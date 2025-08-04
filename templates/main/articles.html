@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Антон Хаус - Статьи{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Хлебные крошки -->
+    <div class="breadcrumbs">
+        <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+        <span class="breadcrumb-separator">•</span>
+        <span class="breadcrumb-current">Статьи</span>
+    </div>
+    
+    <h1>Статьи о недвижимости</h1>
+    <p>Здесь будут статьи</p>
+</div>
+{% endblock %} 

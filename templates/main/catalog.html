@@ -1,0 +1,753 @@
+{% extends 'base.html' %}
+
+{% block title %}Антон Хаус - Каталог ЖК{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="catalog-section">
+        <div class="catalog-header">
+            <h1 class="section-title">{% if page_title %}{{ page_title }}{% else %}Каталог жилых комплексов{% endif %}</h1>
+            <p class="section-subtitle">{% if page_description %}{{ page_description }}{% else %}Все доступные предложения{% endif %}</p>
+        </div>
+        
+        <!-- Хлебные крошки -->
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">Каталог ЖК</span>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="filters-section">
+            <form class="filters-form" id="filters-form">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label>Укажите количество комнат</label>
+                        <div class="button-filter">
+                            <button type="button" class="filter-btn" data-value="" data-active="{% if not filters.rooms %}true{% else %}false{% endif %}">
+                                Любое
+                            </button>
+                            {% for value, label in rooms_choices %}
+                            <button type="button" class="filter-btn" data-value="{{ value }}" data-active="{% if filters.rooms == value %}true{% else %}false{% endif %}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="rooms" id="rooms-hidden" value="{{ filters.rooms|default:'' }}">
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="city">Город</label>
+                        <select name="city" id="city" class="filter-select">
+                            <option value="">Любой</option>
+                            {% for city_name in cities %}
+                                <option value="{{ city_name }}" {% if filters.city == city_name %}selected{% endif %}>
+                                    {{ city_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group" id="district-group" style="display: none;">
+                        <label for="district">Район</label>
+                        <select name="district" id="district" class="filter-select">
+                            <option value="">Любой</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group" id="street-group" style="display: none;">
+                        <label for="street">Улица</label>
+                        <select name="street" id="street" class="filter-select">
+                            <option value="">Любая</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Укажите площадь дома, м²</label>
+                        <div class="range-container">
+                            <div class="range-display">
+                                <span class="range-value">от <strong id="area-from-display">60</strong></span>
+                                <span class="range-separator">—</span>
+                                <span class="range-value">до <strong id="area-to-display">399</strong></span>
+                            </div>
+                            <div class="range-slider">
+                                <input type="range" id="area-from-slider" class="range-slider-input" min="30" max="500" step="1" value="60">
+                                <input type="range" id="area-to-slider" class="range-slider-input" min="30" max="500" step="1" value="399">
+                                <div class="range-track">
+                                    <div class="range-fill area-fill"></div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="area_from" id="area-from-hidden" value="{{ filters.area_from|default:'60' }}">
+                            <input type="hidden" name="area_to" id="area-to-hidden" value="{{ filters.area_to|default:'399' }}">
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Цена, ₽</label>
+                        <div class="range-container">
+                            <div class="range-display">
+                                <span class="range-value">от <strong id="price-from-display">1.0</strong> млн</span>
+                                <span class="range-separator">—</span>
+                                <span class="range-value">до <strong id="price-to-display">10.0</strong> млн</span>
+                            </div>
+                            <div class="range-slider">
+                                <input type="range" id="price-from-slider" class="range-slider-input" min="1" max="10" step="0.1" value="1.0">
+                                <input type="range" id="price-to-slider" class="range-slider-input" min="1" max="10" step="0.1" value="10.0">
+                                <div class="range-track">
+                                    <div class="range-fill price-fill"></div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="price_from" id="price-from-hidden" value="{{ filters.price_from|default:'1.0' }}">
+                            <input type="hidden" name="price_to" id="price-to-hidden" value="{{ filters.price_to|default:'10.0' }}">
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="delivery_date">Дата сдачи до</label>
+                        <input type="date" name="delivery_date" id="delivery_date" value="{{ filters.delivery_date|default:'' }}" class="filter-input">
+                    </div>
+                </div>
+
+                <div class="filters-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                        Поиск
+                    </button>
+                    
+                    <div class="results-count">
+                        Найдено {{ page_obj.paginator.count }} домов
+                    </div>
+                    
+                    <a href="{% url 'main:catalog' %}" class="clear-filters">
+                        <i class="fas fa-times"></i>
+                        Очистить фильтр
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Сортировка -->
+        <div class="sorting-section">
+            <div class="sorting-dropdown">
+                <div class="sorting-options" id="sorting-options">
+                    <div class="sorting-option" data-sort="price_asc">
+                        <span>Дешевле</span>
+                    </div>
+                    <div class="sorting-option" data-sort="price_desc">
+                        <span>Дороже</span>
+                    </div>
+                    <div class="sorting-option" data-sort="area_desc">
+                        <span>С большей площадью</span>
+                    </div>
+                    <div class="sorting-option" data-sort="area_asc">
+                        <span>С меньшей площадью</span>
+                    </div>
+                </div>
+                <div class="sorting-active" id="sorting-active">
+                    <i class="fas fa-sort"></i>
+                    <span id="sorting-text">Дешевле</span>
+                    <i class="fas fa-chevron-up"></i>
+                </div>
+            </div>
+            <input type="hidden" name="sort" id="sort-hidden" value="{{ filters.sort|default:'price_asc' }}">
+        </div>
+
+        <!-- Результаты поиска -->
+        {% if filters_applied %}
+        <div class="search-results">
+            <h3 class="search-title">Результаты поиска</h3>
+        </div>
+        {% endif %}
+
+        <div class="catalog-grid" id="catalog-grid">
+            {% for complex in complexes %}
+            <div class="property-card-large">
+                <div class="card-images">
+                    <div class="main-image">
+                        {% if complex.image %}
+                            <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/600x400/0066cc/ffffff?text={{ complex.name|urlencode }}" alt="{{ complex.name }}">
+                        {% endif %}
+                        <div class="image-counter">1 из 4</div>
+                        <div class="image-nav">
+                            <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
+                            <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="thumbnail-images">
+                        <div class="thumbnail active">
+                            {% if complex.image %}
+                                <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=1" alt="{{ complex.name }}">
+                            {% endif %}
+                        </div>
+                        <div class="thumbnail">
+                            {% if complex.image_2 %}
+                                <img src="{{ complex.image_2.url }}" alt="{{ complex.name }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=2" alt="{{ complex.name }}">
+                            {% endif %}
+                        </div>
+                        <div class="thumbnail">
+                            {% if complex.image_3 %}
+                                <img src="{{ complex.image_3.url }}" alt="{{ complex.name }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=3" alt="{{ complex.name }}">
+                            {% endif %}
+                        </div>
+                        <div class="thumbnail more">
+                            <span>+1</span>
+                            {% if complex.image_4 %}
+                                <img src="{{ complex.image_4.url }}" alt="{{ complex.name }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=4" alt="{{ complex.name }}">
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-content-large">
+                    <div class="card-header">
+                        <div class="card-title-section">
+                            <h3 class="card-title">{{ complex.name }}</h3>
+                            <div class="card-subtitle">
+                                {{ complex.total_apartments }} квартир от застройщика
+                            </div>
+                            <div class="completion-info">
+                                {{ complex.completion_start }} - {{ complex.completion_end }}
+                                {% if complex.has_completed %}
+                                    <span class="completed-badge">Есть сданные</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-price-section">
+                            <div class="main-price">
+                                <span class="price-label">от</span>
+                                <span class="price-value">{{ complex.price_from|floatformat:1 }}</span>
+                                <span class="price-currency">млн ₽</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-location-info">
+                        <div class="location-text">
+                            Россия - {{ complex.city }} - {{ complex.district }} - {{ complex.street }}
+                        </div>
+                    </div>
+                    
+                    <div class="apartment-prices">
+                        <div class="price-row">
+                            <span class="room-type">Студия</span>
+                            <span class="room-price">от {{ complex.studio_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">1-комн.</span>
+                            <span class="room-price">от {{ complex.one_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">2-комн.</span>
+                            <span class="room-price">от {{ complex.two_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">3-комн.</span>
+                            <span class="room-price">от {{ complex.three_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">4-комн.+</span>
+                            <span class="room-price">от {{ complex.four_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+                        </div>
+                    </div>
+                    
+
+                </div>
+            </div>
+            {% empty %}
+            <div class="no-complexes">
+                {% if filters_applied %}
+                    <p>По вашему запросу ничего не найдено</p>
+                    <p>Попробуйте изменить параметры поиска</p>
+                {% else %}
+                    <p>Жилые комплексы пока не добавлены</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Пагинация -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination-container">
+            <div class="pagination-info">
+                Страница {{ page_obj.number }} из {{ paginator.num_pages }}
+            </div>
+            <div class="pagination-controls">
+                {% if page_obj.has_previous %}
+                    <button class="pagination-btn" onclick="loadPage({{ page_obj.previous_page_number }})">
+                        <i class="fas fa-chevron-left"></i> Назад
+                    </button>
+                {% endif %}
+                
+                <div class="pagination-numbers">
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <span class="pagination-number active">{{ num }}</span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <button class="pagination-number" onclick="loadPage({{ num }})">{{ num }}</button>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                
+                {% if page_obj.has_next %}
+                    <button class="pagination-btn" onclick="loadPage({{ page_obj.next_page_number }})">
+                        Вперед <i class="fas fa-chevron-right"></i>
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+
+    </section>
+</div>
+
+<script>
+// Range Slider функциональность
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация range sliders
+    initRangeSlider('area-from-slider', 'area-to-slider', 'area-from-display', 'area-to-display', 'area-from-hidden', 'area-to-hidden', 'area-fill');
+    initRangeSlider('price-from-slider', 'price-to-slider', 'price-from-display', 'price-to-display', 'price-from-hidden', 'price-to-hidden', 'price-fill');
+    
+    // Обработка отправки формы фильтров
+    const filtersForm = document.getElementById('filters-form');
+    filtersForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        applyFilters();
+    });
+    
+    // Обработка выбора города
+    const citySelect = document.getElementById('city');
+    const districtGroup = document.getElementById('district-group');
+    const streetGroup = document.getElementById('street-group');
+    const districtSelect = document.getElementById('district');
+    const streetSelect = document.getElementById('street');
+    
+    citySelect.addEventListener('change', function() {
+        const selectedCity = this.value;
+        
+        if (selectedCity) {
+            // Показываем группу районов и улиц одновременно
+            districtGroup.style.display = 'block';
+            streetGroup.style.display = 'block';
+            
+            // Загружаем районы для выбранного города
+            fetch(`/api/districts/?city=${selectedCity}`)
+                .then(response => response.json())
+                .then(data => {
+                    districtSelect.innerHTML = '<option value="">Любой</option>';
+                    data.districts.forEach(district => {
+                        districtSelect.innerHTML += `<option value="${district}">${district}</option>`;
+                    });
+                });
+            
+            // Загружаем улицы для выбранного города
+            fetch(`/api/streets/?city=${selectedCity}`)
+                .then(response => response.json())
+                .then(data => {
+                    streetSelect.innerHTML = '<option value="">Любая</option>';
+                    data.streets.forEach(street => {
+                        streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
+                    });
+                });
+        } else {
+            districtGroup.style.display = 'none';
+            streetGroup.style.display = 'none';
+        }
+    });
+    
+
+    
+    // Обработка кнопок фильтра количества комнат
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const roomsHidden = document.getElementById('rooms-hidden');
+    
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Убираем активное состояние у всех кнопок
+            filterBtns.forEach(b => {
+                b.setAttribute('data-active', 'false');
+            });
+            
+            // Устанавливаем активное состояние для нажатой кнопки
+            this.setAttribute('data-active', 'true');
+            
+            // Обновляем скрытое поле
+            roomsHidden.value = this.getAttribute('data-value');
+        });
+    });
+    
+    // Обработка сортировки
+    const sortingActive = document.getElementById('sorting-active');
+    const sortingOptions = document.getElementById('sorting-options');
+    const sortingDropdown = document.querySelector('.sorting-dropdown');
+    const sortHidden = document.getElementById('sort-hidden');
+    const sortingText = document.getElementById('sorting-text');
+    
+    sortingActive.addEventListener('click', function() {
+        sortingDropdown.classList.toggle('active');
+        sortingOptions.classList.toggle('active');
+    });
+    
+    // Закрытие сортировки при клике вне её
+    document.addEventListener('click', function(e) {
+        if (!sortingDropdown.contains(e.target)) {
+            sortingDropdown.classList.remove('active');
+            sortingOptions.classList.remove('active');
+        }
+    });
+    
+    // Обработка выбора сортировки
+    const sortingOptionBtns = document.querySelectorAll('.sorting-option');
+    sortingOptionBtns.forEach(option => {
+        option.addEventListener('click', function() {
+            const sortValue = this.getAttribute('data-sort');
+            const sortText = this.querySelector('span').textContent;
+            
+            // Обновляем скрытое поле
+            sortHidden.value = sortValue;
+            
+            // Обновляем текст в активной кнопке
+            sortingText.textContent = sortText;
+            
+            // Убираем активное состояние у всех опций
+            sortingOptionBtns.forEach(o => o.classList.remove('active'));
+            
+            // Устанавливаем активное состояние для выбранной опции
+            this.classList.add('active');
+            
+            // Закрываем dropdown
+            sortingDropdown.classList.remove('active');
+            sortingOptions.classList.remove('active');
+        });
+    });
+    
+    // Обработка кликов по display полям для ручного ввода
+    document.querySelectorAll('.range-display').forEach(display => {
+        display.addEventListener('click', function() {
+            const container = this.closest('.range-container');
+            const fromDisplay = container.querySelector('.range-value strong:first-of-type');
+            const toDisplay = container.querySelector('.range-value strong:last-of-type');
+            
+            // Создаем временные input поля для ручного ввода
+            const fromInput = document.createElement('input');
+            fromInput.type = 'number';
+            fromInput.className = 'temp-input';
+            fromInput.value = fromDisplay.textContent;
+            fromInput.style.cssText = 'width: 50px; padding: 3px; border: 1px solid #0066cc; border-radius: 3px; margin-right: 6px; font-size: 12px;';
+            
+            const toInput = document.createElement('input');
+            toInput.type = 'number';
+            toInput.className = 'temp-input';
+            toInput.value = toDisplay.textContent;
+            toInput.style.cssText = 'width: 50px; padding: 3px; border: 1px solid #0066cc; border-radius: 3px; margin-left: 6px; font-size: 12px;';
+            
+            // Заменяем display на input поля
+            fromDisplay.parentNode.replaceChild(fromInput, fromDisplay);
+            toDisplay.parentNode.replaceChild(toInput, toDisplay);
+            
+            // Фокус на первое поле
+            fromInput.focus();
+            
+            // Обработка завершения ввода
+            function finishInput() {
+                const fromValue = parseFloat(fromInput.value) || 0;
+                const toValue = parseFloat(toInput.value) || 0;
+                
+                // Восстанавливаем display
+                fromDisplay.textContent = fromValue;
+                toDisplay.textContent = toValue;
+                
+                fromInput.parentNode.replaceChild(fromDisplay, fromInput);
+                toInput.parentNode.replaceChild(toDisplay, toInput);
+                
+                // Обновляем slider значения
+                const fromSlider = container.querySelector('input[type="range"]:first-of-type');
+                const toSlider = container.querySelector('input[type="range"]:last-of-type');
+                const fromHidden = container.querySelector('input[type="hidden"]:first-of-type');
+                const toHidden = container.querySelector('input[type="hidden"]:last-of-type');
+                
+                fromSlider.value = fromValue;
+                toSlider.value = toValue;
+                fromHidden.value = fromValue;
+                toHidden.value = toValue;
+                
+                // Обновляем fill
+                updateRangeFill(fromSlider, toSlider, container.querySelector('.range-fill'));
+            }
+            
+            // Обработчики событий
+            fromInput.addEventListener('blur', finishInput);
+            toInput.addEventListener('blur', finishInput);
+            fromInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') finishInput();
+            });
+            toInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') finishInput();
+            });
+        });
+    });
+});
+
+function initRangeSlider(fromSliderId, toSliderId, fromDisplayId, toDisplayId, fromHiddenId, toHiddenId, fillId) {
+    const fromSlider = document.getElementById(fromSliderId);
+    const toSlider = document.getElementById(toSliderId);
+    const fromDisplay = document.getElementById(fromDisplayId);
+    const toDisplay = document.getElementById(toDisplayId);
+    const fromHidden = document.getElementById(fromHiddenId);
+    const toHidden = document.getElementById(toHiddenId);
+    const fill = document.querySelector('.' + fillId);
+    
+    if (!fromSlider || !toSlider) return;
+    
+    // Устанавливаем начальные значения
+    fromSlider.value = fromHidden.value;
+    toSlider.value = toHidden.value;
+    fromDisplay.textContent = fromSlider.value;
+    toDisplay.textContent = toSlider.value;
+    
+    // Обновляем fill при загрузке
+    updateRangeFill(fromSlider, toSlider, fill);
+    
+    // Обработчики событий
+    fromSlider.addEventListener('input', function() {
+        const fromValue = parseInt(this.value);
+        const toValue = parseInt(toSlider.value);
+        
+        if (fromValue > toValue) {
+            this.value = toValue;
+            fromValue = toValue;
+        }
+        
+        fromDisplay.textContent = fromValue;
+        fromHidden.value = fromValue;
+        updateRangeFill(fromSlider, toSlider, fill);
+    });
+    
+    toSlider.addEventListener('input', function() {
+        const fromValue = parseInt(fromSlider.value);
+        const toValue = parseInt(this.value);
+        
+        if (toValue < fromValue) {
+            this.value = fromValue;
+            toValue = fromValue;
+        }
+        
+        toDisplay.textContent = toValue;
+        toHidden.value = toValue;
+        updateRangeFill(fromSlider, toSlider, fill);
+    });
+}
+
+function updateRangeFill(fromSlider, toSlider, fill) {
+    if (!fill) return;
+    
+    const fromValue = parseInt(fromSlider.value);
+    const toValue = parseInt(toSlider.value);
+    const min = parseInt(fromSlider.min);
+    const max = parseInt(fromSlider.max);
+    
+    const fromPercent = ((fromValue - min) / (max - min)) * 100;
+    const toPercent = ((toValue - min) / (max - min)) * 100;
+    
+    // Учитываем отступы в 10px с каждой стороны
+    const adjustedFromPercent = fromPercent * 0.8 + 10; // 80% от ширины + 10px отступ
+    const adjustedToPercent = toPercent * 0.8 + 10;
+    
+    fill.style.left = adjustedFromPercent + '%';
+    fill.style.width = (adjustedToPercent - adjustedFromPercent) + '%';
+}
+
+let currentPage = {{ page_obj.number }};
+
+function loadPage(page) {
+    if (page === currentPage) return;
+    
+    // Собираем текущие фильтры
+    const formData = new FormData(document.getElementById('filters-form'));
+    const params = new URLSearchParams();
+    
+    // Добавляем параметры фильтров
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    // Добавляем номер страницы
+    params.append('page', page);
+    
+    // Показываем индикатор загрузки
+    const grid = document.getElementById('catalog-grid');
+    grid.innerHTML = '<div class="loading">Загрузка...</div>';
+    
+    // Загружаем данные через API
+    fetch(`/api/catalog/?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            currentPage = data.current_page;
+            updateCatalog(data);
+            updatePagination(data);
+            // Обновляем URL без параметров
+            window.history.pushState({}, '', '/catalog/');
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки:', error);
+            grid.innerHTML = '<div class="error">Ошибка загрузки данных</div>';
+        });
+}
+
+function updateCatalog(data) {
+    const grid = document.getElementById('catalog-grid');
+    
+    if (data.complexes.length === 0) {
+        grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p><p>Попробуйте изменить параметры поиска</p></div>';
+        return;
+    }
+    
+    // Проверяем, применены ли фильтры
+    const formData = new FormData(document.getElementById('filters-form'));
+    const hasFilters = Array.from(formData.entries()).some(([key, value]) => value);
+    
+    let html = '';
+    data.complexes.forEach(complex => {
+        const imageUrl = complex.image_url || `https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=${encodeURIComponent(complex.name)}`;
+        
+        html += `
+            <div class="property-card">
+                <div class="card-image">
+                    <img src="${imageUrl}" alt="${complex.name}">
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <h3 class="card-title">${complex.name}</h3>
+                        <span class="card-price">${complex.price_display}</span>
+                    </div>
+                    <div class="card-location">
+                        <i class="fas fa-car"></i>
+                        <span>${complex.location} ${complex.commute_time}</span>
+                    </div>
+                    ${hasFilters ? `
+                    <div class="card-details">
+                        <span class="detail-item">${complex.house_type_display || complex.house_type}</span>
+                        <span class="detail-item">${complex.area_from}-${complex.area_to} м²</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    grid.innerHTML = html;
+}
+
+function updatePagination(data) {
+    const container = document.querySelector('.pagination-container');
+    if (!container) return;
+    
+    const info = container.querySelector('.pagination-info');
+    const controls = container.querySelector('.pagination-controls');
+    
+    info.textContent = `Страница ${data.current_page} из ${data.total_pages}`;
+    
+    let controlsHtml = '';
+    
+    if (data.has_previous) {
+        controlsHtml += `
+            <button class="pagination-btn" onclick="loadPage(${data.current_page - 1})">
+                <i class="fas fa-chevron-left"></i> Назад
+            </button>
+        `;
+    }
+    
+    controlsHtml += '<div class="pagination-numbers">';
+    for (let i = 1; i <= data.total_pages; i++) {
+        if (i === data.current_page) {
+            controlsHtml += `<span class="pagination-number active">${i}</span>`;
+        } else if (i > data.current_page - 3 && i < data.current_page + 3) {
+            controlsHtml += `<button class="pagination-number" onclick="loadPage(${i})">${i}</button>`;
+        }
+    }
+    controlsHtml += '</div>';
+    
+    if (data.has_next) {
+        controlsHtml += `
+            <button class="pagination-btn" onclick="loadPage(${data.current_page + 1})">
+                Вперед <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+    }
+    
+    controls.innerHTML = controlsHtml;
+}
+
+function applyFilters() {
+    // Собираем данные формы
+    const formData = new FormData(document.getElementById('filters-form'));
+    const params = new URLSearchParams();
+    
+    // Добавляем параметры фильтров
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    // Показываем индикатор загрузки
+    const grid = document.getElementById('catalog-grid');
+    grid.innerHTML = '<div class="loading">Поиск...</div>';
+    
+    // Загружаем данные через API с фильтрами
+    fetch(`/api/catalog/?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            currentPage = 1;
+            updateCatalog(data);
+            updatePagination(data);
+            updateResultsCount(data.total_count);
+            
+            // Показываем заголовок результатов поиска
+            const searchResults = document.querySelector('.search-results');
+            if (!searchResults) {
+                const resultsDiv = document.createElement('div');
+                resultsDiv.className = 'search-results';
+                resultsDiv.innerHTML = '<h3 class="search-title">Результаты поиска</h3>';
+                grid.parentNode.insertBefore(resultsDiv, grid);
+            }
+            
+            // Обновляем URL без параметров
+            window.history.pushState({}, '', '/catalog/');
+        })
+        .catch(error => {
+            console.error('Ошибка поиска:', error);
+            grid.innerHTML = '<div class="error">Ошибка поиска</div>';
+        });
+}
+
+function updateResultsCount(count) {
+    const resultsCount = document.querySelector('.results-count');
+    if (resultsCount) {
+        resultsCount.textContent = `Найдено ${count} домов`;
+    }
+}
+
+// Эффект тени для sticky шапки при прокрутке
+window.addEventListener('scroll', function() {
+    const header = document.querySelector('.main-header');
+    if (window.scrollY > 10) {
+        header.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+    } else {
+        header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+    }
+});
+</script>
+{% endblock %} 

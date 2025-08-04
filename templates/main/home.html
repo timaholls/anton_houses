@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Антон Хаус - Главная{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="hero-section">
+        <h1 class="hero-title">Добро пожаловать в Антон Хаус</h1>
+        <p class="hero-subtitle">Найдите свой идеальный дом в лучших жилых комплексах</p>
+    </section>
+
+    <section class="catalog-section">
+        <div class="catalog-header">
+            <h2 class="section-title">Популярные жилые комплексы</h2>
+            <p class="section-subtitle">9 лучших предложений для вас</p>
+        </div>
+
+        <div class="catalog-grid">
+            {% for complex in complexes %}
+            <div class="property-card">
+                <div class="card-image">
+                    {% if complex.image %}
+                        <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
+                    {% else %}
+                        <img src="https://via.placeholder.com/300x200/4A90E2/FFFFFF?text={{ complex.name|urlencode }}" alt="{{ complex.name }}">
+                    {% endif %}
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ complex.name }}</h3>
+                        <span class="card-price">{{ complex.price_display }}</span>
+                    </div>
+                    <div class="card-location">
+                        <i class="fas fa-car"></i>
+                        <span>{{ complex.location }} {{ complex.commute_time }}</span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="no-complexes">
+                <p>Жилые комплексы пока не добавлены</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="catalog-footer">
+            <a href="{% url 'main:catalog' %}" class="btn btn-primary btn-large">
+                Перейти в каталог ЖК
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- Блок "О компании" -->
+    <section class="about-section">
+        <div class="about-header">
+            <span class="about-tab">О компании</span>
+            <h2 class="about-title">Мы специализируемся на продаже квартир в лучших жилых комплексах</h2>
+        </div>
+        
+        <div class="about-content">
+            <div class="about-image">
+                <img src="https://via.placeholder.com/300x400/4A90E2/FFFFFF?text=Антон+Бакметов" alt="Антон Бакметов">
+            </div>
+            
+            <div class="about-text">
+                <blockquote class="about-quote">
+                    «Помогаем клиентам найти идеальную квартиру в современных жилых комплексах, предоставляя полное сопровождение сделки и консультации по всем вопросам недвижимости»
+                </blockquote>
+                
+                <div class="about-signature">
+                    <div class="signature-line">Антон Бакметов</div>
+                    <div class="founder-info">
+                        <span class="founder-title">основатель компании</span>
+                        <span class="company-name">Антон Хаус</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Форма обратной связи -->
+    <section class="feedback-section">
+        <div class="feedback-container">
+            <div class="feedback-header">
+                <span class="feedback-tag">Бесплатная консультация</span>
+                <h2 class="feedback-title">Мы можем бесплатно проконсультировать вас по любому вопросу</h2>
+                <p class="feedback-subtitle">Оставьте свои контакты ниже, и мы свяжемся с вами в ближайшее время</p>
+            </div>
+            
+            <form class="feedback-form" id="feedback-form">
+                <div class="feedback-inputs">
+                    <input type="text" name="name" placeholder="Имя" class="feedback-input" required>
+                    
+                    <div class="phone-input-wrapper">
+                        <div class="phone-prefix">
+                            <img src="https://via.placeholder.com/16x12/4A90E2/FFFFFF?text=🇷🇺" alt="Россия" class="flag-icon">
+                            <span class="country-code">+7</span>
+                        </div>
+                        <input type="tel" name="phone" placeholder="(999) 999-99-99" class="feedback-input phone-input" required>
+                    </div>
+                    
+                    <input type="email" name="email" placeholder="E-mail" class="feedback-input" required>
+                </div>
+                
+                <button type="submit" class="feedback-submit">
+                    Отправить
+                </button>
+            </form>
+            
+            <p class="feedback-disclaimer">
+                Нажимая на кнопку «Отправить», вы даете согласие на <a href="#" class="privacy-link">обработку своих персональных данных</a>
+            </p>
+        </div>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const feedbackForm = document.getElementById('feedback-form');
+    
+    if (feedbackForm) {
+        feedbackForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Собираем данные формы
+            const formData = new FormData(feedbackForm);
+            const name = formData.get('name');
+            const phone = formData.get('phone');
+            const email = formData.get('email');
+            
+            // Простая валидация
+            if (!name || !phone || !email) {
+                alert('Пожалуйста, заполните все поля');
+                return;
+            }
+            
+            // Здесь можно добавить отправку данных на сервер
+            console.log('Данные формы:', { name, phone, email });
+            
+            // Показываем сообщение об успехе
+            alert('Спасибо! Мы свяжемся с вами в ближайшее время.');
+            
+            // Очищаем форму
+            feedbackForm.reset();
+        });
+    }
+    
+    // Эффект тени для sticky шапки при прокрутке
+    window.addEventListener('scroll', function() {
+        const header = document.querySelector('.main-header');
+        if (window.scrollY > 10) {
+            header.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+        } else {
+            header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+        }
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Антон Хаус - Недвижимость{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+
+    <!-- Основная шапка -->
+    <header class="main-header">
+        <div class="container">
+            <div class="header-left">
+                <div class="logo">
+                    <a href="{% url 'main:home' %}">
+                        <span class="logo-text">Антон Хаус</span>
+                    </a>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <a href="{% url 'main:catalog' %}" class="nav-link">Каталог ЖК</a>
+                <a href="{% url 'main:articles' %}" class="nav-link">Статьи</a>
+            </nav>
+
+            <div class="header-right">
+                <div class="contact-info">
+                    <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
+                    <div class="working-hours">Пн-Пт: 9:00-18:00</div>
+                    <div class="address">г. Уфа, ул. Ленина, 1</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <!-- Каталог -->
+                <div class="footer-section">
+                    <h3 class="footer-title">Каталог</h3>
+                    <ul class="footer-links">
+                        <li><a href="{% url 'main:catalog_completed' %}">Сданные</a></li>
+                        <li><a href="{% url 'main:catalog_construction' %}">Строящиеся</a></li>
+                        <li><a href="{% url 'main:catalog_economy' %}">Эконом-класс</a></li>
+                        <li><a href="{% url 'main:catalog_comfort' %}">Комфорт-класс</a></li>
+                        <li><a href="{% url 'main:catalog_premium' %}">Премиум-класс</a></li>
+                        <li><a href="{% url 'main:catalog_finished' %}">С отделкой</a></li>
+                        <li><a href="{% url 'main:catalog_unfinished' %}">Без отделки</a></li>
+                    </ul>
+                </div>
+
+                <!-- Компания -->
+                <div class="footer-section">
+                    <h3 class="footer-title">Компания</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">О компании</a></li>
+                        <li><a href="#">Новости</a></li>
+                        <li><a href="#">Вакансии</a></li>
+                        <li><a href="#">Контакты</a></li>
+                        <li><a href="#">Офисы продаж</a></li>
+                    </ul>
+                </div>
+
+                <!-- Клиентам -->
+                <div class="footer-section">
+                    <h3 class="footer-title">Клиентам</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Ипотека</a></li>
+                        <li><a href="#">Рассрочка</a></li>
+                        <li><a href="#">Сервисы</a></li>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">Отзывы</a></li>
+                    </ul>
+                </div>
+
+                <!-- Контакты -->
+                <div class="footer-section">
+                    <h3 class="footer-title">Контакты</h3>
+                    <div class="footer-contacts">
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <a href="tel:+73472019478">+7 347 201-94-78</a>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-envelope"></i>
+                            <a href="mailto:info@antonhaus.ru">info@antonhaus.ru</a>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>г. Уфа, ул. Ленина, 1</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Пн-Пт: 9:00-18:00</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Мессенджеры -->
+                    <div class="footer-messengers">
+                        <h4 class="messengers-title">Мессенджеры</h4>
+                        <div class="messengers-links">
+                            <a href="#" class="messenger-link whatsapp">
+                                <i class="fab fa-whatsapp"></i>
+                                <span>WhatsApp</span>
+                            </a>
+                            <a href="#" class="messenger-link telegram">
+                                <i class="fab fa-telegram"></i>
+                                <span>Telegram</span>
+                            </a>
+                            <a href="#" class="messenger-link viber">
+                                <i class="fab fa-viber"></i>
+                                <span>Viber</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Нижняя часть футера -->
+            <div class="footer-bottom">
+                <div class="footer-bottom-left">
+                    <p>&copy; 2024 Антон Хаус. Все права защищены.</p>
+                </div>
+                <div class="footer-bottom-right">
+                    <a href="#" class="privacy-link">Политика конфиденциальности</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html> 
