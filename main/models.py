@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.text import slugify
+from ckeditor.fields import RichTextField
 import re
 
 # Create your models here.
@@ -192,8 +193,8 @@ class Article(models.Model):
     ]
     
     title = models.CharField(max_length=200, verbose_name="Заголовок")
-    content = models.TextField(verbose_name="Содержание")
-    excerpt = models.TextField(max_length=300, verbose_name="Краткое описание")
+    content = RichTextField(verbose_name="Содержание", config_name='article')
+    excerpt = RichTextField(max_length=500, verbose_name="Краткое описание", config_name='default')
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='tips', verbose_name="Категория")
     image = models.ImageField(upload_to='articles/', blank=True, null=True, verbose_name="Изображение")
     published_date = models.DateField(auto_now_add=True, verbose_name="Дата публикации")

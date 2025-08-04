@@ -50,7 +50,7 @@
                             <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
                         </h2>
                         
-                        <p class="article-excerpt">{{ article.excerpt|truncatewords:20 }}</p>
+                        <div class="article-excerpt">{{ article.excerpt|safe|truncatewords_html:20 }}</div>
                         
                         <div class="article-footer">
                             <span class="article-views">{{ article.views_count }} просмотров</span>

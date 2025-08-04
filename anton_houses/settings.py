@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'ckeditor',
     'main',
 ]
 
@@ -129,3 +130,54 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# CKEditor Configuration
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'Custom',
+        'toolbar_Custom': [
+            ['Bold', 'Italic', 'Underline', 'Strike'],
+            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent'],
+            ['JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
+            ['Link', 'Unlink'],
+            ['RemoveFormat', 'Source'],
+            ['Format', 'Font', 'FontSize'],
+            ['TextColor', 'BGColor'],
+            ['Table', 'HorizontalRule', 'SpecialChar'],
+            ['Image', 'Flash'],
+            ['Maximize'],
+        ],
+        'height': 400,
+        'width': '100%',
+        'removePlugins': 'stylesheetparser',
+        'allowedContent': True,
+        'extraAllowedContent': 'span(*)',
+        'language': 'ru',
+    },
+    'article': {
+        'toolbar': 'Article',
+        'toolbar_Article': [
+            ['Bold', 'Italic', 'Underline', 'Strike'],
+            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent'],
+            ['JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
+            ['Link', 'Unlink'],
+            ['RemoveFormat', 'Source'],
+            ['Format', 'Font', 'FontSize'],
+            ['TextColor', 'BGColor'],
+            ['Table', 'HorizontalRule', 'SpecialChar'],
+            ['Image', 'Flash'],
+            ['Maximize'],
+        ],
+        'height': 500,
+        'width': '100%',
+        'removePlugins': 'stylesheetparser',
+        'allowedContent': True,
+        'extraAllowedContent': 'span(*)',
+        'language': 'ru',
+        'filebrowserUploadUrl': '/ckeditor/upload/',
+        'filebrowserBrowseUrl': '/ckeditor/browse/',
+    },
+}
+
+CKEDITOR_UPLOAD_PATH = "uploads/"
+CKEDITOR_IMAGE_BACKEND = "pillow"

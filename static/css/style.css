@@ -3005,6 +3005,30 @@ body {
     overflow: hidden;
 }
 
+.article-excerpt p {
+    margin: 0;
+}
+
+.article-excerpt strong,
+.article-excerpt b {
+    font-weight: 600;
+}
+
+.article-excerpt em,
+.article-excerpt i {
+    font-style: italic;
+}
+
+.article-excerpt ul,
+.article-excerpt ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.article-excerpt li {
+    margin: 0;
+}
+
 .article-footer {
     display: flex;
     justify-content: space-between;
