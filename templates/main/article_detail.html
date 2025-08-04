@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article.title }} - Антон Хаус{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="article-detail-container">
+        <!-- Хлебные крошки -->
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <a href="{% url 'main:articles' %}" class="breadcrumb-link">Статьи</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">{{ article.title }}</span>
+        </div>
+
+        <!-- Основная статья -->
+        <article class="article-main">
+            <header class="article-header">
+                <div class="article-meta">
+                    <span class="article-category">{{ article.get_category_display }}</span>
+                    <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
+                    <span class="article-views">{{ article.views_count }} просмотров</span>
+                </div>
+                
+                <h1 class="article-title">{{ article.title }}</h1>
+                
+                {% if article.image %}
+                <div class="article-hero-image">
+                    <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                </div>
+                {% endif %}
+            </header>
+
+            <div class="article-content">
+                {{ article.content|linebreaks }}
+            </div>
+
+            <footer class="article-footer">
+                <div class="article-actions">
+                    <button class="share-btn" onclick="shareArticle('{{ article.title }}', '{{ request.build_absolute_uri }}')">
+                        <i class="fas fa-share"></i>
+                        Поделиться
+                    </button>
+                    
+                    <button class="favorite-btn" onclick="toggleFavorite()">
+                        <i class="far fa-heart"></i>
+                        В избранное
+                    </button>
+                </div>
+            </footer>
+        </article>
+
+        <!-- Блок "Читайте также" -->
+        <section class="read-also-section">
+            <h2 class="read-also-title">ЧИТАЙТЕ ТАКЖЕ:</h2>
+            <div class="read-also-list">
+                <div class="read-also-item">
+                    <span class="read-also-bullet"></span>
+                    <a href="#" class="read-also-link">Как писать на HTML5 и какие в нём есть возможности</a>
+                </div>
+                <div class="read-also-item">
+                    <span class="read-also-bullet"></span>
+                    <a href="#" class="read-also-link">Как правильно верстать HTML-таблицы</a>
+                </div>
+                <div class="read-also-item">
+                    <span class="read-also-bullet"></span>
+                    <a href="#" class="read-also-link">Тест. Сможете ли вы разговаривать с веб-разработчиком на одном языке?</a>
+                </div>
+                <div class="read-also-item">
+                    <span class="read-also-bullet"></span>
+                    <a href="#" class="read-also-link">Что такое JavaScript и зачем он нужен</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Быстрые теги -->
+        {% if article_tags %}
+        <section class="article-tags">
+            <div class="tags-container">
+                {% for tag in article_tags %}
+                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">
+                    {{ tag.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Форма обратной связи -->
+        <section class="feedback-section">
+            <div class="feedback-container">
+                <div class="feedback-header">
+                    <span class="feedback-tag">Бесплатная консультация</span>
+                    <h2 class="feedback-title">Мы можем бесплатно проконсультировать вас по любому вопросу</h2>
+                    <p class="feedback-subtitle">Оставьте свои контакты ниже, и мы свяжемся с вами в ближайшее время</p>
+                </div>
+                
+                {% include 'includes/feedback_form.html' %}
+            </div>
+        </section>
+
+        <!-- Похожие статьи -->
+        {% if similar_articles %}
+        <section class="similar-articles">
+            <h2 class="section-title">Похожие статьи</h2>
+            
+            <div class="similar-articles-grid">
+                {% for similar in similar_articles %}
+                <a href="{% url 'main:article_detail' similar.slug %}" class="similar-article-card">
+                    <div class="similar-article-image">
+                        {% if similar.image %}
+                            <img src="{{ similar.image.url }}" alt="{{ similar.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/200x150/4A90E2/FFFFFF?text={{ similar.title|urlencode }}" alt="{{ similar.title }}">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="similar-article-content">
+                        <div class="similar-article-category">{{ similar.get_category_display }}</div>
+                        <h3 class="similar-article-title">{{ similar.title }}</h3>
+                        <span class="similar-article-date">{{ similar.published_date|date:"j E Y" }}</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function shareArticle(title, url) {
+    if (navigator.share) {
+        navigator.share({
+            title: title,
+            url: url
+        });
+    } else {
+        // Fallback для браузеров без поддержки Web Share API
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        alert('Ссылка скопирована в буфер обмена!');
+    }
+}
+
+function toggleFavorite() {
+    const btn = document.querySelector('.favorite-btn');
+    const icon = btn.querySelector('i');
+    
+    if (btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        icon.className = 'far fa-heart';
+        btn.innerHTML = '<i class="far fa-heart"></i> В избранное';
+    } else {
+        btn.classList.add('active');
+        icon.className = 'fas fa-heart';
+        btn.innerHTML = '<i class="fas fa-heart"></i> В избранном';
+    }
+}
+
+
+</script>
+{% endblock %} 

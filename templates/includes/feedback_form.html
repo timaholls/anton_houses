@@ -1,0 +1,96 @@
+<!-- Форма обратной связи -->
+<section class="feedback-section">
+    <div class="feedback-container">
+        <div class="feedback-header">
+            <span class="feedback-tag">Бесплатная консультация</span>
+            <h2 class="feedback-title">Требуется помощь в выборе или консультация?</h2>
+            <p class="feedback-subtitle">Получите консультацию и помощь в подборе подходящей недвижимости из нашего каталога. Оставьте свои контактные данные, и мы свяжемся с вами!</p>
+        </div>
+        
+        <form class="feedback-form" id="feedback-form">
+            <div class="feedback-inputs">
+                <input type="text" name="name" placeholder="Имя" class="feedback-input" required>
+                
+                <input type="email" name="email" placeholder="mail@example.com" class="feedback-input" required>
+                
+                <div class="phone-input-wrapper">
+                    <div class="phone-prefix">
+                        <span class="country-code">+7 🇷🇺</span>
+                    </div>
+                    <input type="tel" name="phone" placeholder="(999) 999-99-99" class="feedback-input phone-input" required>
+                </div>
+            </div>
+            
+            <div class="feedback-checkbox">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="privacy" required class="checkbox-input">
+                    <span class="checkbox-custom"></span>
+                    <span class="checkbox-text">
+                        Отправляя заявку вы соглашаетесь с <a href="#" class="privacy-link">политикой конфиденциальности</a>
+                    </span>
+                </label>
+            </div>
+            
+            <button type="submit" class="feedback-submit">
+                Отправить
+            </button>
+        </form>
+        
+        <div class="feedback-links">
+            <a href="#" class="feedback-link">Ознакомиться с условиями оплаты и доставки</a>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const feedbackForm = document.getElementById('feedback-form');
+    
+    if (feedbackForm) {
+        feedbackForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Собираем данные формы
+            const formData = new FormData(feedbackForm);
+            const name = formData.get('name');
+            const phone = formData.get('phone');
+            const email = formData.get('email');
+            const privacy = formData.get('privacy');
+            
+            // Простая валидация
+            if (!name || !phone || !email) {
+                alert('Пожалуйста, заполните все обязательные поля');
+                return;
+            }
+            
+            if (!privacy) {
+                alert('Пожалуйста, согласитесь с политикой конфиденциальности');
+                return;
+            }
+            
+            // Валидация email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Пожалуйста, введите корректный email адрес');
+                return;
+            }
+            
+            // Валидация телефона (базовая)
+            const phoneRegex = /^\+7\s?\(?(\d{3})\)?[\s-]?(\d{3})[\s-]?(\d{2})[\s-]?(\d{2})$/;
+            if (!phoneRegex.test(phone)) {
+                alert('Пожалуйста, введите корректный номер телефона в формате +7 (999) 999-99-99');
+                return;
+            }
+            
+            // Здесь можно добавить отправку данных на сервер
+            console.log('Данные формы:', { name, phone, email, privacy });
+            
+            // Показываем сообщение об успехе
+            alert('Спасибо! Мы свяжемся с вами в ближайшее время.');
+            
+            // Очищаем форму
+            feedbackForm.reset();
+        });
+    }
+});
+</script> 

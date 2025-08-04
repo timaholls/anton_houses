@@ -1,17 +1,364 @@
 {% extends 'base.html' %}
 
-{% block title %}Антон Хаус - Статьи{% endblock %}
+{% block title %}Статьи о недвижимости - Антон Хаус{% endblock %}
 
 {% block content %}
 <div class="container">
-    <!-- Хлебные крошки -->
-    <div class="breadcrumbs">
-        <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
-        <span class="breadcrumb-separator">•</span>
-        <span class="breadcrumb-current">Статьи</span>
-    </div>
+    <section class="articles-section">
+        <div class="articles-header">
+            <h1 class="section-title">Статьи о недвижимости</h1>
+            <p class="section-subtitle">Полезная информация для покупателей и продавцов недвижимости</p>
+        </div>
+        
+        <!-- Хлебные крошки -->
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">Статьи</span>
+        </div>
+
+        <!-- Секция "Ипотека" -->
+        <div class="articles-category-section">
+            <div class="category-header">
+                <h2 class="category-title">Ипотека</h2>
+                <a href="{% url 'main:articles' %}?category=mortgage" class="show-all-link">Показать все</a>
+            </div>
+            
+            <div class="articles-grid">
+                {% for article in mortgage_articles %}
+                <div class="article-card">
+                    <div class="article-image">
+                        {% if article.image %}
+                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300x200/4A90E2/FFFFFF?text={{ article.title|urlencode }}" alt="{{ article.title }}">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="article-content">
+                        <div class="article-meta">
+                            <span class="article-category">{{ article.get_category_display }}</span>
+                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
+                        </div>
+                        
+                        <h3 class="article-title">
+                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
+                        </h3>
+                        
+                        <p class="article-excerpt">{{ article.excerpt|truncatewords:15 }}</p>
+                        
+                        <div class="article-footer">
+                            <span class="article-views">{{ article.views_count }} просмотров</span>
+                            
+                            {% if article.tags.all %}
+                            <div class="article-tags">
+                                {% for tag in article.tags.all|slice:":2" %}
+                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-articles">
+                    <p>Статьи по ипотеке пока не добавлены</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Секция "Законы" -->
+        <div class="articles-category-section">
+            <div class="category-header">
+                <h2 class="category-title">Законы</h2>
+                <a href="{% url 'main:articles' %}?category=laws" class="show-all-link">Показать все</a>
+            </div>
+            
+            <div class="articles-grid">
+                {% for article in laws_articles %}
+                <div class="article-card">
+                    <div class="article-image">
+                        {% if article.image %}
+                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300x200/28a745/FFFFFF?text={{ article.title|urlencode }}" alt="{{ article.title }}">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="article-content">
+                        <div class="article-meta">
+                            <span class="article-category">{{ article.get_category_display }}</span>
+                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
+                        </div>
+                        
+                        <h3 class="article-title">
+                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
+                        </h3>
+                        
+                        <p class="article-excerpt">{{ article.excerpt|truncatewords:15 }}</p>
+                        
+                        <div class="article-footer">
+                            <span class="article-views">{{ article.views_count }} просмотров</span>
+                            
+                            {% if article.tags.all %}
+                            <div class="article-tags">
+                                {% for tag in article.tags.all|slice:":2" %}
+                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-articles">
+                    <p>Статьи по законам пока не добавлены</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Секция "Инструкции" -->
+        <div class="articles-category-section">
+            <div class="category-header">
+                <h2 class="category-title">Инструкции</h2>
+                <a href="{% url 'main:articles' %}?category=instructions" class="show-all-link">Показать все</a>
+            </div>
+            
+            <div class="articles-grid">
+                {% for article in instructions_articles %}
+                <div class="article-card">
+                    <div class="article-image">
+                        {% if article.image %}
+                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300x200/ffc107/FFFFFF?text={{ article.title|urlencode }}" alt="{{ article.title }}">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="article-content">
+                        <div class="article-meta">
+                            <span class="article-category">{{ article.get_category_display }}</span>
+                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
+                        </div>
+                        
+                        <h3 class="article-title">
+                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
+                        </h3>
+                        
+                        <p class="article-excerpt">{{ article.excerpt|truncatewords:15 }}</p>
+                        
+                        <div class="article-footer">
+                            <span class="article-views">{{ article.views_count }} просмотров</span>
+                            
+                            {% if article.tags.all %}
+                            <div class="article-tags">
+                                {% for tag in article.tags.all|slice:":2" %}
+                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-articles">
+                    <p>Инструкции пока не добавлены</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Секция "Рынок недвижимости" -->
+        <div class="articles-category-section">
+            <div class="category-header">
+                <h2 class="category-title">Рынок недвижимости</h2>
+                <a href="{% url 'main:articles' %}?category=market" class="show-all-link">Показать все</a>
+            </div>
+            
+            <div class="articles-grid">
+                {% for article in market_articles %}
+                <div class="article-card">
+                    <div class="article-image">
+                        {% if article.image %}
+                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300x200/dc3545/FFFFFF?text={{ article.title|urlencode }}" alt="{{ article.title }}">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="article-content">
+                        <div class="article-meta">
+                            <span class="article-category">{{ article.get_category_display }}</span>
+                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
+                        </div>
+                        
+                        <h3 class="article-title">
+                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
+                        </h3>
+                        
+                        <p class="article-excerpt">{{ article.excerpt|truncatewords:15 }}</p>
+                        
+                        <div class="article-footer">
+                            <span class="article-views">{{ article.views_count }} просмотров</span>
+                            
+                            {% if article.tags.all %}
+                            <div class="article-tags">
+                                {% for tag in article.tags.all|slice:":2" %}
+                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-articles">
+                    <p>Статьи о рынке недвижимости пока не добавлены</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Секция "Советы" -->
+        <div class="articles-category-section">
+            <div class="category-header">
+                <h2 class="category-title">Советы</h2>
+                <a href="{% url 'main:articles' %}?category=tips" class="show-all-link">Показать все</a>
+            </div>
+            
+            <div class="articles-grid">
+                {% for article in tips_articles %}
+                <div class="article-card">
+                    <div class="article-image">
+                        {% if article.image %}
+                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300x200/6f42c1/FFFFFF?text={{ article.title|urlencode }}" alt="{{ article.title }}">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="article-content">
+                        <div class="article-meta">
+                            <span class="article-category">{{ article.get_category_display }}</span>
+                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
+                        </div>
+                        
+                        <h3 class="article-title">
+                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
+                        </h3>
+                        
+                        <p class="article-excerpt">{{ article.excerpt|truncatewords:15 }}</p>
+                        
+                        <div class="article-footer">
+                            <span class="article-views">{{ article.views_count }} просмотров</span>
+                            
+                            {% if article.tags.all %}
+                            <div class="article-tags">
+                                {% for tag in article.tags.all|slice:":2" %}
+                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-articles">
+                    <p>Советы пока не добавлены</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
     
-    <h1>Статьи о недвижимости</h1>
-    <p>Здесь будут статьи</p>
+    <!-- Блок "Похожие статьи" -->
+    <section class="similar-articles-section">
+        <div class="container">
+            <h2 class="similar-articles-title">Популярные статьи</h2>
+            <div class="similar-articles-grid">
+                {% for article in featured_articles %}
+                <a href="{% url 'main:article_detail' article.slug %}" class="similar-article-card">
+                    <div class="similar-article-image">
+                        {% if article.image %}
+                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300x200/4A90E2/FFFFFF?text={{ article.title|urlencode }}" alt="{{ article.title }}">
+                        {% endif %}
+                    </div>
+                    <div class="similar-article-content">
+                        <div class="similar-article-categories">
+                            {% for tag in article.tags.all|slice:":2" %}
+                                <span class="similar-article-category">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                        <h3 class="similar-article-title">{{ article.title }}</h3>
+                        {% if article.author %}
+                        <div class="similar-article-author">
+                            <span class="author-name">{{ article.author.name }}</span>
+                            {% if article.author.position %}
+                            <span class="author-position">{{ article.author.position }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="similar-article-meta">
+                            <span class="similar-article-date">{{ article.published_date|date:"j E Y" }}</span>
+                            <div class="similar-article-stats">
+                                <span class="similar-article-views">{{ article.views_count }}</span>
+                                <span class="similar-article-likes">{{ article.likes_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    
+    <!-- Форма обратной связи -->
+    {% include 'includes/feedback_form.html' %}
 </div>
+
+<script>
+function shareArticle(title, url) {
+    if (navigator.share) {
+        navigator.share({
+            title: title,
+            url: url
+        });
+    } else {
+        // Fallback для браузеров без поддержки Web Share API
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        alert('Ссылка скопирована в буфер обмена!');
+    }
+}
+
+// Анимация появления карточек
+document.addEventListener('DOMContentLoaded', function() {
+    const articleCards = document.querySelectorAll('.article-card');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    
+    articleCards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(card);
+    });
+});
+</script>
 {% endblock %} 

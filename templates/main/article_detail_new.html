@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article.title }} - Антон Хаус{% endblock %}
+
+{% block extra_head %}
+{% csrf_token %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Хлебные крошки -->
+    <div class="breadcrumbs">
+        <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+        <span class="breadcrumb-separator">•</span>
+        <a href="{% url 'main:articles' %}" class="breadcrumb-link">Статьи</a>
+        <span class="breadcrumb-separator">•</span>
+        <span class="breadcrumb-current">{{ article.title|truncatechars:50 }}</span>
+    </div>
+
+    <!-- Основной контейнер статьи -->
+    <div class="article-detail-container">
+        <!-- Левая колонка - Статья -->
+        <div class="article-main">
+            <!-- Заголовок статьи -->
+            <header class="article-header">
+                <h1 class="article-title">{{ article.title }}</h1>
+                
+                <!-- Мета-информация -->
+                <div class="article-meta">
+                    <div class="article-categories">
+                        {% for tag in article.tags.all %}
+                            <span class="article-category">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="article-stats">
+                        <span class="article-date">
+                            <i class="far fa-calendar-alt"></i>
+                            {{ article.published_date|date:"j E Y" }}
+                        </span>
+                        {% if article.updated_date != article.published_date %}
+                            <span class="article-updated">
+                                <i class="fas fa-edit"></i>
+                                Обновлено: {{ article.updated_date|date:"j E Y" }}
+                            </span>
+                        {% endif %}
+                        <span class="article-views">
+                            <i class="far fa-eye"></i>
+                            {{ article.views_count }}
+                        </span>
+                        <span class="article-likes">
+                            <i class="far fa-thumbs-up"></i>
+                            {{ article.likes_count }}
+                        </span>
+                        <span class="article-comments">
+                            <i class="far fa-comment"></i>
+                            {{ article.comments_count }}
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Главное изображение -->
+            {% if article.image %}
+            <div class="article-hero-image">
+                <img src="{{ article.image.url }}" alt="{{ article.title }}">
+            </div>
+            {% endif %}
+
+            <!-- Содержание статьи -->
+            <div class="article-content">
+                {{ article.content|safe }}
+            </div>
+
+            <!-- Блок "Читайте также" -->
+            {% if article.related_articles.all %}
+            <section class="read-also-section">
+                <h2 class="read-also-title">Читайте также</h2>
+                <div class="read-also-list">
+                    {% for related in article.related_articles.all %}
+                    <div class="read-also-item">
+                        <span class="read-also-bullet">•</span>
+                        <a href="{% url 'main:article_detail' related.slug %}" class="read-also-link">
+                            {{ related.title }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Быстрые теги -->
+            {% if article.tags.all %}
+            <section class="quick-tags-section">
+                <div class="quick-tags">
+                    {% for tag in article.tags.all %}
+                    <a href="{% url 'main:tag_detail' tag.slug %}" class="quick-tag">
+                        {{ tag.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+        </div>
+
+        <!-- Правая колонка - Сайдбар -->
+        <aside class="article-sidebar">
+            <!-- Автор статьи -->
+            {% if article.author %}
+            <div class="author-card">
+                <h3 class="author-title">Автор:</h3>
+                <div class="author-info">
+                    {% if article.author.photo %}
+                    <div class="author-photo">
+                        <img src="{{ article.author.photo.url }}" alt="{{ article.author.name }}">
+                    </div>
+                    {% endif %}
+                    <div class="author-details">
+                        <h4 class="author-name">{{ article.author.name }}</h4>
+                        {% if article.author.position %}
+                        <p class="author-position">{{ article.author.position }}</p>
+                        {% endif %}
+                        {% if article.author.description %}
+                        <p class="author-description">{{ article.author.description|truncatewords:20 }}</p>
+                        {% endif %}
+                        <div class="author-stats">
+                            <span class="author-articles">
+                                <i class="far fa-file-alt"></i>
+                                Статей автора: {{ article.author.articles_count }}
+                            </span>
+                            <span class="author-views">
+                                <i class="far fa-eye"></i>
+                                {{ article.author.total_views }}
+                            </span>
+                            <span class="author-likes">
+                                <i class="far fa-heart"></i>
+                                {{ article.author.total_likes }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Содержание статьи -->
+            <div class="table-of-contents">
+                <h3 class="toc-title">Содержание статьи:</h3>
+                <nav class="toc-nav" id="toc-nav">
+                    <!-- JavaScript будет заполнять это -->
+                </nav>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Блок "Похожие статьи" -->
+{% if related_articles %}
+<section class="similar-articles-section">
+    <div class="container">
+        <h2 class="similar-articles-title">С этим материалом читают:</h2>
+        <div class="similar-articles-grid">
+            {% for related in related_articles %}
+            <a href="{% url 'main:article_detail' related.slug %}" class="similar-article-card">
+                <div class="similar-article-image">
+                    {% if related.image %}
+                        <img src="{{ related.image.url }}" alt="{{ related.title }}">
+                    {% else %}
+                        <img src="https://via.placeholder.com/300x200/4A90E2/FFFFFF?text={{ related.title|urlencode }}" alt="{{ related.title }}">
+                    {% endif %}
+                </div>
+                <div class="similar-article-content">
+                    <div class="similar-article-categories">
+                        {% for tag in related.tags.all|slice:":2" %}
+                            <span class="similar-article-category">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    <h3 class="similar-article-title">{{ related.title }}</h3>
+                    {% if related.author %}
+                    <div class="similar-article-author">
+                        <span class="author-name">{{ related.author.name }}</span>
+                        {% if related.author.position %}
+                        <span class="author-position">{{ related.author.position }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="similar-article-meta">
+                        <span class="similar-article-date">{{ related.published_date|date:"j E Y" }}</span>
+                        <div class="similar-article-stats">
+                            <span class="similar-article-views">{{ related.views_count }}</span>
+                            <span class="similar-article-likes">{{ related.likes_count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Форма обратной связи -->
+{% include 'includes/feedback_form.html' %}
+
+<script>
+// Функция для извлечения заголовков из контента и создания оглавления
+function createTableOfContents() {
+    const content = document.querySelector('.article-content');
+    const tocNav = document.getElementById('toc-nav');
+    
+    if (!content || !tocNav) return;
+    
+    const headings = content.querySelectorAll('h2, h3, h4, h5, h6');
+    const tocItems = [];
+    
+    headings.forEach((heading, index) => {
+        // Создаем ID для заголовка
+        const headingId = `heading-${index}`;
+        heading.id = headingId;
+        
+        // Создаем элемент оглавления
+        const tocItem = document.createElement('a');
+        tocItem.href = `#${headingId}`;
+        tocItem.textContent = heading.textContent;
+        tocItem.className = `toc-item toc-${heading.tagName.toLowerCase()}`;
+        
+        tocItems.push(tocItem);
+    });
+    
+    // Добавляем элементы в оглавление
+    tocItems.forEach(item => {
+        tocNav.appendChild(item);
+    });
+    
+    // Плавная прокрутка к якорям
+    tocNav.addEventListener('click', function(e) {
+        if (e.target.classList.contains('toc-item')) {
+            e.preventDefault();
+            const targetId = e.target.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }
+    });
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    createTableOfContents();
+    
+    // Увеличиваем счетчик просмотров
+    fetch(`/api/articles/{{ article.id }}/view/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    });
+});
+</script>
+{% endblock %} 

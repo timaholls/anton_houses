@@ -1,15 +1,25 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from .models import ResidentialComplex
+from .models import ResidentialComplex, Article, Tag, CompanyInfo
 
 def home(request):
     """Главная страница"""
-    # Получаем первые 9 ЖК для главной страницы
-    complexes = ResidentialComplex.objects.all()[:9]
+    # Получаем 9 популярных ЖК для главной страницы
+    complexes = ResidentialComplex.objects.filter(is_featured=True).order_by('-created_at')[:9]
+    
+    # Если популярных ЖК меньше 9, добавляем обычные
+    if complexes.count() < 9:
+        remaining_count = 9 - complexes.count()
+        additional_complexes = ResidentialComplex.objects.filter(is_featured=False).order_by('-created_at')[:remaining_count]
+        complexes = list(complexes) + list(additional_complexes)
+    
+    # Получаем информацию о компании
+    company_info = CompanyInfo.get_active()
     
     context = {
-        'complexes': complexes
+        'complexes': complexes,
+        'company_info': company_info
     }
     return render(request, 'main/home.html', context)
 
@@ -108,9 +118,65 @@ def catalog(request):
     return render(request, 'main/catalog.html', context)
 
 def catalog_api(request):
-    """API для каталога ЖК с пагинацией"""
+    """API для каталога ЖК с пагинацией и фильтрацией"""
     page = request.GET.get('page', 1)
+    
+    # Получаем параметры фильтрации
+    rooms = request.GET.get('rooms', '')
+    city = request.GET.get('city', '')
+    district = request.GET.get('district', '')
+    street = request.GET.get('street', '')
+    area_from = request.GET.get('area_from', '')
+    area_to = request.GET.get('area_to', '')
+    price_from = request.GET.get('price_from', '')
+    price_to = request.GET.get('price_to', '')
+    delivery_date = request.GET.get('delivery_date', '')
+    sort = request.GET.get('sort', 'price_asc')
+    
+    # Базовый queryset
     complexes = ResidentialComplex.objects.all()
+    
+    # Применяем фильтры
+    if rooms:
+        complexes = complexes.filter(rooms=rooms)
+    if city:
+        complexes = complexes.filter(city=city)
+    if district:
+        complexes = complexes.filter(district=district)
+    if street:
+        complexes = complexes.filter(street=street)
+    if area_from:
+        try:
+            complexes = complexes.filter(area_from__gte=float(area_from))
+        except ValueError:
+            pass
+    if area_to:
+        try:
+            complexes = complexes.filter(area_to__lte=float(area_to))
+        except ValueError:
+            pass
+    if price_from:
+        try:
+            complexes = complexes.filter(price_from__gte=float(price_from))
+        except ValueError:
+            pass
+    if price_to:
+        try:
+            complexes = complexes.filter(price_from__lte=float(price_to))
+        except ValueError:
+            pass
+    if delivery_date:
+        complexes = complexes.filter(delivery_date__lte=delivery_date)
+    
+    # Применяем сортировку
+    if sort == 'price_asc':
+        complexes = complexes.order_by('price_from')
+    elif sort == 'price_desc':
+        complexes = complexes.order_by('-price_from')
+    elif sort == 'area_desc':
+        complexes = complexes.order_by('-area_to')
+    elif sort == 'area_asc':
+        complexes = complexes.order_by('area_from')
     
     # Пагинация по 9 элементов
     paginator = Paginator(complexes, 9)
@@ -119,13 +185,28 @@ def catalog_api(request):
     # Подготавливаем данные для JSON
     complexes_data = []
     for complex in page_obj:
+        # Создаем локацию из существующих полей
+        location_parts = []
+        if complex.city:
+            location_parts.append(complex.city)
+        if complex.district:
+            location_parts.append(complex.district)
+        if complex.street:
+            location_parts.append(complex.street)
+        
+        location = ' - '.join(location_parts) if location_parts else 'Локация не указана'
+        
         complexes_data.append({
             'id': complex.id,
             'name': complex.name,
             'price_display': complex.price_display,
-            'location': complex.location,
+            'location': location,
             'commute_time': complex.commute_time,
             'image_url': complex.image.url if complex.image else None,
+            'house_type': complex.house_type,
+            'house_type_display': complex.get_house_type_display(),
+            'area_from': complex.area_from,
+            'area_to': complex.area_to,
         })
     
     return JsonResponse({
@@ -139,7 +220,92 @@ def catalog_api(request):
 
 def articles(request):
     """Страница статей"""
-    return render(request, 'main/articles.html')
+    category = request.GET.get('category', '')
+    
+    # Получаем статьи
+    if category:
+        articles_list = Article.objects.filter(category=category)
+    else:
+        articles_list = Article.objects.all()
+    
+    # Получаем статьи по категориям для отображения в секциях
+    mortgage_articles = Article.objects.filter(category='mortgage', is_featured=True)[:3]
+    laws_articles = Article.objects.filter(category='laws')[:3]
+    instructions_articles = Article.objects.filter(category='instructions')[:3]
+    market_articles = Article.objects.filter(category='market')[:3]
+    tips_articles = Article.objects.filter(category='tips')[:3]
+    
+    # Получаем все категории для фильтрации
+    categories = Article.CATEGORY_CHOICES
+    
+    # Получаем популярные теги
+    popular_tags = Tag.objects.all()[:10]
+    
+    # Получаем рекомендуемые статьи для блока "Похожие статьи"
+    featured_articles = Article.objects.filter(is_featured=True).order_by('-views_count')[:3]
+    
+    context = {
+        'articles': articles_list,
+        'mortgage_articles': mortgage_articles,
+        'laws_articles': laws_articles,
+        'instructions_articles': instructions_articles,
+        'market_articles': market_articles,
+        'tips_articles': tips_articles,
+        'categories': categories,
+        'current_category': category,
+        'popular_tags': popular_tags,
+        'featured_articles': featured_articles,
+    }
+    return render(request, 'main/articles.html', context)
+
+def article_detail(request, slug):
+    """Детальная страница статьи"""
+    article = get_object_or_404(Article, slug=slug)
+    
+    # Увеличиваем счетчик просмотров
+    article.views_count += 1
+    article.save()
+    
+    # Обновляем статистику автора
+    if article.author:
+        article.author.articles_count = article.author.article_set.count()
+        article.author.total_views = sum(article.author.article_set.values_list('views_count', flat=True))
+        article.author.total_likes = sum(article.author.article_set.values_list('likes_count', flat=True))
+        article.author.save()
+    
+    # Получаем похожие статьи (сначала из связанных, потом по категории)
+    related_articles = article.related_articles.all()
+    if not related_articles.exists():
+        related_articles = Article.objects.filter(category=article.category).exclude(id=article.id)[:3]
+    
+    # Если все еще нет похожих статей, берем последние статьи
+    if not related_articles.exists():
+        related_articles = Article.objects.exclude(id=article.id).order_by('-published_date')[:3]
+    
+    # Получаем теги статьи
+    article_tags = article.tags.all()
+    
+    # Получаем популярные теги
+    popular_tags = Tag.objects.all()[:10]
+    
+    context = {
+        'article': article,
+        'related_articles': related_articles,
+        'article_tags': article_tags,
+        'popular_tags': popular_tags,
+    }
+    return render(request, 'main/article_detail_new.html', context)
+
+def tag_detail(request, slug):
+    """Страница тега"""
+    tag = get_object_or_404(Tag, slug=slug)
+    articles = tag.articles.all()
+    
+    context = {
+        'tag': tag,
+        'articles': articles,
+    }
+    return render(request, 'main/tag_detail.html', context)
 
 # Быстрые ссылки каталога
 def catalog_completed(request):
@@ -289,6 +455,22 @@ def catalog_unfinished(request):
     }
     return render(request, 'main/catalog.html', context)
 
+def detail(request, complex_id):
+    """Детальная страница ЖК"""
+    complex = get_object_or_404(ResidentialComplex, id=complex_id)
+    
+    # Получаем похожие ЖК для рекомендаций
+    similar_complexes = ResidentialComplex.objects.filter(
+        city=complex.city,
+        house_class=complex.house_class
+    ).exclude(id=complex.id)[:3]
+    
+    context = {
+        'complex': complex,
+        'similar_complexes': similar_complexes,
+    }
+    return render(request, 'main/detail.html', context)
+
 def districts_api(request):
     """API для получения районов по городу"""
     city = request.GET.get('city', '')
@@ -311,3 +493,15 @@ def streets_api(request):
         streets = []
     
     return JsonResponse({'streets': list(streets)})
+
+def article_view_api(request, article_id):
+    """API для увеличения счетчика просмотров статьи"""
+    if request.method == 'POST':
+        try:
+            article = Article.objects.get(id=article_id)
+            article.views_count += 1
+            article.save()
+            return JsonResponse({'success': True, 'views_count': article.views_count})
+        except Article.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+    return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)

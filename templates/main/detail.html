@@ -1,0 +1,394 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ complex.name }} - Антон Хаус{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <!-- Hero секция с главным изображением -->
+    <div class="detail-hero">
+        <div class="hero-image">
+            {% if complex.image %}
+                <img src="{{ complex.image.url }}" alt="{{ complex.name }}" class="hero-main-image">
+            {% else %}
+                <img src="https://via.placeholder.com/1200x600/4A90E2/FFFFFF?text={{ complex.name|urlencode }}" alt="{{ complex.name }}" class="hero-main-image">
+            {% endif %}
+            
+            <!-- Бейджи на изображении -->
+            <div class="hero-badges">
+                <div class="rating-badge">
+                    <span class="star">★</span>
+                    <span class="rating">3.3</span>
+                </div>
+                <div class="class-badge">
+                    {{ complex.get_house_class_display }}
+                </div>
+                <div class="verified-badge">
+                    Проверено
+                </div>
+            </div>
+            
+            <!-- Информационная панель поверх изображения -->
+            <div class="hero-info-overlay">
+                <h1 class="complex-name">{{ complex.name }}</h1>
+                <div class="price-range">
+                    от {{ complex.price_from|floatformat:1 }} до {{ complex.four_room_price|default:complex.price_from|floatformat:1 }} млн ₽
+                </div>
+                <div class="completion-info">
+                    {{ complex.completion_start }} - {{ complex.completion_end }}
+                    {% if complex.has_completed %}
+                        <span class="completed-indicator">, есть сданные</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Интерактивные кнопки -->
+            <div class="hero-actions">
+                <div class="action-item">
+                    <i class="fas fa-building"></i>
+                    <span>{{ complex.total_apartments }} предложений</span>
+                </div>
+                <div class="action-item">
+                    <i class="fas fa-play"></i>
+                    <span>Видеообзор ЖК</span>
+                </div>
+                <div class="action-item">
+                    <i class="fas fa-map"></i>
+                    <span>Генплан</span>
+                </div>
+                <div class="action-item">
+                    <i class="fas fa-percentage"></i>
+                    <span>12 акций</span>
+                </div>
+                <div class="action-item">
+                    <i class="fas fa-home"></i>
+                    <span>Ипотека</span>
+                </div>
+                <div class="action-item">
+                    <i class="fas fa-city"></i>
+                    <span>Инфраструктура</span>
+                </div>
+                <div class="action-item">
+                    <i class="fas fa-star"></i>
+                    <span>35 отзывов</span>
+                </div>
+                <div class="action-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>Ход с</span>
+                </div>
+                <div class="action-item photo-counter">
+                    <span class="photo-count">19</span>
+                    <div class="photo-nav">
+                        <button class="photo-nav-btn prev"><i class="fas fa-chevron-left"></i></button>
+                        <button class="photo-nav-btn next"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Кнопки в правом верхнем углу -->
+            <div class="hero-top-actions">
+                <button class="favorite-btn">
+                    <i class="far fa-heart"></i>
+                </button>
+                <button class="share-btn">
+                    <i class="fas fa-share"></i>
+                </button>
+                <button class="more-btn">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Основная информация -->
+    <div class="detail-content">
+        <!-- Левая панель с информацией -->
+        <div class="detail-info-panel">
+            <div class="location-section">
+                <div class="location-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}{% if complex.street %}, {{ complex.street }}{% endif %}</span>
+                </div>
+                <div class="metro-info">
+                    <i class="fas fa-subway"></i>
+                    <span>{{ complex.commute_time }}</span>
+                </div>
+            </div>
+            
+            <div class="specifications-grid">
+                <div class="spec-item">
+                    <i class="fas fa-ruler-combined"></i>
+                    <div class="spec-content">
+                        <span class="spec-label">Площади квартир</span>
+                        <span class="spec-value">{{ complex.area_from }}-{{ complex.area_to }} м²</span>
+                    </div>
+                </div>
+                
+                <div class="spec-item">
+                    <i class="fas fa-home"></i>
+                    <div class="spec-content">
+                        <span class="spec-label">Тип жилья</span>
+                        <span class="spec-value">{{ complex.get_house_type_display }}</span>
+                    </div>
+                </div>
+                
+                <div class="spec-item">
+                    <i class="fas fa-building"></i>
+                    <div class="spec-content">
+                        <span class="spec-label">Этажность</span>
+                        <span class="spec-value">17-18</span>
+                    </div>
+                </div>
+                
+                <div class="spec-item">
+                    <i class="fas fa-paint-roller"></i>
+                    <div class="spec-content">
+                        <span class="spec-label">Варианты отделки</span>
+                        <span class="spec-value">{{ complex.get_finishing_display }}</span>
+                    </div>
+                </div>
+                
+                <div class="spec-item">
+                    <i class="fas fa-building"></i>
+                    <div class="spec-content">
+                        <span class="spec-label">Количество корпусов</span>
+                        <span class="spec-value">{{ complex.total_apartments|floatformat:0 }} корпусов</span>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="#" class="more-info-link">Подробнее о ЖК</a>
+            
+            <div class="promotions">
+                <span class="promotions-count">12 акций от застройщика</span>
+            </div>
+        </div>
+        
+        <!-- Средняя секция с рейтингом транспорта -->
+        <div class="transport-rating-card">
+            <div class="transport-icon">
+                <i class="fas fa-crosshairs"></i>
+            </div>
+            <div class="transport-score">3.6 из 10</div>
+            <div class="transport-label">Транспортная доступность</div>
+        </div>
+        
+        <!-- Правая панель с контактами -->
+        <div class="detail-contact-panel">
+            <div class="developer-info">
+                <span class="developer-name">{{ complex.developer }}</span>
+                <span class="developer-label">Застройщик</span>
+            </div>
+            
+            <div class="contact-actions">
+                <button class="btn-primary contact-btn">
+                    Показать телефон
+                </button>
+                <button class="btn-secondary mortgage-btn">
+                    <i class="fas fa-clock"></i>
+                    Рассчитать ипотеку
+                </button>
+            </div>
+            
+            <div class="opening-time">
+                Откроется в 11:00
+            </div>
+            
+            <!-- Реклама -->
+            <div class="advertisement">
+                <div class="ad-image">
+                    <img src="https://via.placeholder.com/60x40/4A90E2/FFFFFF?text=Нарвин" alt="Реклама">
+                </div>
+                <div class="ad-content">
+                    <span class="ad-label">Реклама</span>
+                    <span class="ad-name">«Нарвин»</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Галерея изображений -->
+    <div class="detail-gallery">
+        <h2>Фотографии ЖК</h2>
+        <div class="gallery-grid">
+            {% if complex.image %}
+            <div class="gallery-item main" data-image="{{ complex.image.url }}">
+                <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
+            </div>
+            {% endif %}
+            {% if complex.image_2 %}
+            <div class="gallery-item" data-image="{{ complex.image_2.url }}">
+                <img src="{{ complex.image_2.url }}" alt="{{ complex.name }}">
+            </div>
+            {% endif %}
+            {% if complex.image_3 %}
+            <div class="gallery-item" data-image="{{ complex.image_3.url }}">
+                <img src="{{ complex.image_3.url }}" alt="{{ complex.name }}">
+            </div>
+            {% endif %}
+            {% if complex.image_4 %}
+            <div class="gallery-item" data-image="{{ complex.image_4.url }}">
+                <img src="{{ complex.image_4.url }}" alt="{{ complex.name }}">
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Цены по типам квартир -->
+    <div class="detail-prices">
+        <h2>Цены по типам квартир</h2>
+        <div class="prices-grid">
+            <div class="price-item">
+                <span class="room-type">Студия</span>
+                <span class="room-price">от {{ complex.studio_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+            </div>
+            <div class="price-item">
+                <span class="room-type">1-комн.</span>
+                <span class="room-price">от {{ complex.one_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+            </div>
+            <div class="price-item">
+                <span class="room-type">2-комн.</span>
+                <span class="room-price">от {{ complex.two_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+            </div>
+            <div class="price-item">
+                <span class="room-type">3-комн.</span>
+                <span class="room-price">от {{ complex.three_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+            </div>
+            <div class="price-item">
+                <span class="room-type">4-комн.+</span>
+                <span class="room-price">от {{ complex.four_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Похожие ЖК -->
+    {% if similar_complexes %}
+    <div class="similar-complexes">
+        <h2>Похожие ЖК</h2>
+        <div class="similar-grid">
+            {% for similar in similar_complexes %}
+            <div class="similar-card">
+                <div class="similar-image">
+                    {% if similar.image %}
+                        <img src="{{ similar.image.url }}" alt="{{ similar.name }}">
+                    {% else %}
+                        <img src="https://via.placeholder.com/300x200/4A90E2/FFFFFF?text={{ similar.name|urlencode }}" alt="{{ similar.name }}">
+                    {% endif %}
+                </div>
+                <div class="similar-content">
+                    <h3 class="similar-title">{{ similar.name }}</h3>
+                    <div class="similar-location">{{ similar.district|default:similar.city }}</div>
+                    <div class="similar-price">от {{ similar.price_from|floatformat:1 }} млн ₽</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Функциональность галереи изображений
+    const galleryItems = document.querySelectorAll('.gallery-item');
+    const heroImage = document.querySelector('.hero-main-image');
+    
+    galleryItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const imageUrl = this.getAttribute('data-image');
+            if (imageUrl && heroImage) {
+                heroImage.src = imageUrl;
+                
+                // Обновляем активный класс
+                galleryItems.forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            }
+        });
+    });
+    
+    // Функциональность кнопок действий
+    const actionItems = document.querySelectorAll('.action-item');
+    actionItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const actionText = this.querySelector('span').textContent;
+            console.log('Clicked:', actionText);
+            
+            // Здесь можно добавить обработку различных действий
+            if (actionText.includes('Видеообзор')) {
+                alert('Видеообзор ЖК будет открыт в новом окне');
+            } else if (actionText.includes('Генплан')) {
+                alert('Генеральный план ЖК будет открыт в новом окне');
+            } else if (actionText.includes('Ипотека')) {
+                alert('Калькулятор ипотеки будет открыт в новом окне');
+            }
+        });
+    });
+    
+    // Функциональность избранного
+    const favoriteBtn = document.querySelector('.favorite-btn');
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', function() {
+            this.classList.toggle('active');
+            const icon = this.querySelector('i');
+            if (this.classList.contains('active')) {
+                icon.className = 'fas fa-heart';
+            } else {
+                icon.className = 'far fa-heart';
+            }
+        });
+    }
+    
+    // Функциональность кнопок контактов
+    const contactBtn = document.querySelector('.contact-btn');
+    if (contactBtn) {
+        contactBtn.addEventListener('click', function() {
+            alert('Телефон: +7 347 201-94-78');
+        });
+    }
+    
+    const mortgageBtn = document.querySelector('.mortgage-btn');
+    if (mortgageBtn) {
+        mortgageBtn.addEventListener('click', function() {
+            alert('Калькулятор ипотеки будет открыт в новом окне');
+        });
+    }
+    
+    // Функциональность навигации по фото
+    const photoNavBtns = document.querySelectorAll('.photo-nav-btn');
+    photoNavBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const isNext = this.classList.contains('next');
+            const currentActive = document.querySelector('.gallery-item.active') || document.querySelector('.gallery-item');
+            const allItems = document.querySelectorAll('.gallery-item');
+            const currentIndex = Array.from(allItems).indexOf(currentActive);
+            
+            let newIndex;
+            if (isNext) {
+                newIndex = (currentIndex + 1) % allItems.length;
+            } else {
+                newIndex = currentIndex === 0 ? allItems.length - 1 : currentIndex - 1;
+            }
+            
+            const newActive = allItems[newIndex];
+            if (newActive) {
+                allItems.forEach(item => item.classList.remove('active'));
+                newActive.classList.add('active');
+                
+                const imageUrl = newActive.getAttribute('data-image');
+                if (imageUrl && heroImage) {
+                    heroImage.src = imageUrl;
+                }
+            }
+        });
+    });
+    
+    // Функциональность похожих ЖК
+    const similarCards = document.querySelectorAll('.similar-card');
+    similarCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Здесь можно добавить переход на страницу похожего ЖК
+            console.log('Clicked similar complex');
+        });
+    });
+});
+</script>
+{% endblock %} 

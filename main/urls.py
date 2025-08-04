@@ -6,8 +6,15 @@ app_name = 'main'
 urlpatterns = [
     path('', views.home, name='home'),
     path('catalog/', views.catalog, name='catalog'),
-    path('api/catalog/', views.catalog_api, name='catalog_api'),
+    path('catalog/api/', views.catalog_api, name='catalog_api'),
+    path('api/catalog/', views.catalog_api, name='catalog_api_alt'),
     path('articles/', views.articles, name='articles'),
+    path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
+    path('api/articles/<int:article_id>/view/', views.article_view_api, name='article_view_api'),
+    path('tag/<slug:slug>/', views.tag_detail, name='tag_detail'),
+    path('complex/<int:complex_id>/', views.detail, name='detail'),
+    path('api/districts/', views.districts_api, name='districts_api'),
+    path('api/streets/', views.streets_api, name='streets_api'),
     
     # Быстрые ссылки каталога
     path('catalog/completed/', views.catalog_completed, name='catalog_completed'),
@@ -17,8 +24,4 @@ urlpatterns = [
     path('catalog/premium/', views.catalog_premium, name='catalog_premium'),
     path('catalog/finished/', views.catalog_finished, name='catalog_finished'),
     path('catalog/unfinished/', views.catalog_unfinished, name='catalog_unfinished'),
-    
-    # API для фильтров
-    path('api/districts/', views.districts_api, name='districts_api'),
-    path('api/streets/', views.streets_api, name='streets_api'),
 ] 

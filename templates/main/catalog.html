@@ -22,21 +22,6 @@
             <form class="filters-form" id="filters-form">
                 <div class="filters-row">
                     <div class="filter-group">
-                        <label>Укажите количество комнат</label>
-                        <div class="button-filter">
-                            <button type="button" class="filter-btn" data-value="" data-active="{% if not filters.rooms %}true{% else %}false{% endif %}">
-                                Любое
-                            </button>
-                            {% for value, label in rooms_choices %}
-                            <button type="button" class="filter-btn" data-value="{{ value }}" data-active="{% if filters.rooms == value %}true{% else %}false{% endif %}">
-                                {{ label }}
-                            </button>
-                            {% endfor %}
-                        </div>
-                        <input type="hidden" name="rooms" id="rooms-hidden" value="{{ filters.rooms|default:'' }}">
-                    </div>
-
-                    <div class="filter-group">
                         <label for="city">Город</label>
                         <select name="city" id="city" class="filter-select">
                             <option value="">Любой</option>
@@ -106,6 +91,21 @@
                         <label for="delivery_date">Дата сдачи до</label>
                         <input type="date" name="delivery_date" id="delivery_date" value="{{ filters.delivery_date|default:'' }}" class="filter-input">
                     </div>
+
+                    <div class="filter-group">
+                        <label>Укажите количество комнат</label>
+                        <div class="button-filter">
+                            <button type="button" class="filter-btn" data-value="" data-active="{% if not filters.rooms %}true{% else %}false{% endif %}">
+                                Любое
+                            </button>
+                            {% for value, label in rooms_choices %}
+                            <button type="button" class="filter-btn" data-value="{{ value }}" data-active="{% if filters.rooms == value %}true{% else %}false{% endif %}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="rooms" id="rooms-hidden" value="{{ filters.rooms|default:'' }}">
+                    </div>
                 </div>
 
                 <div class="filters-actions">
@@ -161,7 +161,7 @@
 
         <div class="catalog-grid" id="catalog-grid">
             {% for complex in complexes %}
-            <div class="property-card-large">
+            <div class="property-card-large" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
                 <div class="card-images">
                     <div class="main-image">
                         {% if complex.image %}
@@ -309,6 +309,9 @@
         
 
     </section>
+    
+    <!-- Форма обратной связи -->
+    {% include 'includes/feedback_form.html' %}
 </div>
 
 <script>
@@ -336,10 +339,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedCity = this.value;
         
         if (selectedCity) {
-            // Показываем группу районов и улиц одновременно
-            districtGroup.style.display = 'block';
-            streetGroup.style.display = 'block';
-            
             // Загружаем районы для выбранного города
             fetch(`/api/districts/?city=${selectedCity}`)
                 .then(response => response.json())
@@ -348,6 +347,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     data.districts.forEach(district => {
                         districtSelect.innerHTML += `<option value="${district}">${district}</option>`;
                     });
+                    
+                    // Показываем группу районов с анимацией
+                    districtGroup.style.display = 'block';
+                    setTimeout(() => {
+                        districtGroup.style.opacity = '1';
+                        districtGroup.style.transform = 'translateY(0)';
+                    }, 10);
                 });
             
             // Загружаем улицы для выбранного города
@@ -358,10 +364,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     data.streets.forEach(street => {
                         streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
                     });
+                    
+                    // Показываем группу улиц с анимацией
+                    streetGroup.style.display = 'block';
+                    setTimeout(() => {
+                        streetGroup.style.opacity = '1';
+                        streetGroup.style.transform = 'translateY(0)';
+                    }, 10);
                 });
         } else {
-            districtGroup.style.display = 'none';
-            streetGroup.style.display = 'none';
+            // Скрываем группы с анимацией
+            districtGroup.style.opacity = '0';
+            districtGroup.style.transform = 'translateY(-10px)';
+            streetGroup.style.opacity = '0';
+            streetGroup.style.transform = 'translateY(-10px)';
+            
+            setTimeout(() => {
+                districtGroup.style.display = 'none';
+                streetGroup.style.display = 'none';
+            }, 300);
         }
     });
     
@@ -748,6 +769,80 @@ window.addEventListener('scroll', function() {
     } else {
         header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
     }
+});
+
+// Функциональность переключения изображений в карточках ЖК
+function initImageCarousel() {
+    const propertyCards = document.querySelectorAll('.property-card-large');
+    
+    propertyCards.forEach(card => {
+        const mainImage = card.querySelector('.main-image img');
+        const thumbnails = card.querySelectorAll('.thumbnail');
+        const imageCounter = card.querySelector('.image-counter');
+        const prevBtn = card.querySelector('.nav-btn.prev');
+        const nextBtn = card.querySelector('.nav-btn.next');
+        
+        let currentImageIndex = 0;
+        const totalImages = thumbnails.length;
+        
+        // Функция для обновления главного изображения
+        function updateMainImage(index) {
+            const thumbnail = thumbnails[index];
+            const thumbnailImg = thumbnail.querySelector('img');
+            
+            if (thumbnailImg) {
+                mainImage.src = thumbnailImg.src;
+                mainImage.alt = thumbnailImg.alt;
+                
+                // Обновляем счетчик
+                imageCounter.textContent = `${index + 1} из ${totalImages}`;
+                
+                // Обновляем активную миниатюру
+                thumbnails.forEach((thumb, i) => {
+                    thumb.classList.toggle('active', i === index);
+                });
+                
+                currentImageIndex = index;
+            }
+        }
+        
+        // Обработчики кликов по миниатюрам
+        thumbnails.forEach((thumbnail, index) => {
+            thumbnail.addEventListener('click', function(e) {
+                e.stopPropagation(); // Предотвращаем всплытие события
+                updateMainImage(index);
+            });
+        });
+        
+        // Обработчики для кнопок навигации
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const newIndex = currentImageIndex > 0 ? currentImageIndex - 1 : totalImages - 1;
+                updateMainImage(newIndex);
+            });
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
+                updateMainImage(newIndex);
+            });
+        }
+        
+        // Обработчик клика по главному изображению для перехода к следующему
+        mainImage.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
+            updateMainImage(newIndex);
+        });
+    });
+}
+
+// Инициализация карусели изображений при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    initImageCarousel();
 });
 </script>
 {% endblock %} 
