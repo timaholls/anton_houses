@@ -618,6 +618,7 @@ function loadPage(page) {
             currentPage = data.current_page;
             updateCatalog(data);
             updatePagination(data);
+            updateResultsCount(data.total_count);
             // Обновляем URL без параметров
             window.history.pushState({}, '', '/catalog/');
         })
@@ -635,40 +636,101 @@ function updateCatalog(data) {
         return;
     }
     
-    // Проверяем, применены ли фильтры
-    const formData = new FormData(document.getElementById('filters-form'));
-    const hasFilters = Array.from(formData.entries()).some(([key, value]) => value);
-    
     let html = '';
     data.complexes.forEach(complex => {
-        const imageUrl = complex.image_url || `https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=${encodeURIComponent(complex.name)}`;
+        const imageUrl = complex.image_url || `https://via.placeholder.com/600x400/0066cc/ffffff?text=${encodeURIComponent(complex.name)}`;
         
         html += `
-            <div class="property-card">
-                <div class="card-image">
-                    <img src="${imageUrl}" alt="${complex.name}">
+            <div class="property-card-large" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
+                <div class="card-images">
+                    <div class="main-image">
+                        <img src="${imageUrl}" alt="${complex.name}">
+                        <div class="image-counter">1 из 4</div>
+                        <div class="image-nav">
+                            <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
+                            <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="thumbnail-images">
+                        <div class="thumbnail active">
+                            <img src="${imageUrl}" alt="${complex.name}">
+                        </div>
+                        <div class="thumbnail">
+                            <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=2" alt="${complex.name}">
+                        </div>
+                        <div class="thumbnail">
+                            <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=3" alt="${complex.name}">
+                        </div>
+                        <div class="thumbnail more">
+                            <span>+1</span>
+                            <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=4" alt="${complex.name}">
+                        </div>
+                    </div>
                 </div>
-                <div class="card-content">
+                
+                <div class="card-content-large">
                     <div class="card-header">
-                        <h3 class="card-title">${complex.name}</h3>
-                        <span class="card-price">${complex.price_display}</span>
+                        <div class="card-title-section">
+                            <h3 class="card-title">${complex.name}</h3>
+                            <div class="card-subtitle">
+                                ${complex.total_apartments || 100} квартир от застройщика
+                            </div>
+                            <div class="completion-info">
+                                ${complex.completion_start || '3 кв. 2024'} - ${complex.completion_end || '4 кв. 2025'}
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-location">
-                        <i class="fas fa-car"></i>
-                        <span>${complex.location} ${complex.commute_time}</span>
+                    
+                    <div class="card-location-info">
+                        <div class="location-text">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>${complex.location} ${complex.commute_time}</span>
+                        </div>
                     </div>
-                    ${hasFilters ? `
-                    <div class="card-details">
-                        <span class="detail-item">${complex.house_type_display || complex.house_type}</span>
-                        <span class="detail-item">${complex.area_from}-${complex.area_to} м²</span>
+                    
+                    <div class="card-price-section">
+                        <div class="main-price">
+                            <span class="price-label">от</span>
+                            <span class="price-value">${complex.price_from || complex.price_display.replace('от ', '').replace(' млн Р', '')}</span>
+                            <span class="price-currency">млн Р</span>
+                        </div>
                     </div>
-                    ` : ''}
+                    
+                    <div class="apartment-prices">
+                        <div class="price-row">
+                            <span class="room-type">Студия</span>
+                            <span class="room-price">от ${complex.studio_price || (complex.price_from * 0.8).toFixed(1)} млн Р</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">1-комн.</span>
+                            <span class="room-price">от ${complex.one_room_price || complex.price_from} млн Р</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">2-комн.</span>
+                            <span class="room-price">от ${complex.two_room_price || (complex.price_from * 1.25).toFixed(1)} млн Р</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">3-комн.</span>
+                            <span class="room-price">от ${complex.three_room_price || (complex.price_from * 1.5).toFixed(1)} млн Р</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">4-комн. +</span>
+                            <span class="room-price">от ${complex.four_room_price || (complex.price_from * 2).toFixed(1)} млн Р</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
     });
     
     grid.innerHTML = html;
+}
+
+function updateResultsCount(count) {
+    const resultsCount = document.querySelector('.results-count');
+    if (resultsCount) {
+        resultsCount.textContent = `Найдено ${count} домов`;
+    }
 }
 
 function updatePagination(data) {

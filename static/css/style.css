@@ -150,6 +150,23 @@ body {
     color: #0066cc;
 }
 
+.nav-link.active {
+    color: #4A90E2;
+    font-weight: 600;
+    position: relative;
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #4A90E2;
+    border-radius: 1px;
+}
+
 /* Правая часть шапки */
 .header-right {
     display: flex;
@@ -1614,6 +1631,11 @@ body {
     
     .nav-link {
         font-size: 14px;
+    }
+    
+    .nav-link.active::after {
+        bottom: -3px;
+        height: 1px;
     }
     
     .filters-row {

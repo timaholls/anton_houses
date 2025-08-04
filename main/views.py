@@ -200,6 +200,7 @@ def catalog_api(request):
             'id': complex.id,
             'name': complex.name,
             'price_display': complex.price_display,
+            'price_from': complex.price_from,
             'location': location,
             'commute_time': complex.commute_time,
             'image_url': complex.image.url if complex.image else None,
@@ -207,6 +208,14 @@ def catalog_api(request):
             'house_type_display': complex.get_house_type_display(),
             'area_from': complex.area_from,
             'area_to': complex.area_to,
+            'total_apartments': complex.total_apartments,
+            'completion_start': complex.completion_start,
+            'completion_end': complex.completion_end,
+            'studio_price': complex.studio_price,
+            'one_room_price': complex.one_room_price,
+            'two_room_price': complex.two_room_price,
+            'three_room_price': complex.three_room_price,
+            'four_room_price': complex.four_room_price,
         })
     
     return JsonResponse({

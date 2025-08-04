@@ -24,8 +24,9 @@
             </div>
 
             <nav class="main-nav">
-                <a href="{% url 'main:catalog' %}" class="nav-link">Каталог ЖК</a>
-                <a href="{% url 'main:articles' %}" class="nav-link">Статьи</a>
+                <a href="{% url 'main:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Главная</a>
+                <a href="{% url 'main:catalog' %}" class="nav-link {% if 'catalog' in request.resolver_match.url_name %}active{% endif %}">Каталог ЖК</a>
+                <a href="{% url 'main:articles' %}" class="nav-link {% if 'articles' in request.resolver_match.url_name %}active{% endif %}">Статьи</a>
             </nav>
 
             <div class="header-right">
