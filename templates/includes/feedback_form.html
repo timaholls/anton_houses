@@ -11,11 +11,9 @@
             <div class="feedback-inputs">
                 <input type="text" name="name" placeholder="Имя" class="feedback-input" required>
                 
-                <input type="email" name="email" placeholder="mail@example.com" class="feedback-input" required>
-                
                 <div class="phone-input-wrapper">
                     <div class="phone-prefix">
-                        <span class="country-code">+7 🇷🇺</span>
+                        <span class="country-code">+7</span>
                     </div>
                     <input type="tel" name="phone" placeholder="(999) 999-99-99" class="feedback-input phone-input" required>
                 </div>
@@ -26,7 +24,7 @@
                     <input type="checkbox" name="privacy" required class="checkbox-input">
                     <span class="checkbox-custom"></span>
                     <span class="checkbox-text">
-                        Отправляя заявку вы соглашаетесь с <a href="#" class="privacy-link">политикой конфиденциальности</a>
+                        Отправляя заявку вы соглашаетесь с <a href="{% url 'main:privacy' %}" class="privacy-link">политикой конфиденциальности</a>
                     </span>
                 </label>
             </div>
@@ -35,16 +33,63 @@
                 Отправить
             </button>
         </form>
-        
-        <div class="feedback-links">
-            <a href="#" class="feedback-link">Ознакомиться с условиями оплаты и доставки</a>
-        </div>
     </div>
 </section>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const feedbackForm = document.getElementById('feedback-form');
+    const phoneInput = document.querySelector('.phone-input');
+
+    // Маска телефона: (999) 999-99-99
+    function formatPhone(value) {
+        const digits = value.replace(/\D/g, '').slice(0, 10);
+        let result = '';
+        if (digits.length > 0) {
+            result = '(' + digits.slice(0, Math.min(3, digits.length));
+        }
+        if (digits.length >= 3) {
+            result = '(' + digits.slice(0, 3) + ')';
+        }
+        if (digits.length > 3) {
+            result += ' ' + digits.slice(3, Math.min(6, digits.length));
+        }
+        if (digits.length > 6) {
+            result += '-' + digits.slice(6, Math.min(8, digits.length));
+        }
+        if (digits.length > 8) {
+            result += '-' + digits.slice(8, 10);
+        }
+        return result;
+    }
+
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            const cursorPos = this.selectionStart;
+            const prevLength = this.value.length;
+            this.value = formatPhone(this.value);
+            // Примерная коррекция позиции курсора
+            const newLength = this.value.length;
+            const diff = newLength - prevLength;
+            this.setSelectionRange(cursorPos + (diff > 0 ? 1 : 0), cursorPos + (diff > 0 ? 1 : 0));
+        });
+
+        phoneInput.addEventListener('keydown', function(e) {
+            // Разрешаем служебные клавиши
+            const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
+            if (allowed.includes(e.key)) return;
+            // Разрешаем только цифры
+            if (!/\d/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        phoneInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            this.value = formatPhone(text);
+        });
+    }
     
     if (feedbackForm) {
         feedbackForm.addEventListener('submit', function(e) {
@@ -54,11 +99,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(feedbackForm);
             const name = formData.get('name');
             const phone = formData.get('phone');
-            const email = formData.get('email');
             const privacy = formData.get('privacy');
             
             // Простая валидация
-            if (!name || !phone || !email) {
+            if (!name || !phone) {
                 alert('Пожалуйста, заполните все обязательные поля');
                 return;
             }
@@ -68,27 +112,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Валидация email
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert('Пожалуйста, введите корректный email адрес');
+            // Валидация телефона (10 цифр внутри скобок)
+            const digits = (phone || '').replace(/\D/g, '');
+            if (digits.length !== 10) {
+                alert('Пожалуйста, введите номер в формате (999) 999-99-99');
                 return;
             }
             
-            // Валидация телефона (базовая)
-            const phoneRegex = /^\+7\s?\(?(\d{3})\)?[\s-]?(\d{3})[\s-]?(\d{2})[\s-]?(\d{2})$/;
-            if (!phoneRegex.test(phone)) {
-                alert('Пожалуйста, введите корректный номер телефона в формате +7 (999) 999-99-99');
-                return;
-            }
-            
-            // Здесь можно добавить отправку данных на сервер
-            console.log('Данные формы:', { name, phone, email, privacy });
-            
-            // Показываем сообщение об успехе
+            console.log('Данные формы:', { name, phone: '+7 ' + phone, privacy });
             alert('Спасибо! Мы свяжемся с вами в ближайшее время.');
-            
-            // Очищаем форму
             feedbackForm.reset();
         });
     }

@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-$lzrwtj=5@p6bd#%_0u*cxn6@8+@cl^i$6q^wwzw-!yd_v%q%s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["spitefully-assuring-newfoundland.cloudpub.ru", "localhost"]
 
 
 # Application definition
@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'ckeditor',
+    'tinymce',
     'main',
 ]
 
@@ -131,53 +131,14 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CKEditor Configuration
-CKEDITOR_CONFIGS = {
-    'default': {
-        'toolbar': 'Custom',
-        'toolbar_Custom': [
-            ['Bold', 'Italic', 'Underline', 'Strike'],
-            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent'],
-            ['JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
-            ['Link', 'Unlink'],
-            ['RemoveFormat', 'Source'],
-            ['Format', 'Font', 'FontSize'],
-            ['TextColor', 'BGColor'],
-            ['Table', 'HorizontalRule', 'SpecialChar'],
-            ['Image', 'Flash'],
-            ['Maximize'],
-        ],
-        'height': 400,
-        'width': '100%',
-        'removePlugins': 'stylesheetparser',
-        'allowedContent': True,
-        'extraAllowedContent': 'span(*)',
-        'language': 'ru',
-    },
-    'article': {
-        'toolbar': 'Article',
-        'toolbar_Article': [
-            ['Bold', 'Italic', 'Underline', 'Strike'],
-            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent'],
-            ['JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
-            ['Link', 'Unlink'],
-            ['RemoveFormat', 'Source'],
-            ['Format', 'Font', 'FontSize'],
-            ['TextColor', 'BGColor'],
-            ['Table', 'HorizontalRule', 'SpecialChar'],
-            ['Image', 'Flash'],
-            ['Maximize'],
-        ],
-        'height': 500,
-        'width': '100%',
-        'removePlugins': 'stylesheetparser',
-        'allowedContent': True,
-        'extraAllowedContent': 'span(*)',
-        'language': 'ru',
-        'filebrowserUploadUrl': '/ckeditor/upload/',
-        'filebrowserBrowseUrl': '/ckeditor/browse/',
-    },
+# TinyMCE configuration (минимальный пресет, можно расширить)
+TINYMCE_DEFAULT_CONFIG = {
+    'height': 500,
+    'width': '100%',
+    'menubar': True,
+    'plugins': 'link image lists table code autoresize',
+    'toolbar': 'undo redo | styles | bold italic underline | alignleft aligncenter alignright alignjustify | '
+               'bullist numlist outdent indent | link image table | code',
+    'language': 'ru',
+    'autoresize_bottom_margin': 16,
 }
-
-CKEDITOR_UPLOAD_PATH = "uploads/"
-CKEDITOR_IMAGE_BACKEND = "pillow"

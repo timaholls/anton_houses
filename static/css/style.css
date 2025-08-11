@@ -3877,3 +3877,226 @@ body {
         background: #4A90E2;
     }
 } 
+
+/* =============================
+   Century 21 Theme Overrides
+   ============================= */
+:root {
+    --c21-gold: #BEAF87;        /* Relentless Gold */
+    --c21-gold-dark: #A19276;   /* Dark Gold */
+    --c21-dark: #252526;        /* Obsessed Grey */
+    --c21-mid: #808285;         /* Medium Grey */
+    --c21-light: #E6E7E8;       /* Light Grey */
+}
+
+body {
+    color: var(--c21-dark);
+    background-color: #fff;
+    font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header */
+.main-header {
+    background-color: var(--c21-dark);
+    box-shadow: none;
+}
+
+.logo-text {
+    color: var(--c21-gold);
+    letter-spacing: 1px;
+}
+
+.main-nav .nav-link {
+    color: var(--c21-light);
+}
+
+.main-nav .nav-link:hover {
+    color: var(--c21-gold);
+}
+
+.main-nav .nav-link.active {
+    color: var(--c21-gold);
+}
+
+.main-nav .nav-link.active::after {
+    background: var(--c21-gold);
+}
+
+.header-right .phone-number,
+.header-right .working-hours,
+.header-right .address {
+    color: var(--c21-light);
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--c21-gold) !important;
+    color: var(--c21-dark) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--c21-gold-dark) !important;
+    box-shadow: 0 4px 12px rgba(190, 175, 135, 0.35) !important;
+}
+
+.feedback-submit {
+    background: var(--c21-gold) !important;
+    color: var(--c21-dark) !important;
+}
+
+.feedback-submit:hover {
+    background: var(--c21-gold-dark) !important;
+    box-shadow: 0 8px 25px rgba(190, 175, 135, 0.35) !important;
+}
+
+/* Accents */
+.card-price,
+.section-title .accent,
+.about-quote::before,
+.footer-title::after,
+.contact-item i,
+.pagination-number.active {
+    color: var(--c21-gold) !important;
+    background: none;
+}
+
+.breadcrumb-link:hover,
+.article-title a:hover,
+.tags-cloud .tag-link:hover,
+.footer-links a:hover,
+.footer-bottom .privacy-link:hover {
+    color: var(--c21-gold) !important;
+}
+
+/* Footer */
+.footer {
+    background-color: var(--c21-dark) !important;
+}
+
+.footer-title { color: #fff; }
+.footer-links a { color: #cfcfcf; }
+
+/* Chips, badges */
+.article-category,
+.completed-badge {
+    background: var(--c21-light) !important;
+    color: var(--c21-dark) !important;
+}
+
+/* Inputs focus */
+input:focus, select:focus, textarea:focus {
+    outline-color: var(--c21-gold);
+    border-color: var(--c21-gold);
+}
+
+/* Range slider fills */
+.area-fill,
+.price-fill {
+    background: var(--c21-gold) !important;
+}
+
+/* Links default */
+a { color: var(--c21-dark); }
+a:hover { color: var(--c21-gold); }
+
+/* Century 21: Feedback form color cleanup */
+.feedback-input {
+    border: 2px solid var(--c21-mid) !important;
+}
+
+.feedback-input:focus {
+    border-color: var(--c21-gold) !important;
+    box-shadow: 0 0 0 3px rgba(190, 175, 135, 0.2) !important;
+}
+
+.phone-input-wrapper {
+    border: 2px solid var(--c21-mid) !important;
+}
+
+.phone-input-wrapper:focus-within {
+    border-color: var(--c21-gold) !important;
+    box-shadow: 0 0 0 3px rgba(190, 175, 135, 0.2) !important;
+}
+
+.checkbox-input:checked + .checkbox-custom {
+    background: var(--c21-gold) !important;
+    border-color: var(--c21-gold) !important;
+}
+
+/* Ensure privacy link visible without hover */
+.privacy-link {
+    color: var(--c21-gold) !important;
+    text-decoration: underline;
+}
+
+/* Phone prefix spacing tweak */
+.phone-prefix {
+    background: #F5F5F5;
+    color: var(--c21-dark);
+    font-weight: 600;
+}
+
+/* Грид для фильтров без пустот */
+.filters-row-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(280px, 1fr));
+    gap: 20px 32px;
+    align-items: end;
+}
+
+/* Чипы-кнопки для категорий вторички */
+.button-filter.chips {
+    gap: 10px;
+}
+
+.filter-chip {
+    display: inline-block;
+    padding: 8px 14px;
+    background: var(--c21-light);
+    color: var(--c21-dark);
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.filter-chip.active, .filter-chip:hover {
+    background: var(--c21-dark);
+    color: var(--c21-gold);
+}
+
+/* Brand color overrides to remove blue */
+.header-link:hover,
+.contact-link,
+.location-link,
+.nav-link:hover,
+.phone-number:hover,
+.breadcrumb-link:hover,
+.footer-links a:hover,
+.footer-bottom .privacy-link:hover {
+    color: var(--c21-gold) !important;
+}
+
+.category-btn,
+.btn-primary,
+.filter-btn[data-active="true"],
+.pagination-number.active,
+.sorting-active,
+.feedback-submit {
+    background-color: var(--c21-gold) !important;
+    color: var(--c21-dark) !important;
+    border-color: var(--c21-gold) !important;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+    border-color: var(--c21-gold) !important;
+    box-shadow: 0 0 0 3px rgba(190,175,135,0.2) !important;
+}
+
+.range-slider-input::-webkit-slider-thumb {
+    background: var(--c21-dark);
+}
+
+.range-fill {
+    background: var(--c21-gold) !important;
+}

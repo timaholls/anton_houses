@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils.text import slugify
-from ckeditor.fields import RichTextField
+from tinymce.models import HTMLField
 import re
 
 # Create your models here.
@@ -193,8 +193,8 @@ class Article(models.Model):
     ]
     
     title = models.CharField(max_length=200, verbose_name="Заголовок")
-    content = RichTextField(verbose_name="Содержание", config_name='article')
-    excerpt = RichTextField(max_length=500, verbose_name="Краткое описание", config_name='default')
+    content = HTMLField(verbose_name="Содержание")
+    excerpt = HTMLField(max_length=500, verbose_name="Краткое описание")
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='tips', verbose_name="Категория")
     image = models.ImageField(upload_to='articles/', blank=True, null=True, verbose_name="Изображение")
     published_date = models.DateField(auto_now_add=True, verbose_name="Дата публикации")
@@ -223,3 +223,83 @@ class Article(models.Model):
     
     def get_absolute_url(self):
         return f'/articles/{self.slug}/'
+
+class CatalogLanding(models.Model):
+    """SEO-страница каталога (Новостройки/Вторичка + категории)"""
+    KIND_CHOICES = [
+        ('newbuild', 'Новостройки'),
+        ('secondary', 'Вторичная недвижимость'),
+    ]
+
+    CATEGORY_CHOICES = [
+        ('apartment', 'Квартиры'),
+        ('house', 'Дома'),
+        ('cottage', 'Коттеджи'),
+        ('townhouse', 'Таунхаусы'),
+        ('commercial', 'Коммерческие помещения'),
+        ('all', 'Все объекты'),
+    ]
+
+    name = models.CharField(max_length=200, verbose_name='Название страницы')
+    slug = models.SlugField(max_length=200, unique=True, verbose_name='URL')
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, verbose_name='Тип страницы')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='all', verbose_name='Категория')
+
+    meta_title = models.CharField(max_length=255, blank=True, verbose_name='Meta Title')
+    meta_description = models.TextField(blank=True, verbose_name='Meta Description')
+    meta_keywords = models.CharField(max_length=255, blank=True, verbose_name='Meta Keywords')
+
+    class Meta:
+        verbose_name = 'Страница каталога'
+        verbose_name_plural = 'Страницы каталога'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return f"/catalog/l/{self.slug}/"
+
+class SecondaryProperty(models.Model):
+    """Объект вторичной недвижимости"""
+    HOUSE_TYPE_CHOICES = [
+        ('apartment', 'Квартира'),
+        ('house', 'Частный дом'),
+        ('cottage', 'Коттедж'),
+        ('townhouse', 'Таунхаус'),
+        ('commercial', 'Коммерческое помещение'),
+    ]
+
+    ROOMS_CHOICES = ResidentialComplex.ROOMS_CHOICES
+
+    name = models.CharField(max_length=200, verbose_name='Название')
+    price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Цена (млн)')
+    city = models.CharField(max_length=100, verbose_name='Город', default='Уфа')
+    district = models.CharField(max_length=100, verbose_name='Район', blank=True)
+    street = models.CharField(max_length=200, verbose_name='Улица', blank=True)
+    commute_time = models.CharField(max_length=50, verbose_name='Время в пути', default='10 минут')
+
+    image = models.ImageField(upload_to='secondary/', blank=True, null=True, verbose_name='Изображение')
+    image_2 = models.ImageField(upload_to='secondary/', blank=True, null=True, verbose_name='Изображение 2')
+    image_3 = models.ImageField(upload_to='secondary/', blank=True, null=True, verbose_name='Изображение 3')
+    image_4 = models.ImageField(upload_to='secondary/', blank=True, null=True, verbose_name='Изображение 4')
+
+    house_type = models.CharField(max_length=20, choices=HOUSE_TYPE_CHOICES, default='apartment', verbose_name='Тип объекта')
+    area = models.DecimalField(max_digits=7, decimal_places=1, default=45.0, verbose_name='Площадь (м²)')
+    rooms = models.CharField(max_length=10, choices=ROOMS_CHOICES, default='2', verbose_name='Комнат')
+
+    description = models.TextField(blank=True, verbose_name='Описание')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Вторичная недвижимость'
+        verbose_name_plural = 'Вторичная недвижимость'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def price_from(self):
+        # Для совместимости с шаблоном каталога
+        return self.price

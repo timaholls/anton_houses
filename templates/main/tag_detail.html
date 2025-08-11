@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ tag.meta_title|default:tag.name }} - Антон Хаус{% endblock %}
+{% block title %}{{ tag.meta_title|default:tag.name }} - CENTURY 21{% endblock %}
 
 {% block meta %}
 <meta name="description" content="{{ tag.meta_description|default:tag.name }}">
@@ -36,7 +36,7 @@
                         {% if article.image %}
                             <img src="{{ article.image.url }}" alt="{{ article.title }}">
                         {% else %}
-                            <img src="https://via.placeholder.com/300x200/4A90E2/FFFFFF?text={{ article.title|urlencode }}" alt="{{ article.title }}">
+                            <img src="https://via.placeholder.com/300x200/252526/BEAF87?text={{ article.title|urlencode }}" alt="{{ article.title }}">
                         {% endif %}
                     </div>
                     

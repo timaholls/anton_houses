@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Антон Хаус - Недвижимость{% endblock %}</title>
+    <title>{% block title %}CENTURY 21 - Недвижимость{% endblock %}</title>
+    {% block meta %}{% endblock %}
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -18,7 +19,7 @@
             <div class="header-left">
                 <div class="logo">
                     <a href="{% url 'main:home' %}">
-                        <span class="logo-text">Антон Хаус</span>
+                        <span class="logo-text">CENTURY 21</span>
                     </a>
                 </div>
             </div>
@@ -131,10 +132,10 @@
             <!-- Нижняя часть футера -->
             <div class="footer-bottom">
                 <div class="footer-bottom-left">
-                    <p>&copy; 2024 Антон Хаус. Все права защищены.</p>
+                    <p>&copy; 2024 CENTURY 21. Все права защищены.</p>
                 </div>
                 <div class="footer-bottom-right">
-                    <a href="#" class="privacy-link">Политика конфиденциальности</a>
+                    <a href="{% url 'main:privacy' %}" class="privacy-link">Политика конфиденциальности</a>
                 </div>
             </div>
         </div>

@@ -1,6 +1,17 @@
 {% extends 'base.html' %}
 
-{% block title %}Антон Хаус - Каталог ЖК{% endblock %}
+{% block title %}{% if landing and landing.meta_title %}{{ landing.meta_title }}{% elif page_title %}{{ page_title }} — CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
+
+{% block meta %}
+{% if landing and landing.meta_description %}
+<meta name="description" content="{{ landing.meta_description }}">
+{% elif page_description %}
+<meta name="description" content="{{ page_description }}">
+{% endif %}
+{% if landing and landing.meta_keywords %}
+<meta name="keywords" content="{{ landing.meta_keywords }}">
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,6 +19,18 @@
         <div class="catalog-header">
             <h1 class="section-title">{% if page_title %}{{ page_title }}{% else %}Каталог жилых комплексов{% endif %}</h1>
             <p class="section-subtitle">{% if page_description %}{{ page_description }}{% else %}Все доступные предложения{% endif %}</p>
+
+            <div class="catalog-tabs">
+                <a href="{% url 'main:newbuild_index' %}" class="catalog-tab {% if dataset_type == 'newbuild' %}active{% endif %}">Новостройки</a>
+                <a href="{% url 'main:secondary_index' %}" class="catalog-tab alt {% if dataset_type == 'secondary' %}active{% endif %}">Вторичная недвижимость</a>
+            </div>
+            {% if landing_categories %}
+            <div class="catalog-categories">
+                {% for lc in landing_categories %}
+                    <a href="{% url 'main:catalog_landing' lc.slug %}" class="catalog-category{% if landing and landing.slug == lc.slug %} active{% endif %}">{{ lc.name }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
         
         <!-- Хлебные крошки -->
@@ -20,7 +43,7 @@
         <!-- Фильтры -->
         <div class="filters-section">
             <form class="filters-form" id="filters-form">
-                <div class="filters-row">
+                <div class="filters-row filters-row-grid">
                     <div class="filter-group">
                         <label for="city">Город</label>
                         <select name="city" id="city" class="filter-select">
@@ -33,14 +56,14 @@
                         </select>
                     </div>
 
-                    <div class="filter-group" id="district-group" style="display: none;">
+                    <div class="filter-group" id="district-group">
                         <label for="district">Район</label>
                         <select name="district" id="district" class="filter-select">
                             <option value="">Любой</option>
                         </select>
                     </div>
 
-                    <div class="filter-group" id="street-group" style="display: none;">
+                    <div class="filter-group" id="street-group">
                         <label for="street">Улица</label>
                         <select name="street" id="street" class="filter-select">
                             <option value="">Любая</option>
@@ -87,11 +110,19 @@
                         </div>
                     </div>
 
+                    {% if dataset_type == 'secondary' %}
                     <div class="filter-group">
-                        <label for="delivery_date">Дата сдачи до</label>
-                        <input type="date" name="delivery_date" id="delivery_date" value="{{ filters.delivery_date|default:'' }}" class="filter-input">
+                        <label>Категория объекта</label>
+                        <div class="button-filter chips">
+                            <button type="button" class="filter-chip filter-chip-btn" data-value="" {% if not filters.stype %}data-active="true"{% endif %}>Все</button>
+                            <button type="button" class="filter-chip filter-chip-btn" data-value="apartment" {% if filters.stype == 'apartment' %}data-active="true"{% endif %}>Квартиры</button>
+                            <button type="button" class="filter-chip filter-chip-btn" data-value="cottage" {% if filters.stype == 'cottage' %}data-active="true"{% endif %}>Коттеджи</button>
+                            <button type="button" class="filter-chip filter-chip-btn" data-value="townhouse" {% if filters.stype == 'townhouse' %}data-active="true"{% endif %}>Таунхаусы</button>
+                            <button type="button" class="filter-chip filter-chip-btn" data-value="commercial" {% if filters.stype == 'commercial' %}data-active="true"{% endif %}>Коммерческие</button>
+                        </div>
+                        <input type="hidden" name="stype" id="stype-hidden" value="{{ filters.stype|default:'' }}">
                     </div>
-
+                    {% else %}
                     <div class="filter-group">
                         <label>Укажите количество комнат</label>
                         <div class="button-filter">
@@ -106,6 +137,7 @@
                         </div>
                         <input type="hidden" name="rooms" id="rooms-hidden" value="{{ filters.rooms|default:'' }}">
                     </div>
+                    {% endif %}
                 </div>
 
                 <div class="filters-actions">
@@ -118,7 +150,7 @@
                         Найдено {{ page_obj.paginator.count }} домов
                     </div>
                     
-                    <a href="{% url 'main:catalog' %}" class="clear-filters">
+                    <a href="{% url 'main:catalog' %}" class="clear-filters" id="clear-filters">
                         <i class="fas fa-times"></i>
                         Очистить фильтр
                     </a>
@@ -161,13 +193,13 @@
 
         <div class="catalog-grid" id="catalog-grid">
             {% for complex in complexes %}
-            <div class="property-card-large" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
+            <div class="property-card-large" onclick="window.location.href='{% if dataset_type == 'secondary' %}{% url 'main:secondary_detail' complex.id %}{% else %}{% url 'main:detail' complex.id %}{% endif %}'" style="cursor: pointer;">
                 <div class="card-images">
                     <div class="main-image">
                         {% if complex.image %}
                             <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
                         {% else %}
-                            <img src="https://via.placeholder.com/600x400/0066cc/ffffff?text={{ complex.name|urlencode }}" alt="{{ complex.name }}">
+                            <img src="https://via.placeholder.com/600x400/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}">
                         {% endif %}
                         <div class="image-counter">1 из 4</div>
                         <div class="image-nav">
@@ -180,21 +212,21 @@
                             {% if complex.image %}
                                 <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=1" alt="{{ complex.name }}">
+                                <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=1" alt="{{ complex.name }}">
                             {% endif %}
                         </div>
                         <div class="thumbnail">
                             {% if complex.image_2 %}
                                 <img src="{{ complex.image_2.url }}" alt="{{ complex.name }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=2" alt="{{ complex.name }}">
+                                <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=2" alt="{{ complex.name }}">
                             {% endif %}
                         </div>
                         <div class="thumbnail">
                             {% if complex.image_3 %}
                                 <img src="{{ complex.image_3.url }}" alt="{{ complex.name }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=3" alt="{{ complex.name }}">
+                                <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=3" alt="{{ complex.name }}">
                             {% endif %}
                         </div>
                         <div class="thumbnail more">
@@ -202,7 +234,7 @@
                             {% if complex.image_4 %}
                                 <img src="{{ complex.image_4.url }}" alt="{{ complex.name }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=4" alt="{{ complex.name }}">
+                                <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=4" alt="{{ complex.name }}">
                             {% endif %}
                         </div>
                     </div>
@@ -314,6 +346,19 @@
     {% include 'includes/feedback_form.html' %}
 </div>
 
+<style>
+.catalog-tabs { margin-top: 12px; display: flex; gap: 16px; justify-content: center; }
+.catalog-tab { padding: 8px 16px; border-radius: 999px; background: var(--c21-light); color: var(--c21-dark); text-decoration: none; font-weight: 600; }
+.catalog-tab.active { background: var(--c21-dark); color: var(--c21-gold); }
+.catalog-tab.alt { background: var(--c21-light); color: var(--c21-dark); }
+.catalog-tab.alt.active { background: var(--c21-dark); color: var(--c21-gold); }
+.catalog-categories { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.catalog-category { padding: 6px 12px; border: 1px solid var(--c21-mid); border-radius: 999px; text-decoration: none; color: var(--c21-dark); font-weight: 600; }
+.catalog-category.active, .catalog-category:hover { border-color: var(--c21-gold); color: var(--c21-gold); }
+.filter-chip { display:inline-block; padding:8px 14px; background: var(--c21-light); color: var(--c21-dark); border-radius: 999px; text-decoration: none; font-weight:600; }
+.filter-chip.active, .filter-chip:hover { background: var(--c21-dark); color: var(--c21-gold); }
+</style>
+
 <script>
 // Range Slider функциональность
 document.addEventListener('DOMContentLoaded', function() {
@@ -403,7 +448,13 @@ document.addEventListener('DOMContentLoaded', function() {
             this.setAttribute('data-active', 'true');
             
             // Обновляем скрытое поле
-            roomsHidden.value = this.getAttribute('data-value');
+            if (roomsHidden) {
+                roomsHidden.value = this.getAttribute('data-value');
+            }
+            
+            // Мгновенный запуск поиска
+            const form = document.getElementById('filters-form');
+            if (form) form.submit();
         });
     });
     
@@ -638,7 +689,7 @@ function updateCatalog(data) {
     
     let html = '';
     data.complexes.forEach(complex => {
-        const imageUrl = complex.image_url || `https://via.placeholder.com/600x400/0066cc/ffffff?text=${encodeURIComponent(complex.name)}`;
+        const imageUrl = complex.image_url || `https://via.placeholder.com/600x400/252526/BEAF87?text=${encodeURIComponent(complex.name)}`;
         
         html += `
             <div class="property-card-large" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
@@ -656,14 +707,14 @@ function updateCatalog(data) {
                             <img src="${imageUrl}" alt="${complex.name}">
                         </div>
                         <div class="thumbnail">
-                            <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=2" alt="${complex.name}">
+                            <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=2" alt="${complex.name}">
                         </div>
                         <div class="thumbnail">
-                            <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=3" alt="${complex.name}">
+                            <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=3" alt="${complex.name}">
                         </div>
                         <div class="thumbnail more">
                             <span>+1</span>
-                            <img src="https://via.placeholder.com/120x80/0066cc/ffffff?text=4" alt="${complex.name}">
+                            <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=4" alt="${complex.name}">
                         </div>
                     </div>
                 </div>
@@ -822,6 +873,27 @@ function updateResultsCount(count) {
         resultsCount.textContent = `Найдено ${count} домов`;
     }
 }
+
+// Обработка чипов категорий вторички (выбор без авто-перехода)
+(function(){
+  const chipBtns = document.querySelectorAll('.filter-chip-btn');
+  const stypeHidden = document.getElementById('stype-hidden');
+  if (!chipBtns.length || !stypeHidden) return;
+  chipBtns.forEach(btn => {
+    btn.addEventListener('click', function(){
+      chipBtns.forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      stypeHidden.value = this.getAttribute('data-value');
+      // Мгновенный запуск поиска
+      const form = document.getElementById('filters-form');
+      if (form) form.submit();
+    });
+    // Инициализация активного состояния из скрытого поля
+    if (btn.getAttribute('data-value') === (stypeHidden.value || '')) {
+      btn.classList.add('active');
+    }
+  });
+})();
 
 // Эффект тени для sticky шапки при прокрутке
 window.addEventListener('scroll', function() {

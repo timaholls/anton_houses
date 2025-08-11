@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Политика конфиденциальности - CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+  <section class="privacy-hero">
+    <span class="privacy-badge">Документ</span>
+    <h1 class="privacy-title">Политика конфиденциальности</h1>
+    <p class="privacy-subtitle">Как мы собираем, используем и защищаем ваши персональные данные</p>
+  </section>
+
+  <article class="privacy-content">
+    <h2>1. Общие положения</h2>
+    <p>Настоящая Политика разработана в соответствии с Федеральным законом РФ №152-ФЗ «О персональных данных» и иными нормативными актами, регулирующими вопросы защиты персональных данных.</p>
+
+    <h2>2. Оператор персональных данных</h2>
+    <p>Оператором персональных данных является компания CENTURY 21 (далее — «Компания»).</p>
+
+    <h2>3. Состав обрабатываемых персональных данных</h2>
+    <ul>
+      <li>Имя</li>
+      <li>Контактный телефон</li>
+      <li>Электронная почта</li>
+      <li>Иные данные, предоставленные пользователем добровольно</li>
+    </ul>
+
+    <h2>4. Цели обработки данных</h2>
+    <ul>
+      <li>Обработка запросов пользователей и обратной связи</li>
+      <li>Предоставление консультаций и индивидуальных предложений</li>
+      <li>Улучшение качества сервиса и аналитика</li>
+    </ul>
+
+    <h2>5. Правовые основания обработки</h2>
+    <p>Согласие субъекта персональных данных на обработку его персональных данных, выраженное путем проставления отметки в форме обратной связи на сайте.</p>
+
+    <h2>6. Передача третьим лицам</h2>
+    <p>Передача персональных данных третьим лицам допускается только при наличии правовых оснований и в объеме, необходимом для достижения целей обработки.</p>
+
+    <h2>7. Срок хранения</h2>
+    <p>Персональные данные хранятся не дольше, чем это требуется целями обработки, либо до отзыва согласия пользователем.</p>
+
+    <h2>8. Права пользователя</h2>
+    <ul>
+      <li>Получать информацию об обработке персональных данных</li>
+      <li>Требовать уточнения, блокирования или уничтожения данных</li>
+      <li>Отозвать согласие на обработку персональных данных</li>
+    </ul>
+
+    <h2>9. Контакты</h2>
+    <p>По вопросам обработки персональных данных: <a href="mailto:info@antonhaus.ru" class="privacy-link">info@antonhaus.ru</a>, телефон <a href="tel:+73472019478" class="privacy-link">+7 347 201-94-78</a>.</p>
+  </article>
+</div>
+
+<style>
+.privacy-hero {
+  text-align: center;
+  margin: 20px 0 40px;
+}
+.privacy-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--c21-light);
+  color: var(--c21-dark);
+  font-size: 12px;
+  font-weight: 600;
+}
+.privacy-title {
+  margin: 12px 0 8px;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--c21-dark);
+}
+.privacy-subtitle {
+  color: #666;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.privacy-content {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  padding: 32px;
+  line-height: 1.8;
+}
+.privacy-content h2 {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  font-size: 22px;
+  color: var(--c21-dark);
+}
+.privacy-content ul {
+  padding-left: 18px;
+}
+.privacy-content a { color: var(--c21-gold); }
+.privacy-content a:hover { color: var(--c21-gold-dark); }
+
+@media (max-width: 768px) {
+  .privacy-title { font-size: 28px; }
+  .privacy-content { padding: 20px; }
+}
+</style>
+{% endblock %} 

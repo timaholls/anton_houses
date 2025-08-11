@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ article.title }} - Антон Хаус{% endblock %}
+{% block title %}{{ article.title }} - CENTURY 21{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -112,7 +112,7 @@
                         {% if similar.image %}
                             <img src="{{ similar.image.url }}" alt="{{ similar.title }}">
                         {% else %}
-                            <img src="https://via.placeholder.com/200x150/4A90E2/FFFFFF?text={{ similar.title|urlencode }}" alt="{{ similar.title }}">
+                            <img src="https://via.placeholder.com/200x150/252526/BEAF87?text={{ similar.title|urlencode }}" alt="{{ similar.title }}">
                         {% endif %}
                     </div>
                     

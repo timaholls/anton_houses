@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}Антон Хаус - Главная{% endblock %}
+{% block title %}CENTURY 21 - Главная{% endblock %}
 
 {% block content %}
 <div class="container">
     <section class="hero-section">
-        <h1 class="hero-title">Добро пожаловать в Антон Хаус</h1>
+        <h1 class="hero-title">Добро пожаловать в CENTURY 21</h1>
         <p class="hero-subtitle">Найдите свой идеальный дом в лучших жилых комплексах</p>
     </section>
 
@@ -22,7 +22,7 @@
                     {% if complex.image %}
                         <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
                     {% else %}
-                        <img src="https://via.placeholder.com/400x300/4A90E2/FFFFFF?text={{ complex.name|urlencode }}" alt="{{ complex.name }}">
+                        <img src="https://via.placeholder.com/400x300/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}">
                     {% endif %}
                     
 
@@ -70,7 +70,7 @@
                 {% if company_info.founder_photo %}
                     <img src="{{ company_info.founder_photo.url }}" alt="{{ company_info.founder_name }}">
                 {% else %}
-                    <img src="https://via.placeholder.com/300x400/4A90E2/FFFFFF?text={{ company_info.founder_name|urlencode }}" alt="{{ company_info.founder_name }}">
+                    <img src="https://via.placeholder.com/300x400/252526/BEAF87?text={{ company_info.founder_name|urlencode }}" alt="{{ company_info.founder_name }}">
                 {% endif %}
             </div>
             

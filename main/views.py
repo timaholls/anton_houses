@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from .models import ResidentialComplex, Article, Tag, CompanyInfo
+from .models import ResidentialComplex, Article, Tag, CompanyInfo, CatalogLanding, SecondaryProperty
 
 def home(request):
     """Главная страница"""
@@ -480,6 +480,101 @@ def detail(request, complex_id):
     }
     return render(request, 'main/detail.html', context)
 
+def secondary_detail(request, pk: int):
+    obj = get_object_or_404(SecondaryProperty, pk=pk)
+    # Используем существующий шаблон detail.html с минимальным контекстом-адаптером
+    class Adapter:
+        pass
+    complex = Adapter()
+    complex.name = obj.name
+    complex.image = obj.image
+    complex.image_2 = obj.image_2
+    complex.image_3 = obj.image_3
+    complex.image_4 = obj.image_4
+    complex.price_from = obj.price
+    complex.city = obj.city
+    complex.district = obj.district
+    complex.street = obj.street
+    complex.commute_time = obj.commute_time
+    complex.area_from = obj.area
+    complex.area_to = obj.area
+    complex.developer = 'Собственник'
+    complex.total_apartments = 1
+    complex.completion_start = ''
+    complex.completion_end = ''
+    complex.has_completed = True
+    complex.get_house_class_display = ''
+    complex.get_house_type_display = obj.get_house_type_display if hasattr(obj, 'get_house_type_display') else lambda: ''
+    complex.get_finishing_display = lambda: ''
+
+    return render(request, 'main/detail.html', {'complex': complex, 'similar_complexes': []})
+
+def secondary_api(request):
+    """API для вторичной недвижимости (AJAX)"""
+    page = int(request.GET.get('page', 1))
+    stype = request.GET.get('stype', '')
+    city = request.GET.get('city', '')
+    district = request.GET.get('district', '')
+    street = request.GET.get('street', '')
+    area_from = request.GET.get('area_from', '')
+    area_to = request.GET.get('area_to', '')
+    price_from = request.GET.get('price_from', '')
+    price_to = request.GET.get('price_to', '')
+
+    qs = SecondaryProperty.objects.all()
+    if stype:
+        qs = qs.filter(house_type=stype)
+    if city:
+        qs = qs.filter(city=city)
+    if district:
+        qs = qs.filter(district=district)
+    if street:
+        qs = qs.filter(street=street)
+    if area_from:
+        try:
+            qs = qs.filter(area__gte=float(area_from))
+        except ValueError:
+            pass
+    if area_to:
+        try:
+            qs = qs.filter(area__lte=float(area_to))
+        except ValueError:
+            pass
+    if price_from:
+        try:
+            qs = qs.filter(price__gte=float(price_from))
+        except ValueError:
+            pass
+    if price_to:
+        try:
+            qs = qs.filter(price__lte=float(price_to))
+        except ValueError:
+            pass
+
+    paginator = Paginator(qs, 9)
+    page_obj = paginator.get_page(page)
+
+    items = []
+    for obj in page_obj:
+        items.append({
+            'id': obj.id,
+            'name': obj.name,
+            'price_from': float(obj.price),
+            'city': obj.city,
+            'district': obj.district,
+            'street': obj.street,
+            'image_url': obj.image.url if obj.image else None,
+        })
+
+    return JsonResponse({
+        'items': items,
+        'current_page': page_obj.number,
+        'total_pages': paginator.num_pages,
+        'total_count': paginator.count,
+        'has_previous': page_obj.has_previous(),
+        'has_next': page_obj.has_next(),
+    })
+
 def districts_api(request):
     """API для получения районов по городу"""
     city = request.GET.get('city', '')
@@ -514,3 +609,103 @@ def article_view_api(request, article_id):
         except Article.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
     return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
+
+def privacy_policy(request):
+    """Страница политики конфиденциальности"""
+    return render(request, 'main/privacy.html')
+
+def catalog_landing(request, slug):
+    landing = get_object_or_404(CatalogLanding, slug=slug)
+
+    # Базовый queryset в зависимости от типа
+    if landing.kind == 'secondary':
+        queryset = SecondaryProperty.objects.all()
+    else:
+        queryset = ResidentialComplex.objects.filter(status='construction')
+
+    # Категории
+    category_map = {
+        'apartment': 'apartment',
+        'house': 'house',
+        'cottage': 'cottage',
+        'townhouse': 'townhouse',
+        'commercial': None,        # коммерция отсутствует — оставляем как есть
+        'all': None,
+    }
+    house_type = category_map.get(landing.category)
+    if house_type:
+        if landing.kind == 'secondary':
+            queryset = queryset.filter(house_type=house_type)
+        else:
+            queryset = queryset.filter(house_type=house_type)
+
+    paginator = Paginator(queryset, 9)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    categories = CatalogLanding.objects.filter(kind=landing.kind).order_by('name')
+
+    context = {
+        'complexes': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'cities': ResidentialComplex.objects.values_list('city', flat=True).distinct(),
+        'rooms_choices': ResidentialComplex.ROOMS_CHOICES,
+        'filters': {},
+        'filters_applied': True,
+        'page_title': landing.name,
+        'page_description': landing.meta_description or landing.name,
+        'landing': landing,
+        'landing_categories': categories,
+        'dataset_type': 'secondary' if landing.kind == 'secondary' else 'newbuild',
+    }
+
+    return render(request, 'main/catalog.html', context)
+
+
+def _catalog_fallback(request, kind: str, title: str):
+    """Рендер каталога без необходимости иметь запись CatalogLanding.
+    kind: 'newbuild'|'secondary'
+    """
+    if kind == 'secondary':
+        # Для вторички читаем из собственной таблицы
+        queryset = SecondaryProperty.objects.all()
+        stype = request.GET.get('stype', '')
+        if stype in ['apartment', 'cottage', 'townhouse', 'commercial']:
+            queryset = queryset.filter(house_type=stype)
+    else:
+        queryset = ResidentialComplex.objects.filter(status='construction')
+
+    paginator = Paginator(queryset, 9)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    context = {
+        'complexes': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'cities': ResidentialComplex.objects.values_list('city', flat=True).distinct(),
+        'rooms_choices': ResidentialComplex.ROOMS_CHOICES,
+        'filters': ({'stype': request.GET.get('stype', '')} if kind == 'secondary' else {}),
+        'filters_applied': True,
+        'page_title': title,
+        'page_description': title,
+        'landing': None,
+        'landing_categories': CatalogLanding.objects.filter(kind=kind).order_by('name'),
+        'dataset_type': kind,
+    }
+    return render(request, 'main/catalog.html', context)
+
+
+def newbuild_index(request):
+    # Стартовая страница новостроек
+    landing = CatalogLanding.objects.filter(kind='newbuild', category='all').first()
+    if landing:
+        return catalog_landing(request, slug=landing.slug)
+    return _catalog_fallback(request, kind='newbuild', title='Новостройки')
+
+
+def secondary_index(request):
+    # Стартовая страница вторички
+    landing = CatalogLanding.objects.filter(kind='secondary', category='all').first()
+    if landing:
+        return catalog_landing(request, slug=landing.slug)
+    return _catalog_fallback(request, kind='secondary', title='Вторичная недвижимость')

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ResidentialComplex, Article, Tag, Author, CompanyInfo
+from .models import ResidentialComplex, Article, Tag, Author, CompanyInfo, CatalogLanding, SecondaryProperty
 
 @admin.register(ResidentialComplex)
 class ResidentialComplexAdmin(admin.ModelAdmin):
@@ -29,6 +29,12 @@ class ResidentialComplexAdmin(admin.ModelAdmin):
             'fields': ('is_featured', 'delivery_date')
         }),
     )
+
+@admin.register(SecondaryProperty)
+class SecondaryPropertyAdmin(admin.ModelAdmin):
+    list_display = ['name', 'house_type', 'city', 'district', 'price']
+    list_filter = ['house_type', 'city']
+    search_fields = ['name', 'city', 'district', 'street']
 
 @admin.register(CompanyInfo)
 class CompanyInfoAdmin(admin.ModelAdmin):
@@ -113,3 +119,18 @@ class TagAdmin(admin.ModelAdmin):
     def articles_count(self, obj):
         return obj.articles.count()
     articles_count.short_description = 'Количество статей'
+
+@admin.register(CatalogLanding)
+class CatalogLandingAdmin(admin.ModelAdmin):
+    list_display = ['name', 'kind', 'category', 'slug']
+    list_filter = ['kind', 'category']
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ['name', 'meta_title', 'meta_description', 'meta_keywords']
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('name', 'slug', 'kind', 'category')
+        }),
+        ('SEO', {
+            'fields': ('meta_title', 'meta_description', 'meta_keywords')
+        }),
+    )

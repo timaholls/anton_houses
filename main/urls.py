@@ -8,6 +8,7 @@ urlpatterns = [
     path('catalog/', views.catalog, name='catalog'),
     path('catalog/api/', views.catalog_api, name='catalog_api'),
     path('api/catalog/', views.catalog_api, name='catalog_api_alt'),
+    path('api/secondary/', views.secondary_api, name='secondary_api'),
     path('articles/', views.articles, name='articles'),
     path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
     path('api/articles/<int:article_id>/view/', views.article_view_api, name='article_view_api'),
@@ -24,4 +25,13 @@ urlpatterns = [
     path('catalog/premium/', views.catalog_premium, name='catalog_premium'),
     path('catalog/finished/', views.catalog_finished, name='catalog_finished'),
     path('catalog/unfinished/', views.catalog_unfinished, name='catalog_unfinished'),
+
+    # Политика конфиденциальности
+    path('privacy/', views.privacy_policy, name='privacy'),
+
+    # Лэндинги каталога с SEO
+    path('catalog/l/<slug:slug>/', views.catalog_landing, name='catalog_landing'),
+    path('newbuilds/', views.newbuild_index, name='newbuild_index'),
+    path('secondary/', views.secondary_index, name='secondary_index'),
+    path('secondary/<int:pk>/', views.secondary_detail, name='secondary_detail'),
 ] 
