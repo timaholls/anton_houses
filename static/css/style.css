@@ -100,6 +100,7 @@ body {
     font-weight: 700;
     color: #0066cc;
     text-decoration: none;
+    white-space: nowrap;
 }
 
 .logo a {
@@ -1414,6 +1415,15 @@ body {
     padding: 60px 0 20px;
     margin-top: 80px;
 }
+
+/* Переход к футеру с бренд-логотипом */
+.footer-transition{position:relative}
+/* убрали цветные полосы */
+.footer-transition .ft-band{display:none}
+/* центрированный логотип */
+.deco-logo.on-dark{position:absolute; left:50%; top:-8px; transform:translateX(-50%); height:150px; width:150px; background: transparent; display:flex; align-items:center; justify-content:center; box-shadow:none}
+.deco-logo.on-dark svg{height:120px; width:120px; display:block}
+
 
 .footer-content {
     display: grid;
@@ -4099,4 +4109,45 @@ a:hover { color: var(--c21-gold); }
 
 .range-fill {
     background: var(--c21-gold) !important;
+}
+
+/* Offers section responsive tweaks */
+@media (max-width: 1024px) {
+    .offers-grid { grid-template-columns: repeat(2, 1fr); }
+    .offer-card { grid-template-columns: 180px 1fr; }
+}
+@media (max-width: 768px) {
+    .offers-grid { grid-template-columns: 1fr; }
+    .offer-card { grid-template-columns: 1fr; }
+    .offer-media img { height: 180px; }
+    .offer-actions { justify-content: center; }
+}
+@media (max-width: 480px) {
+    .hero-title { font-size: 28px; }
+    .section-title { font-size: 24px; }
+    .offer-title { font-size: 16px; }
+    .offer-text { font-size: 14px; }
+    .btn, .offer-more { padding: 10px 14px; font-size: 14px; }
+}
+
+/* Responsive fix for catalog filters */
+@media (max-width: 1024px) {
+    .filters-row-grid { grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 16px 20px; }
+}
+@media (max-width: 768px) {
+    .filters-row-grid { grid-template-columns: 1fr; gap: 12px; }
+    .filters-section { padding: 16px; }
+    .filters-actions { flex-direction: column; align-items: stretch; gap: 12px; }
+    .filters-actions .btn { width: 100%; justify-content: center; }
+    .filter-select, .filter-input { width: 100%; }
+}
+
+/* Generic filters-row responsive */
+@media (max-width: 1024px) {
+    .filters-row { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
+}
+@media (max-width: 768px) {
+    .filters-row { grid-template-columns: 1fr; }
+    .button-filter.chips { margin-top: 4px; }
+    .range-slider { padding: 0 6px; }
 }

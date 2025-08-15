@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ video.title }} — Видеообзор — CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="articles-section">
+        <div class="articles-header">
+            <h1 class="section-title">{{ video.title }}</h1>
+            <p class="section-subtitle">{{ video.residential_complex.name }} • {{ video.published_date|date:"j E Y" }} • {{ video.views_count }} просмотров</p>
+        </div>
+
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <a href="{% url 'main:videos' %}" class="breadcrumb-link">Видеообзоры</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">{{ video.title }}</span>
+        </div>
+
+        <div class="property-card" style="padding:0;">
+            <div class="card-content" style="padding:0;">
+                <div class="card-image" style="height:auto;">
+                    {% if video.video_url %}
+                        <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:12px;">
+                            <iframe src="{{ video.video_url|safe }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
+                        </div>
+                    {% elif video.video_file %}
+                        <video controls style="width:100%; border-radius:12px;" poster="{% if video.thumbnail %}{{ video.thumbnail.url }}{% endif %}">
+                            <source src="{{ video.video_file.url }}" type="video/mp4">
+                            Ваш браузер не поддерживает видео тег.
+                        </video>
+                    {% else %}
+                        <div class="card-image" style="height:360px;">
+                            {% if video.thumbnail %}
+                                <img src="{{ video.thumbnail.url }}" alt="{{ video.title }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/1200x600/252526/BEAF87?text={{ video.title|urlencode }}" alt="{{ video.title }}">
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if video.description %}
+                <div class="article-excerpt" style="padding:16px 16px 0 16px;">{{ video.description|safe }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Комментарии -->
+        <div class="articles-category-section" style="margin-top:16px;">
+            <div class="category-header">
+                <h2 class="category-title">Комментарии</h2>
+            </div>
+
+            {% if comment_success %}
+                <div class="no-articles"><p>Спасибо! Ваш комментарий добавлен.</p></div>
+            {% endif %}
+
+            <form method="post" class="article-card" style="padding:16px; margin-bottom:16px;">
+                {% csrf_token %}
+                <div style="display:grid; gap:12px; grid-template-columns:1fr 200px;">
+                    <input type="text" name="name" placeholder="Ваше имя" required style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
+                    <select name="rating" required style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
+                        {% for i in "12345" %}
+                        <option value="{{ forloop.counter }}">{{ forloop.counter }} ★</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <textarea name="text" placeholder="Ваш комментарий" rows="4" required style="margin-top:12px; padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px; width:100%;"></textarea>
+                <div style="margin-top:12px;">
+                    <button type="submit" class="category-btn"><i class="fas fa-paper-plane"></i> Отправить</button>
+                </div>
+            </form>
+
+            <div class="articles-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+                {% for c in video.comments.all %}
+                {% if c.is_approved %}
+                <div class="article-card">
+                    <div class="article-content">
+                        <div class="article-meta" style="display:flex; gap:8px; align-items:center;">
+                            <span class="article-category">{{ c.name }}</span>
+                            <span class="article-date">{{ c.created_at|date:"j E Y, H:i" }}</span>
+                        </div>
+                        <div class="article-title" style="margin-top:6px;">
+                            {% for _ in "12345" %}
+                                {% if forloop.counter <= c.rating %}
+                                    <i class="fas fa-star" style="color:#f5c518;"></i>
+                                {% else %}
+                                    <i class="far fa-star" style="color:#f5c518;"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="article-excerpt" style="margin-top:8px; color:#666;">{{ c.text }}</div>
+                    </div>
+                </div>
+                {% endif %}
+                {% empty %}
+                <div class="no-articles"><p>Пока нет комментариев.</p></div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Похожие видео -->
+        {% if related_videos %}
+        <section class="similar-articles-section">
+            <div class="container">
+                <h2 class="similar-articles-title">Похожие видео</h2>
+                <div class="similar-articles-grid">
+                    {% for v in related_videos %}
+                    <a href="{% url 'main:video_detail' v.slug %}" class="similar-article-card">
+                        <div class="similar-article-image">
+                            {% if v.thumbnail %}
+                                <img src="{{ v.thumbnail.url }}" alt="{{ v.title }}">
+                            {% elif v.residential_complex.image %}
+                                <img src="{{ v.residential_complex.image.url }}" alt="{{ v.residential_complex.name }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/300x200/4A90E2/FFFFFF?text={{ v.title|urlencode }}" alt="{{ v.title }}">
+                            {% endif %}
+                        </div>
+                        <div class="similar-article-content">
+                            <div class="similar-article-categories">
+                                <span class="similar-article-category">{{ v.residential_complex.name }}</span>
+                            </div>
+                            <h3 class="similar-article-title">{{ v.title }}</h3>
+                            <div class="similar-article-meta">
+                                <span class="similar-article-date">{{ v.published_date|date:"j E Y" }}</span>
+                                <div class="similar-article-stats">
+                                    <span class="similar-article-views">{{ v.views_count }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        {% endif %}
+    </section>
+
+    {% include 'includes/feedback_form.html' %}
+</div>
+{% endblock %} 

@@ -34,4 +34,19 @@ urlpatterns = [
     path('newbuilds/', views.newbuild_index, name='newbuild_index'),
     path('secondary/', views.secondary_index, name='secondary_index'),
     path('secondary/<int:pk>/', views.secondary_detail, name='secondary_detail'),
+
+    # Вакансии
+    path('vacancies/', views.vacancies, name='vacancies'),
+    path('vacancies/<slug:slug>/', views.vacancy_detail, name='vacancy_detail'),
+
+    # Офисы продаж
+    path('offices/', views.offices, name='offices'),
+    path('offices/<slug:slug>/', views.office_detail, name='office_detail'),
+
+    # Видеообзоры
+    path('videos/', views.videos, name='videos'),
+    path('videos/<slug:slug>/', views.video_detail, name='video_detail'),
+
+    # Наша компания
+    path('company/', views.company, name='company'),
 ] 

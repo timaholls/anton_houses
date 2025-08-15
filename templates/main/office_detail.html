@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ office.name }} — Офис продаж — CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="articles-section">
+        <div class="articles-header">
+            <h1 class="section-title">{{ office.name }}</h1>
+            <p class="section-subtitle">{{ office.city }}, {{ office.address }}</p>
+        </div>
+
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <a href="{% url 'main:offices' %}" class="breadcrumb-link">Офисы продаж</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">{{ office.name }}</span>
+        </div>
+
+        <div class="property-card" style="margin-bottom:24px;">
+            <div class="card-image" style="height:360px;">
+                {% if office.image %}
+                    <img src="{{ office.image.url }}" alt="{{ office.name }}">
+                {% elif office.photo %}
+                    <img src="{{ office.photo.url }}" alt="{{ office.name }}">
+                {% else %}
+                    <img src="https://via.placeholder.com/1200x600/252526/BEAF87?text={{ office.name|urlencode }}" alt="{{ office.name }}">
+                {% endif %}
+            </div>
+            <div class="card-content">
+                <div class="card-location">
+                    <i class="fas fa-location-dot"></i>
+                    <span>{{ office.city }}, {{ office.address }}</span>
+                </div>
+                <div class="card-location" style="margin-top:6px;">
+                    <i class="fas fa-clock"></i>
+                    <span>{{ office.schedule|default:"График работы уточняйте по телефону" }}</span>
+                </div>
+                <div class="card-location" style="margin-top:6px;">
+                    <i class="fas fa-phone"></i>
+                    <span>{{ office.phone|default:"—" }}</span>
+                </div>
+                <div class="card-location" style="margin-top:6px;">
+                    <i class="fas fa-envelope"></i>
+                    <span>{{ office.email|default:"—" }}</span>
+                </div>
+                {% if office.description %}
+                <div class="article-excerpt" style="margin-top:12px;">{{ office.description|safe }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if employees %}
+        <div class="articles-category-section" style="margin-top:16px;">
+            <div class="category-header">
+                <h2 class="category-title">Сотрудники офиса</h2>
+            </div>
+            <div class="articles-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+                {% for e in employees %}
+                <div class="article-card">
+                    <div class="article-image" style="height:220px;">
+                        {% if e.photo %}
+                            <img src="{{ e.photo.url }}" alt="{{ e.full_name }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/400x300/4A90E2/FFFFFF?text={{ e.full_name|urlencode }}" alt="{{ e.full_name }}">
+                        {% endif %}
+                    </div>
+                    <div class="article-content">
+                        <h3 class="article-title" style="margin-bottom:4px;">{{ e.full_name }}</h3>
+                        <div class="article-excerpt" style="color:#666;">{{ e.position }}</div>
+                        {% if e.phone or e.email %}
+                        <div class="article-footer" style="margin-top:12px; display:flex; gap:16px;">
+                            {% if e.phone %}<span class="article-views"><i class="fas fa-phone" style="color:#999; margin-right:6px;"></i>{{ e.phone }}</span>{% endif %}
+                            {% if e.email %}<span class="article-views"><i class="fas fa-envelope" style="color:#999; margin-right:6px;"></i>{{ e.email }}</span>{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+
+    {% include 'includes/feedback_form.html' %}
+</div>
+{% endblock %} 

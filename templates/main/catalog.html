@@ -24,6 +24,10 @@
                 <a href="{% url 'main:newbuild_index' %}" class="catalog-tab {% if dataset_type == 'newbuild' %}active{% endif %}">Новостройки</a>
                 <a href="{% url 'main:secondary_index' %}" class="catalog-tab alt {% if dataset_type == 'secondary' %}active{% endif %}">Вторичная недвижимость</a>
             </div>
+            <div class="view-toggle">
+                <button type="button" class="view-btn" data-view="list">Списком</button>
+                <button type="button" class="view-btn" data-view="map">Картой</button>
+            </div>
             {% if landing_categories %}
             <div class="catalog-categories">
                 {% for lc in landing_categories %}
@@ -85,8 +89,8 @@
                                     <div class="range-fill area-fill"></div>
                                 </div>
                             </div>
-                            <input type="hidden" name="area_from" id="area-from-hidden" value="{{ filters.area_from|default:'60' }}">
-                            <input type="hidden" name="area_to" id="area-to-hidden" value="{{ filters.area_to|default:'399' }}">
+                            <input type="hidden" name="area_from" id="area-from-hidden" value="{{ filters.area_from|default:'' }}">
+                            <input type="hidden" name="area_to" id="area-to-hidden" value="{{ filters.area_to|default:'' }}">
                         </div>
                     </div>
 
@@ -105,8 +109,8 @@
                                     <div class="range-fill price-fill"></div>
                                 </div>
                             </div>
-                            <input type="hidden" name="price_from" id="price-from-hidden" value="{{ filters.price_from|default:'1.0' }}">
-                            <input type="hidden" name="price_to" id="price-to-hidden" value="{{ filters.price_to|default:'10.0' }}">
+                            <input type="hidden" name="price_from" id="price-from-hidden" value="{{ filters.price_from|default:'' }}">
+                            <input type="hidden" name="price_to" id="price-to-hidden" value="{{ filters.price_to|default:'' }}">
                         </div>
                     </div>
 
@@ -191,6 +195,7 @@
         </div>
         {% endif %}
 
+        <div id="map" style="width: 100%; height: 520px; display:none; border-radius:12px; overflow:hidden; margin-bottom:24px;"></div>
         <div class="catalog-grid" id="catalog-grid">
             {% for complex in complexes %}
             <div class="property-card-large" onclick="window.location.href='{% if dataset_type == 'secondary' %}{% url 'main:secondary_detail' complex.id %}{% else %}{% url 'main:detail' complex.id %}{% endif %}'" style="cursor: pointer;">
@@ -263,14 +268,22 @@
                         </div>
                     </div>
                     
-                    <div class="card-location-info">
-                        <div class="location-text">
-                            Россия - {{ complex.city }} - {{ complex.district }} - {{ complex.street }}
-                        </div>
-                    </div>
-                    
-                    <div class="apartment-prices">
-                        <div class="price-row">
+                                     <div class="card-location-info">
+                         <div class="location-text">
+                             Россия - {{ complex.city }} - {{ complex.district }} - {{ complex.street }}
+                         </div>
+                     </div>
+
+                     <div class="card-price-section" style="margin-top:8px;">
+                         <div class="main-price">
+                             <span class="price-label">от</span>
+                             <span class="price-value">{{ complex.price_from|floatformat:1 }}</span>
+                             <span class="price-currency">млн ₽</span>
+                         </div>
+                     </div>
+                     
+                     <div class="apartment-prices">
+                         <div class="price-row">
                             <span class="room-type">Студия</span>
                             <span class="room-price">от {{ complex.studio_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
                         </div>
@@ -308,16 +321,16 @@
         </div>
 
         <!-- Пагинация -->
-        {% if page_obj.has_other_pages %}
+        {% if paginator.num_pages >= 1 %}
         <div class="pagination-container">
             <div class="pagination-info">
                 Страница {{ page_obj.number }} из {{ paginator.num_pages }}
             </div>
             <div class="pagination-controls">
                 {% if page_obj.has_previous %}
-                    <button class="pagination-btn" onclick="loadPage({{ page_obj.previous_page_number }})">
+                    <a class="pagination-btn" href="?page={{ page_obj.previous_page_number }}">
                         <i class="fas fa-chevron-left"></i> Назад
-                    </button>
+                    </a>
                 {% endif %}
                 
                 <div class="pagination-numbers">
@@ -325,15 +338,15 @@
                         {% if page_obj.number == num %}
                             <span class="pagination-number active">{{ num }}</span>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <button class="pagination-number" onclick="loadPage({{ num }})">{{ num }}</button>
+                            <a class="pagination-number" href="?page={{ num }}">{{ num }}</a>
                         {% endif %}
                     {% endfor %}
                 </div>
                 
                 {% if page_obj.has_next %}
-                    <button class="pagination-btn" onclick="loadPage({{ page_obj.next_page_number }})">
+                    <a class="pagination-btn" href="?page={{ page_obj.next_page_number }}">
                         Вперед <i class="fas fa-chevron-right"></i>
-                    </button>
+                    </a>
                 {% endif %}
             </div>
         </div>
@@ -346,6 +359,8 @@
     {% include 'includes/feedback_form.html' %}
 </div>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
 .catalog-tabs { margin-top: 12px; display: flex; gap: 16px; justify-content: center; }
 .catalog-tab { padding: 8px 16px; border-radius: 999px; background: var(--c21-light); color: var(--c21-dark); text-decoration: none; font-weight: 600; }
@@ -357,6 +372,9 @@
 .catalog-category.active, .catalog-category:hover { border-color: var(--c21-gold); color: var(--c21-gold); }
 .filter-chip { display:inline-block; padding:8px 14px; background: var(--c21-light); color: var(--c21-dark); border-radius: 999px; text-decoration: none; font-weight:600; }
 .filter-chip.active, .filter-chip:hover { background: var(--c21-dark); color: var(--c21-gold); }
+.view-toggle { margin-top: 12px; display:flex; gap:8px; justify-content:center; }
+.view-btn { padding:6px 12px; border-radius:999px; border:1px solid var(--c21-mid); background:#fff; cursor:pointer; font-weight:600; }
+.view-btn.active { background: var(--c21-dark); color: var(--c21-gold); border-color: var(--c21-dark); }
 </style>
 
 <script>
@@ -366,12 +384,14 @@ document.addEventListener('DOMContentLoaded', function() {
     initRangeSlider('area-from-slider', 'area-to-slider', 'area-from-display', 'area-to-display', 'area-from-hidden', 'area-to-hidden', 'area-fill');
     initRangeSlider('price-from-slider', 'price-to-slider', 'price-from-display', 'price-to-display', 'price-from-hidden', 'price-to-hidden', 'price-fill');
     
-    // Обработка отправки формы фильтров
+    // Обработка отправки формы фильтров (для новостроек остаётся старый обработчик)
     const filtersForm = document.getElementById('filters-form');
-    filtersForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        applyFilters();
-    });
+    if (filtersForm && '{{ dataset_type }}' !== 'secondary') {
+        filtersForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            applyFilters();
+        });
+    }
     
     // Обработка выбора города
     const citySelect = document.getElementById('city');
@@ -442,19 +462,23 @@ document.addEventListener('DOMContentLoaded', function() {
             // Убираем активное состояние у всех кнопок
             filterBtns.forEach(b => {
                 b.setAttribute('data-active', 'false');
+                b.classList.remove('active');
             });
             
             // Устанавливаем активное состояние для нажатой кнопки
             this.setAttribute('data-active', 'true');
+            this.classList.add('active');
             
             // Обновляем скрытое поле
             if (roomsHidden) {
                 roomsHidden.value = this.getAttribute('data-value');
             }
             
-            // Мгновенный запуск поиска
+            // Мгновенный запуск поиска без перезагрузки страницы
             const form = document.getElementById('filters-form');
-            if (form) form.submit();
+            if (form) {
+                form.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
         });
     });
     
@@ -581,12 +605,17 @@ function initRangeSlider(fromSliderId, toSliderId, fromDisplayId, toDisplayId, f
     
     if (!fromSlider || !toSlider) return;
     
-    // Устанавливаем начальные значения
-    fromSlider.value = fromHidden.value;
-    toSlider.value = toHidden.value;
+    // Устанавливаем начальные значения (пустые значения не применяем как фильтр)
+    if (fromHidden.value !== '' && toHidden.value !== '') {
+        fromSlider.value = fromHidden.value;
+        toSlider.value = toHidden.value;
+    } else {
+        fromSlider.value = fromSlider.min;
+        toSlider.value = toSlider.max;
+    }
     fromDisplay.textContent = fromSlider.value;
     toDisplay.textContent = toSlider.value;
-    
+
     // Обновляем fill при загрузке
     updateRangeFill(fromSlider, toSlider, fill);
     
@@ -690,6 +719,9 @@ function updateCatalog(data) {
     let html = '';
     data.complexes.forEach(complex => {
         const imageUrl = complex.image_url || `https://via.placeholder.com/600x400/252526/BEAF87?text=${encodeURIComponent(complex.name)}`;
+        const image2 = complex.image_2_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=2';
+        const image3 = complex.image_3_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=3';
+        const image4 = complex.image_4_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=4';
         
         html += `
             <div class="property-card-large" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
@@ -707,14 +739,14 @@ function updateCatalog(data) {
                             <img src="${imageUrl}" alt="${complex.name}">
                         </div>
                         <div class="thumbnail">
-                            <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=2" alt="${complex.name}">
+                            <img src="${image2}" alt="${complex.name}">
                         </div>
                         <div class="thumbnail">
-                            <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=3" alt="${complex.name}">
+                            <img src="${image3}" alt="${complex.name}">
                         </div>
                         <div class="thumbnail more">
                             <span>+1</span>
-                            <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=4" alt="${complex.name}">
+                            <img src="${image4}" alt="${complex.name}">
                         </div>
                     </div>
                 </div>
@@ -732,22 +764,22 @@ function updateCatalog(data) {
                         </div>
                     </div>
                     
-                    <div class="card-location-info">
-                        <div class="location-text">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>${complex.location} ${complex.commute_time}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="card-price-section">
-                        <div class="main-price">
-                            <span class="price-label">от</span>
-                            <span class="price-value">${complex.price_from || complex.price_display.replace('от ', '').replace(' млн Р', '')}</span>
-                            <span class="price-currency">млн Р</span>
-                        </div>
-                    </div>
-                    
-                    <div class="apartment-prices">
+                                         <div class="card-location-info">
+                         <div class="location-text">
+                             <i class="fas fa-map-marker-alt"></i>
+                             <span>${complex.location} ${complex.commute_time}</span>
+                         </div>
+                     </div>
+
+                     <div class="card-price-section" style="margin-top:8px;">
+                         <div class="main-price">
+                             <span class="price-label">от</span>
+                             <span class="price-value">${(complex.price_from || 0).toFixed ? complex.price_from.toFixed(1) : (complex.price_display ? complex.price_display.replace('от ', '').replace(' млн Р', '') : '')}</span>
+                             <span class="price-currency">млн Р</span>
+                         </div>
+                     </div>
+                     
+                     <div class="apartment-prices">
                         <div class="price-row">
                             <span class="room-type">Студия</span>
                             <span class="room-price">от ${complex.studio_price || (complex.price_from * 0.8).toFixed(1)} млн Р</span>
@@ -886,7 +918,7 @@ function updateResultsCount(count) {
       stypeHidden.value = this.getAttribute('data-value');
       // Мгновенный запуск поиска
       const form = document.getElementById('filters-form');
-      if (form) form.submit();
+      if (form) form.dispatchEvent(new Event('submit', { cancelable: true }));
     });
     // Инициализация активного состояния из скрытого поля
     if (btn.getAttribute('data-value') === (stypeHidden.value || '')) {
@@ -978,5 +1010,242 @@ function initImageCarousel() {
 document.addEventListener('DOMContentLoaded', function() {
     initImageCarousel();
 });
+
+// AJAX-загрузка без изменения URL
+(function(){
+  const form = document.getElementById('filters-form');
+  const grid = document.getElementById('catalog-grid');
+  const resultsCount = document.querySelector('.results-count');
+  const isSecondary = '{{ dataset_type }}' === 'secondary';
+  const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+  const mapEl = document.getElementById('map');
+  let map, markersLayer;
+  let activeController = null;
+  let latestRequestId = 0;
+
+  // View toggle
+  const toggleBtns = document.querySelectorAll('.view-btn');
+  const savedView = localStorage.getItem('catalog_view') || 'list';
+  function setView(view){
+    toggleBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-view')===view));
+    if (view === 'map') {
+      grid.style.display = 'none';
+      mapEl.style.display = 'block';
+      if (!map) initMap();
+      fetchData();
+    } else {
+      mapEl.style.display = 'none';
+      grid.style.display = '';
+      fetchData();
+    }
+    localStorage.setItem('catalog_view', view);
+  }
+  toggleBtns.forEach(b=>b.addEventListener('click', ()=>setView(b.getAttribute('data-view'))));
+
+  function initMap(){
+    map = L.map('map', { attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+    markersLayer = L.layerGroup().addTo(map);
+    map.setView([54.7388, 55.9721], 11); // Уфа по умолчанию
+  }
+
+  function serialize() {
+    const fd = new FormData(form);
+    const params = new URLSearchParams();
+    for (const [k, v] of fd.entries()) {
+      if (v !== '') params.append(k, v);
+    }
+    const sort = document.getElementById('sort-hidden');
+    if (sort && sort.value) params.set('sort', sort.value);
+    return params.toString();
+  }
+
+  function renderMapPoints(list, isSec){
+    if (!map) return;
+    markersLayer.clearLayers();
+    const bounds = [];
+    list.forEach(item => {
+      const lat = item.lat, lng = item.lng;
+      if (lat && lng) {
+        const marker = L.marker([lat, lng]).addTo(markersLayer);
+        const price = (item.price_from || 0).toFixed ? item.price_from.toFixed(1) : item.price_from;
+        const link = isSec ? `/secondary/${item.id}/` : `/complex/${item.id}/`;
+        marker.bindPopup(`<b>${item.name}</b><br/>от ${price} млн ₽<br/><a href="${link}">Подробнее</a>`);
+        bounds.push([lat, lng]);
+      }
+    });
+    if (bounds.length) map.fitBounds(bounds, { padding:[20,20] });
+  }
+
+  function renderItems(data){
+    if ((localStorage.getItem('catalog_view')||'list') === 'map'){
+      // карта
+      if (isSecondary) {
+        renderMapPoints(data.items||[], true);
+      } else {
+        renderMapPoints(data.complexes||[], false);
+      }
+    } else {
+      // списком
+      if (isSecondary) {
+        if (!data.items || !data.items.length) {
+          grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
+        } else {
+          grid.innerHTML = data.items.map(item => {
+            const imageUrl = item.image_url || ('https://via.placeholder.com/600x400/252526/BEAF87?text=' + encodeURIComponent(item.name));
+            const image2 = item.image_2_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=2';
+            const image3 = item.image_3_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=3';
+            const image4 = item.image_4_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=4';
+            return `
+            <div class="property-card-large" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
+              <div class="card-images">
+                <div class="main-image">
+                  <img src="${imageUrl}" alt="${item.name}">
+                  <div class="image-counter">1 из 4</div>
+                  <div class="image-nav">
+                    <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
+                    <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
+                  </div>
+                </div>
+                <div class="thumbnail-images">
+                  <div class="thumbnail active"><img src="${imageUrl}" alt="${item.name}"></div>
+                  <div class="thumbnail"><img src="${image2}" alt="${item.name}"></div>
+                  <div class="thumbnail"><img src="${image3}" alt="${item.name}"></div>
+                  <div class="thumbnail more"><span>+1</span><img src="${image4}" alt="${item.name}"></div>
+                </div>
+              </div>
+              <div class="card-content-large">
+                <div class="card-header">
+                  <div class="card-title-section"><h3 class="card-title">${item.name}</h3></div>
+                  <div class="card-price-section">
+                    <div class="main-price"><span class="price-label">от</span><span class="price-value">${(item.price_from || 0).toFixed ? item.price_from.toFixed(1) : item.price_from}</span><span class="price-currency">млн ₽</span></div>
+                  </div>
+                </div>
+                <div class="card-location-info"><div class="location-text">Россия - ${item.city} - ${item.district || ''} - ${item.street || ''}</div></div>
+              </div>
+            </div>`;
+          }).join('');
+          if (typeof initImageCarousel === 'function') { initImageCarousel(); }
+        }
+      } else {
+        const list = data.complexes || [];
+        if (!list.length) {
+          grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
+        } else {
+          // Используем полноценный рендер с миниатюрами и ценами
+          updateCatalog(data);
+          // Инициализируем карусель изображений после обновления разметки
+          if (typeof initImageCarousel === 'function') { initImageCarousel(); }
+        }
+      }
+    }
+    // Обновляем пагинацию под список
+    updatePagination(data);
+    if (resultsCount) {
+      const total = (typeof data.total_count !== 'undefined') ? data.total_count : (data.total_count ?? data.total ?? 0);
+      if (total) resultsCount.textContent = `Найдено ${total} домов`;
+    }
+  }
+
+  async function fetchData(){
+    if (!form || !grid) return;
+    if ((localStorage.getItem('catalog_view')||'list') !== 'map') {
+      grid.innerHTML = '<div class="loading">Поиск...</div>';
+    }
+    const qs = serialize();
+    // Отменяем предыдущий запрос и помечаем текущий как последний
+    try {
+      if (activeController) { activeController.abort(); }
+      const controller = new AbortController();
+      activeController = controller;
+      const requestId = ++latestRequestId;
+      const res = await fetch(apiUrl + (qs ? ('?' + qs) : ''), { signal: controller.signal });
+      const data = await res.json();
+      // Если это не самый свежий ответ — игнорируем
+      if (requestId !== latestRequestId) return;
+      renderItems(data);
+    } catch(e){
+      if (grid) grid.innerHTML = '<div class="error">Ошибка загрузки</div>';
+      console.error(e);
+    }
+  }
+
+  if (form && !form.dataset.ajaxBound) {
+    form.addEventListener('submit', function(e){ e.preventDefault(); fetchData(); });
+    form.dataset.ajaxBound = '1';
+  }
+
+  document.getElementById('clear-filters')?.addEventListener('click', function(e){
+    e.preventDefault();
+    // reset native form controls
+    form.reset();
+
+    // reset area range
+    const afs = document.getElementById('area-from-slider');
+    const ats = document.getElementById('area-to-slider');
+    const afd = document.getElementById('area-from-display');
+    const atd = document.getElementById('area-to-display');
+    const afh = document.getElementById('area-from-hidden');
+    const ath = document.getElementById('area-to-hidden');
+    if (afs && ats && afd && atd && afh && ath) {
+      afs.value = afs.min;
+      ats.value = ats.max;
+      afd.textContent = afs.min;
+      atd.textContent = ats.max;
+      afh.value = '';
+      ath.value = '';
+      updateRangeFill(afs, ats, document.querySelector('.area-fill'));
+    }
+
+    // reset price range
+    const pfs = document.getElementById('price-from-slider');
+    const pts = document.getElementById('price-to-slider');
+    const pfd = document.getElementById('price-from-display');
+    const ptd = document.getElementById('price-to-display');
+    const pfh = document.getElementById('price-from-hidden');
+    const pth = document.getElementById('price-to-hidden');
+    if (pfs && pts && pfd && ptd && pfh && pth) {
+      pfs.value = pfs.min;
+      pts.value = pts.max;
+      pfd.textContent = pfs.min;
+      ptd.textContent = pts.max;
+      pfh.value = '';
+      pth.value = '';
+      updateRangeFill(pfs, pts, document.querySelector('.price-fill'));
+    }
+
+    // reset rooms filter (newbuild)
+    const roomsHidden = document.getElementById('rooms-hidden');
+    if (roomsHidden) roomsHidden.value = '';
+    const roomBtns = document.querySelectorAll('.filter-btn');
+    if (roomBtns && roomBtns.length) {
+      roomBtns.forEach(b => { b.setAttribute('data-active','false'); b.classList.remove('active'); });
+      const anyBtn = Array.from(roomBtns).find(b => (b.getAttribute('data-value') || '') === '');
+      if (anyBtn) { anyBtn.setAttribute('data-active','true'); anyBtn.classList.add('active'); }
+    }
+
+    // reset secondary type chips
+    const stypeHidden = document.getElementById('stype-hidden');
+    if (stypeHidden) stypeHidden.value = '';
+    const chipBtns = document.querySelectorAll('.filter-chip-btn');
+    if (chipBtns && chipBtns.length) {
+      chipBtns.forEach(b => b.classList.remove('active'));
+      const allChip = Array.from(chipBtns).find(b => (b.getAttribute('data-value') || '') === '');
+      if (allChip) allChip.classList.add('active');
+    }
+
+    // reset sorting
+    const sortHidden = document.getElementById('sort-hidden');
+    const sortingText = document.getElementById('sorting-text');
+    if (sortHidden) sortHidden.value = 'price_asc';
+    if (sortingText) sortingText.textContent = 'Дешевле';
+    document.querySelectorAll('.sorting-option').forEach(o => o.classList.toggle('active', o.getAttribute('data-sort') === 'price_asc'));
+
+    // fetch with cleared filters
+    fetchData();
+  });
+})();
+
+// Мгновенный сабмит при выборe фильтров — обрабатывается AJAX-слоем
 </script>
 {% endblock %} 

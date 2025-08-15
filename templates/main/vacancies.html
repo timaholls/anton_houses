@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Вакансии - CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="articles-section">
+        <div class="articles-header">
+            <h1 class="section-title">Вакансии</h1>
+            <p class="section-subtitle">Присоединяйтесь к команде CENTURY 21 в Уфе</p>
+        </div>
+
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">Вакансии</span>
+        </div>
+
+        <div class="filters" style="display:flex; gap:12px; margin-bottom:20px;">
+            <form method="get" style="display:flex; gap:12px; flex-wrap:wrap;">
+                <select name="department" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
+                    <option value="">Все отделы</option>
+                    {% for d in departments %}
+                        <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+                <select name="city" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
+                    <option value="">Все города</option>
+                    {% for c in cities %}
+                        <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+                <select name="employment_type" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
+                    <option value="">Все типы</option>
+                    {% for key, label in employment_choices %}
+                        <option value="{{ key }}" {% if filters.employment_type == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="category-btn"><i class="fas fa-filter"></i> Фильтр</button>
+            </form>
+        </div>
+
+        <div class="articles-grid">
+            {% for item in vacancies %}
+            <a href="{% url 'main:vacancy_detail' item.slug %}" class="article-card" style="text-decoration:none; color:inherit;">
+                <div class="article-content">
+                    <div class="article-meta" style="display:flex; gap:8px; align-items:center;">
+                        <span class="article-category">{{ item.get_employment_type_display }}</span>
+                        <span class="article-date">{{ item.published_date|date:"j E Y" }}</span>
+                    </div>
+                    <h3 class="article-title" style="margin-top:8px;">{{ item.title }}</h3>
+                    <div class="article-excerpt" style="margin-top:8px; color:#666;">
+                        <span><i class="fas fa-location-dot" style="color:#999; margin-right:6px;"></i>{{ item.city }}</span>
+                        {% if item.department %}
+                            <span style="margin-left:12px;">— {{ item.department }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="article-footer" style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                        <span class="article-views">
+                            {% if item.salary_from or item.salary_to %}
+                                {% if item.salary_from and item.salary_to %}
+                                    {{ item.salary_from|floatformat:0 }}–{{ item.salary_to|floatformat:0 }} {{ item.currency }}
+                                {% elif item.salary_from %}
+                                    от {{ item.salary_from|floatformat:0 }} {{ item.currency }}
+                                {% elif item.salary_to %}
+                                    до {{ item.salary_to|floatformat:0 }} {{ item.currency }}
+                                {% endif %}
+                            {% else %}
+                                Уровень дохода по результатам собеседования
+                            {% endif %}
+                        </span>
+                        <span style="color:#4A90E2; font-weight:600;">Подробнее →</span>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+                <div class="no-articles">
+                    <p>Открытых вакансий сейчас нет. Вы можете отправить резюме на <a href="mailto:hr@antonhaus.ru">hr@antonhaus.ru</a>.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination" style="display:flex; gap:8px; justify-content:center; margin-top:24px;">
+            {% if page_obj.has_previous %}
+                <a class="nav-link" href="?page={{ page_obj.previous_page_number }}">Назад</a>
+            {% endif %}
+            <span class="nav-link active">Стр. {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a class="nav-link" href="?page={{ page_obj.next_page_number }}">Вперед</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    {% include 'includes/feedback_form.html' %}
+</div>
+{% endblock %} 

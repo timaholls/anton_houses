@@ -60,7 +60,7 @@ class Tag(models.Model):
         return f'/articles/tag/{self.slug}/'
 
 class ResidentialComplex(models.Model):
-    """Модель жилого комплекса"""
+    """Модель жилого комплекса """
     HOUSE_TYPE_CHOICES = [
         ('apartment', 'Квартира'),
         ('house', 'Дом'),
@@ -72,7 +72,7 @@ class ResidentialComplex(models.Model):
         ('completed', 'Сдан'),
         ('construction', 'Строится'),
     ]
-    
+
     HOUSE_CLASS_CHOICES = [
         ('economy', 'Эконом-класс'),
         ('comfort', 'Комфорт-класс'),
@@ -128,6 +128,8 @@ class ResidentialComplex(models.Model):
     
     is_featured = models.BooleanField(default=False, verbose_name="Популярный")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    latitude = models.FloatField(null=True, blank=True, verbose_name="Широта")
+    longitude = models.FloatField(null=True, blank=True, verbose_name="Долгота")
     
     class Meta:
         verbose_name = "Жилой комплекс"
@@ -200,6 +202,7 @@ class Article(models.Model):
     published_date = models.DateField(auto_now_add=True, verbose_name="Дата публикации")
     updated_date = models.DateField(auto_now=True, verbose_name="Дата обновления")
     is_featured = models.BooleanField(default=False, verbose_name="Рекомендуемая")
+    show_on_home = models.BooleanField(default=False, verbose_name="Показывать на главной")
     views_count = models.IntegerField(default=0, verbose_name="Количество просмотров")
     likes_count = models.IntegerField(default=0, verbose_name="Количество лайков")
     comments_count = models.IntegerField(default=0, verbose_name="Количество комментариев")
@@ -290,6 +293,8 @@ class SecondaryProperty(models.Model):
 
     description = models.TextField(blank=True, verbose_name='Описание')
     created_at = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField(null=True, blank=True, verbose_name='Широта')
+    longitude = models.FloatField(null=True, blank=True, verbose_name='Долгота')
 
     class Meta:
         verbose_name = 'Вторичная недвижимость'
@@ -303,3 +308,203 @@ class SecondaryProperty(models.Model):
     def price_from(self):
         # Для совместимости с шаблоном каталога
         return self.price
+
+
+class Vacancy(models.Model):
+    """Модель вакансии"""
+    EMPLOYMENT_CHOICES = [
+        ('fulltime', 'Полная занятость'),
+        ('parttime', 'Частичная занятость'),
+        ('contract', 'Контракт'),
+        ('intern', 'Стажировка'),
+        ('remote', 'Удаленная работа'),
+    ]
+
+    title = models.CharField(max_length=200, verbose_name='Название вакансии')
+    slug = models.SlugField(max_length=200, unique=True, blank=True, verbose_name='URL')
+    department = models.CharField(max_length=120, blank=True, verbose_name='Отдел')
+    city = models.CharField(max_length=100, default='Уфа', verbose_name='Город')
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_CHOICES, default='fulltime', verbose_name='Тип занятости')
+
+    salary_from = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='Зарплата от')
+    salary_to = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='Зарплата до')
+    currency = models.CharField(max_length=10, default='RUB', verbose_name='Валюта')
+
+    description = HTMLField(verbose_name='Описание')
+    responsibilities = HTMLField(verbose_name='Обязанности', blank=True)
+    requirements = HTMLField(verbose_name='Требования', blank=True)
+    benefits = HTMLField(verbose_name='Условия', blank=True)
+
+    contact_email = models.EmailField(default='hr@antonhaus.ru', verbose_name='Email для отклика')
+
+    is_active = models.BooleanField(default=True, verbose_name='Активна')
+    published_date = models.DateField(auto_now_add=True, verbose_name='Дата публикации')
+    updated_date = models.DateField(auto_now=True, verbose_name='Дата обновления')
+
+    class Meta:
+        verbose_name = 'Вакансия'
+        verbose_name_plural = 'Вакансии'
+        ordering = ['-published_date']
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = create_slug(self.title)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return f'/vacancies/{self.slug}/'
+
+
+class BranchOffice(models.Model):
+    """Филиал/офис продаж"""
+    name = models.CharField(max_length=200, verbose_name='Название офиса')
+    slug = models.SlugField(max_length=200, unique=True, blank=True, verbose_name='URL')
+
+    city = models.CharField(max_length=100, default='Уфа', verbose_name='Город')
+    address = models.CharField(max_length=255, verbose_name='Адрес')
+    phone = models.CharField(max_length=50, blank=True, verbose_name='Телефон')
+    email = models.EmailField(blank=True, verbose_name='Email')
+    schedule = models.CharField(max_length=255, blank=True, verbose_name='График работы')
+
+    description = HTMLField(blank=True, verbose_name='Описание')
+
+    image = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name='Изображение офиса')
+    photo = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name='Фотография офиса')
+
+    latitude = models.FloatField(null=True, blank=True, verbose_name='Широта')
+    longitude = models.FloatField(null=True, blank=True, verbose_name='Долгота')
+
+    is_active = models.BooleanField(default=True, verbose_name='Активен')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Добавлен')
+
+    class Meta:
+        verbose_name = 'Офис продаж'
+        verbose_name_plural = 'Офисы продаж'
+        ordering = ['city', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.city})"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = create_slug(self.name)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return f'/offices/{self.slug}/'
+
+
+class Employee(models.Model):
+    """Сотрудник филиала"""
+    branch = models.ForeignKey(BranchOffice, on_delete=models.CASCADE, related_name='employees', verbose_name='Филиал')
+
+    full_name = models.CharField(max_length=200, verbose_name='ФИО')
+    position = models.CharField(max_length=150, verbose_name='Должность')
+    photo = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name='Фото')
+
+    phone = models.CharField(max_length=50, blank=True, verbose_name='Телефон')
+    email = models.EmailField(blank=True, verbose_name='Email')
+
+    is_active = models.BooleanField(default=True, verbose_name='Активен')
+
+    class Meta:
+        verbose_name = 'Сотрудник'
+        verbose_name_plural = 'Сотрудники'
+        ordering = ['full_name']
+
+    def __str__(self):
+        return self.full_name
+
+
+class ResidentialVideo(models.Model):
+    """Видеообзор жилого комплекса"""
+    residential_complex = models.ForeignKey(ResidentialComplex, on_delete=models.CASCADE, related_name='videos', verbose_name='ЖК')
+    title = models.CharField(max_length=200, verbose_name='Заголовок видео')
+    slug = models.SlugField(max_length=200, unique=True, blank=True, verbose_name='URL')
+
+    description = HTMLField(blank=True, verbose_name='Описание')
+    video_url = models.URLField(blank=True, verbose_name='Ссылка на видео (YouTube и т.п.)')
+    video_file = models.FileField(upload_to='videos/', blank=True, null=True, verbose_name='Файл видео')
+    thumbnail = models.ImageField(upload_to='videos/', blank=True, null=True, verbose_name='Превью')
+
+    views_count = models.IntegerField(default=0, verbose_name='Просмотры')
+    published_date = models.DateField(auto_now_add=True, verbose_name='Дата публикации')
+    updated_date = models.DateField(auto_now=True, verbose_name='Дата обновления')
+    is_active = models.BooleanField(default=True, verbose_name='Активно')
+    is_featured = models.BooleanField(default=False, verbose_name='Рекомендуемое')
+
+    related_videos = models.ManyToManyField('self', blank=True, verbose_name='Похожие видео')
+
+    class Meta:
+        verbose_name = 'Видеообзор ЖК'
+        verbose_name_plural = 'Видеообзоры ЖК'
+        ordering = ['-published_date']
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = create_slug(self.title)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return f'/videos/{self.slug}/'
+
+
+class VideoComment(models.Model):
+    """Комментарий к видеообзору"""
+    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
+
+    video = models.ForeignKey(ResidentialVideo, on_delete=models.CASCADE, related_name='comments', verbose_name='Видео')
+    name = models.CharField(max_length=120, verbose_name='Имя')
+    rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES, default=5, verbose_name='Оценка')
+    text = models.TextField(verbose_name='Комментарий')
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    is_approved = models.BooleanField(default=True, verbose_name='Одобрено')
+
+    class Meta:
+        verbose_name = 'Комментарий к видео'
+        verbose_name_plural = 'Комментарии к видео'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.name} — {self.rating}★'
+
+
+class MortgageProgram(models.Model):
+    """Ипотечная программа (ставка по году)"""
+    name = models.CharField(max_length=120, verbose_name='Название программы')
+    rate = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Ставка, % годовых')
+    is_active = models.BooleanField(default=True, verbose_name='Активна')
+
+    class Meta:
+        verbose_name = 'Ипотечная программа'
+        verbose_name_plural = 'Ипотечные программы'
+        ordering = ['rate', 'name']
+
+    def __str__(self):
+        return f"{self.name} — {self.rate}%"
+
+
+class SpecialOffer(models.Model):
+    """Акции по жилым комплексам"""
+    residential_complex = models.ForeignKey(ResidentialComplex, on_delete=models.CASCADE, related_name='offers', verbose_name='Жилой комплекс')
+    title = models.CharField(max_length=200, verbose_name='Заголовок акции')
+    description = models.TextField(verbose_name='Описание акции')
+    image = models.ImageField(upload_to='offers/', blank=True, null=True, verbose_name='Изображение')
+    is_active = models.BooleanField(default=True, verbose_name='Активна')
+    priority = models.IntegerField(default=0, verbose_name='Приоритет')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
+
+    class Meta:
+        verbose_name = 'Акция'
+        verbose_name_plural = 'Акции'
+        ordering = ['-priority', '-created_at']
+
+    def __str__(self):
+        return f"{self.title} — {self.residential_complex.name}"

@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Видеообзоры ЖК — CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="articles-section">
+        <div class="articles-header">
+            <h1 class="section-title">Видеообзоры ЖК</h1>
+            <p class="section-subtitle">Смотрите обзоры жилых комплексов и выбирайте свой будущий дом</p>
+        </div>
+
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">Видеообзоры</span>
+        </div>
+
+        <div class="filters" style="display:flex; gap:12px; margin-bottom:20px;">
+            <form method="get" style="display:flex; gap:12px; flex-wrap:wrap;">
+                <select name="city" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
+                    <option value="">Все города</option>
+                    {% for c in cities %}
+                        <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="category-btn"><i class="fas fa-filter"></i> Фильтр</button>
+            </form>
+        </div>
+
+        <div class="catalog-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+            {% for v in videos %}
+            <a href="{% url 'main:video_detail' v.slug %}" class="property-card" style="text-decoration:none; color:inherit;">
+                <div class="card-image" style="height:200px;">
+                    {% if v.thumbnail %}
+                        <img src="{{ v.thumbnail.url }}" alt="{{ v.title }}">
+                    {% elif v.residential_complex.image %}
+                        <img src="{{ v.residential_complex.image.url }}" alt="{{ v.residential_complex.name }}">
+                    {% else %}
+                        <img src="https://via.placeholder.com/600x400/252526/BEAF87?text={{ v.title|urlencode }}" alt="{{ v.title }}">
+                    {% endif %}
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ v.title }}</h3>
+                    </div>
+                    <div class="card-location" style="margin-top:8px;">
+                        <i class="fas fa-building"></i>
+                        <span>{{ v.residential_complex.name }}</span>
+                    </div>
+                    <div class="card-location" style="margin-top:6px;">
+                        <i class="fas fa-eye"></i>
+                        <span>{{ v.views_count }} просмотров</span>
+                    </div>
+                    <div class="card-location" style="margin-top:6px;">
+                        <i class="fas fa-calendar"></i>
+                        <span>{{ v.published_date|date:"j E Y" }}</span>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="no-articles"><p>Видео пока не добавлены.</p></div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination" style="display:flex; gap:8px; justify-content:center; margin-top:24px;">
+            {% if page_obj.has_previous %}
+                <a class="nav-link" href="?page={{ page_obj.previous_page_number }}">Назад</a>
+            {% endif %}
+            <span class="nav-link active">Стр. {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a class="nav-link" href="?page={{ page_obj.next_page_number }}">Вперед</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    {% include 'includes/feedback_form.html' %}
+</div>
+{% endblock %} 

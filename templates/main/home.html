@@ -8,24 +8,113 @@
         <h1 class="hero-title">Добро пожаловать в CENTURY 21</h1>
         <p class="hero-subtitle">Найдите свой идеальный дом в лучших жилых комплексах</p>
     </section>
+    <style>
+    .hero-section{
+        position:relative;overflow:hidden;border-radius:16px;min-height:360px;margin:12px 0 22px 0;
+        background: linear-gradient(0deg, rgba(37,37,38,.35), rgba(37,37,38,.35)), url('/media/uploads/back_home.jpg') center/cover no-repeat;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    }
+    .hero-title{font-size:44px;line-height:1.15;margin:0 12px 8px 12px;color:#fff;font-weight:800;letter-spacing:.4px}
+    .hero-subtitle{font-size:18px;color:#f5f5f5;margin:0 12px 0 12px;opacity:.95}
+    @media (max-width: 900px){
+        .hero-section{min-height:280px;border-radius:12px}
+        .hero-title{font-size:30px}
+        .hero-subtitle{font-size:16px}
+    }
+    </style>
+
+    {% if offers %}
+    <section class="offers-section">
+        <div class="offers-header">
+            <h2 class="section-title">Специальные предложения по ЖК</h2>
+        </div>
+        <div class="offers-grid">
+            {% for o in offers %}
+            <div class="offer-card">
+                <div class="offer-media">
+                    {% if o.image %}
+                        <img src="{{ o.image.url }}" alt="{{ o.title }}" loading="lazy" decoding="async">
+                    {% else %}
+                        <img src="https://via.placeholder.com/560x320/252526/BEAF87?text={{ o.title|urlencode }}" alt="{{ o.title }}" loading="lazy" decoding="async">
+                    {% endif %}
+                    <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
+                </div>
+                <div class="offer-content">
+                    <div class="offer-head">
+                        <span class="offer-chip">ЖК «{{ o.residential_complex.name }}»</span>
+                        <h3 class="offer-title">{{ o.title }}</h3>
+                    </div>
+                    <p class="offer-text">{{ o.description|truncatechars:160 }}</p>
+                    <div class="offer-limited"><i class="far fa-clock"></i><span>Временное предложение</span></div>
+                    <div class="offer-actions">
+                        <a href="#feedback-form" class="btn btn-primary btn-small offer-cta">Получить предложение</a>
+                        <a class="offer-more" href="{% url 'main:detail' o.residential_complex.id %}"><span>Подробнее о ЖК</span> <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <style>
+        .offers-section{margin:28px 0 4px 0}
+        .offers-header{text-align:center;margin-bottom:12px}
+        .offers-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:18px;justify-items:center}
+        .offer-card{width:820px;max-width:100%;display:grid;grid-template-columns:280px 1fr;gap:16px;background:#fff;border:1px solid #efe7ce;border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:box-shadow .2s ease, transform .2s ease, border-color .2s ease}
+        .offer-card:hover{box-shadow:0 16px 36px rgba(0,0,0,.14);transform:translateY(-2px);border-color:var(--c21-gold)}
+        .offer-media{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/10}
+        .offer-media img{width:100%;height:100%;object-fit:cover;display:block}
+        .offer-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.00) 40%, rgba(0,0,0,.18) 100%)}
+        .offer-badge-hot{position:absolute;left:10px;top:10px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:6px 10px;border-radius:999px;font-weight:800;display:inline-flex;gap:6px;align-items:center;font-size:12px;box-shadow:0 4px 10px rgba(190,175,135,.35)}
+        .offer-badge-hot i{font-size:12px}
+        .offer-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+        .offer-chip{display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px}
+        .offer-title{margin:0;font-size:18px;font-weight:800;color:#222}
+        .offer-text{color:#444;margin:8px 0 0 0}
+        .offer-limited{display:flex;align-items:center;gap:8px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:10px;padding:8px 10px;margin-top:10px;font-weight:600}
+        .offer-limited i{color:var(--c21-gold)}
+        .offer-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px;justify-content:flex-start}
+        .offer-cta{flex:1 1 220px;text-align:center;padding:10px 14px !important;border-radius:10px;background:linear-gradient(180deg,var(--c21-gold), var(--c21-gold-dark)) !important;color:var(--c21-dark) !important;border:none !important;box-shadow:0 6px 16px rgba(190,175,135,.45)}
+        .offer-cta:hover{filter:brightness(.98);transform:translateY(-1px)}
+        .offer-more{display:inline-flex;align-items:center;gap:6px;color:#6a5e2e;text-decoration:none;font-weight:700;padding:8px 10px;border:1px solid #e8e4d5;border-radius:10px;background:linear-gradient(180deg,#fff, #fbf9f2)}
+        @media(max-width: 1100px){.offers-grid{grid-template-columns:1fr}.offer-card{grid-template-columns:1fr}}
+        </style>
+    </section>
+    {% endif %}
 
     <section class="catalog-section">
         <div class="catalog-header">
-            <h2 class="section-title">Популярные жилые комплексы</h2>
-            <p class="section-subtitle">9 лучших предложений для вас</p>
+            <h2 class="section-title">9 лучших предложений для вас</h2>
         </div>
+
+        <style>
+        /* Улучшенный грид карточек */
+        .home-grid{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:18px}
+        @media(max-width:1100px){.home-grid{grid-template-columns:repeat(2,minmax(240px,1fr))}}
+        @media(max-width:720px){.home-grid{grid-template-columns:1fr}}
+        /* Карточка */
+        .home-property-card{background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:transform .2s ease, box-shadow .2s ease}
+        .home-property-card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(0,0,0,.12)}
+        /* Ровные превью */
+        .home-card-image{position:relative;aspect-ratio:16/10;overflow:hidden}
+        .home-card-image img{width:100%;height:100%;object-fit:cover;display:block}
+        /* Контент */
+        .home-card-content{padding:12px 14px 14px 14px}
+        .home-card-title{margin:0 0 6px 0;font-size:18px;font-weight:800;color:#222}
+        .home-card-location{display:flex;gap:8px;align-items:center;color:#666;font-size:13px}
+        .home-location-text{background:#f6f6f6;border:1px solid #eee;padding:4px 8px;border-radius:999px}
+        .home-commute-time{background:#faf7ee;border:1px solid #efe7ce;color:#7b6a3e;padding:4px 8px;border-radius:999px}
+        .home-card-price{margin-top:10px}
+        .home-price-text{font-weight:800;color:var(--c21-gold)}
+        </style>
 
         <div class="home-grid">
             {% for complex in complexes %}
-            <div class="home-property-card" data-city="{{ complex.city }}" data-district="{{ complex.district }}" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
+            <a class="home-property-card" data-city="{{ complex.city }}" data-district="{{ complex.district }}" href="{% url 'main:detail' complex.id %}">
                 <div class="home-card-image">
                     {% if complex.image %}
-                        <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
+                        <img src="{{ complex.image.url }}" alt="{{ complex.name }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw">
                     {% else %}
-                        <img src="https://via.placeholder.com/400x300/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}">
+                        <img src="https://via.placeholder.com/400x300/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}" loading="lazy" decoding="async">
                     {% endif %}
-                    
-
                 </div>
                 
                 <div class="home-card-content">
@@ -41,7 +130,7 @@
                         <span class="home-price-text">от {{ complex.price_from|floatformat:1 }} млн ₽</span>
                     </div>
                 </div>
-            </div>
+            </a>
             {% empty %}
             <div class="no-complexes">
                 <p>Жилые комплексы пока не добавлены</p>
@@ -56,6 +145,44 @@
             </a>
         </div>
     </section>
+
+    {% if home_articles %}
+    <section class="catalog-section">
+        <div class="catalog-header">
+            <h2 class="section-title">Полезные статьи</h2>
+            <p class="section-subtitle">Отобранные материалы</p>
+        </div>
+
+        <div class="home-grid">
+            {% for a in home_articles %}
+            <a class="home-property-card" href="{{ a.get_absolute_url }}">
+                <div class="home-card-image">
+                    {% if a.image %}
+                        <img src="{{ a.image.url }}" alt="{{ a.title }}">
+                    {% else %}
+                        <img src="https://via.placeholder.com/400x300/252526/BEAF87?text={{ a.title|urlencode }}" alt="{{ a.title }}">
+                    {% endif %}
+                </div>
+                <div class="home-card-content">
+                    <div class="home-card-header">
+                        <h3 class="home-card-title">{{ a.title }}</h3>
+                        <div class="home-card-location">
+                            <span class="home-location-text">{{ a.get_category_display }}</span>
+                            <span class="home-commute-time">{{ a.published_date }}</span>
+                        </div>
+                    </div>
+                    <div class="home-card-price">
+                        <span class="home-price-text">{{ a.excerpt|striptags|truncatechars:90 }}</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        <div class="catalog-footer">
+            <a href="{% url 'main:articles' %}" class="btn btn-primary btn-large">Все статьи <i class="fas fa-arrow-right"></i></a>
+        </div>
+    </section>
+    {% endif %}
 
     <!-- Блок "О компании" -->
     {% if company_info %}
@@ -86,6 +213,10 @@
                         <span class="company-name">{{ company_info.company_name }}</span>
                     </div>
                 </div>
+
+                <div class="about-actions" style="margin-top:16px;">
+                    <a href="{% url 'main:company' %}" class="btn btn-primary btn-large">Наша компания</a>
+                </div>
             </div>
         </div>
     </section>
@@ -95,7 +226,7 @@
 </div>
 
 <script>
-// Обработка кликов по карточкам ЖК теперь происходит через onclick в HTML
+// Навигация теперь через обычные ссылки <a>
 
 // Эффект тени для sticky шапки при прокрутке
 window.addEventListener('scroll', function() {
@@ -105,6 +236,13 @@ window.addEventListener('scroll', function() {
     } else {
         header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
     }
+});
+// Плавный скролл к форме по кнопкам акций
+document.querySelectorAll('.offer-cta').forEach(a=>{
+  a.addEventListener('click', function(e){
+    const target = document.getElementById('feedback-form');
+    if (target){ e.preventDefault(); target.scrollIntoView({behavior:'smooth', block:'start'}); }
+  });
 });
 </script>
 {% endblock %} 

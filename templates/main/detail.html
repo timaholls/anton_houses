@@ -4,391 +4,587 @@
 
 {% block content %}
 <div class="detail-container">
-    <!-- Hero секция с главным изображением -->
-    <div class="detail-hero">
-        <div class="hero-image">
-            {% if complex.image %}
-                <img src="{{ complex.image.url }}" alt="{{ complex.name }}" class="hero-main-image">
-            {% else %}
-                <img src="https://via.placeholder.com/1200x600/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}" class="hero-main-image">
-            {% endif %}
-            
-            <!-- Бейджи на изображении -->
-            <div class="hero-badges">
-                <div class="rating-badge">
-                    <span class="star">★</span>
-                    <span class="rating">3.3</span>
-                </div>
-                <div class="class-badge">
-                    {{ complex.get_house_class_display }}
-                </div>
-                <div class="verified-badge">
-                    Проверено
-                </div>
-            </div>
-            
-            <!-- Информационная панель поверх изображения -->
-            <div class="hero-info-overlay">
-                <h1 class="complex-name">{{ complex.name }}</h1>
-                <div class="price-range">
-                    от {{ complex.price_from|floatformat:1 }} до {{ complex.four_room_price|default:complex.price_from|floatformat:1 }} млн ₽
-                </div>
-                <div class="completion-info">
-                    {{ complex.completion_start }} - {{ complex.completion_end }}
-                    {% if complex.has_completed %}
-                        <span class="completed-indicator">, есть сданные</span>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <!-- Интерактивные кнопки -->
-            <div class="hero-actions">
-                <div class="action-item">
-                    <i class="fas fa-building"></i>
-                    <span>{{ complex.total_apartments }} предложений</span>
-                </div>
-                <div class="action-item">
-                    <i class="fas fa-play"></i>
-                    <span>Видеообзор ЖК</span>
-                </div>
-                <div class="action-item">
-                    <i class="fas fa-map"></i>
-                    <span>Генплан</span>
-                </div>
-                <div class="action-item">
-                    <i class="fas fa-percentage"></i>
-                    <span>12 акций</span>
-                </div>
-                <div class="action-item">
-                    <i class="fas fa-home"></i>
-                    <span>Ипотека</span>
-                </div>
-                <div class="action-item">
-                    <i class="fas fa-city"></i>
-                    <span>Инфраструктура</span>
-                </div>
-                <div class="action-item">
-                    <i class="fas fa-star"></i>
-                    <span>35 отзывов</span>
-                </div>
-                <div class="action-item">
-                    <i class="fas fa-calendar"></i>
-                    <span>Ход с</span>
-                </div>
-                <div class="action-item photo-counter">
-                    <span class="photo-count">19</span>
-                    <div class="photo-nav">
-                        <button class="photo-nav-btn prev"><i class="fas fa-chevron-left"></i></button>
-                        <button class="photo-nav-btn next"><i class="fas fa-chevron-right"></i></button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Кнопки в правом верхнем углу -->
-            <div class="hero-top-actions">
-                <button class="favorite-btn">
-                    <i class="far fa-heart"></i>
-                </button>
-                <button class="share-btn">
-                    <i class="fas fa-share"></i>
-                </button>
-                <button class="more-btn">
-                    <i class="fas fa-ellipsis-h"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Основная информация -->
-    <div class="detail-content">
-        <!-- Левая панель с информацией -->
-        <div class="detail-info-panel">
-            <div class="location-section">
-                <div class="location-item">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>{{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}{% if complex.street %}, {{ complex.street }}{% endif %}</span>
-                </div>
-                <div class="metro-info">
-                    <i class="fas fa-subway"></i>
-                    <span>{{ complex.commute_time }}</span>
-                </div>
-            </div>
-            
-            <div class="specifications-grid">
-                <div class="spec-item">
-                    <i class="fas fa-ruler-combined"></i>
-                    <div class="spec-content">
-                        <span class="spec-label">Площади квартир</span>
-                        <span class="spec-value">{{ complex.area_from }}-{{ complex.area_to }} м²</span>
-                    </div>
-                </div>
-                
-                <div class="spec-item">
-                    <i class="fas fa-home"></i>
-                    <div class="spec-content">
-                        <span class="spec-label">Тип жилья</span>
-                        <span class="spec-value">{{ complex.get_house_type_display }}</span>
-                    </div>
-                </div>
-                
-                <div class="spec-item">
-                    <i class="fas fa-building"></i>
-                    <div class="spec-content">
-                        <span class="spec-label">Этажность</span>
-                        <span class="spec-value">17-18</span>
-                    </div>
-                </div>
-                
-                <div class="spec-item">
-                    <i class="fas fa-paint-roller"></i>
-                    <div class="spec-content">
-                        <span class="spec-label">Варианты отделки</span>
-                        <span class="spec-value">{{ complex.get_finishing_display }}</span>
-                    </div>
-                </div>
-                
-                <div class="spec-item">
-                    <i class="fas fa-building"></i>
-                    <div class="spec-content">
-                        <span class="spec-label">Количество корпусов</span>
-                        <span class="spec-value">{{ complex.total_apartments|floatformat:0 }} корпусов</span>
-                    </div>
-                </div>
-            </div>
-            
-            <a href="#" class="more-info-link">Подробнее о ЖК</a>
-            
-            <div class="promotions">
-                <span class="promotions-count">12 акций от застройщика</span>
-            </div>
-        </div>
-        
-        <!-- Средняя секция с рейтингом транспорта -->
-        <div class="transport-rating-card">
-            <div class="transport-icon">
-                <i class="fas fa-crosshairs"></i>
-            </div>
-            <div class="transport-score">3.6 из 10</div>
-            <div class="transport-label">Транспортная доступность</div>
-        </div>
-        
-        <!-- Правая панель с контактами -->
-        <div class="detail-contact-panel">
-            <div class="developer-info">
-                <span class="developer-name">{{ complex.developer }}</span>
-                <span class="developer-label">Застройщик</span>
-            </div>
-            
-            <div class="contact-actions">
-                <button class="btn-primary contact-btn">
-                    Показать телефон
-                </button>
-                <button class="btn-secondary mortgage-btn">
-                    <i class="fas fa-clock"></i>
-                    Рассчитать ипотеку
-                </button>
-            </div>
-            
-            <div class="opening-time">
-                Откроется в 11:00
-            </div>
-            
-            <!-- Реклама -->
-            <div class="advertisement">
-                <div class="ad-image">
-                    <img src="https://via.placeholder.com/60x40/252526/BEAF87?text=Нарвин" alt="Реклама">
-                </div>
-                <div class="ad-content">
-                    <span class="ad-label">Реклама</span>
-                    <span class="ad-name">«Нарвин»</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Галерея изображений -->
-    <div class="detail-gallery">
-        <h2>Фотографии ЖК</h2>
-        <div class="gallery-grid">
-            {% if complex.image %}
-            <div class="gallery-item main" data-image="{{ complex.image.url }}">
-                <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
-            </div>
-            {% endif %}
-            {% if complex.image_2 %}
-            <div class="gallery-item" data-image="{{ complex.image_2.url }}">
-                <img src="{{ complex.image_2.url }}" alt="{{ complex.name }}">
-            </div>
-            {% endif %}
-            {% if complex.image_3 %}
-            <div class="gallery-item" data-image="{{ complex.image_3.url }}">
-                <img src="{{ complex.image_3.url }}" alt="{{ complex.name }}">
-            </div>
-            {% endif %}
-            {% if complex.image_4 %}
-            <div class="gallery-item" data-image="{{ complex.image_4.url }}">
-                <img src="{{ complex.image_4.url }}" alt="{{ complex.name }}">
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Цены по типам квартир -->
-    <div class="detail-prices">
-        <h2>Цены по типам квартир</h2>
-        <div class="prices-grid">
-            <div class="price-item">
-                <span class="room-type">Студия</span>
-                <span class="room-price">от {{ complex.studio_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-            </div>
-            <div class="price-item">
-                <span class="room-type">1-комн.</span>
-                <span class="room-price">от {{ complex.one_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-            </div>
-            <div class="price-item">
-                <span class="room-type">2-комн.</span>
-                <span class="room-price">от {{ complex.two_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-            </div>
-            <div class="price-item">
-                <span class="room-type">3-комн.</span>
-                <span class="room-price">от {{ complex.three_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-            </div>
-            <div class="price-item">
-                <span class="room-type">4-комн.+</span>
-                <span class="room-price">от {{ complex.four_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Похожие ЖК -->
-    {% if similar_complexes %}
-    <div class="similar-complexes">
-        <h2>Похожие ЖК</h2>
-        <div class="similar-grid">
-            {% for similar in similar_complexes %}
-            <div class="similar-card">
-                <div class="similar-image">
-                    {% if similar.image %}
-                        <img src="{{ similar.image.url }}" alt="{{ similar.name }}">
-                    {% else %}
-                        <img src="https://via.placeholder.com/300x200/252526/BEAF87?text={{ similar.name|urlencode }}" alt="{{ similar.name }}">
-                    {% endif %}
-                </div>
-                <div class="similar-content">
-                    <h3 class="similar-title">{{ similar.name }}</h3>
-                    <div class="similar-location">{{ similar.district|default:similar.city }}</div>
-                    <div class="similar-price">от {{ similar.price_from|floatformat:1 }} млн ₽</div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
+	<!-- Hero секция с главным изображением -->
+	<div class="detail-hero">
+		<div class="hero-image">
+			{% if complex.image %}
+				<img src="{{ complex.image.url }}" alt="{{ complex.name }}" class="hero-main-image">
+			{% else %}
+				<img src="https://via.placeholder.com/1200x600/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}" class="hero-main-image">
+			{% endif %}
+			
+			<!-- Бейджи на изображении -->
+			<div class="hero-badges">
+				<div class="rating-badge">
+					<span class="star">★</span>
+					<span class="rating">3.3</span>
+				</div>
+				<div class="class-badge">
+					{{ complex.get_house_class_display }}
+				</div>
+				<div class="verified-badge">
+					Проверено
+				</div>
+			</div>
+			
+			<!-- Информационная панель поверх изображения -->
+			<div class="hero-info-overlay">
+				<h1 class="complex-name">{{ complex.name }}</h1>
+				<div class="price-range">
+					от {{ complex.price_from|floatformat:1 }} до {{ complex.four_room_price|default:complex.price_from|floatformat:1 }} млн ₽
+				</div>
+				<div class="completion-info">
+					{{ complex.completion_start }} - {{ complex.completion_end }}
+					{% if complex.has_completed %}
+						<span class="completed-indicator">, есть сданные</span>
+					{% endif %}
+				</div>
+			</div>
+			
+			<!-- Верхний правый блок кнопок удалён по требованию -->
+		</div>
+		<!-- Боковые стрелки навигации по фото -->
+		<div class="hero-photo-nav" style="position:absolute; top:50%; left:0; right:0; display:flex; justify-content:space-between; transform:translateY(-50%); pointer-events:none; padding:0 8px;">
+			<button class="photo-nav-btn prev" style="pointer-events:auto; background:rgba(0,0,0,0.5); border:none; color:#fff; width:40px; height:40px; border-radius:999px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-chevron-left"></i></button>
+			<button class="photo-nav-btn next" style="pointer-events:auto; background:rgba(0,0,0,0.5); border:none; color:#fff; width:40px; height:40px; border-radius:999px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-chevron-right"></i></button>
+		</div>
+	</div>
+	
+	<!-- Основная информация -->
+	<div class="detail-content">
+		<!-- Левая панель с информацией -->
+		<div class="detail-info-panel">
+			<div class="location-section">
+				<div class="location-item">
+					<i class="fas fa-map-marker-alt"></i>
+					<span>{{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}{% if complex.street %}, {{ complex.street }}{% endif %}</span>
+				</div>
+				<div class="metro-info">
+					<i class="fas fa-subway"></i>
+					<span>{{ complex.commute_time }}</span>
+				</div>
+			</div>
+			
+			<div class="specifications-grid">
+				<div class="spec-item">
+					<i class="fas fa-ruler-combined"></i>
+					<div class="spec-content">
+						<span class="spec-label">Площади квартир</span>
+						<span class="spec-value">{{ complex.area_from }}-{{ complex.area_to }} м²</span>
+					</div>
+				</div>
+				
+				<div class="spec-item">
+					<i class="fas fa-home"></i>
+					<div class="spec-content">
+						<span class="spec-label">Тип жилья</span>
+						<span class="spec-value">{{ complex.get_house_type_display }}</span>
+					</div>
+				</div>
+				
+				<div class="spec-item">
+					<i class="fas fa-building"></i>
+					<div class="spec-content">
+						<span class="spec-label">Этажность</span>
+						<span class="spec-value">17-18</span>
+					</div>
+				</div>
+				
+				<div class="spec-item">
+					<i class="fas fa-paint-roller"></i>
+					<div class="spec-content">
+						<span class="spec-label">Варианты отделки</span>
+						<span class="spec-value">{{ complex.get_finishing_display }}</span>
+					</div>
+				</div>
+				
+				<div class="spec-item">
+					<i class="fas fa-building"></i>
+					<div class="spec-content">
+						<span class="spec-label">Количество корпусов</span>
+						<span class="spec-value">{{ complex.total_apartments|floatformat:0 }} корпусов</span>
+					</div>
+				</div>
+			</div>
+			
+			<a href="#" class="more-info-link">Подробнее о ЖК</a>
+			
+			<div class="promotions">
+				<span class="promotions-count">12 акций от застройщика</span>
+			</div>
+		</div>
+		
+		<!-- Средняя секция с рейтингом транспорта -->
+		<div class="transport-rating-card">
+			<div class="transport-icon">
+				<i class="fas fa-crosshairs"></i>
+			</div>
+			<div class="transport-score">3.6 из 10</div>
+			<div class="transport-label">Транспортная доступность</div>
+		</div>
+		
+		<!-- Правая панель с контактами -->
+		<div class="detail-contact-panel">
+			<div class="developer-info">
+				<span class="developer-name">{{ complex.developer }}</span>
+				<span class="developer-label">Застройщик</span>
+			</div>
+			
+			<div class="contact-actions">
+				<a href="#mortgage" class="btn-secondary mortgage-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+					<i class="fas fa-clock"></i>
+					Рассчитать ипотеку
+				</a>
+			</div>
+			
+			<div class="opening-time">
+				Откроется в 11:00
+			</div>
+			
+		</div>
+	</div>
+	
+	<!-- Галерея изображений -->
+	<div class="detail-gallery">
+		<h2>Фотографии ЖК</h2>
+		<div class="gallery-grid">
+			{% if complex.image %}
+			<div class="gallery-item main" data-image="{{ complex.image.url }}">
+				<img src="{{ complex.image.url }}" alt="{{ complex.name }}">
+			</div>
+			{% endif %}
+			{% if complex.image_2 %}
+			<div class="gallery-item" data-image="{{ complex.image_2.url }}">
+				<img src="{{ complex.image_2.url }}" alt="{{ complex.name }}">
+			</div>
+			{% endif %}
+			{% if complex.image_3 %}
+			<div class="gallery-item" data-image="{{ complex.image_3.url }}">
+				<img src="{{ complex.image_3.url }}" alt="{{ complex.name }}">
+			</div>
+			{% endif %}
+			{% if complex.image_4 %}
+			<div class="gallery-item" data-image="{{ complex.image_4.url }}">
+				<img src="{{ complex.image_4.url }}" alt="{{ complex.name }}">
+			</div>
+			{% endif %}
+		</div>
+	</div>
+	
+	{% if video %}
+	<!-- Видеообзор ЖК -->
+	<div class="detail-video" style="margin: 24px 0;">
+		<h2>Видеообзор ЖК</h2>
+		<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;border-radius:12px;overflow:hidden;background:#000;">
+			{% if video_embed_url %}
+			<iframe src="{{ video_embed_url }}" title="{{ video.title }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+			{% elif video.video_file %}
+			<video controls style="position:absolute;top:0;left:0;width:100%;height:100%;">
+				<source src="{{ video.video_file.url }}" type="video/mp4">
+			</video>
+			{% else %}
+			<div style="color:#fff;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">Видео недоступно</div>
+			{% endif %}
+		</div>
+		<div style="text-align:right;margin-top:12px;">
+			<a class="btn btn-primary" href="{% url 'main:videos' %}?complex={{ complex.id }}">Перейти к видеообзорам ЖК</a>
+		</div>
+	</div>
+	{% endif %}
+	
+	<!-- Калькулятор ипотеки (новый дизайн) -->
+	<div class="mortgage-section" id="mortgage">
+		<div class="mortgage-grid" style="grid-template-columns: 1fr 1fr;">
+			<div class="mortgage-card" style="padding:20px 22px;">
+				<h2 class="mortgage-title" style="margin-bottom:10px;">Ипотека онлайн <span style="color:#bfa760">*</span></h2>
+				<!-- Скрытое поле с базовой ставкой (fallback) -->
+				<input id="mp-rate-fixed" type="hidden" value="11.4" />
+				<div class="select-wrap" style="margin-top:6px;">
+					<label class="mortgage-label" style="display:block;margin-bottom:6px;">Тип программы</label>
+					<div class="select-box" style="position:relative;">
+						<select id="mp-program" class="mortgage-select" style="height:44px; padding-right:36px;">
+							{% for p in mortgage_programs %}
+							<option value="{{ p.rate }}">{{ p.name }}</option>
+							{% endfor %}
+						</select>
+						<i class="fas fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#b8af95;"></i>
+					</div>
+				</div>
+				<div class="slider-block" style="margin-top:8px;">
+					<label class="mortgage-label" style="display:block;margin-bottom:6px;">Стоимость недвижимости</label>
+					<div class="inline-controls" style="margin-bottom:6px;">
+						<input id="mp-price-input" class="mini-input wide" type="text" inputmode="numeric" value="5 000 000"/>
+					</div>
+					<input id="mp-price" class="c21-range" type="range" min="800000" max="87500000" step="50000" value="5000000"/>
+				</div>
+				<div class="slider-block">
+					<label class="mortgage-label" style="display:block;margin-bottom:6px;">Первоначальный взнос</label>
+					<div class="inline-controls" style="margin-bottom:6px;">
+						<input id="mp-down-amt-input" class="mini-input wide" type="text" inputmode="numeric" value="1 000 000"/>
+					</div>
+					<div style="position:relative;">
+						<input id="mp-down" class="c21-range" type="range" min="10" max="80" step="1" value="20"/>
+						<span id="mp-down-pct-view" style="position:absolute; right:8px; top:-4px; color:#9a8f73; font-weight:700;">20%</span>
+					</div>
+				</div>
+				<div class="slider-block">
+					<label class="mortgage-label" style="display:block;margin-bottom:6px;">Срок кредита</label>
+					<div class="inline-controls" style="margin-bottom:6px;">
+						<input id="mp-years-input" class="mini-input narrow" type="number" min="3" max="30" step="1" value="30"/>
+					</div>
+					<input id="mp-years" class="c21-range" type="range" min="3" max="30" step="1" value="30"/>
+				</div>
+			</div>
+			<div class="mortgage-card summary" style="padding:20px 22px;">
+				<div class="summary-title" style="font-size:22px;">Одна заявка во все банки</div>
+				<div class="summary-main" style="border-top:none;">
+					<span style="color:#666;">Ежемесячный платёж</span>
+					<span id="mp-month" class="summary-amount">—</span>
+				</div>
+				<div class="summary-row"><span>Процентная ставка</span><strong id="mp-rate-text" style="font-weight:500;">от 11.4 %</strong></div>
+				<div class="summary-row" ><span>Сумма кредита</span><strong id="mp-loan" style="font-weight:500;">—</strong></div>
+				<div class="mortgage-logos">
+					<img src="/media/logo/banks.png" alt="Банки" style="height:44px; width:auto;"/>
+				</div>
+				<div class="summary-actions" style="text-align:left;">
+					<a href="#feedback-form" class="btn btn-primary btn-large" style="width:100%;">Подать заявку</a>
+				</div>
+				<div style="color:#888; font-size:12px; margin-top:8px;">* Расчёт примерный. Уточняйте актуальную информацию у нашего специалиста, оставив заявку</div>
+			</div>
+		</div>
+		<style>
+		.mortgage-section{margin:32px 0;font-weight:500; background:#fff;border:1px solid #eee;border-radius:16px;padding:0;box-shadow:0 6px 20px rgba(0,0,0,.06)}
+		.mortgage-grid{display:grid;gap:0}
+		.mortgage-card{background:#fff}
+		.mortgage-card + .mortgage-card{border-left:1px solid #eee}
+		.mortgage-title{margin:0 0 6px 0;font-size:24px; font-weight:500; color:#222; letter-spacing:.2px}
+		.mortgage-label{color:#6b6453;font-size:20px}
+		.inline-controls{display:flex;align-items:center;gap:6px}
+		.mini-input{padding:10px 12px;border:1px solid #e6ddc6;border-radius:10px;background:#fff;color:#222; box-shadow:0 1px 0 rgba(0,0,0,.02) inset}
+		.mini-input.narrow{width:72px}
+		.mini-input.wide{flex:1; min-width:0}
+		.mortgage-select{width:100%;padding:10px 12px;border:1px solid #e6ddc6;border-radius:10px;background:#fff;color:#222; appearance:none}
+		.c21-range{width:100%;background:transparent}
+		.c21-range::-webkit-slider-runnable-track{height:4px;background:#e9e2cf;border-radius:999px}
+		.c21-range::-webkit-slider-thumb{appearance:none; width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid #c3ad6f;margin-top:-7px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+		.c21-range::-moz-range-track{height:4px;background:#e9e2cf;border-radius:999px}
+		.c21-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid #c3ad6f;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+		.summary-amount{font-size:28px;color:#222}
+		.summary-main{padding:10px 0 16px 0}
+		.summary-row{display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid #f0f0f0}
+		.mortgage-logos{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin:16px 0 16px 0}
+		.summary-actions{margin-top:auto}
+		@media (max-width: 900px){.mortgage-grid{grid-template-columns:1fr}.mortgage-card + .mortgage-card{border-left:none;border-top:1px solid #eee}}
+		/* tighter gap between field and slider, and full-width controls */
+		.slider-block .inline-controls{width:100%; margin-bottom:0}
+		.slider-block .c21-range{margin-top:-12px}
+		/* summary card fills height, no empty space at bottom */
+		.mortgage-card.summary{display:flex; flex-direction:column}
+		</style>
+	</div>
+	
+	<!-- Цены по типам квартир -->
+	<div class="detail-prices">
+		<h2>Цены по типам квартир</h2>
+		<div class="prices-grid">
+			<div class="price-item">
+				<span class="room-type">Студия</span>
+				<span class="room-price">от {{ complex.studio_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+			</div>
+			<div class="price-item">
+				<span class="room-type">1-комн.</span>
+				<span class="room-price">от {{ complex.one_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+			</div>
+			<div class="price-item">
+				<span class="room-type">2-комн.</span>
+				<span class="room-price">от {{ complex.two_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+			</div>
+			<div class="price-item">
+				<span class="room-type">3-комн.</span>
+				<span class="room-price">от {{ complex.three_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+			</div>
+			<div class="price-item">
+				<span class="room-type">4-комн.+</span>
+				<span class="room-price">от {{ complex.four_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Похожие ЖК -->
+	{% if similar_complexes %}
+	<div class="similar-complexes">
+		<h2>Похожие ЖК</h2>
+		<div class="similar-grid">
+			{% for similar in similar_complexes %}
+			<div class="similar-card">
+				<div class="similar-image">
+					{% if similar.image %}
+						<img src="{{ similar.image.url }}" alt="{{ similar.name }}">
+					{% else %}
+						<img src="https://via.placeholder.com/300x200/252526/BEAF87?text={{ similar.name|urlencode }}" alt="{{ similar.name }}">
+					{% endif %}
+				</div>
+				<div class="similar-content">
+					<h3 class="similar-title">{{ similar.name }}</h3>
+					<div class="similar-location">{{ similar.district|default:similar.city }}</div>
+					<div class="similar-price">от {{ similar.price_from|floatformat:1 }} млн ₽</div>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+	</div>
+	{% endif %}
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Функциональность галереи изображений
-    const galleryItems = document.querySelectorAll('.gallery-item');
-    const heroImage = document.querySelector('.hero-main-image');
-    
-    galleryItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const imageUrl = this.getAttribute('data-image');
-            if (imageUrl && heroImage) {
-                heroImage.src = imageUrl;
-                
-                // Обновляем активный класс
-                galleryItems.forEach(i => i.classList.remove('active'));
-                this.classList.add('active');
-            }
-        });
-    });
-    
-    // Функциональность кнопок действий
-    const actionItems = document.querySelectorAll('.action-item');
-    actionItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const actionText = this.querySelector('span').textContent;
-            console.log('Clicked:', actionText);
-            
-            // Здесь можно добавить обработку различных действий
-            if (actionText.includes('Видеообзор')) {
-                alert('Видеообзор ЖК будет открыт в новом окне');
-            } else if (actionText.includes('Генплан')) {
-                alert('Генеральный план ЖК будет открыт в новом окне');
-            } else if (actionText.includes('Ипотека')) {
-                alert('Калькулятор ипотеки будет открыт в новом окне');
-            }
-        });
-    });
-    
-    // Функциональность избранного
-    const favoriteBtn = document.querySelector('.favorite-btn');
-    if (favoriteBtn) {
-        favoriteBtn.addEventListener('click', function() {
-            this.classList.toggle('active');
-            const icon = this.querySelector('i');
-            if (this.classList.contains('active')) {
-                icon.className = 'fas fa-heart';
-            } else {
-                icon.className = 'far fa-heart';
-            }
-        });
-    }
-    
-    // Функциональность кнопок контактов
-    const contactBtn = document.querySelector('.contact-btn');
-    if (contactBtn) {
-        contactBtn.addEventListener('click', function() {
-            alert('Телефон: +7 347 201-94-78');
-        });
-    }
-    
-    const mortgageBtn = document.querySelector('.mortgage-btn');
-    if (mortgageBtn) {
-        mortgageBtn.addEventListener('click', function() {
-            alert('Калькулятор ипотеки будет открыт в новом окне');
-        });
-    }
-    
-    // Функциональность навигации по фото
-    const photoNavBtns = document.querySelectorAll('.photo-nav-btn');
-    photoNavBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const isNext = this.classList.contains('next');
-            const currentActive = document.querySelector('.gallery-item.active') || document.querySelector('.gallery-item');
-            const allItems = document.querySelectorAll('.gallery-item');
-            const currentIndex = Array.from(allItems).indexOf(currentActive);
-            
-            let newIndex;
-            if (isNext) {
-                newIndex = (currentIndex + 1) % allItems.length;
-            } else {
-                newIndex = currentIndex === 0 ? allItems.length - 1 : currentIndex - 1;
-            }
-            
-            const newActive = allItems[newIndex];
-            if (newActive) {
-                allItems.forEach(item => item.classList.remove('active'));
-                newActive.classList.add('active');
-                
-                const imageUrl = newActive.getAttribute('data-image');
-                if (imageUrl && heroImage) {
-                    heroImage.src = imageUrl;
-                }
-            }
-        });
-    });
-    
-    // Функциональность похожих ЖК
-    const similarCards = document.querySelectorAll('.similar-card');
-    similarCards.forEach(card => {
-        card.addEventListener('click', function() {
-            // Здесь можно добавить переход на страницу похожего ЖК
-            console.log('Clicked similar complex');
-        });
-    });
+	// Функциональность галереи изображений
+	const galleryItems = document.querySelectorAll('.gallery-item');
+	const heroImage = document.querySelector('.hero-main-image');
+	const prevBtn = document.querySelector('.photo-nav-btn.prev');
+	const nextBtn = document.querySelector('.photo-nav-btn.next');
+	let currentIndex = 0;
+	const allItems = Array.from(galleryItems);
+	function setActiveByIndex(idx){
+		if (!allItems.length) return;
+		currentIndex = (idx + allItems.length) % allItems.length;
+		const newActive = allItems[currentIndex];
+		allItems.forEach(i => i.classList.remove('active'));
+		newActive.classList.add('active');
+		const imageUrl = newActive.getAttribute('data-image') || newActive.querySelector('img')?.src;
+		if (imageUrl && heroImage) heroImage.src = imageUrl;
+	}
+	// Инициализация активного
+	if (allItems.length){
+		const initial = document.querySelector('.gallery-item.main') || allItems[0];
+		currentIndex = allItems.indexOf(initial);
+		setActiveByIndex(currentIndex);
+	}
+
+	galleryItems.forEach(item => {
+		item.addEventListener('click', function() {
+			const idx = allItems.indexOf(this);
+			setActiveByIndex(idx);
+		});
+	});
+	
+	// Автопрокрутка каждые 5 секунд
+	let slideshowTimer = null;
+	function startSlideshow(){
+		stopSlideshow();
+		slideshowTimer = setInterval(()=> setActiveByIndex(currentIndex + 1), 5000);
+	}
+	function stopSlideshow(){ if (slideshowTimer) { clearInterval(slideshowTimer); slideshowTimer = null; } }
+	startSlideshow();
+	
+	// Кнопки навигации
+	prevBtn?.addEventListener('click', function(){ stopSlideshow(); setActiveByIndex(currentIndex - 1); startSlideshow(); });
+	nextBtn?.addEventListener('click', function(){ stopSlideshow(); setActiveByIndex(currentIndex + 1); startSlideshow(); });
+
+	// Функциональность кнопок действий
+	const actionItems = document.querySelectorAll('.action-item');
+	actionItems.forEach(item => {
+		item.addEventListener('click', function() {
+			const actionText = this.querySelector('span').textContent;
+			console.log('Clicked:', actionText);
+		});
+	});
+	
+	// Функциональность избранного
+	const favoriteBtn = document.querySelector('.favorite-btn');
+	if (favoriteBtn) {
+		favoriteBtn.addEventListener('click', function() {
+			this.classList.toggle('active');
+			const icon = this.querySelector('i');
+			if (this.classList.contains('active')) {
+				icon.className = 'fas fa-heart';
+			} else {
+				icon.className = 'far fa-heart';
+			}
+		});
+	}
+	
+	const mortgageBtn = document.querySelector('.mortgage-btn');
+	if (mortgageBtn) {
+		mortgageBtn.addEventListener('click', function() {
+			// smooth scroll handled via anchor; no alerts
+		});
+	}
+	
+	// Функциональность навигации по фото
+	const photoNavBtns = document.querySelectorAll('.photo-nav-btn');
+	photoNavBtns.forEach(btn => {
+		btn.addEventListener('click', function() {
+			const isNext = this.classList.contains('next');
+			const currentActive = document.querySelector('.gallery-item.active') || document.querySelector('.gallery-item');
+			const allItems = document.querySelectorAll('.gallery-item');
+			const currentIndex = Array.from(allItems).indexOf(currentActive);
+			
+			let newIndex;
+			if (isNext) {
+				newIndex = (currentIndex + 1) % allItems.length;
+			} else {
+				newIndex = currentIndex === 0 ? allItems.length - 1 : currentIndex - 1;
+			}
+			
+			const newActive = allItems[newIndex];
+			if (newActive) {
+				allItems.forEach(item => item.classList.remove('active'));
+				newActive.classList.add('active');
+				
+				const imageUrl = newActive.getAttribute('data-image');
+				if (imageUrl && heroImage) {
+					heroImage.src = imageUrl;
+				}
+			}
+		});
+	});
+	
+	// Ипотечный калькулятор (обновлён под новый дизайн)
+	(function(){
+		const baseRateEl = document.getElementById('mp-rate-fixed');
+		const program = document.getElementById('mp-program');
+		const price = document.getElementById('mp-price');
+		const down = document.getElementById('mp-down');
+		const years = document.getElementById('mp-years');
+		const monthEl = document.getElementById('mp-month');
+		const loanEl = document.getElementById('mp-loan');
+		const rateText = document.getElementById('mp-rate-text');
+		const downPctView = document.getElementById('mp-down-pct-view');
+		const priceInput = document.getElementById('mp-price-input');
+		const downAmtInput = document.getElementById('mp-down-amt-input');
+		const yearsInput = document.getElementById('mp-years-input');
+		function fmt(n){ return new Intl.NumberFormat('ru-RU').format(Math.round(n)); }
+		function parseNum(v){ return Number(String(v||'').replace(/[^\d]/g,'')) || 0; }
+		function formatInputKeepCaret(inputEl){
+			const start = inputEl.selectionStart || 0;
+			const leftDigits = (inputEl.value.slice(0, start).match(/\d/g) || []).length;
+			const digits = inputEl.value.replace(/[^\d]/g,'');
+			const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+			inputEl.value = formatted;
+			let pos = 0, seen = 0;
+			while (pos < formatted.length && seen < leftDigits){
+				if (/\d/.test(formatted.charAt(pos))) seen++;
+				pos++;
+			}
+			inputEl.setSelectionRange(pos, pos);
+		}
+		function calc(){
+			const p = priceInput ? (parseNum(priceInput.value) || Number(price.value)) : Number(price.value);
+			const downPct = Number(down.value)/100;
+			const rateVal = program ? Number(program.value || baseRateEl?.value || 11.4) : Number(baseRateEl?.value || 11.4);
+			const rate = rateVal/100; // годовая
+			const n = Number(years.value) * 12;
+			const monthlyRate = rate/12;
+			const firstPay = p * downPct;
+			const loan = Math.max(0, p - firstPay);
+			const annuity = monthlyRate ? loan * (monthlyRate * Math.pow(1+monthlyRate, n)) / (Math.pow(1+monthlyRate, n) - 1) : (n ? loan/n : 0);
+			monthEl.textContent = fmt(annuity) + ' ₽';
+			loanEl.textContent = fmt(loan) + ' ₽';
+			if (rateText) rateText.textContent = 'от ' + (rateVal.toFixed(1)) + ' %';
+			if (downPctView) downPctView.textContent = Math.round(downPct*100) + '%';
+			if (yearsInput) yearsInput.value = Number(years.value);
+		}
+		['change','input'].forEach(ev=>{
+			program && program.addEventListener(ev, calc);
+			years.addEventListener(ev, calc);
+		});
+		// Sync from range: price -> text + amount
+		price.addEventListener('input', function(){
+			const val = Number(price.value);
+			if (priceInput){ priceInput.value = fmt(val); }
+			if (downAmtInput){ downAmtInput.value = fmt(val * (Number(down.value)/100)); downAmtInput.max = String(val); }
+			calc();
+		});
+		// Sync from down slider -> amount
+		down.addEventListener('input', function(){
+			const p = priceInput ? (parseNum(priceInput.value) || Number(price.value)) : Number(price.value);
+			if (downAmtInput){ downAmtInput.value = fmt(p * (Number(down.value)/100)); }
+			calc();
+		});
+		// Ручной ввод цены с живым форматированием
+		if (priceInput){
+			priceInput.addEventListener('input', function(){
+				formatInputKeepCaret(this);
+				const raw = parseNum(this.value);
+				if (downAmtInput){ downAmtInput.max = String(raw); }
+				calc();
+			});
+			priceInput.addEventListener('blur', function(){
+				const min = Number(price.min), max = Number(price.max);
+				let val = parseNum(this.value);
+				val = Math.max(min, Math.min(max, val));
+				this.value = fmt(val);
+				price.value = String(val);
+				if (downAmtInput){ downAmtInput.max = String(val); downAmtInput.value = fmt(val * (Number(down.value)/100)); }
+				calc();
+			});
+		}
+		// Ручной ввод суммы первоначального взноса с живым форматированием
+		if (downAmtInput){
+			downAmtInput.addEventListener('input', function(){
+				formatInputKeepCaret(this);
+				const p = priceInput ? (parseNum(priceInput.value) || Number(price.value)) : Number(price.value);
+				let amt = parseNum(this.value);
+				amt = Math.max(0, Math.min(p, amt));
+				const pctRaw = p ? (amt / p) * 100 : 0;
+				const pct = Math.min(80, Math.max(10, Math.round(pctRaw)));
+				down.value = String(pct);
+				calc();
+			});
+			downAmtInput.addEventListener('blur', function(){
+				const p = priceInput ? (parseNum(priceInput.value) || Number(price.value)) : Number(price.value);
+				let amt = parseNum(this.value);
+				amt = Math.max(0, Math.min(p, amt));
+				this.value = fmt(amt);
+			});
+		}
+		if (yearsInput){
+			yearsInput.addEventListener('input', function(){
+				const min = Number(years.min), max = Number(years.max);
+				let val = Number(this.value||0);
+				val = Math.max(min, Math.min(max, val));
+				years.value = String(val);
+				calc();
+			});
+		}
+		// начальная отрисовка и форматирование
+		if (priceInput){ priceInput.value = fmt(Number(price.value)); }
+		if (downAmtInput){ const p0 = Number(price.value); downAmtInput.value = fmt(p0 * (Number(down.value)/100)); downAmtInput.max = String(p0); }
+		calc();
+	})();
+
+	// Функциональность похожих ЖК
+	const similarCards = document.querySelectorAll('.similar-card');
+	similarCards.forEach(card => {
+		card.addEventListener('click', function() {
+			console.log('Clicked similar complex');
+		});
+	});
+
+	// Плавный скролл к форме обратной связи
+	document.querySelectorAll('a[href="#feedback-form"]').forEach(a=>{
+		a.addEventListener('click', function(e){
+			const target = document.getElementById('feedback-form');
+			if (target) {
+				e.preventDefault();
+				const top = target.getBoundingClientRect().top + window.pageYOffset - 30; // небольшой отступ
+				window.scrollTo({ top, behavior: 'smooth' });
+			}
+		});
+	});
+	// Плавный скролл к блоку ипотеки
+	document.querySelectorAll('a[href="#mortgage"]').forEach(a=>{
+		a.addEventListener('click', function(e){
+			const target = document.getElementById('mortgage');
+			if (target) {
+				e.preventDefault();
+				const top = target.getBoundingClientRect().top + window.pageYOffset - 30;
+				window.scrollTo({ top, behavior: 'smooth' });
+			}
+		});
+	});
 });
 </script>
+{% include 'includes/feedback_form.html' %}
 {% endblock %} 
