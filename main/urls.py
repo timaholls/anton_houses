@@ -49,4 +49,7 @@ urlpatterns = [
 
     # Наша компания
     path('company/', views.company, name='company'),
+    
+    # Ипотека
+    path('mortgage/', views.mortgage, name='mortgage'),
 ] 

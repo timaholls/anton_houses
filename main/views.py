@@ -123,7 +123,8 @@ def catalog(request):
             'delivery_date': delivery_date,
             'sort': sort,
         },
-        'filters_applied': filters_applied
+        'filters_applied': filters_applied,
+        'dataset_type': 'newbuild'  # По умолчанию показываем новостройки
     }
     return render(request, 'main/catalog.html', context)
 
@@ -920,3 +921,23 @@ def company(request):
         'paginator': paginator,
     }
     return render(request, 'main/company.html', context)
+
+
+def mortgage(request):
+    """Страница ипотеки с калькулятором"""
+    # Получаем ипотечные программы для калькулятора
+    mortgage_programs = MortgageProgram.objects.filter(is_active=True).order_by('rate')
+    
+    # Если нет программ, создаем базовую
+    if not mortgage_programs.exists():
+        mortgage_programs = [
+            type('MortgageProgram', (), {
+                'name': 'Базовая',
+                'rate': 11.4
+            })()
+        ]
+    
+    context = {
+        'mortgage_programs': mortgage_programs,
+    }
+    return render(request, 'main/mortgage.html', context)

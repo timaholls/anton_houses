@@ -194,16 +194,16 @@
         
         <div class="about-content">
             <div class="about-image">
-                {% if company_info.founder_photo %}
-                    <img src="{{ company_info.founder_photo.url }}" alt="{{ company_info.founder_name }}">
-                {% else %}
-                    <img src="https://via.placeholder.com/300x400/252526/BEAF87?text={{ company_info.founder_name|urlencode }}" alt="{{ company_info.founder_name }}">
-                {% endif %}
+                                        {% if company_info.founder_photo %}
+                            <img src="{{ company_info.founder_photo.url }}" alt="{{ company_info.founder_name }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/380x480/BEAF87/ffffff?text={{ company_info.founder_name|urlencode }}" alt="{{ company_info.founder_name }}">
+                        {% endif %}
             </div>
             
             <div class="about-text">
                 <blockquote class="about-quote">
-                    «{{ company_info.quote }}»
+                    {{ company_info.quote }}
                 </blockquote>
                 
                 <div class="about-signature">
@@ -214,15 +214,17 @@
                     </div>
                 </div>
 
-                <div class="about-actions" style="margin-top:16px;">
-                    <a href="{% url 'main:company' %}" class="btn btn-primary btn-large">Наша компания</a>
+                <div class="about-actions">
+                    <a href="{% url 'main:company' %}" class="btn">
+                        Наша компания
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </div>
     </section>
     {% endif %}
 
-    {% include 'includes/feedback_form.html' %}
 </div>
 
 <script>
@@ -237,12 +239,88 @@ window.addEventListener('scroll', function() {
         header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
     }
 });
+
 // Плавный скролл к форме по кнопкам акций
 document.querySelectorAll('.offer-cta').forEach(a=>{
   a.addEventListener('click', function(e){
     const target = document.getElementById('feedback-form');
     if (target){ e.preventDefault(); target.scrollIntoView({behavior:'smooth', block:'start'}); }
   });
+});
+
+// Дополнительные эффекты для блока "О компании"
+document.addEventListener('DOMContentLoaded', function() {
+    const aboutSection = document.querySelector('.about-section');
+    const aboutImage = document.querySelector('.about-image');
+    const aboutQuote = document.querySelector('.about-quote');
+    
+    if (aboutSection && aboutImage && aboutQuote) {
+        let isTypewriterActive = false;
+        
+        // Анимация появления цитаты при наведении на изображение
+        aboutImage.addEventListener('mouseenter', function() {
+            if (!isTypewriterActive) {
+                aboutQuote.style.transform = 'scale(1.02)';
+                aboutQuote.style.transition = 'transform 0.3s ease';
+            }
+        });
+        
+        aboutImage.addEventListener('mouseleave', function() {
+            if (!isTypewriterActive) {
+                aboutQuote.style.transform = 'scale(1)';
+            }
+        });
+        
+        // Эффект печатной машинки для цитаты
+        const quoteText = aboutQuote.textContent.trim();
+        aboutQuote.textContent = '';
+        let i = 0;
+        
+        function typeWriter() {
+            if (i < quoteText.length) {
+                aboutQuote.textContent += quoteText.charAt(i);
+                i++;
+                setTimeout(typeWriter, 30);
+            } else {
+                // Завершаем анимацию печатной машинки
+                isTypewriterActive = false;
+                // Восстанавливаем возможность hover эффектов
+                aboutQuote.style.transition = 'transform 0.3s ease';
+            }
+        }
+        
+        // Запускаем анимацию печатной машинки при появлении в области видимости
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting && !isTypewriterActive) {
+                    isTypewriterActive = true;
+                    // Фиксируем изображение во время анимации печатной машинки
+                    aboutImage.style.transform = 'perspective(1000px) rotateY(-5deg)';
+                    aboutImage.style.transition = 'transform 0.3s ease';
+                    
+                    setTimeout(typeWriter, 1000);
+                    observer.unobserve(entry.target);
+                }
+            });
+        });
+        
+        observer.observe(aboutSection);
+        
+        // Легкий эффект параллакса только после завершения анимации печатной машинки
+        window.addEventListener('scroll', function() {
+            if (!isTypewriterActive) {
+                const scrolled = window.pageYOffset;
+                const aboutSectionTop = aboutSection.offsetTop;
+                const aboutSectionHeight = aboutSection.offsetHeight;
+                
+                if (scrolled >= aboutSectionTop - window.innerHeight && 
+                    scrolled <= aboutSectionTop + aboutSectionHeight) {
+                    const rate = (scrolled - aboutSectionTop) * 0.1;
+                    aboutImage.style.transform = `perspective(1000px) rotateY(-5deg) translateY(${rate}px)`;
+                }
+            }
+        });
+    }
 });
 </script>
 {% endblock %} 

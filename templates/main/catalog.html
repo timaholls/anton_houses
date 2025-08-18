@@ -1,6 +1,87 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{% if landing and landing.meta_title %}{{ landing.meta_title }}{% elif page_title %}{{ page_title }} — CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Специальные исправления для страницы каталога ЖК */
+.catalog-section ~ .feedback-wrapper {
+    margin-top: 100px !important;
+    padding: 120px 0 250px 0 !important;
+}
+
+.catalog-section ~ .feedback-wrapper .feedback-container {
+    margin-bottom: 200px !important;
+}
+
+.catalog-section ~ .footer-transition {
+    padding-top: 200px !important;
+}
+
+.catalog-section ~ .footer-transition .deco-logo.on-dark {
+    top: 40px !important;
+    z-index: 200 !important;
+}
+
+.catalog-section ~ .footer .footer-content {
+    margin-top: 120px !important;
+}
+
+.catalog-section {
+    margin-bottom: 30px !important;
+}
+
+.catalog-grid {
+    margin-bottom: 30px !important;
+}
+
+.pagination-container {
+    margin-top: 30px !important;
+    margin-bottom: 50px !important;
+}
+
+@media (max-width: 768px) {
+    .catalog-section ~ .feedback-wrapper {
+        margin-top: 80px !important;
+        padding: 80px 0 180px 0 !important;
+    }
+    
+    .catalog-section ~ .footer-transition {
+        padding-top: 150px !important;
+    }
+    
+    .catalog-section ~ .footer-transition .deco-logo.on-dark {
+        top: 30px !important;
+        z-index: 200 !important;
+    }
+    
+    .catalog-section ~ .footer .footer-content {
+        margin-top: 100px !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .catalog-section ~ .feedback-wrapper {
+        margin-top: 60px !important;
+        padding: 60px 0 150px 0 !important;
+    }
+    
+    .catalog-section ~ .footer-transition {
+        padding-top: 120px !important;
+    }
+    
+    .catalog-section ~ .footer-transition .deco-logo.on-dark {
+        top: 25px !important;
+        z-index: 200 !important;
+    }
+    
+    .catalog-section ~ .footer .footer-content {
+        margin-top: 80px !important;
+    }
+}
+</style>
+{% endblock %}
 
 {% block meta %}
 {% if landing and landing.meta_description %}
@@ -47,7 +128,7 @@
         <!-- Фильтры -->
         <div class="filters-section">
             <form class="filters-form" id="filters-form">
-                <div class="filters-row filters-row-grid">
+                <div class="filters-row filters-row-grid fixed-grid">
                     <div class="filter-group">
                         <label for="city">Город</label>
                         <select name="city" id="city" class="filter-select">
@@ -60,14 +141,14 @@
                         </select>
                     </div>
 
-                    <div class="filter-group" id="district-group">
+                    <div class="filter-group hidden" id="district-group">
                         <label for="district">Район</label>
                         <select name="district" id="district" class="filter-select">
                             <option value="">Любой</option>
                         </select>
                     </div>
 
-                    <div class="filter-group" id="street-group">
+                    <div class="filter-group hidden" id="street-group">
                         <label for="street">Улица</label>
                         <select name="street" id="street" class="filter-select">
                             <option value="">Любая</option>
@@ -355,8 +436,6 @@
 
     </section>
     
-    <!-- Форма обратной связи -->
-    {% include 'includes/feedback_form.html' %}
 </div>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -400,6 +479,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const districtSelect = document.getElementById('district');
     const streetSelect = document.getElementById('street');
     
+    // Инициализация: показываем поля района и улицы, если город уже выбран
+    if (citySelect.value) {
+        districtGroup.classList.remove('hidden');
+        streetGroup.classList.remove('hidden');
+    }
+    
     citySelect.addEventListener('change', function() {
         const selectedCity = this.value;
         
@@ -413,12 +498,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         districtSelect.innerHTML += `<option value="${district}">${district}</option>`;
                     });
                     
-                    // Показываем группу районов с анимацией
-                    districtGroup.style.display = 'block';
-                    setTimeout(() => {
-                        districtGroup.style.opacity = '1';
-                        districtGroup.style.transform = 'translateY(0)';
-                    }, 10);
+                    // Показываем группу районов
+                    districtGroup.classList.remove('hidden');
                 });
             
             // Загружаем улицы для выбранного города
@@ -430,24 +511,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
                     });
                     
-                    // Показываем группу улиц с анимацией
-                    streetGroup.style.display = 'block';
-                    setTimeout(() => {
-                        streetGroup.style.opacity = '1';
-                        streetGroup.style.transform = 'translateY(0)';
-                    }, 10);
+                    // Показываем группу улиц
+                    streetGroup.classList.remove('hidden');
                 });
         } else {
-            // Скрываем группы с анимацией
-            districtGroup.style.opacity = '0';
-            districtGroup.style.transform = 'translateY(-10px)';
-            streetGroup.style.opacity = '0';
-            streetGroup.style.transform = 'translateY(-10px)';
+            // Сбрасываем значения
+            districtSelect.innerHTML = '<option value="">Любой</option>';
+            streetSelect.innerHTML = '<option value="">Любая</option>';
             
-            setTimeout(() => {
-                districtGroup.style.display = 'none';
-                streetGroup.style.display = 'none';
-            }, 300);
+            // Скрываем группы через CSS класс
+            districtGroup.classList.add('hidden');
+            streetGroup.classList.add('hidden');
         }
     });
     
@@ -1041,6 +1115,9 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem('catalog_view', view);
   }
   toggleBtns.forEach(b=>b.addEventListener('click', ()=>setView(b.getAttribute('data-view'))));
+  
+  // Инициализация вида по умолчанию
+  setView(savedView);
 
   function initMap(){
     map = L.map('map', { attributionControl: false });
@@ -1247,5 +1324,116 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 
 // Мгновенный сабмит при выборe фильтров — обрабатывается AJAX-слоем
+
+// Современные анимации для фильтров
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация появления фильтров
+    const filterGroups = document.querySelectorAll('.filter-group');
+    filterGroups.forEach((group, index) => {
+        group.style.opacity = '0';
+        group.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            group.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            group.style.opacity = '1';
+            group.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Анимация для кнопок фильтра
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px) scale(1.02)';
+        });
+        
+        btn.addEventListener('mouseleave', function() {
+            if (!this.getAttribute('data-active') === 'true') {
+                this.style.transform = 'translateY(0) scale(1)';
+            }
+        });
+    });
+    
+    // Анимация для select элементов
+    const filterSelects = document.querySelectorAll('.filter-select');
+    filterSelects.forEach(select => {
+        select.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'translateY(-2px)';
+        });
+        
+        select.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Анимация для range sliders
+    const rangeSliders = document.querySelectorAll('.range-slider-input');
+    rangeSliders.forEach(slider => {
+        slider.addEventListener('input', function() {
+            const container = this.closest('.range-container');
+            container.style.transform = 'translateY(-1px) scale(1.01)';
+            
+            setTimeout(() => {
+                container.style.transform = 'translateY(0) scale(1)';
+            }, 150);
+        });
+    });
+    
+    // Анимация для кнопки очистки фильтров
+    const clearFiltersBtn = document.querySelector('.clear-filters');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px) scale(1.02)';
+        });
+        
+        clearFiltersBtn.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    }
+    
+    // Анимация для сортировки
+    const sortingActive = document.querySelector('.sorting-active');
+    if (sortingActive) {
+        sortingActive.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px) scale(1.01)';
+        });
+        
+        sortingActive.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    }
+    
+    // Плавная анимация для результатов поиска
+    const resultsCount = document.querySelector('.results-count');
+    if (resultsCount) {
+        resultsCount.style.opacity = '0';
+        resultsCount.style.transform = 'translateY(10px)';
+        
+        setTimeout(() => {
+            resultsCount.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            resultsCount.style.opacity = '1';
+            resultsCount.style.transform = 'translateY(0)';
+        }, 500);
+    }
+    
+    // Анимация для секции фильтров при скролле
+    const filtersSection = document.querySelector('.filters-section');
+    if (filtersSection) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        filtersSection.style.opacity = '0';
+        filtersSection.style.transform = 'translateY(30px)';
+        filtersSection.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        observer.observe(filtersSection);
+    }
+});
 </script>
 {% endblock %} 

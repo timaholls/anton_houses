@@ -40,6 +40,65 @@
 document.addEventListener('DOMContentLoaded', function() {
     const feedbackForm = document.getElementById('feedback-form');
     const phoneInput = document.querySelector('.phone-input');
+    const submitButton = document.querySelector('.feedback-submit');
+    const inputs = document.querySelectorAll('.feedback-input');
+    const checkbox = document.querySelector('.checkbox-input');
+
+    // Анимация появления формы
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    // Применяем анимацию к элементам формы
+    const formElements = document.querySelectorAll('.feedback-header, .feedback-form');
+    formElements.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = `all 0.6s cubic-bezier(0.4, 0, 0.2, 1) ${index * 0.2}s`;
+        observer.observe(el);
+    });
+
+    // Эффект фокуса для инпутов
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'translateY(-2px)';
+            this.parentElement.style.boxShadow = '0 8px 25px rgba(190, 175, 135, 0.2)';
+        });
+
+        input.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'translateY(0)';
+            this.parentElement.style.boxShadow = 'none';
+        });
+
+        // Анимация при вводе
+        input.addEventListener('input', function() {
+            if (this.value.length > 0) {
+                this.style.borderColor = '#BEAF87';
+                this.style.background = 'rgba(255, 255, 255, 1)';
+            } else {
+                this.style.borderColor = 'rgba(190, 175, 135, 0.2)';
+                this.style.background = 'rgba(255, 255, 255, 0.9)';
+            }
+        });
+    });
+
+    // Анимация для чекбокса
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            const customCheckbox = this.nextElementSibling;
+            if (this.checked) {
+                customCheckbox.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    customCheckbox.style.transform = 'scale(1)';
+                }, 150);
+            }
+        });
+    }
 
     // Маска телефона: (999) 999-99-99
     function formatPhone(value) {
@@ -103,26 +162,114 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Простая валидация
             if (!name || !phone) {
-                alert('Пожалуйста, заполните все обязательные поля');
+                showNotification('Пожалуйста, заполните все обязательные поля', 'error');
                 return;
             }
             
             if (!privacy) {
-                alert('Пожалуйста, согласитесь с политикой конфиденциальности');
+                showNotification('Пожалуйста, согласитесь с политикой конфиденциальности', 'error');
                 return;
             }
             
             // Валидация телефона (10 цифр внутри скобок)
             const digits = (phone || '').replace(/\D/g, '');
             if (digits.length !== 10) {
-                alert('Пожалуйста, введите номер в формате (999) 999-99-99');
+                showNotification('Пожалуйста, введите номер в формате (999) 999-99-99', 'error');
                 return;
             }
             
-            console.log('Данные формы:', { name, phone: '+7 ' + phone, privacy });
-            alert('Спасибо! Мы свяжемся с вами в ближайшее время.');
-            feedbackForm.reset();
+            // Анимация отправки
+            if (submitButton) {
+                submitButton.textContent = 'Отправляется...';
+                submitButton.style.pointerEvents = 'none';
+                submitButton.style.background = 'linear-gradient(135deg, #A19276 0%, #8B7D5F 100%)';
+            }
+            
+            // Имитация отправки
+            setTimeout(() => {
+                console.log('Данные формы:', { name, phone: '+7 ' + phone, privacy });
+                showNotification('Спасибо! Мы свяжемся с вами в ближайшее время.', 'success');
+                feedbackForm.reset();
+                
+                // Сброс стилей инпутов
+                inputs.forEach(input => {
+                    input.style.borderColor = 'rgba(190, 175, 135, 0.2)';
+                    input.style.background = 'rgba(255, 255, 255, 0.9)';
+                });
+                
+                // Восстановление кнопки
+                if (submitButton) {
+                    submitButton.textContent = 'Отправить';
+                    submitButton.style.pointerEvents = 'auto';
+                    submitButton.style.background = 'linear-gradient(135deg, #BEAF87 0%, #A19276 100%)';
+                }
+            }, 2000);
         });
     }
+
+    // Функция показа уведомлений
+    function showNotification(message, type) {
+        // Удаляем существующие уведомления
+        const existingNotifications = document.querySelectorAll('.notification');
+        existingNotifications.forEach(notification => notification.remove());
+
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        
+        // Стили для уведомления
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 10000;
+            transform: translateX(100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+        `;
+
+        if (type === 'success') {
+            notification.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+        } else {
+            notification.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+        }
+
+        document.body.appendChild(notification);
+
+        // Анимация появления
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+
+        // Автоматическое удаление
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 4000);
+    }
+
+    // Эффект параллакса для фона формы
+    window.addEventListener('scroll', function() {
+        const feedbackSection = document.querySelector('.feedback-section');
+        if (feedbackSection) {
+            const rect = feedbackSection.getBoundingClientRect();
+            const scrolled = window.pageYOffset;
+            
+            // Применяем параллакс только когда секция видна в viewport
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                const rate = (scrolled - rect.top) * 0.05;
+                feedbackSection.style.transform = `translateY(${rate}px)`;
+            }
+        }
+    });
 });
 </script> 

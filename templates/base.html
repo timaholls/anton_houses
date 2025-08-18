@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon" type="image/svg+xml" href="/media/logo/icon_site.png">
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
 
@@ -30,7 +31,7 @@
                  <a href="{% url 'main:catalog' %}" class="nav-link {% if 'catalog' in request.resolver_match.url_name %}active{% endif %}">Каталог ЖК</a>
                  <a href="{% url 'main:articles' %}" class="nav-link {% if 'articles' in request.resolver_match.url_name %}active{% endif %}">Новости</a>
                  <a href="{% url 'main:videos' %}" class="nav-link {% if 'video' in request.resolver_match.url_name %}active{% endif %}">Видеообзоры ЖК</a>
-                 <a href="{% url 'main:catalog' %}#mortgage" class="nav-link">Ипотека</a>
+                 <a href="{% url 'main:mortgage' %}" class="nav-link">Ипотека</a>
                  <a href="{% url 'main:vacancies' %}" class="nav-link {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
                  <a href="{% url 'main:offices' %}" class="nav-link {% if 'office' in request.resolver_match.url_name %}active{% endif %}">Офисы продаж</a>
              </nav>
@@ -49,6 +50,11 @@
         {% block content %}
         {% endblock %}
     </main>
+
+    <!-- Форма обратной связи -->
+    <div class="feedback-wrapper">
+        {% include 'includes/feedback_form.html' %}
+    </div>
 
     <!-- Переход к футеру с логотипом по центру -->
     <div class="footer-transition">
