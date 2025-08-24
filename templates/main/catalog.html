@@ -122,7 +122,7 @@
         <div class="breadcrumbs">
             <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
             <span class="breadcrumb-separator">•</span>
-            <span class="breadcrumb-current">Каталог ЖК</span>
+            <span class="breadcrumb-current">{% if dataset_type == 'secondary' %}Вторичная недвижимость{% else %}Каталог ЖК{% endif %}</span>
         </div>
 
         <!-- Фильтры -->
@@ -235,7 +235,7 @@
                         Найдено {{ page_obj.paginator.count }} домов
                     </div>
                     
-                    <a href="{% url 'main:catalog' %}" class="clear-filters" id="clear-filters">
+                    <a href="{% if dataset_type == 'secondary' %}{% url 'main:secondary_index' %}{% else %}{% url 'main:catalog' %}{% endif %}" class="clear-filters" id="clear-filters">
                         <i class="fas fa-times"></i>
                         Очистить фильтр
                     </a>
@@ -282,11 +282,13 @@
             <div class="property-card-large" onclick="window.location.href='{% if dataset_type == 'secondary' %}{% url 'main:secondary_detail' complex.id %}{% else %}{% url 'main:detail' complex.id %}{% endif %}'" style="cursor: pointer;">
                 <div class="card-images">
                     <div class="main-image">
-                        {% if complex.image %}
-                            <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
-                        {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                        {% endif %}
+                        {% with catalog_images=complex.get_catalog_images %}
+                            {% if catalog_images.0.image %}
+                                <img src="{{ catalog_images.0.image.url }}" alt="{{ complex.name }}">
+                            {% else %}
+                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
+                            {% endif %}
+                        {% endwith %}
                         <div class="image-counter">1 из 4</div>
                         <div class="image-nav">
                             <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
@@ -294,35 +296,37 @@
                         </div>
                     </div>
                     <div class="thumbnail-images">
-                        <div class="thumbnail active">
-                            {% if complex.image %}
-                                <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
-                            {% else %}
-                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                            {% endif %}
-                        </div>
-                        <div class="thumbnail">
-                            {% if complex.image_2 %}
-                                <img src="{{ complex.image_2.url }}" alt="{{ complex.name }}">
-                            {% else %}
-                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                            {% endif %}
-                        </div>
-                        <div class="thumbnail">
-                            {% if complex.image_3 %}
-                                <img src="{{ complex.image_3.url }}" alt="{{ complex.name }}">
-                            {% else %}
-                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                            {% endif %}
-                        </div>
-                        <div class="thumbnail more">
-                            <span>+1</span>
-                            {% if complex.image_4 %}
-                                <img src="{{ complex.image_4.url }}" alt="{{ complex.name }}">
-                            {% else %}
-                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                            {% endif %}
-                        </div>
+                        {% with catalog_images=complex.get_catalog_images %}
+                            <div class="thumbnail active">
+                                {% if catalog_images.0.image %}
+                                    <img src="{{ catalog_images.0.image.url }}" alt="{{ complex.name }}">
+                                {% else %}
+                                    <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
+                                {% endif %}
+                            </div>
+                            <div class="thumbnail">
+                                {% if catalog_images.1.image %}
+                                    <img src="{{ catalog_images.1.image.url }}" alt="{{ complex.name }}">
+                                {% else %}
+                                    <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
+                                {% endif %}
+                            </div>
+                            <div class="thumbnail">
+                                {% if catalog_images.2.image %}
+                                    <img src="{{ catalog_images.2.image.url }}" alt="{{ complex.name }}">
+                                {% else %}
+                                    <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
+                                {% endif %}
+                            </div>
+                            <div class="thumbnail more">
+                                <span>+1</span>
+                                {% if catalog_images.3.image %}
+                                    <img src="{{ catalog_images.3.image.url }}" alt="{{ complex.name }}">
+                                {% else %}
+                                    <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
+                                {% endif %}
+                            </div>
+                        {% endwith %}
                     </div>
                 </div>
                 
@@ -409,7 +413,7 @@
             </div>
             <div class="pagination-controls">
                 {% if page_obj.has_previous %}
-                    <a class="pagination-btn" href="?page={{ page_obj.previous_page_number }}">
+                    <a class="pagination-btn" href="{% if dataset_type == 'secondary' %}{% url 'main:secondary_index' %}?page={{ page_obj.previous_page_number }}{% else %}{% url 'main:catalog' %}?page={{ page_obj.previous_page_number }}{% endif %}">
                         <i class="fas fa-chevron-left"></i> Назад
                     </a>
                 {% endif %}
@@ -419,13 +423,13 @@
                         {% if page_obj.number == num %}
                             <span class="pagination-number active">{{ num }}</span>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <a class="pagination-number" href="?page={{ num }}">{{ num }}</a>
+                            <a class="pagination-number" href="{% if dataset_type == 'secondary' %}{% url 'main:secondary_index' %}?page={{ num }}{% else %}{% url 'main:catalog' %}?page={{ num }}{% endif %}">{{ num }}</a>
                         {% endif %}
                     {% endfor %}
                 </div>
                 
                 {% if page_obj.has_next %}
-                    <a class="pagination-btn" href="?page={{ page_obj.next_page_number }}">
+                    <a class="pagination-btn" href="{% if dataset_type == 'secondary' %}{% url 'main:secondary_index' %}?page={{ page_obj.next_page_number }}{% else %}{% url 'main:catalog' %}?page={{ page_obj.next_page_number }}{% endif %}">
                         Вперед <i class="fas fa-chevron-right"></i>
                     </a>
                 {% endif %}
@@ -457,15 +461,534 @@
 </style>
 
 <script>
+// Глобальные функции - должны быть определены первой
+window.renderItems = function(data){
+  const grid = document.getElementById('catalog-grid');
+  const resultsCount = document.querySelector('.results-count');
+  const isSecondary = '{{ dataset_type }}' === 'secondary';
+  
+  // Для вторичной недвижимости всегда показываем списком
+  const currentView = isSecondary ? 'list' : (localStorage.getItem('catalog_view')||'list');
+  
+  if (currentView === 'map'){
+    // карта
+    if (isSecondary) {
+      if (typeof renderMapPoints === 'function') {
+        renderMapPoints(data.items||[], true);
+      }
+    } else {
+      if (typeof renderMapPoints === 'function') {
+        renderMapPoints(data.complexes||[], false);
+      }
+    }
+  } else {
+    // списком
+    if (isSecondary) {
+      if (!data.items || !data.items.length) {
+        grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
+      } else {
+        grid.innerHTML = data.items.map(item => {
+          const imageUrl = item.image_url || '/media/gallery/placeholders.png';
+          const image2 = item.image_2_url || '/media/gallery/placeholders.png';
+          const image3 = item.image_3_url || '/media/gallery/placeholders.png';
+          const image4 = item.image_4_url || '/media/gallery/placeholders.png';
+          return `
+          <div class="property-card-large" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
+            <div class="card-images">
+              <div class="main-image">
+                <img src="${imageUrl}" alt="${item.name}">
+                <div class="image-counter">1 из 4</div>
+                <div class="image-nav">
+                  <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
+                  <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
+                </div>
+              </div>
+              <div class="thumbnail-images">
+                <div class="thumbnail active"><img src="${imageUrl}" alt="${item.name}"></div>
+                <div class="thumbnail"><img src="${image2}" alt="${item.name}"></div>
+                <div class="thumbnail"><img src="${image3}" alt="${item.name}"></div>
+                <div class="thumbnail more"><span>+1</span><img src="${image4}" alt="${item.name}"></div>
+              </div>
+            </div>
+            <div class="card-content-large">
+              <div class="card-header">
+                <div class="card-title-section"><h3 class="card-title">${item.name}</h3></div>
+                <div class="card-price-section">
+                  <div class="main-price"><span class="price-label">от</span><span class="price-value">${(item.price_from || 0).toFixed ? item.price_from.toFixed(1) : item.price_from}</span><span class="price-currency">млн ₽</span></div>
+                </div>
+              </div>
+              <div class="card-location-info"><div class="location-text">Россия - ${item.city} - ${item.district || ''} - ${item.street || ''}</div></div>
+            </div>
+          </div>`;
+        }).join('');
+        if (typeof initImageCarousel === 'function') { initImageCarousel(); }
+      }
+    } else {
+      const list = data.complexes || [];
+      if (!list.length) {
+        grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
+      } else {
+        // Используем полноценный рендер с миниатюрами и ценами
+        if (typeof updateCatalog === 'function') {
+          updateCatalog(data);
+        }
+        // Инициализируем карусель изображений после обновления разметки
+        if (typeof initImageCarousel === 'function') { initImageCarousel(); }
+      }
+    }
+  }
+  // Обновляем пагинацию под список
+  if (typeof updatePagination === 'function') {
+    updatePagination(data);
+  }
+  if (resultsCount) {
+    const total = (typeof data.total_count !== 'undefined') ? data.total_count : (data.total_count ?? data.total ?? 0);
+    if (total) resultsCount.textContent = `Найдено ${total} домов`;
+  }
+}
+
+// Глобальная функция applyFilters
+window.applyFilters = function() {
+    // Собираем данные формы
+    const formData = new FormData(document.getElementById('filters-form'));
+    const params = new URLSearchParams();
+    
+    // Добавляем параметры фильтров
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    // Показываем индикатор загрузки
+    const grid = document.getElementById('catalog-grid');
+    grid.innerHTML = '<div class="loading">Поиск...</div>';
+    
+    // Определяем правильный API URL в зависимости от типа данных
+    const isSecondary = '{{ dataset_type }}' === 'secondary';
+    const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+    
+    // Загружаем данные через API с фильтрами
+    fetch(`${apiUrl}?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            window.currentPage = 1;
+            if (isSecondary) {
+                renderItems(data);
+            } else {
+                updateCatalog(data);
+                updatePagination(data);
+                updateResultsCount(data.total_count);
+            }
+            
+            // Показываем заголовок результатов поиска
+            const searchResults = document.querySelector('.search-results');
+            if (!searchResults) {
+                const resultsDiv = document.createElement('div');
+                resultsDiv.className = 'search-results';
+                resultsDiv.innerHTML = '<h3 class="search-title">Результаты поиска</h3>';
+                grid.parentNode.insertBefore(resultsDiv, grid);
+            }
+            
+            // Обновляем URL без параметров
+            const baseUrl = isSecondary ? '/secondary/' : '/catalog/';
+            window.history.pushState({}, '', baseUrl);
+        })
+        .catch(error => {
+            console.error('Ошибка поиска:', error);
+            grid.innerHTML = '<div class="error">Ошибка поиска</div>';
+        });
+}
+
+// Глобальная функция loadPage
+window.loadPage = function(page) {
+    if (page === window.currentPage) return;
+    
+    // Собираем текущие фильтры
+    const formData = new FormData(document.getElementById('filters-form'));
+    const params = new URLSearchParams();
+    
+    // Добавляем параметры фильтров
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    // Добавляем номер страницы
+    params.append('page', page);
+    
+    // Показываем индикатор загрузки
+    const grid = document.getElementById('catalog-grid');
+    grid.innerHTML = '<div class="loading">Загрузка...</div>';
+    
+    // Определяем правильный API URL в зависимости от типа данных
+    const isSecondary = '{{ dataset_type }}' === 'secondary';
+    const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+    
+    // Загружаем данные через API
+    fetch(`${apiUrl}?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            window.currentPage = data.current_page;
+            if (isSecondary) {
+                renderItems(data);
+            } else {
+                updateCatalog(data);
+                updatePagination(data);
+                updateResultsCount(data.total_count);
+            }
+            // Обновляем URL без параметров
+            const baseUrl = isSecondary ? '/secondary/' : '/catalog/';
+            window.history.pushState({}, '', baseUrl);
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки:', error);
+            grid.innerHTML = '<div class="error">Ошибка загрузки данных</div>';
+        });
+}
+
+// Глобальная функция updateCatalog
+window.updateCatalog = function(data) {
+    const grid = document.getElementById('catalog-grid');
+    
+    if (data.complexes.length === 0) {
+        grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p><p>Попробуйте изменить параметры поиска</p></div>';
+        return;
+    }
+    
+    let html = '';
+    data.complexes.forEach(complex => {
+        const imageUrl = complex.image_url || '/media/gallery/placeholders.png';
+        const image2 = complex.image_2_url || '/media/gallery/placeholders.png';
+        const image3 = complex.image_3_url || '/media/gallery/placeholders.png';
+        const image4 = complex.image_4_url || '/media/gallery/placeholders.png';
+        
+        html += `
+            <div class="property-card-large" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
+                <div class="card-images">
+                    <div class="main-image">
+                        <img src="${imageUrl}" alt="${complex.name}">
+                        <div class="image-counter">1 из 4</div>
+                        <div class="image-nav">
+                            <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
+                            <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="thumbnail-images">
+                        <div class="thumbnail active">
+                            <img src="${imageUrl}" alt="${complex.name}">
+                        </div>
+                        <div class="thumbnail">
+                            <img src="${image2}" alt="${complex.name}">
+                        </div>
+                        <div class="thumbnail">
+                            <img src="${image3}" alt="${complex.name}">
+                        </div>
+                        <div class="thumbnail more">
+                            <span>+1</span>
+                            <img src="${image4}" alt="${complex.name}">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-content-large">
+                    <div class="card-header">
+                        <div class="card-title-section">
+                            <h3 class="card-title">${complex.name}</h3>
+                            <div class="card-subtitle">
+                                ${complex.total_apartments || 100} квартир от застройщика
+                            </div>
+                            <div class="completion-info">
+                                ${complex.completion_start || '3 кв. 2024'} - ${complex.completion_end || '4 кв. 2025'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-location-info">
+                        <div class="location-text">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>${complex.location} ${complex.commute_time}</span>
+                        </div>
+                    </div>
+
+                    <div class="card-price-section" style="margin-top:8px;">
+                        <div class="main-price">
+                            <span class="price-label">от</span>
+                            <span class="price-value">${(complex.price_from || 0).toFixed ? complex.price_from.toFixed(1) : (complex.price_display ? complex.price_display.replace('от ', '').replace(' млн Р', '') : '')}</span>
+                            <span class="price-currency">млн Р</span>
+                        </div>
+                    </div>
+                    
+                    <div class="apartment-prices">
+                        <div class="price-row">
+                            <span class="room-type">Студия</span>
+                            <span class="room-price">от ${complex.studio_price || (complex.price_from * 0.8).toFixed(1)} млн Р</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">1-комн.</span>
+                            <span class="room-price">от ${complex.one_room_price || complex.price_from} млн Р</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">2-комн.</span>
+                            <span class="room-price">от ${complex.two_room_price || (complex.price_from * 1.25).toFixed(1)} млн Р</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">3-комн.</span>
+                            <span class="room-price">от ${complex.three_room_price || (complex.price_from * 1.5).toFixed(1)} млн Р</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="room-type">4-комн. +</span>
+                            <span class="room-price">от ${complex.four_room_price || (complex.price_from * 2).toFixed(1)} млн Р</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    grid.innerHTML = html;
+}
+
+// Глобальная функция updateResultsCount
+window.updateResultsCount = function(count) {
+    const resultsCount = document.querySelector('.results-count');
+    if (resultsCount) {
+        resultsCount.textContent = `Найдено ${count} домов`;
+    }
+}
+
+// Глобальная функция updatePagination
+window.updatePagination = function(data) {
+    const container = document.querySelector('.pagination-container');
+    if (!container) return;
+    
+    const info = container.querySelector('.pagination-info');
+    const controls = container.querySelector('.pagination-controls');
+    
+    info.textContent = `Страница ${data.current_page} из ${data.total_pages}`;
+    
+    let controlsHtml = '';
+    
+    if (data.has_previous) {
+        controlsHtml += `
+            <button class="pagination-btn" onclick="loadPage(${data.current_page - 1})">
+                <i class="fas fa-chevron-left"></i> Назад
+            </button>
+        `;
+    }
+    
+    controlsHtml += '<div class="pagination-numbers">';
+    for (let i = 1; i <= data.total_pages; i++) {
+        if (i === data.current_page) {
+            controlsHtml += `<span class="pagination-number active">${i}</span>`;
+        } else if (i > data.current_page - 3 && i < data.current_page + 3) {
+            controlsHtml += `<button class="pagination-number" onclick="loadPage(${i})">${i}</button>`;
+        }
+    }
+    controlsHtml += '</div>';
+    
+    if (data.has_next) {
+        controlsHtml += `
+            <button class="pagination-btn" onclick="loadPage(${data.current_page + 1})">
+                Вперед <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+    }
+    
+    controls.innerHTML = controlsHtml;
+}
+
+// Глобальная функция initImageCarousel
+window.initImageCarousel = function() {
+    const propertyCards = document.querySelectorAll('.property-card-large');
+    
+    propertyCards.forEach(card => {
+        const mainImage = card.querySelector('.main-image img');
+        const thumbnails = card.querySelectorAll('.thumbnail');
+        const imageCounter = card.querySelector('.image-counter');
+        const prevBtn = card.querySelector('.nav-btn.prev');
+        const nextBtn = card.querySelector('.nav-btn.next');
+        
+        let currentImageIndex = 0;
+        const totalImages = thumbnails.length;
+        
+        // Функция для обновления главного изображения
+        function updateMainImage(index) {
+            const thumbnail = thumbnails[index];
+            const thumbnailImg = thumbnail.querySelector('img');
+            
+            if (thumbnailImg) {
+                mainImage.src = thumbnailImg.src;
+                mainImage.alt = thumbnailImg.alt;
+                
+                // Обновляем счетчик
+                imageCounter.textContent = `${index + 1} из ${totalImages}`;
+                
+                // Обновляем активную миниатюру
+                thumbnails.forEach((thumb, i) => {
+                    thumb.classList.toggle('active', i === index);
+                });
+                
+                currentImageIndex = index;
+            }
+        }
+        
+        // Обработчики кликов по миниатюрам
+        thumbnails.forEach((thumbnail, index) => {
+            thumbnail.addEventListener('click', function(e) {
+                e.stopPropagation(); // Предотвращаем всплытие события
+                updateMainImage(index);
+            });
+        });
+        
+        // Обработчики для кнопок навигации
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const newIndex = currentImageIndex > 0 ? currentImageIndex - 1 : totalImages - 1;
+                updateMainImage(newIndex);
+            });
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
+                updateMainImage(newIndex);
+            });
+        }
+        
+        // Обработчик клика по главному изображению для перехода к следующему
+        mainImage.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
+            updateMainImage(newIndex);
+        });
+    });
+}
+
+// Инициализация глобальных переменных
+window.currentPage = {{ page_obj.number }};
+
+// Глобальная функция fetchData
+window.fetchData = async function(){
+  const form = document.getElementById('filters-form');
+  const grid = document.getElementById('catalog-grid');
+  const isSecondary = '{{ dataset_type }}' === 'secondary';
+  const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+  
+  if (!form || !grid) return;
+  if ((localStorage.getItem('catalog_view')||'list') !== 'map') {
+    grid.innerHTML = '<div class="loading">Поиск...</div>';
+  }
+  const qs = window.serialize();
+  // Отменяем предыдущий запрос и помечаем текущий как последний
+  try {
+    if (window.activeController) { window.activeController.abort(); }
+    const controller = new AbortController();
+    window.activeController = controller;
+    const requestId = ++window.latestRequestId;
+    const res = await fetch(apiUrl + (qs ? ('?' + qs) : ''), { signal: controller.signal });
+    const data = await res.json();
+    // Если это не самый свежий ответ — игнорируем
+    if (requestId !== window.latestRequestId) return;
+    renderItems(data);
+  } catch(e){
+    if (grid) grid.innerHTML = '<div class="error">Ошибка загрузки</div>';
+    console.error(e);
+  }
+}
+
+// Глобальная функция initMap
+window.initMap = function(){
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+  
+  window.map = L.map('map', { attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(window.map);
+  window.markersLayer = L.layerGroup().addTo(window.map);
+  window.map.setView([54.7388, 55.9721], 11); // Уфа по умолчанию
+}
+
+// Глобальная функция serialize
+window.serialize = function() {
+  const form = document.getElementById('filters-form');
+  if (!form) return '';
+  
+  const fd = new FormData(form);
+  const params = new URLSearchParams();
+  for (const [k, v] of fd.entries()) {
+    if (v !== '') params.append(k, v);
+  }
+  const sort = document.getElementById('sort-hidden');
+  if (sort && sort.value) params.set('sort', sort.value);
+  return params.toString();
+}
+
+// Глобальная функция renderMapPoints
+window.renderMapPoints = function(list, isSec){
+  if (!window.map) return;
+  window.markersLayer.clearLayers();
+  const bounds = [];
+  list.forEach(item => {
+    const lat = item.lat, lng = item.lng;
+    if (lat && lng) {
+      const marker = L.marker([lat, lng]).addTo(window.markersLayer);
+      const price = (item.price_from || 0).toFixed ? item.price_from.toFixed(1) : item.price_from;
+      const link = isSec ? `/secondary/${item.id}/` : `/complex/${item.id}/`;
+      marker.bindPopup(`<b>${item.name}</b><br/>от ${price} млн ₽<br/><a href="${link}">Подробнее</a>`);
+      bounds.push([lat, lng]);
+    }
+  });
+  if (bounds.length) window.map.fitBounds(bounds, { padding:[20,20] });
+}
+
+// Глобальная функция setView
+window.setView = function(view){
+  const grid = document.getElementById('catalog-grid');
+  const mapEl = document.getElementById('map');
+  const toggleBtns = document.querySelectorAll('.view-btn');
+  const isSecondary = '{{ dataset_type }}' === 'secondary';
+  
+  // Не позволяем переключиться на карту для вторичной недвижимости
+  if (isSecondary && view === 'map') {
+    return;
+  }
+  
+  toggleBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-view')===view));
+  if (view === 'map') {
+    grid.style.display = 'none';
+    mapEl.style.display = 'block';
+    if (!window.map) initMap();
+    fetchData();
+  } else {
+    mapEl.style.display = 'none';
+    grid.style.display = '';
+    fetchData();
+  }
+  
+  // Сохраняем в localStorage только для новостроек
+  if (!isSecondary) {
+    localStorage.setItem('catalog_view', view);
+  }
+}
+
+// Инициализация глобальных переменных для AJAX
+window.activeController = null;
+window.latestRequestId = 0;
+window.map = null;
+window.markersLayer = null;
+
 // Range Slider функциональность
 document.addEventListener('DOMContentLoaded', function() {
     // Инициализация range sliders
     initRangeSlider('area-from-slider', 'area-to-slider', 'area-from-display', 'area-to-display', 'area-from-hidden', 'area-to-hidden', 'area-fill');
     initRangeSlider('price-from-slider', 'price-to-slider', 'price-from-display', 'price-to-display', 'price-from-hidden', 'price-to-hidden', 'price-fill');
     
-    // Обработка отправки формы фильтров (для новостроек остаётся старый обработчик)
+    // Обработка отправки формы фильтров (для всех типов недвижимости)
     const filtersForm = document.getElementById('filters-form');
-    if (filtersForm && '{{ dataset_type }}' !== 'secondary') {
+    if (filtersForm) {
         filtersForm.addEventListener('submit', function(e) {
             e.preventDefault();
             applyFilters();
@@ -742,243 +1265,7 @@ function updateRangeFill(fromSlider, toSlider, fill) {
     fill.style.width = (adjustedToPercent - adjustedFromPercent) + '%';
 }
 
-let currentPage = {{ page_obj.number }};
 
-function loadPage(page) {
-    if (page === currentPage) return;
-    
-    // Собираем текущие фильтры
-    const formData = new FormData(document.getElementById('filters-form'));
-    const params = new URLSearchParams();
-    
-    // Добавляем параметры фильтров
-    for (let [key, value] of formData.entries()) {
-        if (value) {
-            params.append(key, value);
-        }
-    }
-    
-    // Добавляем номер страницы
-    params.append('page', page);
-    
-    // Показываем индикатор загрузки
-    const grid = document.getElementById('catalog-grid');
-    grid.innerHTML = '<div class="loading">Загрузка...</div>';
-    
-    // Загружаем данные через API
-    fetch(`/api/catalog/?${params.toString()}`)
-        .then(response => response.json())
-        .then(data => {
-            currentPage = data.current_page;
-            updateCatalog(data);
-            updatePagination(data);
-            updateResultsCount(data.total_count);
-            // Обновляем URL без параметров
-            window.history.pushState({}, '', '/catalog/');
-        })
-        .catch(error => {
-            console.error('Ошибка загрузки:', error);
-            grid.innerHTML = '<div class="error">Ошибка загрузки данных</div>';
-        });
-}
-
-function updateCatalog(data) {
-    const grid = document.getElementById('catalog-grid');
-    
-    if (data.complexes.length === 0) {
-        grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p><p>Попробуйте изменить параметры поиска</p></div>';
-        return;
-    }
-    
-    let html = '';
-    data.complexes.forEach(complex => {
-        const imageUrl = complex.image_url || '/media/gallery/placeholders.png';
-        const image2 = complex.image_2_url || '/media/gallery/placeholders.png';
-        const image3 = complex.image_3_url || '/media/gallery/placeholders.png';
-        const image4 = complex.image_4_url || '/media/gallery/placeholders.png';
-        
-        html += `
-            <div class="property-card-large" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
-                <div class="card-images">
-                    <div class="main-image">
-                        <img src="${imageUrl}" alt="${complex.name}">
-                        <div class="image-counter">1 из 4</div>
-                        <div class="image-nav">
-                            <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
-                            <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                    <div class="thumbnail-images">
-                        <div class="thumbnail active">
-                            <img src="${imageUrl}" alt="${complex.name}">
-                        </div>
-                        <div class="thumbnail">
-                            <img src="${image2}" alt="${complex.name}">
-                        </div>
-                        <div class="thumbnail">
-                            <img src="${image3}" alt="${complex.name}">
-                        </div>
-                        <div class="thumbnail more">
-                            <span>+1</span>
-                            <img src="${image4}" alt="${complex.name}">
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card-content-large">
-                    <div class="card-header">
-                        <div class="card-title-section">
-                            <h3 class="card-title">${complex.name}</h3>
-                            <div class="card-subtitle">
-                                ${complex.total_apartments || 100} квартир от застройщика
-                            </div>
-                            <div class="completion-info">
-                                ${complex.completion_start || '3 кв. 2024'} - ${complex.completion_end || '4 кв. 2025'}
-                            </div>
-                        </div>
-                    </div>
-                    
-                                         <div class="card-location-info">
-                         <div class="location-text">
-                             <i class="fas fa-map-marker-alt"></i>
-                             <span>${complex.location} ${complex.commute_time}</span>
-                         </div>
-                     </div>
-
-                     <div class="card-price-section" style="margin-top:8px;">
-                         <div class="main-price">
-                             <span class="price-label">от</span>
-                             <span class="price-value">${(complex.price_from || 0).toFixed ? complex.price_from.toFixed(1) : (complex.price_display ? complex.price_display.replace('от ', '').replace(' млн Р', '') : '')}</span>
-                             <span class="price-currency">млн Р</span>
-                         </div>
-                     </div>
-                     
-                     <div class="apartment-prices">
-                        <div class="price-row">
-                            <span class="room-type">Студия</span>
-                            <span class="room-price">от ${complex.studio_price || (complex.price_from * 0.8).toFixed(1)} млн Р</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">1-комн.</span>
-                            <span class="room-price">от ${complex.one_room_price || complex.price_from} млн Р</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">2-комн.</span>
-                            <span class="room-price">от ${complex.two_room_price || (complex.price_from * 1.25).toFixed(1)} млн Р</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">3-комн.</span>
-                            <span class="room-price">от ${complex.three_room_price || (complex.price_from * 1.5).toFixed(1)} млн Р</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">4-комн. +</span>
-                            <span class="room-price">от ${complex.four_room_price || (complex.price_from * 2).toFixed(1)} млн Р</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    grid.innerHTML = html;
-}
-
-function updateResultsCount(count) {
-    const resultsCount = document.querySelector('.results-count');
-    if (resultsCount) {
-        resultsCount.textContent = `Найдено ${count} домов`;
-    }
-}
-
-function updatePagination(data) {
-    const container = document.querySelector('.pagination-container');
-    if (!container) return;
-    
-    const info = container.querySelector('.pagination-info');
-    const controls = container.querySelector('.pagination-controls');
-    
-    info.textContent = `Страница ${data.current_page} из ${data.total_pages}`;
-    
-    let controlsHtml = '';
-    
-    if (data.has_previous) {
-        controlsHtml += `
-            <button class="pagination-btn" onclick="loadPage(${data.current_page - 1})">
-                <i class="fas fa-chevron-left"></i> Назад
-            </button>
-        `;
-    }
-    
-    controlsHtml += '<div class="pagination-numbers">';
-    for (let i = 1; i <= data.total_pages; i++) {
-        if (i === data.current_page) {
-            controlsHtml += `<span class="pagination-number active">${i}</span>`;
-        } else if (i > data.current_page - 3 && i < data.current_page + 3) {
-            controlsHtml += `<button class="pagination-number" onclick="loadPage(${i})">${i}</button>`;
-        }
-    }
-    controlsHtml += '</div>';
-    
-    if (data.has_next) {
-        controlsHtml += `
-            <button class="pagination-btn" onclick="loadPage(${data.current_page + 1})">
-                Вперед <i class="fas fa-chevron-right"></i>
-            </button>
-        `;
-    }
-    
-    controls.innerHTML = controlsHtml;
-}
-
-function applyFilters() {
-    // Собираем данные формы
-    const formData = new FormData(document.getElementById('filters-form'));
-    const params = new URLSearchParams();
-    
-    // Добавляем параметры фильтров
-    for (let [key, value] of formData.entries()) {
-        if (value) {
-            params.append(key, value);
-        }
-    }
-    
-    // Показываем индикатор загрузки
-    const grid = document.getElementById('catalog-grid');
-    grid.innerHTML = '<div class="loading">Поиск...</div>';
-    
-    // Загружаем данные через API с фильтрами
-    fetch(`/api/catalog/?${params.toString()}`)
-        .then(response => response.json())
-        .then(data => {
-            currentPage = 1;
-            updateCatalog(data);
-            updatePagination(data);
-            updateResultsCount(data.total_count);
-            
-            // Показываем заголовок результатов поиска
-            const searchResults = document.querySelector('.search-results');
-            if (!searchResults) {
-                const resultsDiv = document.createElement('div');
-                resultsDiv.className = 'search-results';
-                resultsDiv.innerHTML = '<h3 class="search-title">Результаты поиска</h3>';
-                grid.parentNode.insertBefore(resultsDiv, grid);
-            }
-            
-            // Обновляем URL без параметров
-            window.history.pushState({}, '', '/catalog/');
-        })
-        .catch(error => {
-            console.error('Ошибка поиска:', error);
-            grid.innerHTML = '<div class="error">Ошибка поиска</div>';
-        });
-}
-
-function updateResultsCount(count) {
-    const resultsCount = document.querySelector('.results-count');
-    if (resultsCount) {
-        resultsCount.textContent = `Найдено ${count} домов`;
-    }
-}
 
 // Обработка чипов категорий вторички (выбор без авто-перехода)
 (function(){
@@ -1011,74 +1298,7 @@ window.addEventListener('scroll', function() {
     }
 });
 
-// Функциональность переключения изображений в карточках ЖК
-function initImageCarousel() {
-    const propertyCards = document.querySelectorAll('.property-card-large');
-    
-    propertyCards.forEach(card => {
-        const mainImage = card.querySelector('.main-image img');
-        const thumbnails = card.querySelectorAll('.thumbnail');
-        const imageCounter = card.querySelector('.image-counter');
-        const prevBtn = card.querySelector('.nav-btn.prev');
-        const nextBtn = card.querySelector('.nav-btn.next');
-        
-        let currentImageIndex = 0;
-        const totalImages = thumbnails.length;
-        
-        // Функция для обновления главного изображения
-        function updateMainImage(index) {
-            const thumbnail = thumbnails[index];
-            const thumbnailImg = thumbnail.querySelector('img');
-            
-            if (thumbnailImg) {
-                mainImage.src = thumbnailImg.src;
-                mainImage.alt = thumbnailImg.alt;
-                
-                // Обновляем счетчик
-                imageCounter.textContent = `${index + 1} из ${totalImages}`;
-                
-                // Обновляем активную миниатюру
-                thumbnails.forEach((thumb, i) => {
-                    thumb.classList.toggle('active', i === index);
-                });
-                
-                currentImageIndex = index;
-            }
-        }
-        
-        // Обработчики кликов по миниатюрам
-        thumbnails.forEach((thumbnail, index) => {
-            thumbnail.addEventListener('click', function(e) {
-                e.stopPropagation(); // Предотвращаем всплытие события
-                updateMainImage(index);
-            });
-        });
-        
-        // Обработчики для кнопок навигации
-        if (prevBtn) {
-            prevBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const newIndex = currentImageIndex > 0 ? currentImageIndex - 1 : totalImages - 1;
-                updateMainImage(newIndex);
-            });
-        }
-        
-        if (nextBtn) {
-            nextBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
-                updateMainImage(newIndex);
-            });
-        }
-        
-        // Обработчик клика по главному изображению для перехода к следующему
-        mainImage.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
-            updateMainImage(newIndex);
-        });
-    });
-}
+
 
 // Инициализация карусели изображений при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
@@ -1100,155 +1320,39 @@ document.addEventListener('DOMContentLoaded', function() {
   // View toggle
   const toggleBtns = document.querySelectorAll('.view-btn');
   const savedView = localStorage.getItem('catalog_view') || 'list';
-  function setView(view){
-    toggleBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-view')===view));
-    if (view === 'map') {
-      grid.style.display = 'none';
-      mapEl.style.display = 'block';
-      if (!map) initMap();
-      fetchData();
-    } else {
-      mapEl.style.display = 'none';
-      grid.style.display = '';
-      fetchData();
+  
+  // Отключаем кнопку карты для вторичной недвижимости
+  if (isSecondary) {
+    const mapBtn = document.querySelector('.view-btn[data-view="map"]');
+    if (mapBtn) {
+      mapBtn.disabled = true;
+      mapBtn.style.opacity = '0.5';
+      mapBtn.style.cursor = 'not-allowed';
+      mapBtn.title = 'Карта недоступна для вторичной недвижимости';
     }
-    localStorage.setItem('catalog_view', view);
   }
-  toggleBtns.forEach(b=>b.addEventListener('click', ()=>setView(b.getAttribute('data-view'))));
+  
+
+  toggleBtns.forEach(b=>b.addEventListener('click', ()=>{
+    // Не обрабатываем клик по кнопке карты для вторичной недвижимости
+    if (isSecondary && b.getAttribute('data-view') === 'map') {
+      return;
+    }
+    setView(b.getAttribute('data-view'));
+  }));
   
   // Инициализация вида по умолчанию
-  setView(savedView);
-
-  function initMap(){
-    map = L.map('map', { attributionControl: false });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
-    markersLayer = L.layerGroup().addTo(map);
-    map.setView([54.7388, 55.9721], 11); // Уфа по умолчанию
+  // Принудительно устанавливаем вид "списком" для вторичной недвижимости
+  if (isSecondary) {
+    setView('list');
+  } else {
+    setView(savedView);
   }
 
-  function serialize() {
-    const fd = new FormData(form);
-    const params = new URLSearchParams();
-    for (const [k, v] of fd.entries()) {
-      if (v !== '') params.append(k, v);
-    }
-    const sort = document.getElementById('sort-hidden');
-    if (sort && sort.value) params.set('sort', sort.value);
-    return params.toString();
-  }
 
-  function renderMapPoints(list, isSec){
-    if (!map) return;
-    markersLayer.clearLayers();
-    const bounds = [];
-    list.forEach(item => {
-      const lat = item.lat, lng = item.lng;
-      if (lat && lng) {
-        const marker = L.marker([lat, lng]).addTo(markersLayer);
-        const price = (item.price_from || 0).toFixed ? item.price_from.toFixed(1) : item.price_from;
-        const link = isSec ? `/secondary/${item.id}/` : `/complex/${item.id}/`;
-        marker.bindPopup(`<b>${item.name}</b><br/>от ${price} млн ₽<br/><a href="${link}">Подробнее</a>`);
-        bounds.push([lat, lng]);
-      }
-    });
-    if (bounds.length) map.fitBounds(bounds, { padding:[20,20] });
-  }
-
-  function renderItems(data){
-    if ((localStorage.getItem('catalog_view')||'list') === 'map'){
-      // карта
-      if (isSecondary) {
-        renderMapPoints(data.items||[], true);
-      } else {
-        renderMapPoints(data.complexes||[], false);
-      }
-    } else {
-      // списком
-      if (isSecondary) {
-        if (!data.items || !data.items.length) {
-          grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
-        } else {
-          grid.innerHTML = data.items.map(item => {
-            const imageUrl = item.image_url || '/media/gallery/placeholders.png';
-            const image2 = item.image_2_url || '/media/gallery/placeholders.png';
-            const image3 = item.image_3_url || '/media/gallery/placeholders.png';
-            const image4 = item.image_4_url || '/media/gallery/placeholders.png';
-            return `
-            <div class="property-card-large" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
-              <div class="card-images">
-                <div class="main-image">
-                  <img src="${imageUrl}" alt="${item.name}">
-                  <div class="image-counter">1 из 4</div>
-                  <div class="image-nav">
-                    <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
-                    <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
-                  </div>
-                </div>
-                <div class="thumbnail-images">
-                  <div class="thumbnail active"><img src="${imageUrl}" alt="${item.name}"></div>
-                  <div class="thumbnail"><img src="${image2}" alt="${item.name}"></div>
-                  <div class="thumbnail"><img src="${image3}" alt="${item.name}"></div>
-                  <div class="thumbnail more"><span>+1</span><img src="${image4}" alt="${item.name}"></div>
-                </div>
-              </div>
-              <div class="card-content-large">
-                <div class="card-header">
-                  <div class="card-title-section"><h3 class="card-title">${item.name}</h3></div>
-                  <div class="card-price-section">
-                    <div class="main-price"><span class="price-label">от</span><span class="price-value">${(item.price_from || 0).toFixed ? item.price_from.toFixed(1) : item.price_from}</span><span class="price-currency">млн ₽</span></div>
-                  </div>
-                </div>
-                <div class="card-location-info"><div class="location-text">Россия - ${item.city} - ${item.district || ''} - ${item.street || ''}</div></div>
-              </div>
-            </div>`;
-          }).join('');
-          if (typeof initImageCarousel === 'function') { initImageCarousel(); }
-        }
-      } else {
-        const list = data.complexes || [];
-        if (!list.length) {
-          grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
-        } else {
-          // Используем полноценный рендер с миниатюрами и ценами
-          updateCatalog(data);
-          // Инициализируем карусель изображений после обновления разметки
-          if (typeof initImageCarousel === 'function') { initImageCarousel(); }
-        }
-      }
-    }
-    // Обновляем пагинацию под список
-    updatePagination(data);
-    if (resultsCount) {
-      const total = (typeof data.total_count !== 'undefined') ? data.total_count : (data.total_count ?? data.total ?? 0);
-      if (total) resultsCount.textContent = `Найдено ${total} домов`;
-    }
-  }
-
-  async function fetchData(){
-    if (!form || !grid) return;
-    if ((localStorage.getItem('catalog_view')||'list') !== 'map') {
-      grid.innerHTML = '<div class="loading">Поиск...</div>';
-    }
-    const qs = serialize();
-    // Отменяем предыдущий запрос и помечаем текущий как последний
-    try {
-      if (activeController) { activeController.abort(); }
-      const controller = new AbortController();
-      activeController = controller;
-      const requestId = ++latestRequestId;
-      const res = await fetch(apiUrl + (qs ? ('?' + qs) : ''), { signal: controller.signal });
-      const data = await res.json();
-      // Если это не самый свежий ответ — игнорируем
-      if (requestId !== latestRequestId) return;
-      renderItems(data);
-    } catch(e){
-      if (grid) grid.innerHTML = '<div class="error">Ошибка загрузки</div>';
-      console.error(e);
-    }
-  }
 
   if (form && !form.dataset.ajaxBound) {
-    form.addEventListener('submit', function(e){ e.preventDefault(); fetchData(); });
+    form.addEventListener('submit', function(e){ e.preventDefault(); window.fetchData(); });
     form.dataset.ajaxBound = '1';
   }
 
@@ -1319,7 +1423,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.sorting-option').forEach(o => o.classList.toggle('active', o.getAttribute('data-sort') === 'price_asc'));
 
     // fetch with cleared filters
-    fetchData();
+    window.fetchData();
   });
 })();
 

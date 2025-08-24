@@ -5285,6 +5285,21 @@ a:hover { color: var(--c21-gold); }
     .btn, .offer-more { padding: 10px 14px; font-size: 14px; }
 }
 
+/* Стили для отключенной кнопки карты */
+.view-btn:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    background-color: #ccc !important;
+    color: #666 !important;
+    pointer-events: none !important;
+}
+
+.view-btn:disabled:hover {
+    background-color: #ccc !important;
+    color: #666 !important;
+    transform: none !important;
+}
+
 /* Responsive fix for catalog filters */
 @media (max-width: 1200px) {
     .filters-section {

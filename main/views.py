@@ -216,15 +216,25 @@ def catalog_api(request):
         
         # Получаем изображения для каталога
         catalog_images = complex.get_catalog_images()
-        catalog_images_data = []
-        for img in catalog_images:
-            if img.image:  # Проверяем, что изображение существует
-                catalog_images_data.append({
-                    'id': img.id,
-                    'title': img.title,
-                    'image_url': img.image.url,
-                    'is_main': img.is_main
-                })
+        
+        # Подготавливаем отдельные URL для каждого изображения
+        image_url = None
+        image_2_url = None
+        image_3_url = None
+        image_4_url = None
+        
+        if catalog_images:
+            # Главное изображение
+            if len(catalog_images) > 0 and catalog_images[0].image:
+                image_url = catalog_images[0].image.url
+            
+            # Дополнительные изображения
+            if len(catalog_images) > 1 and catalog_images[1].image:
+                image_2_url = catalog_images[1].image.url
+            if len(catalog_images) > 2 and catalog_images[2].image:
+                image_3_url = catalog_images[2].image.url
+            if len(catalog_images) > 3 and catalog_images[3].image:
+                image_4_url = catalog_images[3].image.url
         
         complexes_data.append({
             'id': complex.id if complex.id else 0,
@@ -233,8 +243,10 @@ def catalog_api(request):
             'price_from': complex.price_from,
             'location': location,
             'commute_time': complex.commute_time,
-            'image_url': complex.get_main_image().image.url if complex.get_main_image() and complex.get_main_image().image else None,
-            'catalog_images': catalog_images_data,
+            'image_url': image_url,
+            'image_2_url': image_2_url,
+            'image_3_url': image_3_url,
+            'image_4_url': image_4_url,
             'house_type': complex.house_type,
             'house_type_display': complex.get_house_type_display(),
             'area_from': complex.area_from,
@@ -869,6 +881,28 @@ def secondary_api(request):
 
     items = []
     for obj in page_obj:
+        # Получаем изображения для каталога
+        catalog_images = obj.get_catalog_images()
+        
+        # Подготавливаем отдельные URL для каждого изображения
+        image_url = None
+        image_2_url = None
+        image_3_url = None
+        image_4_url = None
+        
+        if catalog_images:
+            # Главное изображение
+            if len(catalog_images) > 0 and catalog_images[0].image:
+                image_url = catalog_images[0].image.url
+            
+            # Дополнительные изображения
+            if len(catalog_images) > 1 and catalog_images[1].image:
+                image_2_url = catalog_images[1].image.url
+            if len(catalog_images) > 2 and catalog_images[2].image:
+                image_3_url = catalog_images[2].image.url
+            if len(catalog_images) > 3 and catalog_images[3].image:
+                image_4_url = catalog_images[3].image.url
+        
         items.append({
             'id': obj.id if obj.id else 0,
             'name': obj.name,
@@ -876,7 +910,10 @@ def secondary_api(request):
             'city': obj.city,
             'district': obj.district,
             'street': obj.street,
-            'image_url': obj.get_main_image().image.url if obj.get_main_image() and obj.get_main_image().image else None,
+            'image_url': image_url,
+            'image_2_url': image_2_url,
+            'image_3_url': image_3_url,
+            'image_4_url': image_4_url,
             'lat': obj.latitude,
             'lng': obj.longitude,
         })

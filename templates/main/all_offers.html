@@ -35,7 +35,7 @@
                 </div>
                 <div class="offer-content">
                     <div class="offer-head">
-                        <span class="offer-chip">ЖК «{{ o.residential_complex.name }}»</span>
+                        <span class="offer-chip">{{ o.residential_complex.name }}</span>
                         <h3 class="offer-title">{{ o.title }}</h3>
                     </div>
                     <p class="offer-text">{{ o.description|truncatechars:160 }}</p>

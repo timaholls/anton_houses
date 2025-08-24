@@ -239,6 +239,8 @@ class ResidentialComplex(models.Model):
     def __str__(self):
         return self.name
     
+
+    
     @property
     def price_display(self):
         """Форматированная цена для отображения"""
@@ -518,6 +520,8 @@ class SecondaryProperty(models.Model):
     def __str__(self):
         return self.name
 
+
+
     @property
     def price_from(self):
         # Для совместимости с шаблоном каталога
@@ -550,6 +554,28 @@ class SecondaryProperty(models.Model):
             ).first()
         
         return main_image
+    
+    def get_catalog_images(self):
+        """Получить изображения для каталога: главное фото + 3 дополнительных по порядку"""
+        # Получаем главное изображение
+        main_image = self.get_main_image()
+        
+        # Получаем все изображения, исключая главное
+        other_images = Gallery.objects.filter(
+            category='secondary_property',
+            object_id=self.id,
+            is_active=True
+        ).exclude(
+            id=main_image.id if main_image else None
+        ).order_by('order', 'created_at')[:3]
+        
+        # Формируем список: главное + дополнительные
+        catalog_images = []
+        if main_image:
+            catalog_images.append(main_image)
+        catalog_images.extend(other_images)
+        
+        return catalog_images
     
     def get_videos(self):
         """Получить все видео вторичной недвижимости"""

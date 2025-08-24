@@ -57,7 +57,7 @@
             <div class="complex-link-section">
                 <a href="{% url 'main:detail' residential_complex.id %}" class="complex-link-btn">
                     <i class="fas fa-building"></i>
-                    <span>Перейти к ЖК «{{ residential_complex.name }}»</span>
+                    <span>Перейти к {{ residential_complex.name }}</span>
                     <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
@@ -66,7 +66,7 @@
         <!-- Правая колонка - видео из того же ЖК -->
         <div class="video-sidebar">
             <div class="sidebar-section">
-                <h3 class="sidebar-title">Видео ЖК «{{ residential_complex.name }}»</h3>
+                <h3 class="sidebar-title">Видео {{ residential_complex.name }}</h3>
                 {% if same_complex_videos %}
                 <div class="sidebar-videos">
                     {% for v in same_complex_videos %}
