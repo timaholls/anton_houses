@@ -165,7 +165,7 @@
                     {% if related.image %}
                         <img src="{{ related.image.url }}" alt="{{ related.title }}">
                     {% else %}
-                        <img src="https://via.placeholder.com/300x200/252526/BEAF87?text={{ related.title|urlencode }}" alt="{{ related.title }}">
+                        <img src="/media/gallery/placeholders.png" alt="{{ related.title }}">
                     {% endif %}
                 </div>
                 <div class="similar-article-content">

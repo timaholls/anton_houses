@@ -24,18 +24,18 @@
     </style>
 
     {% if offers %}
-    <section class="offers-section">
+    <section class="offers-section" id="offers">
         <div class="offers-header">
             <h2 class="section-title">Специальные предложения по ЖК</h2>
         </div>
         <div class="offers-grid">
             {% for o in offers %}
-            <div class="offer-card">
+            <a href="{% url 'main:offer_detail' o.id %}" class="offer-card">
                 <div class="offer-media">
-                    {% if o.image %}
-                        <img src="{{ o.image.url }}" alt="{{ o.title }}" loading="lazy" decoding="async">
+                    {% if o.get_main_image and o.get_main_image.image %}
+                        <img src="{{ o.get_main_image.image.url }}" alt="{{ o.title }}" loading="lazy" decoding="async">
                     {% else %}
-                        <img src="https://via.placeholder.com/560x320/252526/BEAF87?text={{ o.title|urlencode }}" alt="{{ o.title }}" loading="lazy" decoding="async">
+                        <img src="/media/gallery/placeholders.png" alt="{{ o.title }}" loading="lazy" decoding="async">
                     {% endif %}
                     <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
                 </div>
@@ -45,37 +45,95 @@
                         <h3 class="offer-title">{{ o.title }}</h3>
                     </div>
                     <p class="offer-text">{{ o.description|truncatechars:160 }}</p>
-                    <div class="offer-limited"><i class="far fa-clock"></i><span>Временное предложение</span></div>
+                    <div class="offer-limited">
+                        <i class="far fa-clock"></i>
+                        <span>
+                            {% if o.expires_at %}
+                                До {{ o.expires_at|date:"d.m.Y" }}
+                            {% else %}
+                                Временное предложение
+                            {% endif %}
+                        </span>
+                    </div>
                     <div class="offer-actions">
-                        <a href="#feedback-form" class="btn btn-primary btn-small offer-cta">Получить предложение</a>
-                        <a class="offer-more" href="{% url 'main:detail' o.residential_complex.id %}"><span>Подробнее о ЖК</span> <i class="fas fa-arrow-right"></i></a>
+                        <span class="btn btn-primary btn-small offer-cta">Подробнее об акции</span>
                     </div>
                 </div>
-            </div>
+            </a>
             {% endfor %}
+        </div>
+        
+        <!-- Кнопка "Посмотреть все акции" -->
+        <div class="offers-more-section">
+            <a href="{% url 'main:all_offers' %}" class="btn btn-secondary btn-large offers-more-btn">
+                <span>Посмотреть все акции</span>
+                <i class="fas fa-arrow-right"></i>
+            </a>
         </div>
         <style>
         .offers-section{margin:28px 0 4px 0}
         .offers-header{text-align:center;margin-bottom:12px}
-        .offers-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:18px;justify-items:center}
-        .offer-card{width:820px;max-width:100%;display:grid;grid-template-columns:280px 1fr;gap:16px;background:#fff;border:1px solid #efe7ce;border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:box-shadow .2s ease, transform .2s ease, border-color .2s ease}
+        .offers-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(400px, 1fr));gap:20px;justify-items:center}
+                 .offer-card{width:100%;max-width:600px;display:grid;grid-template-columns:200px 1fr;gap:16px;background:#fff;border:1px solid #efe7ce;border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:box-shadow .2s ease, transform .2s ease, border-color .2s ease;text-decoration:none;color:inherit}
         .offer-card:hover{box-shadow:0 16px 36px rgba(0,0,0,.14);transform:translateY(-2px);border-color:var(--c21-gold)}
-        .offer-media{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/10}
+        .offer-media{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/10;min-height:120px}
         .offer-media img{width:100%;height:100%;object-fit:cover;display:block}
         .offer-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.00) 40%, rgba(0,0,0,.18) 100%)}
-        .offer-badge-hot{position:absolute;left:10px;top:10px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:6px 10px;border-radius:999px;font-weight:800;display:inline-flex;gap:6px;align-items:center;font-size:12px;box-shadow:0 4px 10px rgba(190,175,135,.35)}
-        .offer-badge-hot i{font-size:12px}
-        .offer-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
-        .offer-chip{display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px}
-        .offer-title{margin:0;font-size:18px;font-weight:800;color:#222}
-        .offer-text{color:#444;margin:8px 0 0 0}
-        .offer-limited{display:flex;align-items:center;gap:8px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:10px;padding:8px 10px;margin-top:10px;font-weight:600}
-        .offer-limited i{color:var(--c21-gold)}
-        .offer-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px;justify-content:flex-start}
-        .offer-cta{flex:1 1 220px;text-align:center;padding:10px 14px !important;border-radius:10px;background:linear-gradient(180deg,var(--c21-gold), var(--c21-gold-dark)) !important;color:var(--c21-dark) !important;border:none !important;box-shadow:0 6px 16px rgba(190,175,135,.45)}
-        .offer-cta:hover{filter:brightness(.98);transform:translateY(-1px)}
-        .offer-more{display:inline-flex;align-items:center;gap:6px;color:#6a5e2e;text-decoration:none;font-weight:700;padding:8px 10px;border:1px solid #e8e4d5;border-radius:10px;background:linear-gradient(180deg,#fff, #fbf9f2)}
-        @media(max-width: 1100px){.offers-grid{grid-template-columns:1fr}.offer-card{grid-template-columns:1fr}}
+        .offer-badge-hot{position:absolute;left:8px;top:8px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:4px 8px;border-radius:999px;font-weight:800;display:inline-flex;gap:4px;align-items:center;font-size:11px;box-shadow:0 4px 10px rgba(190,175,135,.35)}
+        .offer-badge-hot i{font-size:11px}
+        .offer-content{display:flex;flex-direction:column;justify-content:space-between;min-height:120px}
+        .offer-head{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+        .offer-chip{display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:3px 8px;border-radius:999px;font-weight:700;font-size:11px;white-space:nowrap}
+        .offer-title{margin:0;font-size:16px;font-weight:800;color:#222;line-height:1.3;word-wrap:break-word;hyphens:auto}
+        .offer-text{color:#444;margin:8px 0 0 0;font-size:14px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis}
+        .offer-limited{display:flex;align-items:center;gap:6px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:8px;padding:6px 8px;margin-top:8px;font-weight:600;font-size:12px}
+        .offer-limited i{color:var(--c21-gold);font-size:12px}
+        .offer-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;justify-content:flex-start}
+                 .offer-cta{flex:none;text-align:center;padding:8px 16px !important;border-radius:8px;background:linear-gradient(180deg,var(--c21-gold), var(--c21-gold-dark)) !important;color:var(--c21-dark) !important;border:none !important;box-shadow:0 4px 12px rgba(190,175,135,.45);font-size:13px;font-weight:700;min-width:140px}
+         .offer-cta:hover{filter:brightness(.98);transform:translateY(-1px)}
+        @media(max-width: 768px){
+            .offers-grid{grid-template-columns:1fr;gap:16px}
+            .offer-card{grid-template-columns:1fr;max-width:100%}
+            .offer-media{aspect-ratio:16/9}
+            .offer-content{min-height:auto}
+            .offer-title{font-size:18px}
+            .offer-text{font-size:15px}
+        }
+                 @media(max-width: 480px){
+             .offer-card{padding:12px;gap:12px}
+             .offer-title{font-size:16px}
+             .offer-text{font-size:14px}
+             .offer-actions{flex-direction:column;align-items:center}
+             .offer-cta{flex:none;width:100%;max-width:200px}
+         }
+         
+         /* Стили для кнопки "Посмотреть все акции" */
+         .offers-more-section {
+             text-align: center;
+             margin-top: 32px;
+         }
+         
+         .offers-more-btn {
+             display: inline-flex;
+             align-items: center;
+             gap: 8px;
+             padding: 16px 32px;
+             border-radius: 12px;
+             text-decoration: none;
+             font-weight: 700;
+             font-size: 16px;
+             transition: all 0.2s ease;
+             background: #fff;
+             color: #6a5e2e;
+             border: 2px solid #e8e4d5;
+             box-shadow: 0 4px 12px rgba(0,0,0,.08);
+         }
+         
+         .offers-more-btn:hover {
+             background: #faf7ee;
+             transform: translateY(-2px);
+             box-shadow: 0 8px 16px rgba(0,0,0,.12);
+         }
         </style>
     </section>
     {% endif %}
@@ -110,10 +168,10 @@
             {% for complex in complexes %}
             <a class="home-property-card" data-city="{{ complex.city }}" data-district="{{ complex.district }}" href="{% url 'main:detail' complex.id %}">
                 <div class="home-card-image">
-                    {% if complex.image %}
-                        <img src="{{ complex.image.url }}" alt="{{ complex.name }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw">
+                    {% if complex.get_main_image and complex.get_main_image.image %}
+                        <img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw">
                     {% else %}
-                        <img src="https://via.placeholder.com/400x300/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}" loading="lazy" decoding="async">
+                        <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" loading="lazy" decoding="async">
                     {% endif %}
                 </div>
                 
@@ -157,10 +215,10 @@
             {% for a in home_articles %}
             <a class="home-property-card" href="{{ a.get_absolute_url }}">
                 <div class="home-card-image">
-                    {% if a.image %}
-                        <img src="{{ a.image.url }}" alt="{{ a.title }}">
+                    {% if a.get_main_image and a.get_main_image.image %}
+                        <img src="{{ a.get_main_image.image.url }}" alt="{{ a.title }}">
                     {% else %}
-                        <img src="https://via.placeholder.com/400x300/252526/BEAF87?text={{ a.title|urlencode }}" alt="{{ a.title }}">
+                        <img src="/media/gallery/placeholders.png" alt="{{ a.title }}">
                     {% endif %}
                 </div>
                 <div class="home-card-content">
@@ -194,11 +252,48 @@
         
         <div class="about-content">
             <div class="about-image">
-                                        {% if company_info.founder_photo %}
-                            <img src="{{ company_info.founder_photo.url }}" alt="{{ company_info.founder_name }}">
-                        {% else %}
-                            <img src="https://via.placeholder.com/380x480/BEAF87/ffffff?text={{ company_info.founder_name|urlencode }}" alt="{{ company_info.founder_name }}">
-                        {% endif %}
+                {% if company_gallery %}
+                <!-- Слайд-шоу галереи -->
+                <div class="company-gallery-slider">
+                    <div class="slider-container">
+                        {% for gallery_item in company_gallery %}
+                        <div class="slide {% if forloop.first %}active{% endif %}" data-slide="{{ forloop.counter0 }}">
+                            <img src="{{ gallery_item.image.url }}" alt="{{ gallery_item.title }}">
+                            {% if gallery_item.description %}
+                            <div class="slide-caption">
+                                <h4>{{ gallery_item.title }}</h4>
+                                <p>{{ gallery_item.description }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Навигационные точки -->
+                    {% if company_gallery|length > 1 %}
+                    <div class="slider-dots">
+                        {% for gallery_item in company_gallery %}
+                        <button class="dot {% if forloop.first %}active{% endif %}" data-slide="{{ forloop.counter0 }}"></button>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Кнопки навигации -->
+                    <button class="slider-btn prev-btn" aria-label="Предыдущее изображение">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="slider-btn next-btn" aria-label="Следующее изображение">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                {% else %}
+                <!-- Фото основателя как fallback -->
+                {% if company_info.get_main_image and company_info.get_main_image.image %}
+<img src="{{ company_info.get_main_image.image.url }}" alt="{{ company_info.founder_name }}">
+                {% else %}
+                <img src="/media/gallery/placeholders.png" alt="{{ company_info.founder_name }}">
+                {% endif %}
+                {% endif %}
             </div>
             
             <div class="about-text">
@@ -227,6 +322,165 @@
 
 </div>
 
+<style>
+/* Стили для слайд-шоу галереи компании */
+.company-gallery-slider {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.slider-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.8s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slide.active {
+    opacity: 1;
+}
+
+.slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 16px;
+}
+
+.slide-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.slide-caption h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.slide-caption p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Навигационные точки */
+.slider-dots {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.5);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dot.active {
+    background: var(--c21-gold);
+    border-color: var(--c21-gold);
+}
+
+.dot:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* Кнопки навигации */
+.slider-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.slider-btn:hover {
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+}
+
+.prev-btn {
+    left: 20px;
+}
+
+.next-btn {
+    right: 20px;
+}
+
+/* Адаптивность для слайд-шоу */
+@media (max-width: 768px) {
+    .company-gallery-slider {
+        height: 300px;
+    }
+    
+    .slider-btn {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .prev-btn {
+        left: 10px;
+    }
+    
+    .next-btn {
+        right: 10px;
+    }
+    
+    .slide-caption {
+        padding: 15px;
+    }
+    
+    .slide-caption h4 {
+        font-size: 1rem;
+    }
+    
+    .slide-caption p {
+        font-size: 0.8rem;
+    }
+}
+</style>
+
 <script>
 // Навигация теперь через обычные ссылки <a>
 
@@ -240,16 +494,87 @@ window.addEventListener('scroll', function() {
     }
 });
 
-// Плавный скролл к форме по кнопкам акций
-document.querySelectorAll('.offer-cta').forEach(a=>{
-  a.addEventListener('click', function(e){
-    const target = document.getElementById('feedback-form');
-    if (target){ e.preventDefault(); target.scrollIntoView({behavior:'smooth', block:'start'}); }
-  });
-});
+
 
 // Дополнительные эффекты для блока "О компании"
 document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация слайд-шоу галереи
+    const slider = document.querySelector('.company-gallery-slider');
+    if (slider) {
+        const slides = slider.querySelectorAll('.slide');
+        const dots = slider.querySelectorAll('.dot');
+        const prevBtn = slider.querySelector('.prev-btn');
+        const nextBtn = slider.querySelector('.next-btn');
+        
+        let currentSlide = 0;
+        let slideInterval;
+        
+        function showSlide(index) {
+            // Скрываем все слайды
+            slides.forEach(slide => slide.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+            
+            // Показываем текущий слайд
+            slides[index].classList.add('active');
+            dots[index].classList.add('active');
+            
+            currentSlide = index;
+        }
+        
+        function nextSlide() {
+            const nextIndex = (currentSlide + 1) % slides.length;
+            showSlide(nextIndex);
+        }
+        
+        function prevSlide() {
+            const prevIndex = (currentSlide - 1 + slides.length) % slides.length;
+            showSlide(prevIndex);
+        }
+        
+        function startAutoSlide() {
+            slideInterval = setInterval(nextSlide, 5000); // 5 секунд
+        }
+        
+        function stopAutoSlide() {
+            clearInterval(slideInterval);
+        }
+        
+        // Обработчики для кнопок
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function() {
+                stopAutoSlide();
+                nextSlide();
+                startAutoSlide();
+            });
+        }
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function() {
+                stopAutoSlide();
+                prevSlide();
+                startAutoSlide();
+            });
+        }
+        
+        // Обработчики для точек
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', function() {
+                stopAutoSlide();
+                showSlide(index);
+                startAutoSlide();
+            });
+        });
+        
+        // Остановка автопереключения при наведении
+        slider.addEventListener('mouseenter', stopAutoSlide);
+        slider.addEventListener('mouseleave', startAutoSlide);
+        
+        // Запускаем автопереключение
+        if (slides.length > 1) {
+            startAutoSlide();
+        }
+    }
+    
     const aboutSection = document.querySelector('.about-section');
     const aboutImage = document.querySelector('.about-image');
     const aboutQuote = document.querySelector('.about-quote');

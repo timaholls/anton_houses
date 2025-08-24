@@ -4,139 +4,610 @@
 
 {% block content %}
 <div class="container">
-    <section class="articles-section">
-        <div class="articles-header">
-            <h1 class="section-title">{{ video.title }}</h1>
-            <p class="section-subtitle">{{ video.residential_complex.name }} • {{ video.published_date|date:"j E Y" }} • {{ video.views_count }} просмотров</p>
-        </div>
+    <!-- Хлебные крошки -->
+    <div class="breadcrumbs">
+        <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+        <span class="breadcrumb-separator">•</span>
+        <a href="{% url 'main:videos' %}" class="breadcrumb-link">Видеообзоры</a>
+        <span class="breadcrumb-separator">•</span>
+        <span class="breadcrumb-current">{{ video.title }}</span>
+    </div>
 
-        <div class="breadcrumbs">
-            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
-            <span class="breadcrumb-separator">•</span>
-            <a href="{% url 'main:videos' %}" class="breadcrumb-link">Видеообзоры</a>
-            <span class="breadcrumb-separator">•</span>
-            <span class="breadcrumb-current">{{ video.title }}</span>
-        </div>
-
-        <div class="property-card" style="padding:0;">
-            <div class="card-content" style="padding:0;">
-                <div class="card-image" style="height:auto;">
-                    {% if video.video_url %}
-                        <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:12px;">
-                            <iframe src="{{ video.video_url|safe }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
-                        </div>
-                    {% elif video.video_file %}
-                        <video controls style="width:100%; border-radius:12px;" poster="{% if video.thumbnail %}{{ video.thumbnail.url }}{% endif %}">
-                            <source src="{{ video.video_file.url }}" type="video/mp4">
-                            Ваш браузер не поддерживает видео тег.
-                        </video>
-                    {% else %}
-                        <div class="card-image" style="height:360px;">
-                            {% if video.thumbnail %}
-                                <img src="{{ video.thumbnail.url }}" alt="{{ video.title }}">
-                            {% else %}
-                                <img src="https://via.placeholder.com/1200x600/252526/BEAF87?text={{ video.title|urlencode }}" alt="{{ video.title }}">
-                            {% endif %}
-                        </div>
-                    {% endif %}
+    <!-- Основной контент -->
+    <div class="video-detail-layout">
+        <!-- Левая колонка - основное видео -->
+        <div class="video-main-content">
+            <div class="video-header">
+                <h1 class="video-title">{{ video.title }}</h1>
+                <div class="video-meta">
+                    <span class="complex-name">{{ residential_complex.name }}</span>
+                    <span class="video-date">{{ video.created_at|date:"j E Y" }}</span>
                 </div>
+            </div>
 
-                {% if video.description %}
-                <div class="article-excerpt" style="padding:16px 16px 0 16px;">{{ video.description|safe }}</div>
+            <!-- Видео плеер -->
+            <div class="video-player-container">
+                {% if video_embed_url %}
+                    <div class="video-embed">
+                        <!-- Создаем iframe с полученным URL -->
+                        <iframe src="{{ video_embed_url|safe }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                {% elif video.video_url %}
+                    <iframe src="{{ video.video_url|safe }}" class="video-player" frameborder="0" allowfullscreen></iframe>
+                {% else %}
+                    <div class="video-placeholder">
+                        {% if video.video_thumbnail %}
+                            <img src="{{ video.video_thumbnail.url }}" alt="{{ video.title }}">
+                        {% else %}
+                            <img src="/media/gallery/placeholders.png" alt="{{ video.title }}">
+                        {% endif %}
+                    </div>
                 {% endif %}
             </div>
-        </div>
 
-        <!-- Комментарии -->
-        <div class="articles-category-section" style="margin-top:16px;">
-            <div class="category-header">
-                <h2 class="category-title">Комментарии</h2>
+            <!-- Описание видео -->
+            {% if video.description %}
+            <div class="video-description">
+                <h3>Описание</h3>
+                <div class="description-content">{{ video.description|safe }}</div>
             </div>
-
-            {% if comment_success %}
-                <div class="no-articles"><p>Спасибо! Ваш комментарий добавлен.</p></div>
             {% endif %}
 
-            <form method="post" class="article-card" style="padding:16px; margin-bottom:16px;">
-                {% csrf_token %}
-                <div style="display:grid; gap:12px; grid-template-columns:1fr 200px;">
-                    <input type="text" name="name" placeholder="Ваше имя" required style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
-                    <select name="rating" required style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
-                        {% for i in "12345" %}
-                        <option value="{{ forloop.counter }}">{{ forloop.counter }} ★</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <textarea name="text" placeholder="Ваш комментарий" rows="4" required style="margin-top:12px; padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px; width:100%;"></textarea>
-                <div style="margin-top:12px;">
-                    <button type="submit" class="category-btn"><i class="fas fa-paper-plane"></i> Отправить</button>
-                </div>
-            </form>
-
-            <div class="articles-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-                {% for c in video.comments.all %}
-                {% if c.is_approved %}
-                <div class="article-card">
-                    <div class="article-content">
-                        <div class="article-meta" style="display:flex; gap:8px; align-items:center;">
-                            <span class="article-category">{{ c.name }}</span>
-                            <span class="article-date">{{ c.created_at|date:"j E Y, H:i" }}</span>
-                        </div>
-                        <div class="article-title" style="margin-top:6px;">
-                            {% for _ in "12345" %}
-                                {% if forloop.counter <= c.rating %}
-                                    <i class="fas fa-star" style="color:#f5c518;"></i>
-                                {% else %}
-                                    <i class="far fa-star" style="color:#f5c518;"></i>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        <div class="article-excerpt" style="margin-top:8px; color:#666;">{{ c.text }}</div>
-                    </div>
-                </div>
-                {% endif %}
-                {% empty %}
-                <div class="no-articles"><p>Пока нет комментариев.</p></div>
-                {% endfor %}
+            <!-- Кнопка перехода к ЖК -->
+            <div class="complex-link-section">
+                <a href="{% url 'main:detail' residential_complex.id %}" class="complex-link-btn">
+                    <i class="fas fa-building"></i>
+                    <span>Перейти к ЖК «{{ residential_complex.name }}»</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
         </div>
 
-        <!-- Похожие видео -->
-        {% if related_videos %}
-        <section class="similar-articles-section">
-            <div class="container">
-                <h2 class="similar-articles-title">Похожие видео</h2>
-                <div class="similar-articles-grid">
-                    {% for v in related_videos %}
-                    <a href="{% url 'main:video_detail' v.slug %}" class="similar-article-card">
-                        <div class="similar-article-image">
-                            {% if v.thumbnail %}
-                                <img src="{{ v.thumbnail.url }}" alt="{{ v.title }}">
-                            {% elif v.residential_complex.image %}
-                                <img src="{{ v.residential_complex.image.url }}" alt="{{ v.residential_complex.name }}">
+        <!-- Правая колонка - видео из того же ЖК -->
+        <div class="video-sidebar">
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Видео ЖК «{{ residential_complex.name }}»</h3>
+                {% if same_complex_videos %}
+                <div class="sidebar-videos">
+                    {% for v in same_complex_videos %}
+                    <a href="{% url 'main:video_detail' v.id %}" class="sidebar-video-card {% if v.id == video.id %}active{% endif %}">
+                        <div class="sidebar-video-image">
+                            {% if v.video_thumbnail %}
+                                <img src="{{ v.video_thumbnail.url }}" alt="{{ v.title }}">
+                            {% elif v.image and v.image.url %}
+                                <img src="{{ v.image.url }}" alt="{{ v.title }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/300x200/4A90E2/FFFFFF?text={{ v.title|urlencode }}" alt="{{ v.title }}">
+                                <img src="/media/gallery/placeholders.png" alt="{{ v.title }}">
                             {% endif %}
-                        </div>
-                        <div class="similar-article-content">
-                            <div class="similar-article-categories">
-                                <span class="similar-article-category">{{ v.residential_complex.name }}</span>
+                            <div class="video-play-overlay">
+                                <i class="fas fa-play"></i>
                             </div>
-                            <h3 class="similar-article-title">{{ v.title }}</h3>
-                            <div class="similar-article-meta">
-                                <span class="similar-article-date">{{ v.published_date|date:"j E Y" }}</span>
-                                <div class="similar-article-stats">
-                                    <span class="similar-article-views">{{ v.views_count }}</span>
-                                </div>
+                        </div>
+                        <div class="sidebar-video-content">
+                            <h4 class="sidebar-video-title">{{ v.title }}</h4>
+                            <div class="sidebar-video-meta">
+                                <span class="sidebar-video-date">{{ v.created_at|date:"j E Y" }}</span>
                             </div>
                         </div>
                     </a>
                     {% endfor %}
                 </div>
+                {% else %}
+                <div class="no-videos">
+                    <p>Других видео этого ЖК пока нет</p>
+                </div>
+                {% endif %}
             </div>
-        </section>
-        {% endif %}
-    </section>
-
+        </div>
+    </div>
 </div>
+
+<!-- Похожие видео из других ЖК -->
+{% if similar_videos %}
+<section class="similar-videos-full-section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Похожие видео из других ЖК</h2>
+            <p class="section-subtitle">Другие интересные видеообзоры</p>
+        </div>
+        <div class="similar-videos-full-grid">
+            {% for v in similar_videos %}
+            <a href="{% url 'main:video_detail' v.id %}" class="similar-video-full-card">
+                <div class="similar-video-full-image">
+                    {% if v.video_thumbnail %}
+                        <img src="{{ v.video_thumbnail.url }}" alt="{{ v.title }}">
+                    {% elif v.image and v.image.url %}
+                        <img src="{{ v.image.url }}" alt="{{ v.title }}">
+                    {% else %}
+                        <img src="/media/gallery/placeholders.png" alt="{{ v.title }}">
+                    {% endif %}
+                    <div class="video-play-overlay">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </div>
+                <div class="similar-video-full-content">
+                    <h3 class="similar-video-full-title">{{ v.title }}</h3>
+                    <div class="similar-video-full-meta">
+                        <span class="similar-video-full-date">{{ v.created_at|date:"j E Y" }}</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<style>
+/* Основные переменные */
+:root {
+    --c21-dark: #252526;
+    --c21-gold: #BEAF87;
+    --c21-gold-dark: #A89A6F;
+    --c21-light: #f8f9fa;
+    --c21-gray: #6c757d;
+    --c21-border: #e9ecef;
+    --c21-shadow: rgba(0,0,0,0.1);
+    --c21-shadow-hover: rgba(0,0,0,0.15);
+}
+
+/* Хлебные крошки */
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: #666;
+}
+
+.breadcrumb-link {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.breadcrumb-link:hover {
+    color: var(--c21-gold);
+}
+
+.breadcrumb-separator {
+    color: #999;
+    font-size: 12px;
+}
+
+.breadcrumb-current {
+    color: #999;
+}
+
+/* Основной layout */
+.video-detail-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Левая колонка */
+.video-main-content {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px var(--c21-shadow);
+}
+
+.video-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--c21-border);
+}
+
+.video-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--c21-dark);
+    margin: 0 0 0.5rem 0;
+    line-height: 1.3;
+}
+
+.video-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--c21-gray);
+    font-size: 0.9rem;
+}
+
+.complex-name {
+    color: var(--c21-gold);
+    font-weight: 600;
+}
+
+/* Видео плеер */
+.video-player-container {
+    position: relative;
+    width: 100%;
+}
+
+.video-embed {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+}
+
+.video-embed iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.video-player {
+    width: 100%;
+    border-radius: 0;
+}
+
+.video-placeholder {
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
+}
+
+.video-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Описание */
+.video-description {
+    padding: 1.5rem;
+    border-top: 1px solid var(--c21-border);
+}
+
+.video-description h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 1rem 0;
+}
+
+.description-content {
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Кнопка перехода к ЖК */
+.complex-link-section {
+    padding: 1.5rem;
+    border-top: 1px solid var(--c21-border);
+    text-align: center;
+}
+
+.complex-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+    color: var(--c21-dark);
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(190,175,135,0.3);
+}
+
+.complex-link-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(190,175,135,0.4);
+    color: var(--c21-dark);
+}
+
+.complex-link-btn i {
+    font-size: 1.1rem;
+}
+
+/* Правая колонка */
+.video-sidebar {
+    position: sticky;
+    top: 80px;
+    height: fit-content;
+}
+
+.sidebar-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px var(--c21-shadow);
+    overflow: hidden;
+}
+
+.sidebar-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0;
+    padding: 1rem;
+    border-bottom: 1px solid var(--c21-border);
+    background: linear-gradient(135deg, #faf7ee 0%, #e8e4d5 100%);
+}
+
+.sidebar-videos {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.sidebar-video-card {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--c21-border);
+    transition: background-color 0.3s ease;
+}
+
+.sidebar-video-card:hover {
+    background: #faf7ee;
+}
+
+.sidebar-video-card.active {
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+}
+
+.sidebar-video-card.active .sidebar-video-title {
+    color: var(--c21-dark);
+}
+
+.sidebar-video-card.active .sidebar-video-meta {
+    color: rgba(37, 37, 38, 0.7);
+}
+
+.sidebar-video-image {
+    position: relative;
+    width: 80px;
+    height: 60px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.sidebar-video-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sidebar-video-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.sidebar-video-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--c21-dark);
+    margin: 0 0 0.25rem 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.sidebar-video-meta {
+    color: var(--c21-gray);
+    font-size: 0.75rem;
+}
+
+.no-videos {
+    padding: 1rem;
+    text-align: center;
+    color: var(--c21-gray);
+    font-style: italic;
+}
+
+/* Похожие видео из других ЖК (полная секция) */
+.similar-videos-full-section {
+    background: #f8f9fa;
+    padding: 3rem 0;
+    margin-top: 2rem;
+}
+
+.similar-videos-full-section .section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.similar-videos-full-section .section-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--c21-dark);
+    margin: 0 0 0.5rem 0;
+}
+
+.similar-videos-full-section .section-subtitle {
+    font-size: 1.1rem;
+    color: var(--c21-gray);
+    margin: 0;
+}
+
+.similar-videos-full-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.similar-video-full-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px var(--c21-shadow);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.similar-video-full-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px var(--c21-shadow-hover);
+}
+
+.similar-video-full-image {
+    position: relative;
+    height: 180px;
+    overflow: hidden;
+}
+
+.similar-video-full-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.similar-video-full-card:hover .similar-video-full-image img {
+    transform: scale(1.05);
+}
+
+.video-play-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.7);
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.similar-video-full-card:hover .video-play-overlay {
+    opacity: 1;
+}
+
+.similar-video-full-content {
+    padding: 1rem;
+}
+
+.similar-video-full-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 0.5rem 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.similar-video-full-meta {
+    color: var(--c21-gray);
+    font-size: 0.9rem;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .video-detail-layout {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .video-sidebar {
+        position: static;
+        order: -1;
+    }
+    
+    .sidebar-videos {
+        max-height: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .video-title {
+        font-size: 1.5rem;
+    }
+    
+    .video-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .complex-link-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .similar-videos-full-section {
+        padding: 2rem 0;
+    }
+    
+    .similar-videos-full-section .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .similar-videos-full-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .sidebar-video-card {
+        padding: 0.5rem;
+    }
+    
+    .sidebar-video-image {
+        width: 60px;
+        height: 45px;
+    }
+    
+    .sidebar-video-title {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .video-header {
+        padding: 1rem;
+    }
+    
+    .video-title {
+        font-size: 1.3rem;
+    }
+    
+    .video-description,
+    .complex-link-section {
+        padding: 1rem;
+    }
+    
+    .complex-link-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+        gap: 0.5rem;
+    }
+    
+    .similar-videos-full-section {
+        padding: 1.5rem 0;
+    }
+    
+    .similar-videos-full-section .section-title {
+        font-size: 1.3rem;
+    }
+    
+    .similar-videos-full-section .section-subtitle {
+        font-size: 1rem;
+    }
+}
+</style>
 {% endblock %} 

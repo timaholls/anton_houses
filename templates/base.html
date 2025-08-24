@@ -32,6 +32,7 @@
                  <a href="{% url 'main:articles' %}" class="nav-link {% if 'articles' in request.resolver_match.url_name %}active{% endif %}">Новости</a>
                  <a href="{% url 'main:videos' %}" class="nav-link {% if 'video' in request.resolver_match.url_name %}active{% endif %}">Видеообзоры ЖК</a>
                  <a href="{% url 'main:mortgage' %}" class="nav-link">Ипотека</a>
+                 <a href="{% url 'main:company' %}" class="nav-link {% if request.resolver_match.url_name == 'company' %}active{% endif %}">Наша команда</a>
                  <a href="{% url 'main:vacancies' %}" class="nav-link {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
                  <a href="{% url 'main:offices' %}" class="nav-link {% if 'office' in request.resolver_match.url_name %}active{% endif %}">Офисы продаж</a>
              </nav>
@@ -52,9 +53,11 @@
     </main>
 
     <!-- Форма обратной связи -->
+    {% if not request.resolver_match.url_name == 'vacancies' %}
     <div class="feedback-wrapper">
         {% include 'includes/feedback_form.html' %}
     </div>
+    {% endif %}
 
     <!-- Переход к футеру с логотипом по центру -->
     <div class="footer-transition">
@@ -84,8 +87,8 @@
                 <div class="footer-section">
                     <h3 class="footer-title">Компания</h3>
                     <ul class="footer-links">
-                        <li><a href="#">О компании</a></li>
-                        <li><a href="#">Новости</a></li>
+                        <li><a href="{% url 'main:company' %}">О компании</a></li>
+                        <li><a href="{% url 'main:articles' %}">Новости</a></li>
                         <li><a href="{% url 'main:videos' %}">Видеообзоры</a></li>
                         <li><a href="{% url 'main:vacancies' %}">Вакансии</a></li>
                         <li><a href="{% url 'main:offices' %}">Офисы продаж</a></li>

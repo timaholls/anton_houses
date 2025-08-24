@@ -37,7 +37,7 @@
                     {% elif office.photo %}
                         <img src="{{ office.photo.url }}" alt="{{ office.name }}">
                     {% else %}
-                        <img src="https://via.placeholder.com/600x400/252526/BEAF87?text={{ office.name|urlencode }}" alt="{{ office.name }}">
+                        <img src="/media/gallery/placeholders.png" alt="{{ office.name }}">
                     {% endif %}
                 </div>
                 <div class="card-content">

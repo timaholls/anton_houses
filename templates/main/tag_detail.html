@@ -36,7 +36,7 @@
                         {% if article.image %}
                             <img src="{{ article.image.url }}" alt="{{ article.title }}">
                         {% else %}
-                            <img src="https://via.placeholder.com/300x200/252526/BEAF87?text={{ article.title|urlencode }}" alt="{{ article.title }}">
+                            <img src="/media/gallery/placeholders.png" alt="{{ article.title }}">
                         {% endif %}
                     </div>
                     

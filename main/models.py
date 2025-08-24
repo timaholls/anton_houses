@@ -59,6 +59,111 @@ class Tag(models.Model):
     def get_absolute_url(self):
         return f'/articles/tag/{self.slug}/'
 
+class Gallery(models.Model):
+    """Универсальная модель для галерей всех типов контента"""
+    CONTENT_TYPE_CHOICES = [
+        ('image', 'Фото'),
+        ('video', 'Видео'),
+    ]
+    
+    CATEGORY_CHOICES = [
+        ('residential_complex', 'Жилые комплексы'),
+        ('secondary_property', 'Вторичная недвижимость'),
+        ('employee', 'Сотрудники'),
+        ('company', 'Компания'),
+        ('article', 'Статьи'),
+        ('special_offer', 'Акции'),
+        ('office', 'Офисы'),
+        ('employee_video', 'Видео сотрудников'),
+        ('residential_video', 'Видео жилых комплексов'),
+        ('secondary_video', 'Видео вторичной недвижимости'),
+    ]
+    
+    title = models.CharField(max_length=200, verbose_name="Название")
+    content_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES, default='image', verbose_name="Тип контента")
+    image = models.ImageField(upload_to='gallery/', verbose_name="Изображение", blank=True, null=True)
+    video_url = models.URLField(blank=True, null=True, verbose_name="Ссылка на видео (YouTube)")
+    # video_file = models.FileField(upload_to='gallery/videos/', blank=True, null=True, verbose_name="Файл видео")  # Убрано - только ссылки на видео
+    video_thumbnail = models.ImageField(upload_to='gallery/thumbnails/', blank=True, null=True, verbose_name="Превью видео")
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, verbose_name="Категория")
+    object_id = models.PositiveIntegerField(verbose_name="ID объекта")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    order = models.IntegerField(default=0, verbose_name="Порядок")
+    is_active = models.BooleanField(default=True, verbose_name="Активно")
+    is_main = models.BooleanField(default=False, verbose_name="Главное фото/видео")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    
+    class Meta:
+        verbose_name = "Галерея"
+        verbose_name_plural = "Галереи"
+        ordering = ['category', 'object_id', 'order', 'created_at']
+        indexes = [
+            models.Index(fields=['category', 'object_id']),
+            models.Index(fields=['is_active', 'is_main']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_category_display()} - {self.title}"
+    
+    def clean(self):
+        """Валидация модели"""
+        from django.core.exceptions import ValidationError
+        
+        # Валидация превью видео
+        if self.video_thumbnail:
+            # Проверяем размер файла (максимум 5MB)
+            if self.video_thumbnail.size > 5 * 1024 * 1024:
+                raise ValidationError({
+                    'video_thumbnail': 'Размер файла превью не должен превышать 5MB.'
+                })
+            
+            # Проверяем, что это изображение (по расширению файла)
+            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            file_extension = self.video_thumbnail.name.lower().split('.')[-1]
+            if f'.{file_extension}' not in allowed_extensions:
+                raise ValidationError({
+                    'video_thumbnail': f'Неподдерживаемый формат файла. Разрешены: {", ".join(allowed_extensions)}'
+                })
+    
+    def save(self, *args, **kwargs):
+        """Переопределяем save для выполнения валидации"""
+        self.clean()
+        super().save(*args, **kwargs)
+    
+    def get_upload_path(self, filename):
+        """Автоматическое определение пути загрузки по категории"""
+        if self.category == 'residential_complex':
+            return f'gallery/residential_complex/{self.object_id}/{filename}'
+        elif self.category == 'secondary_property':
+            return f'gallery/secondary_property/{self.object_id}/{filename}'
+        elif self.category == 'employee':
+            return f'gallery/employees/{self.object_id}/{filename}'
+        elif self.category == 'company':
+            return f'gallery/company/{filename}'
+        elif self.category == 'article':
+            return f'gallery/articles/{self.object_id}/{filename}'
+        elif self.category == 'special_offer':
+            return f'gallery/special_offers/{self.object_id}/{filename}'
+        elif self.category == 'office':
+            return f'gallery/offices/{self.object_id}/{filename}'
+        elif self.category == 'employee_video':
+            return f'gallery/employee_videos/{self.object_id}/{filename}'
+        elif self.category == 'residential_video':
+            return f'gallery/residential_videos/{self.object_id}/{filename}'
+        else:
+            return f'gallery/{self.category}/{self.object_id}/{filename}'
+    
+    def save(self, *args, **kwargs):
+        # Если это главное фото, убираем главный статус у других фото этого объекта
+        if self.is_main:
+            Gallery.objects.filter(
+                category=self.category,
+                object_id=self.object_id,
+                is_main=True
+            ).exclude(id=self.id).update(is_main=False)
+        super().save(*args, **kwargs)
+
+
 class ResidentialComplex(models.Model):
     """Модель жилого комплекса """
     HOUSE_TYPE_CHOICES = [
@@ -97,7 +202,6 @@ class ResidentialComplex(models.Model):
     district = models.CharField(max_length=100, verbose_name="Район", blank=True)
     street = models.CharField(max_length=200, verbose_name="Улица", blank=True)
     commute_time = models.CharField(max_length=50, verbose_name="Время в пути")
-    image = models.ImageField(upload_to='complexes/', blank=True, null=True, verbose_name="Изображение")
     house_type = models.CharField(max_length=20, choices=HOUSE_TYPE_CHOICES, default='apartment', verbose_name="Тип дома")
     area_from = models.DecimalField(max_digits=6, decimal_places=1, default=60.0, verbose_name="Площадь от (м²)")
     area_to = models.DecimalField(max_digits=6, decimal_places=1, default=120.0, verbose_name="Площадь до (м²)")
@@ -121,12 +225,8 @@ class ResidentialComplex(models.Model):
     three_room_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена 3-комнатной (млн)")
     four_room_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена 4+ комнатной (млн)")
     
-    # Дополнительные изображения
-    image_2 = models.ImageField(upload_to='complexes/', blank=True, null=True, verbose_name="Изображение 2")
-    image_3 = models.ImageField(upload_to='complexes/', blank=True, null=True, verbose_name="Изображение 3")
-    image_4 = models.ImageField(upload_to='complexes/', blank=True, null=True, verbose_name="Изображение 4")
-    
     is_featured = models.BooleanField(default=False, verbose_name="Популярный")
+    agent = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='residential_complexes', verbose_name="Ответственный агент")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     latitude = models.FloatField(null=True, blank=True, verbose_name="Широта")
     longitude = models.FloatField(null=True, blank=True, verbose_name="Долгота")
@@ -143,11 +243,75 @@ class ResidentialComplex(models.Model):
     def price_display(self):
         """Форматированная цена для отображения"""
         return f"от {self.price_from} млн Р"
+    
+    def get_images(self):
+        """Получить все изображения ЖК"""
+        return Gallery.objects.filter(
+            category='residential_complex',
+            object_id=self.id,
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_image(self):
+        """Получить главное изображение ЖК"""
+        return Gallery.objects.filter(
+            category='residential_complex',
+            object_id=self.id,
+            is_main=True,
+            is_active=True
+        ).first()
+    
+    def get_catalog_images(self):
+        """Получить изображения для каталога: главное фото + 3 дополнительных по порядку"""
+        # Получаем главное изображение
+        main_image = self.get_main_image()
+        
+        # Получаем все изображения, исключая главное
+        other_images = Gallery.objects.filter(
+            category='residential_complex',
+            object_id=self.id,
+            is_active=True
+        ).exclude(
+            id=main_image.id if main_image else None
+        ).order_by('order', 'created_at')[:3]
+        
+        # Формируем список: главное + дополнительные
+        catalog_images = []
+        if main_image:
+            catalog_images.append(main_image)
+        catalog_images.extend(other_images)
+        
+        return catalog_images
+    
+    def get_videos(self):
+        """Получить все видео ЖК"""
+        return Gallery.objects.filter(
+            category='residential_video',
+            object_id=self.id,
+            content_type='video',
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_video(self):
+        """Получить главное видео ЖК"""
+        return Gallery.objects.filter(
+            category='residential_video',
+            object_id=self.id,
+            content_type='video',
+            is_main=True,
+            is_active=True
+        ).first()
+    
+    def get_related_complexes(self):
+        """Получить похожие ЖК"""
+        return ResidentialComplex.objects.filter(
+            city=self.city,
+            house_class=self.house_class
+        ).exclude(id=self.id)[:3]
 
 class CompanyInfo(models.Model):
     """Модель информации о компании"""
     founder_name = models.CharField(max_length=100, verbose_name="Имя основателя")
-    founder_photo = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name="Фото основателя")
     founder_position = models.CharField(max_length=200, default="основатель компании", verbose_name="Должность основателя")
     company_name = models.CharField(max_length=100, default="Антон Хаус", verbose_name="Название компании")
     quote = models.TextField(verbose_name="Цитата основателя")
@@ -165,11 +329,30 @@ class CompanyInfo(models.Model):
     def get_active(cls):
         """Получить активную информацию о компании"""
         return cls.objects.filter(is_active=True).first()
+    
+    def get_images(self):
+        """Получить все изображения компании"""
+        return Gallery.objects.filter(
+            category='company',
+            object_id=self.id,
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_image(self):
+        """Получить главное изображение компании"""
+        return Gallery.objects.filter(
+            category='company',
+            object_id=self.id,
+            is_main=True,
+            is_active=True
+        ).first()
+
+
+
 
 class Author(models.Model):
     """Модель автора статьи"""
     name = models.CharField(max_length=100, verbose_name="Имя автора")
-    photo = models.ImageField(upload_to='authors/', blank=True, null=True, verbose_name="Фото автора")
     description = models.TextField(blank=True, verbose_name="Описание автора")
     position = models.CharField(max_length=200, blank=True, verbose_name="Должность")
     articles_count = models.IntegerField(default=0, verbose_name="Количество статей")
@@ -184,21 +367,39 @@ class Author(models.Model):
     def __str__(self):
         return self.name
 
+class Category(models.Model):
+    """Модель категории статей"""
+    name = models.CharField(max_length=100, verbose_name="Название")
+    slug = models.SlugField(max_length=100, unique=True, verbose_name="URL")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    is_active = models.BooleanField(default=True, verbose_name="Активна")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    
+    class Meta:
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = create_slug(self.name)
+        super().save(*args, **kwargs)
+
 class Article(models.Model):
     """Модель статьи"""
-    CATEGORY_CHOICES = [
-        ('mortgage', 'Ипотека'),
-        ('laws', 'Законы'),
-        ('instructions', 'Инструкции'),
-        ('market', 'Рынок недвижимости'),
-        ('tips', 'Советы'),
+    TYPE_CHOICES = [
+        ('news', 'Новости'),
+        ('company', 'Новости компании'),
     ]
     
     title = models.CharField(max_length=200, verbose_name="Заголовок")
+    article_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='news', verbose_name="Тип статьи")
     content = HTMLField(verbose_name="Содержание")
     excerpt = HTMLField(max_length=500, verbose_name="Краткое описание")
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='tips', verbose_name="Категория")
-    image = models.ImageField(upload_to='articles/', blank=True, null=True, verbose_name="Изображение")
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, verbose_name="Категория")
     published_date = models.DateField(auto_now_add=True, verbose_name="Дата публикации")
     updated_date = models.DateField(auto_now=True, verbose_name="Дата обновления")
     is_featured = models.BooleanField(default=False, verbose_name="Рекомендуемая")
@@ -226,6 +427,23 @@ class Article(models.Model):
     
     def get_absolute_url(self):
         return f'/articles/{self.slug}/'
+    
+    def get_images(self):
+        """Получить все изображения статьи"""
+        return Gallery.objects.filter(
+            category='article',
+            object_id=self.id,
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_image(self):
+        """Получить главное изображение статьи"""
+        return Gallery.objects.filter(
+            category='article',
+            object_id=self.id,
+            is_main=True,
+            is_active=True
+        ).first()
 
 class CatalogLanding(models.Model):
     """SEO-страница каталога (Новостройки/Вторичка + категории)"""
@@ -282,16 +500,12 @@ class SecondaryProperty(models.Model):
     street = models.CharField(max_length=200, verbose_name='Улица', blank=True)
     commute_time = models.CharField(max_length=50, verbose_name='Время в пути', default='10 минут')
 
-    image = models.ImageField(upload_to='secondary/', blank=True, null=True, verbose_name='Изображение')
-    image_2 = models.ImageField(upload_to='secondary/', blank=True, null=True, verbose_name='Изображение 2')
-    image_3 = models.ImageField(upload_to='secondary/', blank=True, null=True, verbose_name='Изображение 3')
-    image_4 = models.ImageField(upload_to='secondary/', blank=True, null=True, verbose_name='Изображение 4')
-
     house_type = models.CharField(max_length=20, choices=HOUSE_TYPE_CHOICES, default='apartment', verbose_name='Тип объекта')
     area = models.DecimalField(max_digits=7, decimal_places=1, default=45.0, verbose_name='Площадь (м²)')
     rooms = models.CharField(max_length=10, choices=ROOMS_CHOICES, default='2', verbose_name='Комнат')
 
     description = models.TextField(blank=True, verbose_name='Описание')
+    agent = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='secondary_properties', verbose_name="Ответственный агент")
     created_at = models.DateTimeField(auto_now_add=True)
     latitude = models.FloatField(null=True, blank=True, verbose_name='Широта')
     longitude = models.FloatField(null=True, blank=True, verbose_name='Долгота')
@@ -308,6 +522,53 @@ class SecondaryProperty(models.Model):
     def price_from(self):
         # Для совместимости с шаблоном каталога
         return self.price
+    
+    def get_images(self):
+        """Получить все изображения объекта вторичной недвижимости"""
+        return Gallery.objects.filter(
+            category='secondary_property',
+            object_id=self.id,
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_image(self):
+        """Получить главное изображение объекта вторичной недвижимости"""
+        # Сначала ищем главное изображение
+        main_image = Gallery.objects.filter(
+            category='secondary_property',
+            object_id=self.id,
+            is_main=True,
+            is_active=True
+        ).first()
+        
+        # Если главного нет, берем первое доступное
+        if not main_image:
+            main_image = Gallery.objects.filter(
+                category='secondary_property',
+                object_id=self.id,
+                is_active=True
+            ).first()
+        
+        return main_image
+    
+    def get_videos(self):
+        """Получить все видео вторичной недвижимости"""
+        return Gallery.objects.filter(
+            category='secondary_video',
+            object_id=self.id,
+            content_type='video',
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_video(self):
+        """Получить главное видео вторичной недвижимости"""
+        return Gallery.objects.filter(
+            category='secondary_video',
+            object_id=self.id,
+            content_type='video',
+            is_main=True,
+            is_active=True
+        ).first()
 
 
 class Vacancy(models.Model):
@@ -371,9 +632,6 @@ class BranchOffice(models.Model):
 
     description = HTMLField(blank=True, verbose_name='Описание')
 
-    image = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name='Изображение офиса')
-    photo = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name='Фотография офиса')
-
     latitude = models.FloatField(null=True, blank=True, verbose_name='Широта')
     longitude = models.FloatField(null=True, blank=True, verbose_name='Долгота')
 
@@ -395,6 +653,23 @@ class BranchOffice(models.Model):
 
     def get_absolute_url(self):
         return f'/offices/{self.slug}/'
+    
+    def get_images(self):
+        """Получить все изображения офиса"""
+        return Gallery.objects.filter(
+            category='office',
+            object_id=self.id,
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_image(self):
+        """Получить главное изображение офиса"""
+        return Gallery.objects.filter(
+            category='office',
+            object_id=self.id,
+            is_main=True,
+            is_active=True
+        ).first()
 
 
 class Employee(models.Model):
@@ -403,77 +678,124 @@ class Employee(models.Model):
 
     full_name = models.CharField(max_length=200, verbose_name='ФИО')
     position = models.CharField(max_length=150, verbose_name='Должность')
-    photo = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name='Фото')
-
+    video_url = models.URLField(blank=True, null=True, verbose_name='Ссылка на видео (YouTube)')
+    video_file = models.FileField(upload_to='company/videos/', blank=True, null=True, verbose_name='Файл видео')
+    
+    experience_years = models.PositiveIntegerField(default=0, verbose_name='Опыт работы (лет)')
+    description = HTMLField(blank=True, verbose_name='Описание агента')
+    achievements = HTMLField(blank=True, verbose_name='Достижения')
+    specializations = models.TextField(blank=True, verbose_name='Специализации')
+    
     phone = models.CharField(max_length=50, blank=True, verbose_name='Телефон')
     email = models.EmailField(blank=True, verbose_name='Email')
-
+    
+    is_featured = models.BooleanField(default=False, verbose_name='Рекомендуемый агент')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата добавления')
 
     class Meta:
         verbose_name = 'Сотрудник'
         verbose_name_plural = 'Сотрудники'
-        ordering = ['full_name']
+        ordering = ['-is_featured', 'full_name']
 
     def __str__(self):
         return self.full_name
-
-
-class ResidentialVideo(models.Model):
-    """Видеообзор жилого комплекса"""
-    residential_complex = models.ForeignKey(ResidentialComplex, on_delete=models.CASCADE, related_name='videos', verbose_name='ЖК')
-    title = models.CharField(max_length=200, verbose_name='Заголовок видео')
-    slug = models.SlugField(max_length=200, unique=True, blank=True, verbose_name='URL')
-
-    description = HTMLField(blank=True, verbose_name='Описание')
-    video_url = models.URLField(blank=True, verbose_name='Ссылка на видео (YouTube и т.п.)')
-    video_file = models.FileField(upload_to='videos/', blank=True, null=True, verbose_name='Файл видео')
-    thumbnail = models.ImageField(upload_to='videos/', blank=True, null=True, verbose_name='Превью')
-
-    views_count = models.IntegerField(default=0, verbose_name='Просмотры')
-    published_date = models.DateField(auto_now_add=True, verbose_name='Дата публикации')
-    updated_date = models.DateField(auto_now=True, verbose_name='Дата обновления')
-    is_active = models.BooleanField(default=True, verbose_name='Активно')
-    is_featured = models.BooleanField(default=False, verbose_name='Рекомендуемое')
-
-    related_videos = models.ManyToManyField('self', blank=True, verbose_name='Похожие видео')
-
-    class Meta:
-        verbose_name = 'Видеообзор ЖК'
-        verbose_name_plural = 'Видеообзоры ЖК'
-        ordering = ['-published_date']
-
-    def __str__(self):
-        return self.title
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = create_slug(self.title)
-        super().save(*args, **kwargs)
-
+    
     def get_absolute_url(self):
-        return f'/videos/{self.slug}/'
+        return f'/team/{self.id}/'
+    
+    @property
+    def reviews_count(self):
+        """Количество опубликованных отзывов"""
+        return self.reviews.filter(is_approved=True).count()
+    
+    @property
+    def average_rating(self):
+        """Средний рейтинг по отзывам"""
+        approved_reviews = self.reviews.filter(is_approved=True)
+        if approved_reviews.exists():
+            return round(approved_reviews.aggregate(avg=models.Avg('rating'))['avg'], 1)
+        return 0.0
+    
+    def get_images(self):
+        """Получить все изображения сотрудника"""
+        return Gallery.objects.filter(
+            category='employee',
+            object_id=self.id,
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_image(self):
+        """Получить главное изображение сотрудника"""
+        # Сначала ищем главное изображение
+        main_image = Gallery.objects.filter(
+            category='employee',
+            object_id=self.id,
+            is_main=True,
+            is_active=True
+        ).first()
+        
+        # Если главного нет, берем первое доступное
+        if not main_image:
+            main_image = Gallery.objects.filter(
+                category='employee',
+                object_id=self.id,
+                is_active=True
+            ).first()
+        
+        return main_image
+    
+    def get_videos(self):
+        """Получить все видео сотрудника"""
+        return Gallery.objects.filter(
+            category='employee_video',
+            object_id=self.id,
+            content_type='video',
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_video(self):
+        """Получить главное видео сотрудника"""
+        return Gallery.objects.filter(
+            category='employee_video',
+            object_id=self.id,
+            content_type='video',
+            is_main=True,
+            is_active=True
+        ).first()
 
 
-class VideoComment(models.Model):
-    """Комментарий к видеообзору"""
+
+
+
+class EmployeeReview(models.Model):
+    """Отзыв о сотруднике"""
     RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
-
-    video = models.ForeignKey(ResidentialVideo, on_delete=models.CASCADE, related_name='comments', verbose_name='Видео')
-    name = models.CharField(max_length=120, verbose_name='Имя')
+    
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='reviews', verbose_name='Сотрудник')
+    name = models.CharField(max_length=120, verbose_name='Имя клиента')
+    email = models.EmailField(blank=True, verbose_name='Email клиента')
+    phone = models.CharField(max_length=20, blank=True, verbose_name='Телефон клиента')
+    
     rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES, default=5, verbose_name='Оценка')
-    text = models.TextField(verbose_name='Комментарий')
-
+    text = models.TextField(verbose_name='Текст отзыва')
+    
+    is_approved = models.BooleanField(default=False, verbose_name='Одобрен')
+    is_published = models.BooleanField(default=False, verbose_name='Опубликован')
+    
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
-    is_approved = models.BooleanField(default=True, verbose_name='Одобрено')
-
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+    
     class Meta:
-        verbose_name = 'Комментарий к видео'
-        verbose_name_plural = 'Комментарии к видео'
+        verbose_name = 'Отзыв о сотруднике'
+        verbose_name_plural = 'Отзывы о сотрудниках'
         ordering = ['-created_at']
-
+    
     def __str__(self):
-        return f'{self.name} — {self.rating}★'
+        return f'{self.name} — {self.employee.full_name} ({self.rating}★)'
+
+
+
 
 
 class MortgageProgram(models.Model):
@@ -496,10 +818,10 @@ class SpecialOffer(models.Model):
     residential_complex = models.ForeignKey(ResidentialComplex, on_delete=models.CASCADE, related_name='offers', verbose_name='Жилой комплекс')
     title = models.CharField(max_length=200, verbose_name='Заголовок акции')
     description = models.TextField(verbose_name='Описание акции')
-    image = models.ImageField(upload_to='offers/', blank=True, null=True, verbose_name='Изображение')
     is_active = models.BooleanField(default=True, verbose_name='Активна')
     priority = models.IntegerField(default=0, verbose_name='Приоритет')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
+    expires_at = models.DateTimeField(verbose_name='Дата окончания акции', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Акция'
@@ -508,3 +830,43 @@ class SpecialOffer(models.Model):
 
     def __str__(self):
         return f"{self.title} — {self.residential_complex.name}"
+    
+    @property
+    def is_expired(self):
+        """Проверяет, истекла ли акция"""
+        if self.expires_at:
+            from django.utils import timezone
+            return timezone.now() > self.expires_at
+        return False
+    
+    @property
+    def is_valid(self):
+        """Проверяет, активна ли акция и не истекла ли она"""
+        return self.is_active and not self.is_expired
+    
+    @classmethod
+    def get_active_offers(cls, limit=6):
+        """Получает активные предложения с учетом времени жизни"""
+        from django.utils import timezone
+        return cls.objects.filter(
+            is_active=True
+        ).filter(
+            models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
+        ).select_related('residential_complex').order_by('?')[:limit]
+    
+    def get_images(self):
+        """Получить все изображения акции"""
+        return Gallery.objects.filter(
+            category='special_offer',
+            object_id=self.id,
+            is_active=True
+        ).order_by('order', 'created_at')
+    
+    def get_main_image(self):
+        """Получить главное изображение акции"""
+        return Gallery.objects.filter(
+            category='special_offer',
+            object_id=self.id,
+            is_main=True,
+            is_active=True
+        ).first()

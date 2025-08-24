@@ -16,29 +16,7 @@
             <span class="breadcrumb-current">Вакансии</span>
         </div>
 
-        <div class="filters" style="display:flex; gap:12px; margin-bottom:20px;">
-            <form method="get" style="display:flex; gap:12px; flex-wrap:wrap;">
-                <select name="department" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
-                    <option value="">Все отделы</option>
-                    {% for d in departments %}
-                        <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
-                    {% endfor %}
-                </select>
-                <select name="city" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
-                    <option value="">Все города</option>
-                    {% for c in cities %}
-                        <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
-                    {% endfor %}
-                </select>
-                <select name="employment_type" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
-                    <option value="">Все типы</option>
-                    {% for key, label in employment_choices %}
-                        <option value="{{ key }}" {% if filters.employment_type == key %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="category-btn"><i class="fas fa-filter"></i> Фильтр</button>
-            </form>
-        </div>
+
 
         <div class="articles-grid">
             {% for item in vacancies %}
@@ -94,4 +72,7 @@
     </section>
 
 </div>
+
+<!-- Специальная форма обратной связи для вакансий -->
+{% include 'includes/vacancy_feedback_form.html' %}
 {% endblock %} 

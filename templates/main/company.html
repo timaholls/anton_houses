@@ -32,7 +32,7 @@
                         {% if e.photo %}
                             <img src="{{ e.photo.url }}" alt="{{ e.full_name }}">
                         {% else %}
-                            <img src="https://via.placeholder.com/400x300/4A90E2/FFFFFF?text={{ e.full_name|urlencode }}" alt="{{ e.full_name }}">
+                            <img src="/media/gallery/placeholders.png" alt="{{ e.full_name }}">
                         {% endif %}
                     </div>
                     <div class="article-content">
@@ -42,7 +42,8 @@
                             Филиал: {{ e.branch.name }} — {{ e.branch.city }}
                         </div>
                         <div class="article-footer" style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                            <a href="{% url 'main:office_detail' e.branch.slug %}" class="btn btn-primary btn-small">Посмотреть филиал</a>
+                            <a href="{% url 'main:employee_detail' e.id %}" class="btn btn-primary btn-small">Подробнее об агенте</a>
+                            <a href="{% url 'main:office_detail' e.branch.slug %}" class="btn btn-secondary btn-small">Посмотреть филиал</a>
                             {% if e.phone %}<span class="article-views"><i class="fas fa-phone" style="color:#999; margin-right:6px;"></i>{{ e.phone }}</span>{% endif %}
                             {% if e.email %}<span class="article-views"><i class="fas fa-envelope" style="color:#999; margin-right:6px;"></i>{{ e.email }}</span>{% endif %}
                         </div>
@@ -71,4 +72,33 @@
     </section>
 
 </div>
+
+<style>
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-secondary.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+</style>
 {% endblock %} 

@@ -1,0 +1,871 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ employee.full_name }} - {{ employee.position }} - CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Хлебные крошки -->
+    <div class="breadcrumbs">
+        <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+        <span class="breadcrumb-separator">•</span>
+        <a href="{% url 'main:team' %}" class="breadcrumb-link">Наша команда</a>
+        <span class="breadcrumb-separator">•</span>
+        <span class="breadcrumb-current">{{ employee.full_name }}</span>
+    </div>
+
+    <!-- Hero секция сотрудника -->
+    <div class="employee-hero">
+        <div class="hero-content">
+            <div class="hero-left">
+                <div class="employee-photo-container">
+                    {% if employee.get_main_image %}
+                    <img src="{{ employee.get_main_image.image.url }}" class="employee-photo" alt="{{ employee.full_name }}">
+                    {% else %}
+                    <div class="employee-photo-placeholder">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <!-- Debug info -->
+                    <div style="background: #f8f9fa; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 12px;">
+                        <strong>Отладочная информация:</strong><br>
+                        ID сотрудника: {{ employee.id }}<br>
+                        Всего фото в галерее: {{ employee.get_images.count }}<br>
+                        {% if employee.get_images %}
+                            <ul style="margin: 5px 0; padding-left: 20px;">
+                            {% for img in employee.get_images %}
+                                <li>Фото {{ forloop.counter }}: {{ img.title }} (главное: {{ img.is_main }}, активно: {{ img.is_active }})</li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p style="color: #dc3545; margin: 5px 0;">Фото не найдены в галерее!</p>
+                            <p style="margin: 5px 0;">Убедитесь, что вы добавили фото в админке в разделе "Галереи" с категорией "Сотрудники" и ID объекта {{ employee.id }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    {% if employee.is_featured %}
+                    <div class="featured-badge">
+                        <i class="fas fa-star"></i>
+                        <span>Рекомендуемый агент</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="hero-right">
+                <div class="employee-header">
+                    <h1 class="employee-name">{{ employee.full_name }}</h1>
+                    <p class="employee-position">{{ employee.position }}</p>
+                    
+                    <div class="employee-stats">
+                        {% if employee.experience_years > 0 %}
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Опыт работы: {{ employee.experience_years }} лет</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if employee.average_rating > 0 %}
+                        <div class="stat-item">
+                            <div class="rating-display">
+                                <div class="stars">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= employee.average_rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="rating-text">{{ employee.average_rating }}/5 ({{ employee.reviews_count }} отзывов)</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="stat-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ employee.branch.name }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="employee-contacts">
+                        {% if employee.phone %}
+                        <a href="tel:{{ employee.phone }}" class="contact-btn phone-btn">
+                            <i class="fas fa-phone"></i>
+                            <span>{{ employee.phone }}</span>
+                        </a>
+                        {% endif %}
+                        
+                        {% if employee.email %}
+                        <a href="mailto:{{ employee.email }}" class="contact-btn email-btn">
+                            <i class="fas fa-envelope"></i>
+                            <span>{{ employee.email }}</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="content-grid">
+        <!-- Левая колонка -->
+        <div class="content-main">
+            <!-- Видео -->
+            {% if employee.get_main_video %}
+            <div class="info-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-video"></i> Видео-презентация</h2>
+                </div>
+                <div class="section-content">
+                    {% if employee.get_main_video.video_url %}
+                    <div class="video-container">
+                        <iframe src="{{ employee.get_main_video.video_url }}" allowfullscreen></iframe>
+                    </div>
+                    {% elif employee.get_main_video.video_url %}
+                    <iframe src="{{ employee.get_main_video.video_url|safe }}" class="video-player" frameborder="0" allowfullscreen></iframe>
+                    </video>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if employee.description %}
+            <div class="info-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-user-tie"></i> О специалисте</h2>
+                </div>
+                <div class="section-content">
+                    {{ employee.description|safe }}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if employee.achievements %}
+            <div class="info-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-trophy"></i> Достижения</h2>
+                </div>
+                <div class="section-content">
+                    {{ employee.achievements|safe }}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if employee.specializations %}
+            <div class="info-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-tags"></i> Специализации</h2>
+                </div>
+                <div class="section-content">
+                    <p>{{ employee.specializations }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Объекты недвижимости -->
+            {% if residential_complexes or secondary_properties %}
+            <div class="properties-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-building"></i> Объекты агента</h2>
+                </div>
+                
+                {% if residential_complexes %}
+                <div class="property-category">
+                    <h3><i class="fas fa-home"></i> Новостройки</h3>
+                    <div class="properties-grid">
+                        {% for complex in residential_complexes %}
+                        <div class="property-card">
+                            {% if complex.get_main_image and complex.get_main_image.image %}
+                            <div class="property-image">
+                                <img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}">
+                            </div>
+                            {% endif %}
+                            <div class="property-info">
+                                <h4>{{ complex.name }}</h4>
+                                <p class="property-location">{{ complex.city }}, {{ complex.district }}</p>
+                                <p class="property-price">от {{ complex.price_from }} млн ₽</p>
+                                <a href="{% url 'main:detail' complex.id %}" class="property-link">
+                                    Подробнее <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if secondary_properties %}
+                <div class="property-category">
+                    <h3><i class="fas fa-key"></i> Вторичная недвижимость</h3>
+                    <div class="properties-grid">
+                        {% for property in secondary_properties %}
+                        <div class="property-card">
+                            {% if property.get_main_image and property.get_main_image.image %}
+                            <div class="property-image">
+                                <img src="{{ property.get_main_image.image.url }}" alt="{{ property.name }}">
+                            </div>
+                            {% endif %}
+                            <div class="property-info">
+                                <h4>{{ property.name }}</h4>
+                                <p class="property-location">{{ property.city }}, {{ property.district }}</p>
+                                <p class="property-price">{{ property.price }} млн ₽</p>
+                                <a href="{% url 'main:detail' property.id %}" class="property-link">
+                                    Подробнее <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Отзывы -->
+            <div class="reviews-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-comments"></i> Отзывы клиентов</h2>
+                </div>
+                
+                {% if reviews %}
+                <div class="reviews-grid">
+                    {% for review in reviews %}
+                    <div class="review-card">
+                        <div class="review-header">
+                            <h5>{{ review.name }}</h5>
+                            <div class="stars">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= review.rating %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="review-content">
+                            <p>{{ review.text }}</p>
+                        </div>
+                        <div class="review-footer">
+                            <small>{{ review.created_at|date:"d.m.Y" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-reviews">
+                    <i class="fas fa-comments"></i>
+                    <p>Пока нет отзывов</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Правая колонка -->
+        <div class="content-sidebar">
+            <!-- Форма отзыва -->
+            <div class="review-form-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-comment"></i> Оставить отзыв</h3>
+                </div>
+                <div class="section-content">
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post" class="review-form">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="name">Ваше имя *</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="phone">Телефон</label>
+                            <input type="tel" class="form-control" id="phone" name="phone">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rating">Оценка *</label>
+                            <select class="form-control" id="rating" name="rating" required>
+                                <option value="5">5 - Отлично</option>
+                                <option value="4">4 - Хорошо</option>
+                                <option value="3">3 - Удовлетворительно</option>
+                                <option value="2">2 - Плохо</option>
+                                <option value="1">1 - Очень плохо</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="text">Ваш отзыв *</label>
+                            <textarea class="form-control" id="text" name="text" rows="4" required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <i class="fas fa-paper-plane"></i>
+                            <span>Отправить отзыв</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Основные переменные */
+:root {
+    --c21-dark: #252526;
+    --c21-gold: #BEAF87;
+    --c21-gold-dark: #A89A6F;
+    --c21-light: #f8f9fa;
+    --c21-gray: #6c757d;
+    --c21-border: #e9ecef;
+    --c21-shadow: rgba(0,0,0,0.1);
+    --c21-shadow-hover: rgba(0,0,0,0.15);
+}
+
+/* Хлебные крошки */
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: #666;
+}
+
+.breadcrumb-link {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.breadcrumb-link:hover {
+    color: #0066cc;
+}
+
+.breadcrumb-separator {
+    color: #999;
+    font-size: 12px;
+}
+
+.breadcrumb-current {
+    color: #999;
+}
+
+/* Hero секция */
+.employee-hero {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px var(--c21-shadow);
+    border: 1px solid #e8e4d5;
+}
+
+.hero-content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 2.5rem;
+    align-items: start;
+}
+
+.employee-photo-container {
+    position: relative;
+    text-align: center;
+}
+
+.employee-photo {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.employee-photo-placeholder {
+    width: 100%;
+    height: 300px;
+    background: linear-gradient(135deg, var(--c21-gray) 0%, #495057 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.employee-photo-placeholder i {
+    font-size: 4rem;
+    color: #fff;
+    opacity: 0.7;
+}
+
+.featured-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 4px 12px rgba(190,175,135,0.4);
+}
+
+.featured-badge i {
+    font-size: 10px;
+}
+
+.employee-header {
+    color: var(--c21-dark);
+}
+
+.employee-name {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+
+.employee-position {
+    font-size: 1.2rem;
+    color: var(--c21-gold);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.employee-stats {
+    margin-bottom: 2rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.stat-item i {
+    width: 20px;
+    margin-right: 12px;
+    color: var(--c21-gold);
+}
+
+.rating-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stars {
+    display: flex;
+    gap: 2px;
+}
+
+.stars i {
+    color: var(--c21-gold);
+    font-size: 1rem;
+}
+
+.rating-text {
+    color: var(--c21-gray);
+    font-size: 0.9rem;
+}
+
+.employee-contacts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.contact-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid #e8e4d5;
+    border-radius: 8px;
+    color: var(--c21-dark);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.contact-btn:hover {
+    background: #faf7ee;
+    border-color: var(--c21-gold);
+    color: var(--c21-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(190,175,135,0.2);
+}
+
+.contact-btn i {
+    color: var(--c21-gold);
+    font-size: 1.1rem;
+}
+
+/* Основной контент */
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Информационные секции */
+.info-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px var(--c21-shadow);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.info-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px var(--c21-shadow-hover);
+}
+
+.section-header {
+    background: linear-gradient(135deg, #faf7ee 0%, #e8e4d5 100%);
+    color: var(--c21-dark);
+    padding: 1.5rem;
+    border-bottom: 1px solid #e8e4d5;
+}
+
+.section-header h2, .section-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-header i {
+    color: var(--c21-gold);
+}
+
+.section-content {
+    padding: 1.5rem;
+}
+
+.section-content p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Видео */
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+}
+
+.video-player {
+    width: 100%;
+    border-radius: 8px;
+}
+
+/* Объекты недвижимости */
+.property-category {
+    margin-bottom: 2rem;
+}
+
+.property-category h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.property-category h3 i {
+    color: var(--c21-gold);
+}
+
+.properties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.property-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px var(--c21-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.property-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px var(--c21-shadow-hover);
+}
+
+.property-image {
+    height: 180px;
+    overflow: hidden;
+}
+
+.property-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.property-card:hover .property-image img {
+    transform: scale(1.05);
+}
+
+.property-info {
+    padding: 1rem;
+}
+
+.property-info h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin-bottom: 0.5rem;
+}
+
+.property-location {
+    color: var(--c21-gray);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.property-price {
+    font-weight: 700;
+    color: var(--c21-gold);
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+}
+
+.property-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--c21-dark);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.property-link:hover {
+    color: var(--c21-gold);
+}
+
+/* Отзывы */
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.review-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 12px var(--c21-shadow);
+    transition: transform 0.3s ease;
+}
+
+.review-card:hover {
+    transform: translateY(-2px);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.review-header h5 {
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0;
+}
+
+.review-content p {
+    color: #333;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.review-footer {
+    color: var(--c21-gray);
+    font-size: 0.9rem;
+}
+
+.no-reviews {
+    text-align: center;
+    padding: 3rem;
+    color: var(--c21-gray);
+}
+
+.no-reviews i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Боковая панель */
+.review-form-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px var(--c21-shadow);
+    position: sticky;
+    top: 80px;
+    overflow: hidden;
+    transition: top 0.3s ease;
+}
+
+.review-form-section .section-header {
+    background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+    color: var(--c21-dark);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--c21-dark);
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--c21-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--c21-gold);
+    box-shadow: 0 0 0 3px rgba(190,175,135,0.1);
+}
+
+.submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+    color: var(--c21-dark);
+    border: none;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(190,175,135,0.3);
+}
+
+.submit-btn:hover {
+    background: linear-gradient(135deg, var(--c21-gold-dark) 0%, var(--c21-gold) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(190,175,135,0.4);
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .review-form-section {
+        position: static;
+        margin-top: 2rem;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-content {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .employee-photo-container {
+        max-width: 250px;
+        margin: 0 auto;
+    }
+    
+    .employee-name {
+        font-size: 2rem;
+    }
+    
+    .properties-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .reviews-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .employee-hero {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .employee-name {
+        font-size: 1.8rem;
+    }
+    
+    .employee-position {
+        font-size: 1rem;
+    }
+    
+    .contact-btn {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+}
+</style>
+{% endblock %}

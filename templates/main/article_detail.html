@@ -101,7 +101,7 @@
                         {% if similar.image %}
                             <img src="{{ similar.image.url }}" alt="{{ similar.title }}">
                         {% else %}
-                            <img src="https://via.placeholder.com/200x150/252526/BEAF87?text={{ similar.title|urlencode }}" alt="{{ similar.title }}">
+                            <img src="/media/gallery/placeholders.png" alt="{{ similar.title }}">
                         {% endif %}
                     </div>
                     

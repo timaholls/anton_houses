@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+
+{% block title %}Все акции - CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Хлебные крошки -->
+    <nav class="breadcrumb-nav">
+        <a href="{% url 'main:home' %}">Главная</a>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-current">Все акции</span>
+    </nav>
+
+    <!-- Заголовок страницы -->
+    <section class="page-header">
+        <div class="section-header">
+            <h1 class="section-title">Все акции</h1>
+            <p class="section-subtitle">Специальные предложения от ведущих застройщиков</p>
+        </div>
+    </section>
+
+    <!-- Все акции -->
+    {% if offers %}
+    <section class="offers-section">
+        <div class="offers-grid">
+            {% for o in offers %}
+            <a href="{% url 'main:offer_detail' o.id %}" class="offer-card">
+                <div class="offer-media">
+                    {% if o.get_main_image and o.get_main_image.image %}
+                        <img src="{{ o.get_main_image.image.url }}" alt="{{ o.title }}" loading="lazy" decoding="async">
+                    {% else %}
+                        <img src="/media/gallery/placeholders.png" alt="{{ o.title }}" loading="lazy" decoding="async">
+                    {% endif %}
+                    <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
+                </div>
+                <div class="offer-content">
+                    <div class="offer-head">
+                        <span class="offer-chip">ЖК «{{ o.residential_complex.name }}»</span>
+                        <h3 class="offer-title">{{ o.title }}</h3>
+                    </div>
+                    <p class="offer-text">{{ o.description|truncatechars:160 }}</p>
+                    <div class="offer-limited">
+                        <i class="far fa-clock"></i>
+                        <span>
+                            {% if o.expires_at %}
+                                До {{ o.expires_at|date:"d.m.Y" }}
+                            {% else %}
+                                Временное предложение
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="offer-actions">
+                        <span class="btn btn-primary btn-small offer-cta">Подробнее об акции</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% else %}
+    <section class="no-offers-section">
+        <div class="no-offers-content">
+            <i class="fas fa-gift" style="font-size: 48px; color: #ccc; margin-bottom: 20px;"></i>
+            <h2>Акций пока нет</h2>
+            <p>В данный момент нет активных специальных предложений. Загляните позже!</p>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<style>
+/* Хлебные крошки */
+.breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0;
+    font-size: 14px;
+}
+
+.breadcrumb-nav a {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-nav a:hover {
+    color: var(--c21-gold);
+}
+
+.breadcrumb-separator {
+    color: #ccc;
+}
+
+.breadcrumb-current {
+    color: #333;
+    font-weight: 600;
+}
+
+/* Заголовок страницы */
+.page-header {
+    margin: 20px 0 40px 0;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.section-title {
+    font-size: 36px;
+    font-weight: 800;
+    color: #222;
+    margin: 0 0 12px 0;
+}
+
+.section-subtitle {
+    font-size: 18px;
+    color: #666;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Сетка акций */
+.offers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    justify-items: center;
+}
+
+ .offer-card {
+     width: 100%;
+     max-width: 600px;
+     display: grid;
+     grid-template-columns: 200px 1fr;
+     gap: 16px;
+     background: #fff;
+     border: 1px solid #efe7ce;
+     border-radius: 16px;
+     padding: 16px;
+     box-shadow: 0 8px 24px rgba(0,0,0,.06);
+     transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+     text-decoration: none;
+     color: inherit;
+ }
+
+.offer-card:hover {
+    box-shadow: 0 16px 36px rgba(0,0,0,.14);
+    transform: translateY(-2px);
+    border-color: var(--c21-gold);
+}
+
+.offer-media {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16/10;
+    min-height: 120px;
+}
+
+.offer-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.offer-badge-hot {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    z-index: 2;
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 800;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    box-shadow: 0 4px 12px rgba(190,175,135,.4);
+}
+
+.offer-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 120px;
+}
+
+.offer-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.offer-chip {
+    display: inline-block;
+    background: var(--c21-dark);
+    color: var(--c21-gold);
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+.offer-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #222;
+    line-height: 1.3;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.offer-text {
+    color: #444;
+    margin: 8px 0 0 0;
+    font-size: 14px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.offer-limited {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #7b6a3e;
+    background: #faf7ee;
+    border: 1px solid #efe7ce;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 12px;
+    width: fit-content;
+    margin-top: 8px;
+}
+
+.offer-limited i {
+    color: var(--c21-gold);
+    font-size: 14px;
+}
+
+.offer-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    justify-content: flex-start;
+}
+
+.offer-cta {
+    flex: none;
+    text-align: center;
+    padding: 8px 16px !important;
+    border-radius: 8px;
+    background: linear-gradient(180deg, var(--c21-gold), var(--c21-gold-dark)) !important;
+    color: var(--c21-dark) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(190,175,135,.45);
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 140px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.offer-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(190,175,135,.55);
+}
+
+/* Секция без акций */
+.no-offers-section {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.no-offers-content h2 {
+    font-size: 24px;
+    color: #666;
+    margin: 0 0 12px 0;
+}
+
+.no-offers-content p {
+    font-size: 16px;
+    color: #999;
+    margin: 0;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .section-title {
+        font-size: 28px;
+    }
+    
+    .section-subtitle {
+        font-size: 16px;
+    }
+    
+    .offers-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .offer-card {
+        grid-template-columns: 1fr;
+        max-width: 100%;
+    }
+    
+    .offer-media {
+        aspect-ratio: 16/9;
+    }
+    
+    .offer-content {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .section-title {
+        font-size: 24px;
+    }
+    
+    .offer-card {
+        padding: 12px;
+        gap: 12px;
+    }
+    
+    .offer-title {
+        font-size: 16px;
+    }
+    
+    .offer-text {
+        font-size: 14px;
+    }
+    
+    .offer-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .offer-cta {
+        flex: none;
+        width: 100%;
+        max-width: 200px;
+    }
+}
+</style>
+{% endblock %}

@@ -285,7 +285,7 @@
                         {% if complex.image %}
                             <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
                         {% else %}
-                            <img src="https://via.placeholder.com/600x400/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}">
+                            <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
                         {% endif %}
                         <div class="image-counter">1 из 4</div>
                         <div class="image-nav">
@@ -298,21 +298,21 @@
                             {% if complex.image %}
                                 <img src="{{ complex.image.url }}" alt="{{ complex.name }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=1" alt="{{ complex.name }}">
+                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
                             {% endif %}
                         </div>
                         <div class="thumbnail">
                             {% if complex.image_2 %}
                                 <img src="{{ complex.image_2.url }}" alt="{{ complex.name }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=2" alt="{{ complex.name }}">
+                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
                             {% endif %}
                         </div>
                         <div class="thumbnail">
                             {% if complex.image_3 %}
                                 <img src="{{ complex.image_3.url }}" alt="{{ complex.name }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=3" alt="{{ complex.name }}">
+                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
                             {% endif %}
                         </div>
                         <div class="thumbnail more">
@@ -320,7 +320,7 @@
                             {% if complex.image_4 %}
                                 <img src="{{ complex.image_4.url }}" alt="{{ complex.name }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/120x80/252526/BEAF87?text=4" alt="{{ complex.name }}">
+                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
                             {% endif %}
                         </div>
                     </div>
@@ -792,10 +792,10 @@ function updateCatalog(data) {
     
     let html = '';
     data.complexes.forEach(complex => {
-        const imageUrl = complex.image_url || `https://via.placeholder.com/600x400/252526/BEAF87?text=${encodeURIComponent(complex.name)}`;
-        const image2 = complex.image_2_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=2';
-        const image3 = complex.image_3_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=3';
-        const image4 = complex.image_4_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=4';
+        const imageUrl = complex.image_url || '/media/gallery/placeholders.png';
+        const image2 = complex.image_2_url || '/media/gallery/placeholders.png';
+        const image3 = complex.image_3_url || '/media/gallery/placeholders.png';
+        const image4 = complex.image_4_url || '/media/gallery/placeholders.png';
         
         html += `
             <div class="property-card-large" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
@@ -1169,10 +1169,10 @@ document.addEventListener('DOMContentLoaded', function() {
           grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
         } else {
           grid.innerHTML = data.items.map(item => {
-            const imageUrl = item.image_url || ('https://via.placeholder.com/600x400/252526/BEAF87?text=' + encodeURIComponent(item.name));
-            const image2 = item.image_2_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=2';
-            const image3 = item.image_3_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=3';
-            const image4 = item.image_4_url || 'https://via.placeholder.com/120x80/252526/BEAF87?text=4';
+            const imageUrl = item.image_url || '/media/gallery/placeholders.png';
+            const image2 = item.image_2_url || '/media/gallery/placeholders.png';
+            const image3 = item.image_3_url || '/media/gallery/placeholders.png';
+            const image4 = item.image_4_url || '/media/gallery/placeholders.png';
             return `
             <div class="property-card-large" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
               <div class="card-images">

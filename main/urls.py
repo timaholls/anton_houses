@@ -45,11 +45,18 @@ urlpatterns = [
 
     # Видеообзоры
     path('videos/', views.videos, name='videos'),
-    path('videos/<slug:slug>/', views.video_detail, name='video_detail'),
+    path('videos/<int:video_id>/', views.video_detail, name='video_detail'),
+    path('api/videos/objects/', views.videos_objects_api, name='videos_objects_api'),
 
     # Наша компания
     path('company/', views.company, name='company'),
     
     # Ипотека
     path('mortgage/', views.mortgage, name='mortgage'),
+    
+    # Акции
+    path('offers/', views.all_offers, name='all_offers'),
+    path('offers/<int:offer_id>/', views.offer_detail, name='offer_detail'),
+    path('team/', views.team, name='team'),
+    path('team/<int:employee_id>/', views.employee_detail, name='employee_detail'),
 ] 

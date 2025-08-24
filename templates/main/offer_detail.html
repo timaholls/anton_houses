@@ -1,0 +1,490 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ offer.title }} - CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Хлебные крошки -->
+    <nav class="breadcrumb-nav">
+        <a href="{% url 'main:home' %}">Главная</a>
+        <span class="breadcrumb-separator">/</span>
+        <a href="{% url 'main:home' %}#offers">Акции</a>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-current">{{ offer.title }}</span>
+    </nav>
+
+    <!-- Детальная информация об акции -->
+    <section class="offer-detail-section">
+        <div class="offer-detail-card">
+            <div class="offer-detail-media">
+                                    {% if offer.get_main_image %}
+                        <img src="{{ offer.get_main_image.image.url }}" alt="{{ offer.title }}" loading="lazy" decoding="async">
+                    {% else %}
+                        <img src="/media/gallery/placeholders.png" alt="{{ offer.title }}" loading="lazy" decoding="async">
+                    {% endif %}
+                <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
+            </div>
+            
+            <div class="offer-detail-content">
+                <div class="offer-detail-header">
+                    <span class="offer-chip">ЖК «{{ offer.residential_complex.name }}»</span>
+                    <h1 class="offer-detail-title">{{ offer.title }}</h1>
+                </div>
+                
+                <div class="offer-detail-description">
+                    {{ offer.description|linebreaks }}
+                </div>
+                
+                <div class="offer-detail-info">
+                    <div class="offer-limited">
+                        <i class="far fa-clock"></i>
+                        <span>
+                            {% if offer.expires_at %}
+                                До {{ offer.expires_at|date:"d.m.Y" }}
+                            {% else %}
+                                Временное предложение
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="offer-detail-actions">
+                        <a href="#feedback-form" class="btn btn-primary btn-large offer-cta">Получить предложение</a>
+                        <a class="btn btn-secondary btn-large" href="{% url 'main:detail' offer.residential_complex.id %}">
+                            <span>Подробнее о ЖК</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Другие акции -->
+    {% if other_offers %}
+    <section class="other-offers-section">
+        <div class="section-header">
+            <h2 class="section-title">Другие акции</h2>
+        </div>
+        
+        <div class="offers-grid">
+                         {% for o in other_offers %}
+             <a href="{% url 'main:offer_detail' o.id %}" class="offer-card">
+                 <div class="offer-media">
+                     {% if o.get_main_image %}
+                         <img src="{{ o.get_main_image.image.url }}" alt="{{ o.title }}" loading="lazy" decoding="async">
+                     {% else %}
+                         <img src="/media/gallery/placeholders.png" alt="{{ o.title }}" loading="lazy" decoding="async">
+                     {% endif %}
+                     <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
+                 </div>
+                 <div class="offer-content">
+                     <div class="offer-head">
+                         <span class="offer-chip">ЖК «{{ o.residential_complex.name }}»</span>
+                         <h3 class="offer-title">{{ o.title }}</h3>
+                     </div>
+                     <p class="offer-text">{{ o.description|truncatechars:160 }}</p>
+                     <div class="offer-limited">
+                         <i class="far fa-clock"></i>
+                         <span>
+                             {% if o.expires_at %}
+                                 До {{ o.expires_at|date:"d.m.Y" }}
+                             {% else %}
+                                 Временное предложение
+                             {% endif %}
+                         </span>
+                     </div>
+                     <div class="offer-actions">
+                         <span class="btn btn-primary btn-small">Подробнее об акции</span>
+                     </div>
+                 </div>
+             </a>
+             {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<style>
+/* Хлебные крошки */
+.breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0;
+    font-size: 14px;
+}
+
+.breadcrumb-nav a {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-nav a:hover {
+    color: var(--c21-gold);
+}
+
+.breadcrumb-separator {
+    color: #ccc;
+}
+
+.breadcrumb-current {
+    color: #333;
+    font-weight: 600;
+}
+
+/* Детальная карточка акции */
+.offer-detail-section {
+    margin: 20px 0 40px 0;
+}
+
+.offer-detail-card {
+    background: #fff;
+    border: 1px solid #efe7ce;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 12px 32px rgba(0,0,0,.08);
+}
+
+.offer-detail-media {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
+}
+
+.offer-detail-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.offer-badge-hot {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    z-index: 2;
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-weight: 800;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 14px;
+    box-shadow: 0 6px 16px rgba(190,175,135,.4);
+}
+
+.offer-detail-content {
+    padding: 32px;
+}
+
+.offer-detail-header {
+    margin-bottom: 24px;
+}
+
+.offer-chip {
+    display: inline-block;
+    background: var(--c21-dark);
+    color: var(--c21-gold);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.offer-detail-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: #222;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.offer-detail-description {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #444;
+    margin-bottom: 24px;
+}
+
+.offer-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.offer-limited {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #7b6a3e;
+    background: #faf7ee;
+    border: 1px solid #efe7ce;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    width: fit-content;
+}
+
+.offer-limited i {
+    color: var(--c21-gold);
+    font-size: 16px;
+}
+
+.offer-detail-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: linear-gradient(180deg, var(--c21-gold), var(--c21-gold-dark));
+    color: var(--c21-dark);
+    box-shadow: 0 8px 20px rgba(190,175,135,.4);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(190,175,135,.5);
+}
+
+.btn-secondary {
+    background: #fff;
+    color: #6a5e2e;
+    border: 2px solid #e8e4d5;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.btn-secondary:hover {
+    background: #faf7ee;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,.12);
+}
+
+.btn-large {
+    padding: 16px 32px;
+    font-size: 18px;
+}
+
+/* Секция других акций */
+.other-offers-section {
+    margin: 40px 0;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.section-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #222;
+    margin: 0;
+}
+
+/* Сетка акций (используем стили из главной страницы) */
+.offers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    justify-items: center;
+}
+
+ .offer-card {
+     width: 100%;
+     max-width: 600px;
+     display: grid;
+     grid-template-columns: 200px 1fr;
+     gap: 16px;
+     background: #fff;
+     border: 1px solid #efe7ce;
+     border-radius: 16px;
+     padding: 16px;
+     box-shadow: 0 8px 24px rgba(0,0,0,.06);
+     transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+     text-decoration: none;
+     color: inherit;
+ }
+
+.offer-card:hover {
+    box-shadow: 0 16px 36px rgba(0,0,0,.14);
+    transform: translateY(-2px);
+    border-color: var(--c21-gold);
+}
+
+.offer-media {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16/10;
+    min-height: 120px;
+}
+
+.offer-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.offer-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 120px;
+}
+
+.offer-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.offer-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #222;
+    line-height: 1.3;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.offer-text {
+    color: #444;
+    margin: 8px 0 0 0;
+    font-size: 14px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.offer-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    justify-content: flex-start;
+}
+
+ .offer-cta {
+     flex: none;
+     text-align: center;
+     padding: 8px 16px !important;
+     border-radius: 8px;
+     background: linear-gradient(180deg, var(--c21-gold), var(--c21-gold-dark)) !important;
+     color: var(--c21-dark) !important;
+     border: none !important;
+     box-shadow: 0 4px 12px rgba(190,175,135,.45);
+     font-size: 13px;
+     font-weight: 700;
+     min-width: 140px;
+ }
+
+
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .offer-detail-content {
+        padding: 20px;
+    }
+    
+    .offer-detail-title {
+        font-size: 24px;
+    }
+    
+    .offer-detail-actions {
+        flex-direction: column;
+    }
+    
+    .offers-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .offer-card {
+        grid-template-columns: 1fr;
+        max-width: 100%;
+    }
+    
+    .offer-media {
+        aspect-ratio: 16/9;
+    }
+    
+    .offer-content {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .offer-detail-media {
+        height: 250px;
+    }
+    
+    .offer-detail-content {
+        padding: 16px;
+    }
+    
+    .offer-detail-title {
+        font-size: 20px;
+    }
+    
+    .offer-detail-description {
+        font-size: 14px;
+    }
+    
+    .btn-large {
+        padding: 12px 24px;
+        font-size: 16px;
+    }
+    
+    .offer-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .offer-cta {
+        flex: none;
+        width: 100%;
+        max-width: 200px;
+    }
+}
+</style>
+
+<script>
+// Плавный скролл к форме по кнопке "Получить предложение" (только для основной кнопки)
+document.querySelector('.offer-detail-actions .offer-cta').addEventListener('click', function(e) {
+    const target = document.getElementById('feedback-form');
+    if (target) {
+        e.preventDefault();
+        target.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+});
+</script>
+{% endblock %}

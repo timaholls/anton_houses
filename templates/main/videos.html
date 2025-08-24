@@ -18,26 +18,30 @@
 
         <div class="filters" style="display:flex; gap:12px; margin-bottom:20px;">
             <form method="get" style="display:flex; gap:12px; flex-wrap:wrap;">
-                <select name="city" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
-                    <option value="">Все города</option>
-                    {% for c in cities %}
-                        <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
+                <select name="category" id="category-select" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
+                    <option value="">Все категории</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.value }}" {% if filters.category == cat.value %}selected{% endif %}>{{ cat.name }}</option>
                     {% endfor %}
                 </select>
-                <button type="submit" class="category-btn"><i class="fas fa-filter"></i> Фильтр</button>
+                <select name="complex" id="complex-select" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px; display:none;">
+                    <option value="">Все объекты</option>
+                </select>
+                <button type="submit" class="category-btn"><i class="fas fa-search"></i> Поиск</button>
+                <button type="button" id="reset-filter" class="category-btn" style="background-color: #6c757d;"><i class="fas fa-times"></i> Сбросить</button>
             </form>
         </div>
 
         <div class="catalog-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
             {% for v in videos %}
-            <a href="{% url 'main:video_detail' v.slug %}" class="property-card" style="text-decoration:none; color:inherit;">
+            <a href="{% url 'main:video_detail' v.id %}" class="property-card" style="text-decoration:none; color:inherit;">
                 <div class="card-image" style="height:200px;">
-                    {% if v.thumbnail %}
-                        <img src="{{ v.thumbnail.url }}" alt="{{ v.title }}">
-                    {% elif v.residential_complex.image %}
-                        <img src="{{ v.residential_complex.image.url }}" alt="{{ v.residential_complex.name }}">
+                    {% if v.video_thumbnail %}
+                        <img src="{{ v.video_thumbnail.url }}" alt="{{ v.title }}">
+                    {% elif v.image and v.image.url %}
+                        <img src="{{ v.image.url }}" alt="{{ v.title }}">
                     {% else %}
-                        <img src="https://via.placeholder.com/600x400/252526/BEAF87?text={{ v.title|urlencode }}" alt="{{ v.title }}">
+                        <img src="/media/gallery/placeholders.png" alt="{{ v.title }}">
                     {% endif %}
                 </div>
                 <div class="card-content">
@@ -46,35 +50,86 @@
                     </div>
                     <div class="card-location" style="margin-top:8px;">
                         <i class="fas fa-building"></i>
-                        <span>{{ v.residential_complex.name }}</span>
-                    </div>
-                    <div class="card-location" style="margin-top:6px;">
-                        <i class="fas fa-eye"></i>
-                        <span>{{ v.views_count }} просмотров</span>
+                        <span>{{ v.residential_complex_name }}</span>
                     </div>
                     <div class="card-location" style="margin-top:6px;">
                         <i class="fas fa-calendar"></i>
-                        <span>{{ v.published_date|date:"j E Y" }}</span>
+                        <span>{{ v.created_at|date:"j E Y" }}</span>
                     </div>
                 </div>
             </a>
             {% empty %}
-            <div class="no-articles"><p>Видео пока не добавлены.</p></div>
+            <div class="no-articles">
+                {% if no_videos_for_complex %}
+                    <p>Для данного объекта пока нет видеообзоров.</p>
+                {% else %}
+                    <p>Видео пока не добавлены.</p>
+                {% endif %}
+            </div>
             {% endfor %}
         </div>
 
         {% if page_obj.paginator.num_pages > 1 %}
         <div class="pagination" style="display:flex; gap:8px; justify-content:center; margin-top:24px;">
             {% if page_obj.has_previous %}
-                <a class="nav-link" href="?page={{ page_obj.previous_page_number }}">Назад</a>
+                <a class="nav-link" href="?page={{ page_obj.previous_page_number }}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.complex %}&complex={{ filters.complex }}{% endif %}">Назад</a>
             {% endif %}
             <span class="nav-link active">Стр. {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-                <a class="nav-link" href="?page={{ page_obj.next_page_number }}">Вперед</a>
+                <a class="nav-link" href="?page={{ page_obj.next_page_number }}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.complex %}&complex={{ filters.complex }}{% endif %}">Вперед</a>
             {% endif %}
         </div>
         {% endif %}
     </section>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.getElementById('category-select');
+    const complexSelect = document.getElementById('complex-select');
+    const resetButton = document.getElementById('reset-filter');
+    
+    // Обработчик изменения категории
+    categorySelect.addEventListener('change', function() {
+        const selectedCategory = this.value;
+        
+        if (selectedCategory) {
+            // Загружаем объекты для выбранной категории
+            fetch(`/api/videos/objects/?category=${selectedCategory}`)
+                .then(response => response.json())
+                .then(data => {
+                    complexSelect.innerHTML = '<option value="">Все объекты</option>';
+                    if (data.success && data.objects) {
+                        data.objects.forEach(obj => {
+                            complexSelect.innerHTML += `<option value="${obj.id}">${obj.name}</option>`;
+                        });
+                    }
+                    complexSelect.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error loading objects:', error);
+                    complexSelect.style.display = 'none';
+                });
+        } else {
+            complexSelect.innerHTML = '<option value="">Все объекты</option>';
+            complexSelect.style.display = 'none';
+        }
+    });
+    
+    // Обработчик кнопки сброса
+    resetButton.addEventListener('click', function() {
+        categorySelect.value = '';
+        complexSelect.value = '';
+        complexSelect.style.display = 'none';
+        // Перезагружаем страницу без параметров
+        window.location.href = window.location.pathname;
+    });
+    
+    // Если категория уже выбрана при загрузке страницы, загружаем объекты
+    if (categorySelect.value) {
+        categorySelect.dispatchEvent(new Event('change'));
+    }
+});
+</script>
 {% endblock %} 

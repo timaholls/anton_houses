@@ -7,10 +7,10 @@
 	<!-- Hero секция с главным изображением -->
 	<div class="detail-hero">
 		<div class="hero-image">
-			{% if complex.image %}
-				<img src="{{ complex.image.url }}" alt="{{ complex.name }}" class="hero-main-image">
+			{% if complex.get_main_image and complex.get_main_image.image %}
+				<img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}" class="hero-main-image">
 			{% else %}
-				<img src="https://via.placeholder.com/1200x600/252526/BEAF87?text={{ complex.name|urlencode }}" alt="{{ complex.name }}" class="hero-main-image">
+				<img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" class="hero-main-image">
 			{% endif %}
 			
 			<!-- Бейджи на изображении -->
@@ -148,26 +148,17 @@
 	<div class="detail-gallery">
 		<h2>Фотографии ЖК</h2>
 		<div class="gallery-grid">
-			{% if complex.image %}
-			<div class="gallery-item main" data-image="{{ complex.image.url }}">
-				<img src="{{ complex.image.url }}" alt="{{ complex.name }}">
+			{% for image in complex.get_images %}
+			{% if image.image %}
+			<div class="gallery-item {% if image.is_main %}main{% endif %}" data-image="{{ image.image.url }}">
+				<img src="{{ image.image.url }}" alt="{{ image.title|default:complex.name }}">
 			</div>
 			{% endif %}
-			{% if complex.image_2 %}
-			<div class="gallery-item" data-image="{{ complex.image_2.url }}">
-				<img src="{{ complex.image_2.url }}" alt="{{ complex.name }}">
+			{% empty %}
+			<div class="gallery-item main" data-image="/media/gallery/placeholders.png">
+<img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
 			</div>
-			{% endif %}
-			{% if complex.image_3 %}
-			<div class="gallery-item" data-image="{{ complex.image_3.url }}">
-				<img src="{{ complex.image_3.url }}" alt="{{ complex.name }}">
-			</div>
-			{% endif %}
-			{% if complex.image_4 %}
-			<div class="gallery-item" data-image="{{ complex.image_4.url }}">
-				<img src="{{ complex.image_4.url }}" alt="{{ complex.name }}">
-			</div>
-			{% endif %}
+			{% endfor %}
 		</div>
 	</div>
 	
@@ -178,10 +169,8 @@
 		<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;border-radius:12px;overflow:hidden;background:#000;">
 			{% if video_embed_url %}
 			<iframe src="{{ video_embed_url }}" title="{{ video.title }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
-			{% elif video.video_file %}
-			<video controls style="position:absolute;top:0;left:0;width:100%;height:100%;">
-				<source src="{{ video.video_file.url }}" type="video/mp4">
-			</video>
+			{% elif video.video_url %}
+			<iframe src="{{ video.video_url|safe }}" style="position:absolute;top:0;left:0;width:100%;height:100%;" frameborder="0" allowfullscreen></iframe>
 			{% else %}
 			<div style="color:#fff;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">Видео недоступно</div>
 			{% endif %}
@@ -189,6 +178,71 @@
 		<div style="text-align:right;margin-top:12px;">
 			<a class="btn btn-primary" href="{% url 'main:videos' %}?complex={{ complex.id }}">Перейти к видеообзорам ЖК</a>
 		</div>
+	</div>
+	{% endif %}
+	
+	{% if complex_offers %}
+	<!-- Акции ЖК -->
+	<div class="complex-offers-section" style="margin: 32px 0;">
+		<div class="offers-header" style="text-align:center;margin-bottom:24px;">
+			<h2 class="section-title" style="font-size:28px;font-weight:700;color:#222;margin:0;">Акции ЖК «{{ complex.name }}»</h2>
+		</div>
+		<div class="offers-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(400px, 1fr));gap:20px;justify-items:center;">
+			{% for offer in complex_offers %}
+			<a href="{% url 'main:offer_detail' offer.id %}" class="offer-card" style="width:100%;max-width:600px;display:grid;grid-template-columns:200px 1fr;gap:16px;background:#fff;border:1px solid #efe7ce;border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:box-shadow .2s ease, transform .2s ease, border-color .2s ease;text-decoration:none;color:inherit;">
+				<div class="offer-media" style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/10;min-height:120px;">
+					{% if offer.get_main_image and offer.get_main_image.image %}
+						<img src="{{ offer.get_main_image.image.url }}" alt="{{ offer.title }}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">
+					{% else %}
+						<img src="/media/gallery/placeholders.png" alt="{{ offer.title }}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">
+					{% endif %}
+					<div class="offer-media::after" style="content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.00) 40%, rgba(0,0,0,.18) 100%);"></div>
+					<span class="offer-badge-hot" style="position:absolute;left:8px;top:8px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:4px 8px;border-radius:999px;font-weight:800;display:inline-flex;gap:4px;align-items:center;font-size:11px;box-shadow:0 4px 10px rgba(190,175,135,.35);">
+						<i class="fas fa-bolt" style="font-size:11px;"></i> Акция
+					</span>
+				</div>
+				<div class="offer-content" style="display:flex;flex-direction:column;justify-content:space-between;min-height:120px;">
+					<div class="offer-head" style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+						<span class="offer-chip" style="display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:3px 8px;border-radius:999px;font-weight:700;font-size:11px;white-space:nowrap;">ЖК «{{ offer.residential_complex.name }}»</span>
+						<h3 class="offer-title" style="margin:0;font-size:16px;font-weight:800;color:#222;line-height:1.3;word-wrap:break-word;hyphens:auto;">{{ offer.title }}</h3>
+					</div>
+					<p class="offer-text" style="color:#444;margin:8px 0 0 0;font-size:14px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;">{{ offer.description|truncatechars:160 }}</p>
+					<div class="offer-limited" style="display:flex;align-items:center;gap:6px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:8px;padding:6px 8px;margin-top:8px;font-weight:600;font-size:12px;">
+						<i class="far fa-clock" style="color:var(--c21-gold);font-size:12px;"></i>
+						<span>
+							{% if offer.expires_at %}
+								До {{ offer.expires_at|date:"d.m.Y" }}
+							{% else %}
+								Временное предложение
+							{% endif %}
+						</span>
+					</div>
+					<div class="offer-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;justify-content:flex-start;">
+						<span class="btn btn-primary btn-small offer-cta" style="flex:none;text-align:center;padding:8px 16px !important;border-radius:8px;background:linear-gradient(180deg,var(--c21-gold), var(--c21-gold-dark)) !important;color:var(--c21-dark) !important;border:none !important;box-shadow:0 4px 12px rgba(190,175,135,.45);font-size:13px;font-weight:700;min-width:140px;">Подробнее об акции</span>
+					</div>
+				</div>
+			</a>
+			{% endfor %}
+		</div>
+		<style>
+		.offer-card:hover{box-shadow:0 16px 36px rgba(0,0,0,.14);transform:translateY(-2px);border-color:var(--c21-gold)}
+		.offer-cta:hover{filter:brightness(.98);transform:translateY(-1px)}
+		@media(max-width: 768px){
+			.offers-grid{grid-template-columns:1fr;gap:16px}
+			.offer-card{grid-template-columns:1fr;max-width:100%}
+			.offer-media{aspect-ratio:16/9}
+			.offer-content{min-height:auto}
+			.offer-title{font-size:18px}
+			.offer-text{font-size:15px}
+		}
+		@media(max-width: 480px){
+			.offer-card{padding:12px;gap:12px}
+			.offer-title{font-size:16px}
+			.offer-text{font-size:14px}
+			.offer-actions{flex-direction:column;align-items:center}
+			.offer-cta{flex:none;width:100%;max-width:200px}
+		}
+		</style>
 	</div>
 	{% endif %}
 	
@@ -318,10 +372,10 @@
 			{% for similar in similar_complexes %}
 			<div class="similar-card">
 				<div class="similar-image">
-					{% if similar.image %}
-						<img src="{{ similar.image.url }}" alt="{{ similar.name }}">
+					{% if similar.get_main_image and similar.get_main_image.image %}
+						<img src="{{ similar.get_main_image.image.url }}" alt="{{ similar.name }}">
 					{% else %}
-						<img src="https://via.placeholder.com/300x200/252526/BEAF87?text={{ similar.name|urlencode }}" alt="{{ similar.name }}">
+						<img src="/media/gallery/placeholders.png" alt="{{ similar.name }}">
 					{% endif %}
 				</div>
 				<div class="similar-content">
