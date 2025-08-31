@@ -1,29 +1,29 @@
 {% extends 'base.html' %}
 
-{% block title %}Наша компания — CENTURY 21{% endblock %}
+{% block title %}Наша команда — CENTURY 21{% endblock %}
 
 {% block content %}
 <div class="container">
     <section class="articles-section">
         <div class="articles-header">
-            <h1 class="section-title">Наша компания</h1>
+            <h1 class="section-title">Наша команда</h1>
             {% if company_info %}
             <p class="section-subtitle">{{ company_info.company_name }} — команда профессионалов</p>
             {% else %}
-            <p class="section-subtitle">Наша команда профессионалов</p>
+            <p class="section-subtitle">CENTURY 21 — команда профессионалов</p>
             {% endif %}
         </div>
 
         <div class="breadcrumbs">
             <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
             <span class="breadcrumb-separator">•</span>
-            <span class="breadcrumb-current">Наша компания</span>
+            <span class="breadcrumb-current">Наша команда</span>
         </div>
 
         {% if employees %}
         <div class="articles-category-section" style="margin-top:16px;">
             <div class="category-header">
-                <h2 class="category-title">Сотрудники</h2>
+                <h2 class="category-title">Наши специалисты</h2>
             </div>
             <div class="articles-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
                 {% for e in employees %}
@@ -65,7 +65,7 @@
         </div>
         {% endif %}
         {% else %}
-        <div class="no-complexes">
+        <div class="no-articles">
             <p>Сотрудники пока не добавлены</p>
         </div>
         {% endif %}

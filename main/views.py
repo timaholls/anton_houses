@@ -487,16 +487,43 @@ def videos(request):
     
     # Если фильтруем по конкретному объекту и нет видео, показываем сообщение
     if complex_id and not videos_qs.exists():
+        # Получаем категории для фильтра
+        categories = [
+            {'value': 'newbuild', 'name': 'Новостройки'},
+            {'value': 'secondary', 'name': 'Вторичная недвижимость'},
+        ]
+        
         context = {
             'videos': [],
             'page_obj': None,
             'paginator': None,
-            'categories': [],
+            'categories': categories,
             'filters': {
                 'category': category,
                 'complex': complex_id,
             },
             'no_videos_for_complex': True
+        }
+        return render(request, 'main/videos.html', context)
+    
+    # Проверяем, есть ли результаты поиска
+    if not videos_qs.exists():
+        # Получаем категории для фильтра
+        categories = [
+            {'value': 'newbuild', 'name': 'Новостройки'},
+            {'value': 'secondary', 'name': 'Вторичная недвижимость'},
+        ]
+        
+        context = {
+            'videos': [],
+            'page_obj': None,
+            'paginator': None,
+            'categories': categories,
+            'filters': {
+                'category': category,
+                'complex': complex_id,
+            },
+            'no_videos_for_complex': False
         }
         return render(request, 'main/videos.html', context)
     
