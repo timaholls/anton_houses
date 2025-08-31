@@ -168,6 +168,146 @@ body {
     border-radius: 1px;
 }
 
+/* Выпадающее меню */
+.nav-dropdown {
+    position: relative;
+}
+
+.dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: #333;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 400;
+    transition: color 0.2s ease;
+    white-space: nowrap;
+}
+
+.dropdown-toggle:hover {
+    color: #bcaf8a;
+}
+
+.dropdown-toggle.active {
+    color: #bcaf8a;
+    font-weight: 600;
+    position: relative;
+}
+
+.dropdown-toggle.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #bcaf8a;
+    border-radius: 1px;
+}
+
+.dropdown-toggle i {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+    margin-left: 4px;
+}
+
+.nav-dropdown:hover .dropdown-toggle i {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+    min-width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    padding: 8px 0;
+    backdrop-filter: blur(10px);
+}
+
+.nav-dropdown:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Добавляем стрелочку к выпадающему меню */
+.dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid white;
+    z-index: 1001;
+}
+
+.dropdown-menu::after {
+    content: '';
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 7px solid #e9ecef;
+    z-index: 1000;
+}
+
+.dropdown-item {
+    display: block;
+    padding: 12px 20px;
+    color: #333;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 400;
+    transition: all 0.2s ease;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    position: relative;
+}
+
+.dropdown-item:hover {
+    background: linear-gradient(135deg, #faf7ee 0%, #efe7ce 100%);
+    color: #7b6a3e;
+    transform: translateX(4px);
+}
+
+.dropdown-item.active {
+    background: linear-gradient(135deg, #faf7ee 0%, #efe7ce 100%);
+    color: #7b6a3e;
+    font-weight: 600;
+}
+
+.dropdown-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: #bcaf8a;
+    border-radius: 0 2px 2px 0;
+}
+
 /* Правая часть шапки */
 .header-right {
     display: flex;
@@ -2881,6 +3021,62 @@ body {
         gap: 16px;
     }
     
+    /* Адаптивность для выпадающего меню */
+    .nav-dropdown {
+        position: static;
+    }
+    
+    .dropdown-menu {
+        position: static;
+        opacity: 0;
+        visibility: hidden;
+        transform: none;
+        box-shadow: none;
+        border: none;
+        background: transparent;
+        padding: 0;
+        margin-top: 8px;
+        margin-left: 16px;
+        max-height: 0;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .dropdown-menu.show {
+        opacity: 1;
+        visibility: visible;
+        max-height: 200px;
+        margin-top: 12px;
+    }
+    
+    .dropdown-item {
+        padding: 10px 20px;
+        font-size: 14px;
+        border-left: 3px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .dropdown-item:hover {
+        background: rgba(188, 175, 138, 0.1);
+        border-left-color: #bcaf8a;
+        transform: translateX(4px);
+    }
+    
+    .dropdown-item.active {
+        background: rgba(188, 175, 138, 0.15);
+        border-left-color: #bcaf8a;
+        font-weight: 600;
+    }
+    
+    /* Стили для стрелочки на мобильных */
+    .dropdown-toggle i {
+        transition: transform 0.3s ease;
+    }
+    
+    .nav-dropdown:hover .dropdown-toggle i {
+        transform: rotate(180deg);
+    }
+    
     .contact-info {
         align-items: center;
         flex-direction: column;
@@ -5138,6 +5334,16 @@ body {
     .feedback-section {
         padding: 25px 15px;
         margin: 0 auto;
+    }
+    
+    /* Дополнительные стили для очень маленьких экранов */
+    .dropdown-menu {
+        margin-left: 12px;
+    }
+    
+    .dropdown-item {
+        padding: 8px 16px;
+        font-size: 13px;
     }
     
     .feedback-title {
