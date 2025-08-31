@@ -71,7 +71,7 @@
                     <img src="/media/logo/banks.png" alt="Банки" style="height:44px; width:auto;"/>
                 </div>
                 <div class="summary-actions" style="text-align:left;">
-                    <a href="#feedback-form" class="btn btn-primary btn-large" style="width:100%;">Подать заявку</a>
+                    <a href="#feedback-submit-btn" class="btn btn-primary btn-large anchor-feedback-btn" style="width:100%;">Подать заявку</a>
                 </div>
                 <div style="color:#888; font-size:12px; margin-top:8px;">* Расчёт примерный. Уточняйте актуальную информацию у нашего специалиста, оставив заявку</div>
             </div>
@@ -601,17 +601,7 @@
     calc();
 })();
 
-// Плавный скролл к форме обратной связи
-document.querySelectorAll('a[href="#feedback-form"]').forEach(a=>{
-    a.addEventListener('click', function(e){
-        const target = document.getElementById('feedback-form');
-        if (target) {
-            e.preventDefault();
-            const top = target.getBoundingClientRect().top + window.pageYOffset - 30; // небольшой отступ
-            window.scrollTo({ top, behavior: 'smooth' });
-        }
-    });
-});
+
 </script>
 {% endblock %}
 

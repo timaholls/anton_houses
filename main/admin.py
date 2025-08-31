@@ -5,7 +5,7 @@ from django.urls import path
 from django.template.response import TemplateResponse
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from .models import ResidentialComplex, Article, Tag, Author, CompanyInfo, CatalogLanding, SecondaryProperty, Category, Gallery
+from .models import ResidentialComplex, Article, Tag, Author, CompanyInfo, CatalogLanding, SecondaryProperty, Category, Gallery, FutureComplex
 from .models import Vacancy
 from .models import BranchOffice, Employee, EmployeeReview
 from .models import MortgageProgram, SpecialOffer
@@ -42,6 +42,34 @@ class SecondaryPropertyAdmin(admin.ModelAdmin):
     list_filter = ['house_type', 'city', 'agent']
     search_fields = ['name', 'city', 'district', 'street', 'agent__full_name']
     list_editable = ['agent']
+
+
+@admin.register(FutureComplex)
+class FutureComplexAdmin(admin.ModelAdmin):
+    list_display = ['name', 'city', 'district', 'delivery_date', 'price_from', 'is_active', 'is_featured']
+    list_filter = ['city', 'district', 'is_active', 'is_featured', 'delivery_date', 'created_at']
+    search_fields = ['name', 'city', 'district', 'street', 'developer']
+    list_editable = ['is_active', 'is_featured']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('name', 'description', 'city', 'district', 'street')
+        }),
+        ('Цена и площадь', {
+            'fields': ('price_from', 'price_to', 'area_from', 'area_to', 'rooms')
+        }),
+        ('Сроки и застройщик', {
+            'fields': ('delivery_date', 'developer')
+        }),
+        ('Дополнительная информация', {
+            'fields': ('house_class', 'is_active', 'is_featured')
+        }),
+        ('Даты', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 @admin.register(CompanyInfo)
 class CompanyInfoAdmin(admin.ModelAdmin):

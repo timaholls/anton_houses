@@ -1,0 +1,627 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ complex.name }} — Будущие ЖК{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="future-complex-detail-section">
+        <!-- Хлебные крошки -->
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <a href="{% url 'main:future_complexes' %}" class="breadcrumb-link">Будущие ЖК</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">{{ complex.name }}</span>
+        </div>
+
+        <!-- Основная информация -->
+        <div class="complex-header">
+            <div class="complex-title-section">
+                <h1 class="complex-title">{{ complex.name }}</h1>
+                <div class="complex-location">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}{% if complex.street %}, {{ complex.street }}{% endif %}</span>
+                </div>
+            </div>
+            <div class="complex-badge">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Сдача: {{ complex.delivery_date|date:"d.m.Y" }}</span>
+            </div>
+        </div>
+
+        <!-- Галерея изображений -->
+        {% if images %}
+        <div class="complex-gallery">
+            <div class="gallery-main">
+                {% with first_image=images.first %}
+                <img src="{{ first_image.image.url }}" alt="{{ complex.name }}" id="main-image" loading="lazy">
+                {% endwith %}
+            </div>
+            {% if images.count > 1 %}
+            <div class="gallery-thumbnails">
+                {% for image in images %}
+                <div class="thumbnail-item" onclick="changeMainImage('{{ image.image.url }}')">
+                    <img src="{{ image.image.url }}" alt="{{ image.title }}" loading="lazy">
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Основная информация о ЖК -->
+        <div class="complex-info-grid">
+            <div class="complex-main-info">
+                <h2 class="section-title">О проекте</h2>
+                <div class="complex-description">
+                    {{ complex.description|linebreaks }}
+                </div>
+
+                <!-- Характеристики -->
+                <div class="complex-characteristics">
+                    <h3>Характеристики</h3>
+                    <div class="characteristics-grid">
+                        {% if complex.price_from %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-tag"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Цена от</span>
+                                <span class="characteristic-value">{{ complex.price_from }} млн ₽</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.price_to %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-tag"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Цена до</span>
+                                <span class="characteristic-value">{{ complex.price_to }} млн ₽</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.area_from %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-ruler-combined"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Площадь</span>
+                                <span class="characteristic-value">{{ complex.area_from }}-{{ complex.area_to|default:complex.area_from }} м²</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.rooms %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-home"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Комнаты</span>
+                                <span class="characteristic-value">{{ complex.rooms }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.house_class %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-star"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Класс дома</span>
+                                <span class="characteristic-value">{{ complex.house_class }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.developer %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-building"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Застройщик</span>
+                                <span class="characteristic-value">{{ complex.developer }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="characteristic-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Срок сдачи</span>
+                                <span class="characteristic-value">{{ complex.delivery_date|date:"d.m.Y" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Контактная информация -->
+            <div class="complex-contact">
+                <div class="contact-card">
+                    <h3>Получить консультацию</h3>
+                    <p>Оставьте заявку, и наш специалист свяжется с вами для консультации по данному проекту</p>
+                    <a href="#feedback-submit-btn" class="contact-btn anchor-feedback-btn">
+                        <i class="fas fa-phone"></i>
+                        Оставить заявку
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Другие проекты -->
+        {% if other_complexes %}
+        <div class="other-projects-section">
+            <h2 class="section-title">Другие будущие проекты</h2>
+            <div class="other-projects-grid">
+                {% for other_complex in other_complexes %}
+                <div class="other-project-card">
+                    <div class="other-project-media">
+                        {% if other_complex.get_main_image and other_complex.get_main_image.image %}
+                            <img src="{{ other_complex.get_main_image.image.url }}" alt="{{ other_complex.name }}" loading="lazy">
+                        {% else %}
+                            <img src="/media/gallery/placeholders.png" alt="{{ other_complex.name }}" loading="lazy">
+                        {% endif %}
+                        <div class="other-project-badge">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>{{ other_complex.delivery_date|date:"d.m.Y" }}</span>
+                        </div>
+                    </div>
+                    <div class="other-project-content">
+                        <h3 class="other-project-title">{{ other_complex.name }}</h3>
+                        <div class="other-project-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ other_complex.district|default:other_complex.city }}</span>
+                        </div>
+                        <div class="other-project-price">
+                            <span>от {{ other_complex.price_from }} млн ₽</span>
+                        </div>
+                        <a href="{% url 'main:future_complex_detail' other_complex.id %}" class="other-project-link">
+                            Подробнее
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+<style>
+.future-complex-detail-section {
+    margin: 40px 0;
+}
+
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: #666;
+}
+
+.breadcrumb-link {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.breadcrumb-link:hover {
+    color: var(--c21-gold);
+}
+
+.breadcrumb-separator {
+    color: #999;
+    font-size: 12px;
+}
+
+.breadcrumb-current {
+    color: #999;
+}
+
+/* Заголовок ЖК */
+.complex-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    gap: 20px;
+}
+
+.complex-title-section {
+    flex: 1;
+}
+
+.complex-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--c21-dark);
+    margin: 0 0 12px 0;
+    line-height: 1.2;
+}
+
+.complex-location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 16px;
+}
+
+.complex-location i {
+    color: var(--c21-gold);
+}
+
+.complex-badge {
+    background: #28a745;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(40,167,69,.3);
+}
+
+/* Галерея */
+.complex-gallery {
+    margin-bottom: 40px;
+}
+
+.gallery-main {
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+
+.gallery-main img {
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
+    display: block;
+}
+
+.gallery-thumbnails {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.thumbnail-item {
+    flex-shrink: 0;
+    width: 120px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.thumbnail-item:hover {
+    transform: scale(1.05);
+    border-color: var(--c21-gold);
+}
+
+.thumbnail-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Информация о ЖК */
+.complex-info-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+    margin-bottom: 60px;
+}
+
+.complex-main-info {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.06);
+}
+
+.section-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--c21-dark);
+    margin: 0 0 24px 0;
+}
+
+.complex-description {
+    color: #444;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    font-size: 16px;
+}
+
+.complex-characteristics h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 20px 0;
+}
+
+.characteristics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.characteristic-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.characteristic-item i {
+    color: var(--c21-gold);
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+}
+
+.characteristic-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.characteristic-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.characteristic-value {
+    font-size: 14px;
+    color: var(--c21-dark);
+    font-weight: 700;
+}
+
+/* Контактная информация */
+.complex-contact {
+    position: sticky;
+    top: 20px;
+}
+
+.contact-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.06);
+    border: 1px solid #e9ecef;
+}
+
+.contact-card h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 12px 0;
+}
+
+.contact-card p {
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.contact-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 16px;
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(190,175,135,.3);
+}
+
+.contact-btn:hover {
+    background: var(--c21-gold-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(190,175,135,.4);
+}
+
+/* Другие проекты */
+.other-projects-section {
+    margin-top: 60px;
+}
+
+.other-projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+}
+
+.other-project-card {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.other-project-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,.12);
+}
+
+.other-project-media {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.other-project-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.other-project-card:hover .other-project-media img {
+    transform: scale(1.05);
+}
+
+.other-project-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #28a745;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.other-project-content {
+    padding: 20px;
+}
+
+.other-project-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+
+.other-project-location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.other-project-location i {
+    color: var(--c21-gold);
+    font-size: 12px;
+}
+
+.other-project-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c21-gold);
+    margin-bottom: 16px;
+}
+
+.other-project-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--c21-dark);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.other-project-link:hover {
+    color: var(--c21-gold);
+}
+
+.other-project-link i {
+    transition: transform 0.3s ease;
+}
+
+.other-project-link:hover i {
+    transform: translateX(4px);
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .complex-info-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .complex-contact {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .complex-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .complex-title {
+        font-size: 2rem;
+    }
+    
+    .gallery-main img {
+        height: 300px;
+    }
+    
+    .complex-main-info {
+        padding: 20px;
+    }
+    
+    .characteristics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .other-projects-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .complex-title {
+        font-size: 1.8rem;
+    }
+    
+    .gallery-main img {
+        height: 250px;
+    }
+    
+    .complex-main-info {
+        padding: 16px;
+    }
+    
+    .contact-card {
+        padding: 20px;
+    }
+    
+    .thumbnail-item {
+        width: 100px;
+        height: 70px;
+    }
+}
+</style>
+
+<script>
+function changeMainImage(imageUrl) {
+    document.getElementById('main-image').src = imageUrl;
+}
+</script>
+{% endblock %}

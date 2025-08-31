@@ -4,7 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 import io
 import random
-from main.models import Gallery, ResidentialComplex, SecondaryProperty, Employee, Article, SpecialOffer, BranchOffice, CompanyInfo
+from main.models import Gallery, ResidentialComplex, SecondaryProperty, Employee, Article, SpecialOffer, BranchOffice, CompanyInfo, FutureComplex
 
 class Command(BaseCommand):
     help = 'Заполняет все объекты тестовыми изображениями'
@@ -220,6 +220,30 @@ class Command(BaseCommand):
                     'company',
                     company_info.id,
                     f"Фото {i+2} компании: {company_info.company_name}",
+                    is_main=False,
+                    order=i+1
+                )
+        
+        # 8. Будущие ЖК
+        future_complexes = FutureComplex.objects.all()
+        for complex in future_complexes:
+            self.stdout.write(f'Добавляем изображения для будущего ЖК: {complex.name}')
+
+            # Главное фото будущего ЖК
+            self.create_gallery_item(
+                'future_complex',
+                complex.id,
+                f"Фото будущего ЖК: {complex.name}",
+                is_main=True,
+                order=0
+            )
+
+            # Дополнительные фото будущего ЖК
+            for i in range(random.randint(1, 3)):
+                self.create_gallery_item(
+                    'future_complex',
+                    complex.id,
+                    f"Фото {i+2} будущего ЖК: {complex.name}",
                     is_main=False,
                     order=i+1
                 )

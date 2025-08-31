@@ -138,6 +138,356 @@
     </section>
     {% endif %}
 
+    {% if future_complexes %}
+    <section class="future-complexes-section">
+        <div class="future-complexes-header">
+            <h2 class="section-title">Будущие ЖК</h2>
+            <p class="section-subtitle">Новые проекты, которые скоро появятся на рынке</p>
+        </div>
+
+        <div class="future-complexes-grid">
+            {% for complex in future_complexes %}
+            <a href="{% url 'main:future_complex_detail' complex.id %}" class="future-complex-card">
+                <div class="future-complex-media">
+                    {% if complex.get_main_image and complex.get_main_image.image %}
+                        <img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}" loading="lazy" decoding="async">
+                    {% else %}
+                        <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" loading="lazy" decoding="async">
+                    {% endif %}
+                    <div class="future-complex-badge">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Сдача: {{ complex.delivery_date|date:"d.m.Y" }}</span>
+                    </div>
+                </div>
+                <div class="future-complex-content">
+                    <div class="future-complex-head">
+                        <span class="future-complex-chip">{{ complex.district|default:complex.city }}</span>
+                        <h3 class="future-complex-title">{{ complex.name }}</h3>
+                    </div>
+                    <p class="future-complex-text">{{ complex.description|truncatechars:120 }}</p>
+                    <div class="future-complex-details">
+                        <div class="future-complex-price">
+                            <i class="fas fa-tag"></i>
+                            <span>от {{ complex.price_from }} млн ₽</span>
+                        </div>
+                        {% if complex.area_from %}
+                        <div class="future-complex-area">
+                            <i class="fas fa-ruler-combined"></i>
+                            <span>{{ complex.area_from }}-{{ complex.area_to|default:complex.area_from }} м²</span>
+                        </div>
+                        {% endif %}
+                        {% if complex.developer %}
+                        <div class="future-complex-developer">
+                            <i class="fas fa-building"></i>
+                            <span>{{ complex.developer }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="future-complex-actions">
+                        <span class="future-complex-cta">Подробнее о проекте</span>
+                        <span class="future-complex-cta secondary anchor-feedback-btn" onclick="event.preventDefault(); event.stopPropagation(); document.getElementById('feedback-submit-btn').scrollIntoView({behavior: 'smooth', block: 'center'});">Оставить заявку</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        <div class="future-complexes-more-section">
+            <a href="{% url 'main:future_complexes' %}" class="future-complexes-more-btn">
+                Все будущие проекты
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        <style>
+        .future-complexes-section {
+            margin: 40px 0;
+        }
+        
+        .future-complexes-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .future-complexes-header .section-subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-top: 8px;
+        }
+        
+        .future-complexes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            justify-items: center;
+        }
+        
+        .future-complex-card {
+            width: 100%;
+            max-width: 600px;
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 16px;
+            background: #fff;
+            border: 1px solid #efe7ce;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.06);
+            transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .future-complex-card:hover {
+            box-shadow: 0 16px 36px rgba(0,0,0,.14);
+            transform: translateY(-2px);
+            border-color: var(--c21-gold);
+        }
+        
+        .future-complex-media {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 16/10;
+            min-height: 120px;
+        }
+        
+        .future-complex-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .future-complex-media::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg,rgba(0,0,0,.00) 40%, rgba(0,0,0,.18) 100%);
+        }
+        
+        .future-complex-badge {
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            z-index: 2;
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-weight: 700;
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            font-size: 11px;
+            box-shadow: 0 4px 10px rgba(40,167,69,.35);
+        }
+        
+        .future-complex-badge i {
+            font-size: 11px;
+        }
+        
+        .future-complex-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 120px;
+        }
+        
+        .future-complex-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        
+        .future-complex-chip {
+            display: inline-block;
+            background: var(--c21-dark);
+            color: var(--c21-gold);
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        
+        .future-complex-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #222;
+            line-height: 1.3;
+            word-wrap: break-word;
+            hyphens: auto;
+        }
+        
+        .future-complex-text {
+            color: #444;
+            margin: 8px 0 0 0;
+            font-size: 14px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .future-complex-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 12px;
+        }
+        
+        .future-complex-price,
+        .future-complex-area,
+        .future-complex-developer {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #7b6a3e;
+            background: #faf7ee;
+            border: 1px solid #efe7ce;
+            border-radius: 8px;
+            padding: 6px 8px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        
+        .future-complex-price i,
+        .future-complex-area i,
+        .future-complex-developer i {
+            color: var(--c21-gold);
+            font-size: 12px;
+        }
+        
+        .future-complex-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            justify-content: flex-start;
+        }
+        
+                .future-complex-cta {
+            flex: none;
+            text-align: center;
+            padding: 8px 16px !important;
+            border-radius: 8px;
+            background: linear-gradient(180deg,var(--c21-gold), var(--c21-gold-dark)) !important;
+            color: var(--c21-dark) !important;
+            border: none !important;
+            box-shadow: 0 4px 12px rgba(190,175,135,.45);
+            font-size: 13px;
+            font-weight: 700;
+            min-width: 140px;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .future-complex-cta:hover {
+            filter: brightness(.98);
+            transform: translateY(-1px);
+        }
+        
+        .future-complex-cta.secondary {
+            background: #6c757d !important;
+            color: white !important;
+        }
+        
+        .future-complex-cta.secondary:hover {
+            background: #5a6268 !important;
+        }
+        
+        .future-complexes-more-section {
+            text-align: center;
+            margin-top: 32px;
+        }
+        
+        .future-complexes-more-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            background: #fff;
+            color: #6a5e2e;
+            border: 2px solid #e8e4d5;
+            box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        }
+        
+        .future-complexes-more-btn:hover {
+            background: #faf7ee;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,.12);
+        }
+        
+        @media(max-width: 768px) {
+            .future-complexes-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .future-complex-card {
+                grid-template-columns: 1fr;
+                max-width: 100%;
+            }
+            
+            .future-complex-media {
+                aspect-ratio: 16/9;
+            }
+            
+            .future-complex-content {
+                min-height: auto;
+            }
+            
+            .future-complex-title {
+                font-size: 18px;
+            }
+            
+            .future-complex-text {
+                font-size: 15px;
+            }
+        }
+        
+        @media(max-width: 480px) {
+            .future-complex-card {
+                padding: 12px;
+                gap: 12px;
+            }
+            
+            .future-complex-title {
+                font-size: 16px;
+            }
+            
+            .future-complex-text {
+                font-size: 14px;
+            }
+            
+            .future-complex-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .future-complex-cta {
+                flex: none;
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+        </style>
+    </section>
+    {% endif %}
+
     <section class="catalog-section">
         <div class="catalog-header">
             <h2 class="section-title">9 лучших предложений для вас</h2>
@@ -686,6 +1036,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+
 });
 </script>
 {% endblock %} 

@@ -77,6 +77,7 @@ class Gallery(models.Model):
         ('employee_video', 'Видео сотрудников'),
         ('residential_video', 'Видео жилых комплексов'),
         ('secondary_video', 'Видео вторичной недвижимости'),
+        ('future_complex', 'Будущие ЖК'),
     ]
     
     title = models.CharField(max_length=200, verbose_name="Название")
@@ -150,6 +151,8 @@ class Gallery(models.Model):
             return f'gallery/employee_videos/{self.object_id}/{filename}'
         elif self.category == 'residential_video':
             return f'gallery/residential_videos/{self.object_id}/{filename}'
+        elif self.category == 'future_complex':
+            return f'gallery/future_complexes/{self.object_id}/{filename}'
         else:
             return f'gallery/{self.category}/{self.object_id}/{filename}'
     
@@ -896,3 +899,49 @@ class SpecialOffer(models.Model):
             is_main=True,
             is_active=True
         ).first()
+
+
+class FutureComplex(models.Model):
+    """Модель будущих ЖК"""
+    name = models.CharField(max_length=200, verbose_name="Название ЖК")
+    description = models.TextField(verbose_name="Описание")
+    city = models.CharField(max_length=100, verbose_name="Город")
+    district = models.CharField(max_length=100, verbose_name="Район", blank=True)
+    street = models.CharField(max_length=200, verbose_name="Улица", blank=True)
+    delivery_date = models.DateField(verbose_name="Срок сдачи")
+    price_from = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена от (млн ₽)")
+    price_to = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена до (млн ₽)", null=True, blank=True)
+    area_from = models.DecimalField(max_digits=6, decimal_places=1, verbose_name="Площадь от (м²)", null=True, blank=True)
+    area_to = models.DecimalField(max_digits=6, decimal_places=1, verbose_name="Площадь до (м²)", null=True, blank=True)
+    rooms = models.CharField(max_length=50, verbose_name="Количество комнат", blank=True)
+    house_class = models.CharField(max_length=50, verbose_name="Класс дома", blank=True)
+    developer = models.CharField(max_length=200, verbose_name="Застройщик", blank=True)
+    is_active = models.BooleanField(default=True, verbose_name="Активно")
+    is_featured = models.BooleanField(default=False, verbose_name="Рекомендуемый")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    
+    class Meta:
+        verbose_name = "Будущий ЖК"
+        verbose_name_plural = "Будущие ЖК"
+        ordering = ['-is_featured', '-created_at']
+    
+    def __str__(self):
+        return self.name
+    
+    def get_main_image(self):
+        """Получить главное изображение ЖК"""
+        return Gallery.objects.filter(
+            category='future_complex',
+            object_id=self.id,
+            is_main=True,
+            is_active=True
+        ).first()
+    
+    def get_images(self):
+        """Получить все изображения ЖК"""
+        return Gallery.objects.filter(
+            category='future_complex',
+            object_id=self.id,
+            is_active=True
+        ).order_by('order', 'created_at')

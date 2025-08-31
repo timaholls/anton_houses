@@ -5256,6 +5256,31 @@ body {
     color: var(--c21-dark) !important;
 }
 
+/* Якорные ссылки и прокрутка */
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 20px;
+}
+
+#feedback-form {
+    scroll-margin-top: 20px;
+    scroll-behavior: smooth;
+}
+
+.feedback-title {
+    scroll-margin-top: 20px;
+}
+
+/* Стили для кнопок якоря */
+.anchor-feedback-btn {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.anchor-feedback-btn:hover {
+    transform: translateY(-1px);
+}
+
 /* Inputs focus */
 input:focus, select:focus, textarea:focus {
     outline-color: var(--c21-gold);

@@ -1,9 +1,10 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404
 from django.http import Http404
+from django.shortcuts import redirect
 from django.core.paginator import Paginator
 from django.http import JsonResponse, Http404
 from django.contrib import messages
-from .models import ResidentialComplex, Article, Tag, CompanyInfo, CatalogLanding, SecondaryProperty, Category, Employee, EmployeeReview
+from .models import ResidentialComplex, Article, Tag, CompanyInfo, CatalogLanding, SecondaryProperty, Category, Employee, EmployeeReview, FutureComplex
 from .models import Vacancy
 from .models import BranchOffice
 from .models import Gallery, MortgageProgram, SpecialOffer
@@ -31,12 +32,16 @@ def home(request):
     # Акции для главной - случайные 6 активных предложений
     offers = SpecialOffer.get_active_offers(limit=4)
     
+    # Будущие ЖК для главной - 4 случайных активных ЖК
+    future_complexes = FutureComplex.objects.filter(is_active=True).order_by('?')[:4]
+    
     context = {
         'complexes': complexes,
         'company_info': company_info,
         'company_gallery': company_gallery,
         'home_articles': home_articles,
         'offers': offers,
+        'future_complexes': future_complexes,
     }
     return render(request, 'main/home.html', context)
 
@@ -1114,6 +1119,94 @@ def team(request):
         'employees': employees,
     }
     return render(request, 'main/team.html', context)
+
+
+def future_complexes(request):
+    """Страница будущих ЖК"""
+    # Получаем параметры фильтрации
+    city = request.GET.get('city', '')
+    district = request.GET.get('district', '')
+    price_from = request.GET.get('price_from', '')
+    price_to = request.GET.get('price_to', '')
+    delivery_date = request.GET.get('delivery_date', '')
+    sort = request.GET.get('sort', 'delivery_date_asc')
+    
+    # Базовый queryset
+    complexes = FutureComplex.objects.filter(is_active=True)
+    
+    # Применяем фильтры
+    if city:
+        complexes = complexes.filter(city__icontains=city)
+    if district:
+        complexes = complexes.filter(district__icontains=district)
+    if price_from:
+        try:
+            complexes = complexes.filter(price_from__gte=float(price_from))
+        except ValueError:
+            pass
+    if price_to:
+        try:
+            complexes = complexes.filter(price_from__lte=float(price_to))
+        except ValueError:
+            pass
+    if delivery_date:
+        complexes = complexes.filter(delivery_date__lte=delivery_date)
+    
+    # Применяем сортировку
+    if sort == 'delivery_date_asc':
+        complexes = complexes.order_by('delivery_date')
+    elif sort == 'delivery_date_desc':
+        complexes = complexes.order_by('-delivery_date')
+    elif sort == 'price_asc':
+        complexes = complexes.order_by('price_from')
+    elif sort == 'price_desc':
+        complexes = complexes.order_by('-price_from')
+    elif sort == 'name_asc':
+        complexes = complexes.order_by('name')
+    else:
+        complexes = complexes.order_by('-is_featured', 'delivery_date')
+    
+    # Пагинация
+    paginator = Paginator(complexes, 12)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    
+    context = {
+        'complexes': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'filters': {
+            'city': city,
+            'district': district,
+            'price_from': price_from,
+            'price_to': price_to,
+            'delivery_date': delivery_date,
+            'sort': sort,
+        }
+    }
+    return render(request, 'main/future_complexes.html', context)
+
+
+def future_complex_detail(request, complex_id):
+    """Детальная страница будущего ЖК"""
+    try:
+        complex = FutureComplex.objects.get(id=complex_id, is_active=True)
+    except FutureComplex.DoesNotExist:
+        raise Http404("ЖК не найден")
+    
+    # Получаем изображения ЖК
+    images = complex.get_images()
+    
+    # Получаем другие будущие ЖК для блока "Другие проекты"
+    other_complexes = FutureComplex.objects.filter(
+        is_active=True
+    ).exclude(id=complex_id).order_by('?')[:6]
+    
+    context = {
+        'complex': complex,
+        'images': images,
+        'other_complexes': other_complexes,
+    }
+    return render(request, 'main/future_complex_detail.html', context)
 
 
 def employee_detail(request, employee_id):
