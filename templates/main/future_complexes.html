@@ -16,51 +16,7 @@
             <span class="breadcrumb-current">Будущие ЖК</span>
         </div>
 
-        <!-- Фильтры -->
-        <div class="filters-section">
-            <form method="get" class="filters-form">
-                <div class="filters-row">
-                    <div class="filter-group">
-                        <label for="city">Город</label>
-                        <input type="text" id="city" name="city" value="{{ filters.city }}" placeholder="Все города">
-                    </div>
-                    <div class="filter-group">
-                        <label for="district">Район</label>
-                        <input type="text" id="district" name="district" value="{{ filters.district }}" placeholder="Все районы">
-                    </div>
-                    <div class="filter-group">
-                        <label for="price_from">Цена от (млн ₽)</label>
-                        <input type="number" id="price_from" name="price_from" value="{{ filters.price_from }}" step="0.1" min="0">
-                    </div>
-                    <div class="filter-group">
-                        <label for="price_to">Цена до (млн ₽)</label>
-                        <input type="number" id="price_to" name="price_to" value="{{ filters.price_to }}" step="0.1" min="0">
-                    </div>
-                    <div class="filter-group">
-                        <label for="delivery_date">Сдача до</label>
-                        <input type="date" id="delivery_date" name="delivery_date" value="{{ filters.delivery_date }}">
-                    </div>
-                    <div class="filter-group">
-                        <label for="sort">Сортировка</label>
-                        <select id="sort" name="sort">
-                            <option value="delivery_date_asc" {% if filters.sort == 'delivery_date_asc' %}selected{% endif %}>По дате сдачи (сначала ранние)</option>
-                            <option value="delivery_date_desc" {% if filters.sort == 'delivery_date_desc' %}selected{% endif %}>По дате сдачи (сначала поздние)</option>
-                            <option value="price_asc" {% if filters.sort == 'price_asc' %}selected{% endif %}>По цене (сначала дешевые)</option>
-                            <option value="price_desc" {% if filters.sort == 'price_desc' %}selected{% endif %}>По цене (сначала дорогие)</option>
-                            <option value="name_asc" {% if filters.sort == 'name_asc' %}selected{% endif %}>По названию (А-Я)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="filters-actions">
-                    <button type="submit" class="filter-btn primary">
-                        <i class="fas fa-search"></i> Найти
-                    </button>
-                    <a href="{% url 'main:future_complexes' %}" class="filter-btn secondary">
-                        <i class="fas fa-times"></i> Сбросить
-                    </a>
-                </div>
-            </form>
-        </div>
+
 
         <!-- Список ЖК -->
         <div class="future-complexes-grid">
@@ -118,7 +74,7 @@
         {% if page_obj.paginator.num_pages > 1 %}
         <div class="pagination">
             {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if filters.city %}&city={{ filters.city }}{% endif %}{% if filters.district %}&district={{ filters.district }}{% endif %}{% if filters.price_from %}&price_from={{ filters.price_from }}{% endif %}{% if filters.price_to %}&price_to={{ filters.price_to }}{% endif %}{% if filters.delivery_date %}&delivery_date={{ filters.delivery_date }}{% endif %}{% if filters.sort %}&sort={{ filters.sort }}{% endif %}" class="pagination-btn">
+                <a href="?page={{ page_obj.previous_page_number }}" class="pagination-btn">
                     <i class="fas fa-chevron-left"></i> Назад
                 </a>
             {% endif %}
@@ -128,7 +84,7 @@
             </span>
             
             {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if filters.city %}&city={{ filters.city }}{% endif %}{% if filters.district %}&district={{ filters.district }}{% endif %}{% if filters.price_from %}&price_from={{ filters.price_from }}{% endif %}{% if filters.price_to %}&price_to={{ filters.price_to }}{% endif %}{% if filters.delivery_date %}&delivery_date={{ filters.delivery_date }}{% endif %}{% if filters.sort %}&sort={{ filters.sort }}{% endif %}" class="pagination-btn">
+                <a href="?page={{ page_obj.next_page_number }}" class="pagination-btn">
                     Вперед <i class="fas fa-chevron-right"></i>
                 </a>
             {% endif %}
@@ -188,95 +144,7 @@
     color: #999;
 }
 
-/* Фильтры */
-.filters-section {
-    background: #f8f9fa;
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 32px;
-    border: 1px solid #e9ecef;
-}
 
-.filters-form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.filters-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-}
-
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.filter-group label {
-    font-weight: 600;
-    color: var(--c21-dark);
-    font-size: 14px;
-}
-
-.filter-group input,
-.filter-group select {
-    padding: 10px 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: border-color 0.3s ease;
-}
-
-.filter-group input:focus,
-.filter-group select:focus {
-    outline: none;
-    border-color: var(--c21-gold);
-    box-shadow: 0 0 0 3px rgba(190,175,135,0.1);
-}
-
-.filters-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.filter-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-}
-
-.filter-btn.primary {
-    background: var(--c21-gold);
-    color: var(--c21-dark);
-}
-
-.filter-btn.primary:hover {
-    background: var(--c21-gold-dark);
-    transform: translateY(-1px);
-}
-
-.filter-btn.secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.filter-btn.secondary:hover {
-    background: #5a6268;
-    transform: translateY(-1px);
-}
 
 /* Сетка ЖК */
 .future-complexes-grid {
