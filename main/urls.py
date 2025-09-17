@@ -57,6 +57,7 @@ urlpatterns = [
     path('offers/<int:offer_id>/', views.offer_detail, name='offer_detail'),
     path('team/', views.team, name='team'),
     path('team/<int:employee_id>/', views.employee_detail, name='employee_detail'),
+    path('team/<int:employee_id>/properties/', views.agent_properties, name='agent_properties'),
     path('future-complexes/', views.future_complexes, name='future_complexes'),
     path('future-complexes/<int:complex_id>/', views.future_complex_detail, name='future_complex_detail'),
 ] 

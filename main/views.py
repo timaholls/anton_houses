@@ -785,11 +785,55 @@ def detail(request, complex_id):
     """Детальная страница ЖК"""
     complex = get_object_or_404(ResidentialComplex, id=complex_id)
     
-    # Получаем похожие ЖК для рекомендаций
+    # Проверяем, пришли ли мы от агента
+    agent_id = request.GET.get('agent_id')
+    agent = None
+    agent_other_properties = []
+    
+    if agent_id:
+        try:
+            agent = Employee.objects.get(id=agent_id, is_active=True)
+            # Получаем другие объекты этого агента (исключая текущий ЖК)
+            agent_residential = agent.residential_complexes.exclude(id=complex_id)[:3]
+            agent_secondary = agent.secondary_properties.all()[:3]
+            
+            # Объединяем объекты агента
+            for complex_obj in agent_residential:
+                agent_other_properties.append({
+                    'type': 'residential',
+                    'object': complex_obj,
+                    'name': complex_obj.name,
+                    'price': complex_obj.price_from,
+                    'location': f"{complex_obj.district or complex_obj.city}",
+                    'image': complex_obj.get_main_image(),
+                    'url': f"/complex/{complex_obj.id}/",
+                })
+            
+            for property_obj in agent_secondary:
+                agent_other_properties.append({
+                    'type': 'secondary',
+                    'object': property_obj,
+                    'name': property_obj.name,
+                    'price': property_obj.price,
+                    'location': f"{property_obj.district or property_obj.city}",
+                    'image': property_obj.get_main_image(),
+                    'url': f"/secondary/{property_obj.id}/",
+                })
+        except Employee.DoesNotExist:
+            pass
+    
+    # Получаем общие похожие ЖК (если нет других объектов агента или их мало)
     similar_complexes = ResidentialComplex.objects.filter(
         city=complex.city,
         house_class=complex.house_class
-    ).exclude(id=complex.id)[:3]
+    ).exclude(id=complex.id)
+    
+    # Если есть объекты агента, ограничиваем количество общих похожих
+    if agent_other_properties:
+        remaining_slots = max(0, 6 - len(agent_other_properties))
+        similar_complexes = similar_complexes[:remaining_slots]
+    else:
+        similar_complexes = similar_complexes[:3]
     
     # Получаем акции для данного ЖК
     from django.utils import timezone
@@ -833,6 +877,8 @@ def detail(request, complex_id):
         'video': video,
         'video_embed_url': video_embed_url,
         'mortgage_programs': mortgage_programs,
+        'agent': agent,
+        'agent_other_properties': agent_other_properties,
     }
     return render(request, 'main/detail.html', context)
 
@@ -1100,6 +1146,82 @@ def team(request):
     return render(request, 'main/team.html', context)
 
 
+def agent_properties(request, employee_id):
+    """Страница объектов агента"""
+    employee = get_object_or_404(Employee, id=employee_id, is_active=True)
+    
+    # Получаем параметры фильтрации и сортировки
+    property_type = request.GET.get('property_type', '')
+    sort_by = request.GET.get('sort_by', 'date-desc')
+    
+    # Получаем все объекты агента (новостройки и вторичная недвижимость)
+    residential_complexes = ResidentialComplex.objects.filter(agent=employee)
+    secondary_properties = SecondaryProperty.objects.filter(agent=employee)
+    
+    # Фильтрация по типу недвижимости
+    if property_type == 'residential':
+        secondary_properties = SecondaryProperty.objects.none()
+    elif property_type == 'secondary':
+        residential_complexes = ResidentialComplex.objects.none()
+    
+    # Объединяем все объекты
+    all_properties = []
+    
+    # Добавляем новостройки
+    for complex in residential_complexes:
+        all_properties.append({
+            'type': 'residential',
+            'object': complex,
+            'name': complex.name,
+            'price': complex.price_from,
+            'location': f"{complex.district or complex.city}",
+            'image': complex.get_main_image(),
+            'url': f"/complex/{complex.id}/",
+            'created_at': complex.created_at,
+        })
+    
+    # Добавляем вторичную недвижимость
+    for property in secondary_properties:
+        all_properties.append({
+            'type': 'secondary',
+            'object': property,
+            'name': property.name,
+            'price': property.price,
+            'location': f"{property.district or property.city}",
+            'image': property.get_main_image(),
+            'url': f"/secondary/{property.id}/",
+            'created_at': property.created_at,
+        })
+    
+    # Применяем сортировку
+    if sort_by == 'date-desc':
+        all_properties.sort(key=lambda x: x['created_at'], reverse=True)
+    elif sort_by == 'date-asc':
+        all_properties.sort(key=lambda x: x['created_at'])
+    elif sort_by == 'price-asc':
+        all_properties.sort(key=lambda x: float(x['price']))
+    elif sort_by == 'price-desc':
+        all_properties.sort(key=lambda x: float(x['price']), reverse=True)
+    elif sort_by == 'name-asc':
+        all_properties.sort(key=lambda x: x['name'].lower())
+    
+    # Пагинация по 9 элементов
+    paginator = Paginator(all_properties, 9)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    
+    context = {
+        'employee': employee,
+        'properties': page_obj,
+        'page_obj': page_obj,
+        'total_count': len(all_properties),
+        'residential_count': ResidentialComplex.objects.filter(agent=employee).count(),
+        'secondary_count': SecondaryProperty.objects.filter(agent=employee).count(),
+        'current_property_type': property_type,
+        'current_sort': sort_by,
+    }
+    return render(request, 'main/agent_properties.html', context)
+
+
 def future_complexes(request):
     """Страница будущих ЖК"""
     # Получаем параметры фильтрации
@@ -1192,9 +1314,12 @@ def employee_detail(request, employee_id):
     """Детальная страница сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id, is_active=True)
     
-    # Получаем объекты недвижимости агента
-    residential_complexes = employee.residential_complexes.filter(is_featured=True)[:6]
-    secondary_properties = employee.secondary_properties.all()[:6]
+    # Получаем объекты недвижимости агента (по 2 новостройки и 2 вторички = 4 всего)
+    residential_complexes = employee.residential_complexes.all()[:2]
+    secondary_properties = employee.secondary_properties.all()[:2]
+    
+    # Считаем общее количество объектов
+    total_properties_count = employee.residential_complexes.count() + employee.secondary_properties.count()
     
     # Получаем опубликованные отзывы
     reviews = employee.reviews.filter(is_approved=True, is_published=True).order_by('-created_at')[:10]
@@ -1231,6 +1356,7 @@ def employee_detail(request, employee_id):
         'residential_complexes': residential_complexes,
         'secondary_properties': secondary_properties,
         'reviews': reviews,
+        'total_properties_count': total_properties_count,
     }
     return render(request, 'main/employee_detail.html', context)
 

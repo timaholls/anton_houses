@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}Объекты агента {{ employee.full_name }} - CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Хлебные крошки -->
+    <div class="breadcrumbs">
+        <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+        <span class="breadcrumb-separator">•</span>
+        <a href="{% url 'main:team' %}" class="breadcrumb-link">Наша команда</a>
+        <span class="breadcrumb-separator">•</span>
+        <a href="{% url 'main:employee_detail' employee.id %}" class="breadcrumb-link">{{ employee.full_name }}</a>
+        <span class="breadcrumb-separator">•</span>
+        <span class="breadcrumb-current">Объекты агента</span>
+    </div>
+
+    <!-- Заголовок -->
+    <div class="catalog-header">
+        <h1 class="section-title">Объекты агента {{ employee.full_name }}</h1>
+        <p class="section-subtitle">
+            Всего объектов: {{ total_count }} 
+            (Новостройки: {{ residential_count }}, Вторичная недвижимость: {{ secondary_count }})
+        </p>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filters-section">
+        <form method="GET" id="filters-form">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="property-type">Тип недвижимости:</label>
+                    <select id="property-type" name="property_type" class="filter-select" onchange="document.getElementById('filters-form').submit();">
+                        <option value="">Все объекты</option>
+                        <option value="residential" {% if current_property_type == 'residential' %}selected{% endif %}>Новостройки</option>
+                        <option value="secondary" {% if current_property_type == 'secondary' %}selected{% endif %}>Вторичная недвижимость</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="sort-by">Сортировка:</label>
+                    <select id="sort-by" name="sort_by" class="filter-select" onchange="document.getElementById('filters-form').submit();">
+                        <option value="date-desc" {% if current_sort == 'date-desc' %}selected{% endif %}>По дате (новые сначала)</option>
+                        <option value="date-asc" {% if current_sort == 'date-asc' %}selected{% endif %}>По дате (старые сначала)</option>
+                        <option value="price-asc" {% if current_sort == 'price-asc' %}selected{% endif %}>По цене (дешевые сначала)</option>
+                        <option value="price-desc" {% if current_sort == 'price-desc' %}selected{% endif %}>По цене (дорогие сначала)</option>
+                        <option value="name-asc" {% if current_sort == 'name-asc' %}selected{% endif %}>По названию (А-Я)</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% if properties %}
+    <!-- Сетка объектов 3x3 -->
+    <div class="properties-grid">
+        {% for property in properties %}
+        <div class="property-card agent-property-card" data-type="{{ property.type }}">
+            <div class="card-image">
+                {% if property.image and property.image.image %}
+                    <img src="{{ property.image.image.url }}" alt="{{ property.name }}" loading="lazy">
+                {% else %}
+                    <img src="/media/gallery/placeholders.png" alt="{{ property.name }}" loading="lazy">
+                {% endif %}
+                <!-- Бейдж типа недвижимости -->
+                <div class="property-type-badge">
+                    {% if property.type == 'residential' %}
+                        <span class="badge badge-primary">Новостройка</span>
+                    {% else %}
+                        <span class="badge badge-secondary">Вторичная</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-header">
+                    <h3 class="card-title">{{ property.name }}</h3>
+                </div>
+                <div class="card-location">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ property.location }}</span>
+                </div>
+                <div class="card-price">
+                    <span class="price-text">
+                        {% if property.type == 'residential' %}
+                            от {{ property.price|floatformat:1 }} млн ₽
+                        {% else %}
+                            {{ property.price|floatformat:1 }} млн ₽
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="card-actions">
+                    <a href="{{ property.url }}?agent_id={{ employee.id }}" class="btn btn-primary btn-small" style="width:100%; text-align:center; justify-content:center;">
+                        Подробнее о ЖК
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Пагинация -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if current_property_type %}&property_type={{ current_property_type }}{% endif %}{% if current_sort %}&sort_by={{ current_sort }}{% endif %}" class="pagination-link">&laquo; Первая</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if current_property_type %}&property_type={{ current_property_type }}{% endif %}{% if current_sort %}&sort_by={{ current_sort }}{% endif %}" class="pagination-link">Назад</a>
+            {% endif %}
+            
+            <span class="pagination-info">
+                Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if current_property_type %}&property_type={{ current_property_type }}{% endif %}{% if current_sort %}&sort_by={{ current_sort }}{% endif %}" class="pagination-link">Вперед</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if current_property_type %}&property_type={{ current_property_type }}{% endif %}{% if current_sort %}&sort_by={{ current_sort }}{% endif %}" class="pagination-link">Последняя &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Пустое состояние -->
+    <div class="no-properties">
+        <div class="no-properties-content">
+            <i class="fas fa-home" style="font-size: 48px; color: #ccc; margin-bottom: 16px;"></i>
+            <h3>У агента пока нет объектов</h3>
+            <p>{{ employee.full_name }} еще не добавил ни одного объекта недвижимости.</p>
+            <a href="{% url 'main:team' %}" class="btn btn-secondary">Вернуться к команде</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Сетка объектов 3x3 */
+.properties-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 32px 0;
+}
+
+@media (max-width: 1024px) {
+    .properties-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .properties-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+/* Карточка объекта */
+.agent-property-card {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.agent-property-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+/* Бейдж типа недвижимости */
+.property-type-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-primary {
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+}
+
+.badge-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+/* Пустое состояние */
+.no-properties {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.no-properties-content h3 {
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.no-properties-content p {
+    color: #888;
+    margin-bottom: 24px;
+}
+
+/* Фильтры */
+.filters-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 24px 0;
+}
+
+.filters-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    align-items: end;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #333;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+}
+
+/* Пагинация */
+.pagination-container {
+    margin: 40px 0;
+    text-align: center;
+}
+
+.pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pagination-link {
+    padding: 8px 16px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.pagination-link:hover {
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    border-color: var(--c21-gold);
+}
+
+.pagination-info {
+    padding: 8px 16px;
+    color: #666;
+    font-weight: 500;
+}
+</style>
+
+{% endblock %}

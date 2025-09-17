@@ -170,31 +170,6 @@
                     <h2><i class="fas fa-building"></i> Объекты агента</h2>
                 </div>
                 
-                {% if residential_complexes %}
-                <div class="property-category">
-                    <h3><i class="fas fa-home"></i> Новостройки</h3>
-                    <div class="properties-grid">
-                        {% for complex in residential_complexes %}
-                        <div class="property-card">
-                            {% if complex.get_main_image and complex.get_main_image.image %}
-                            <div class="property-image">
-                                <img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}">
-                            </div>
-                            {% endif %}
-                            <div class="property-info">
-                                <h4>{{ complex.name }}</h4>
-                                <p class="property-location">{{ complex.city }}, {{ complex.district }}</p>
-                                <p class="property-price">от {{ complex.price_from }} млн ₽</p>
-                                <a href="{% url 'main:detail' complex.id %}" class="property-link">
-                                    Подробнее <i class="fas fa-arrow-right"></i>
-                                </a>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-                
                 {% if secondary_properties %}
                 <div class="property-category">
                     <h3><i class="fas fa-key"></i> Вторичная недвижимость</h3>
@@ -210,13 +185,48 @@
                                 <h4>{{ property.name }}</h4>
                                 <p class="property-location">{{ property.city }}, {{ property.district }}</p>
                                 <p class="property-price">{{ property.price }} млн ₽</p>
-                                <a href="{% url 'main:detail' property.id %}" class="property-link">
+                                <a href="{% url 'main:detail' property.id %}?agent_id={{ employee.id }}" class="property-link">
                                     Подробнее <i class="fas fa-arrow-right"></i>
                                 </a>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
+                </div>
+                {% endif %}
+                
+                {% if residential_complexes %}
+                <div class="property-category">
+                    <h3><i class="fas fa-home"></i> Новостройки</h3>
+                    <div class="properties-grid">
+                        {% for complex in residential_complexes %}
+                        <div class="property-card">
+                            {% if complex.get_main_image and complex.get_main_image.image %}
+                            <div class="property-image">
+                                <img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}">
+                            </div>
+                            {% endif %}
+                            <div class="property-info">
+                                <h4>{{ complex.name }}</h4>
+                                <p class="property-location">{{ complex.city }}, {{ complex.district }}</p>
+                                <p class="property-price">от {{ complex.price_from }} млн ₽</p>
+                                <a href="{% url 'main:detail' complex.id %}?agent_id={{ employee.id }}" class="property-link">
+                                    Подробнее <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Кнопка "Посмотреть все объекты" -->
+                {% if total_properties_count > 4 %}
+                <div class="all-properties-button">
+                    <a href="{% url 'main:agent_properties' employee.id %}" class="btn btn-outline btn-large">
+                        <i class="fas fa-building"></i>
+                        Посмотреть все объекты агента ({{ total_properties_count }})
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -866,6 +876,20 @@
         padding: 10px 12px;
         font-size: 0.9rem;
     }
+}
+
+/* Стили для кнопки "Посмотреть все объекты" */
+.all-properties-button {
+    text-align: center;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #eee;
+}
+
+.all-properties-button .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 </style>
 {% endblock %}

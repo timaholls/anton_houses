@@ -246,6 +246,56 @@
 	</div>
 	{% endif %}
 	
+	<!-- Другие проекты агента -->
+	{% if agent and agent_other_properties %}
+	<div class="agent-properties-section">
+		<h2>Другие проекты агента {{ agent.full_name }}</h2>
+		<div class="similar-grid">
+			{% for property in agent_other_properties %}
+			<div class="similar-card">
+				<div class="similar-image">
+					{% if property.image and property.image.image %}
+						<img src="{{ property.image.image.url }}" alt="{{ property.name }}">
+					{% else %}
+						<img src="/media/gallery/placeholders.png" alt="{{ property.name }}">
+					{% endif %}
+					<!-- Бейдж типа недвижимости -->
+					<div class="property-type-badge">
+						{% if property.type == 'residential' %}
+							<span class="badge badge-primary">Новостройка</span>
+						{% else %}
+							<span class="badge badge-secondary">Вторичная</span>
+						{% endif %}
+					</div>
+				</div>
+				<div class="similar-content">
+					<h3 class="similar-title">{{ property.name }}</h3>
+					<div class="similar-location">{{ property.location }}</div>
+					<div class="similar-price">
+						{% if property.type == 'residential' %}
+							от {{ property.price|floatformat:1 }} млн ₽
+						{% else %}
+							{{ property.price|floatformat:1 }} млн ₽
+						{% endif %}
+					</div>
+					<a href="{{ property.url }}?agent_id={{ agent.id }}" class="btn btn-outline btn-small" style="margin-top: 8px; width: 100%; justify-content: center;">
+						Подробнее
+					</a>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+		
+		<!-- Кнопка "Все объекты агента" -->
+		<div style="text-align: center; margin-top: 24px;">
+			<a href="{% url 'main:agent_properties' agent.id %}" class="btn btn-secondary">
+				<i class="fas fa-building"></i>
+				Все объекты агента
+			</a>
+		</div>
+	</div>
+	{% endif %}
+	
 	<!-- Калькулятор ипотеки (новый дизайн) -->
 	<div class="mortgage-section" id="mortgage">
 		<div class="mortgage-grid" style="grid-template-columns: 1fr 1fr;">
@@ -367,7 +417,7 @@
 	<!-- Похожие ЖК -->
 	{% if similar_complexes %}
 	<div class="similar-complexes">
-		<h2>Похожие ЖК</h2>
+		<h2>{% if agent %}Другие похожие ЖК{% else %}Похожие ЖК{% endif %}</h2>
 		<div class="similar-grid">
 			{% for similar in similar_complexes %}
 			<div class="similar-card">
@@ -630,4 +680,52 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 });
 </script>
+
+<style>
+/* Стили для секции "Другие проекты агента" */
+.agent-properties-section {
+	margin: 40px 0;
+	padding: 32px;
+	background: #f8f9fa;
+	border-radius: 16px;
+}
+
+.agent-properties-section h2 {
+	color: var(--c21-dark);
+	margin-bottom: 24px;
+	text-align: center;
+}
+
+.property-type-badge {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	z-index: 2;
+}
+
+.badge {
+	padding: 4px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.badge-primary {
+	background: var(--c21-gold);
+	color: var(--c21-dark);
+}
+
+.badge-secondary {
+	background: #6c757d;
+	color: white;
+}
+
+@media (max-width: 768px) {
+	.agent-properties-section {
+		padding: 24px 16px;
+	}
+}
+</style>
 {% endblock %} 
