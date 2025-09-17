@@ -32,16 +32,12 @@ def home(request):
     # Акции для главной - случайные 6 активных предложений
     offers = SpecialOffer.get_active_offers(limit=4)
     
-    # Будущие ЖК для главной - 4 случайных активных ЖК
-    future_complexes = FutureComplex.objects.filter(is_active=True).order_by('?')[:4]
-    
     context = {
         'complexes': complexes,
         'company_info': company_info,
         'company_gallery': company_gallery,
         'home_articles': home_articles,
         'offers': offers,
-        'future_complexes': future_complexes,
     }
     return render(request, 'main/home.html', context)
 
@@ -1093,23 +1089,6 @@ def secondary_index(request):
     if landing:
         return catalog_landing(request, slug=landing.slug)
     return _catalog_fallback(request, kind='secondary', title='Вторичная недвижимость')
-
-def company(request):
-    """Страница "Наша компания" со всеми сотрудниками"""
-    company_info = CompanyInfo.get_active()
-    employees_qs = Employee.objects.filter(is_active=True).select_related('branch').order_by('full_name')
-
-    paginator = Paginator(employees_qs, 24)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
-
-    context = {
-        'company_info': company_info,
-        'employees': page_obj,
-        'page_obj': page_obj,
-        'paginator': paginator,
-    }
-    return render(request, 'main/company.html', context)
-
 
 def team(request):
     """Страница команды"""

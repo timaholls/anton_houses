@@ -6,30 +6,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const toggle = dropdown.querySelector('.dropdown-toggle');
         const menu = dropdown.querySelector('.dropdown-menu');
         
-        // На мобильных устройствах добавляем обработчик клика
-        if (window.innerWidth <= 768) {
-            toggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Закрываем все другие выпадающие меню
-                dropdowns.forEach(otherDropdown => {
-                    if (otherDropdown !== dropdown) {
-                        otherDropdown.querySelector('.dropdown-menu').classList.remove('show');
-                        otherDropdown.querySelector('.dropdown-toggle i').style.transform = 'rotate(0deg)';
-                    }
-                });
-                
-                // Переключаем текущее меню
-                menu.classList.toggle('show');
-                const icon = toggle.querySelector('i');
-                if (menu.classList.contains('show')) {
-                    icon.style.transform = 'rotate(180deg)';
-                } else {
-                    icon.style.transform = 'rotate(0deg)';
+        // Добавляем обработчик клика для всех устройств
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Закрываем все другие выпадающие меню
+            dropdowns.forEach(otherDropdown => {
+                if (otherDropdown !== dropdown) {
+                    otherDropdown.querySelector('.dropdown-menu').classList.remove('show');
+                    otherDropdown.querySelector('.dropdown-toggle i').style.transform = 'rotate(0deg)';
                 }
             });
-        }
+            
+            // Переключаем текущее меню
+            menu.classList.toggle('show');
+            const icon = toggle.querySelector('i');
+            if (menu.classList.contains('show')) {
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                icon.style.transform = 'rotate(0deg)';
+            }
+        });
         
         // Закрываем меню при клике вне его
         document.addEventListener('click', function(e) {

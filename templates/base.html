@@ -22,6 +22,7 @@
                 <div class="logo">
                     <a href="{% url 'main:home' %}">
                         <span class="logo-text">CENTURY&nbsp;21</span>
+                        <span class="logo-slogan">Мир в Квадратах</span>
                     </a>
                 </div>
             </div>
@@ -31,12 +32,13 @@
                  
                  <!-- Выпадающее меню Жилые комплексы -->
                  <div class="nav-dropdown">
-                     <a href="#" class="nav-link dropdown-toggle {% if 'catalog' in request.resolver_match.url_name or 'future_complex' in request.resolver_match.url_name or 'video' in request.resolver_match.url_name %}active{% endif %}">
+                     <a href="#" class="nav-link dropdown-toggle {% if 'catalog' in request.resolver_match.url_name or 'newbuild' in request.resolver_match.url_name or 'secondary' in request.resolver_match.url_name or 'future_complex' in request.resolver_match.url_name or 'video' in request.resolver_match.url_name %}active{% endif %}">
                          Жилые комплексы
                          <i class="fas fa-chevron-down"></i>
                      </a>
                      <div class="dropdown-menu">
-                         <a href="{% url 'main:catalog' %}" class="dropdown-item {% if 'catalog' in request.resolver_match.url_name and 'future_complex' not in request.resolver_match.url_name %}active{% endif %}">Каталог</a>
+                         <a href="{% url 'main:newbuild_index' %}" class="dropdown-item {% if 'newbuild' in request.resolver_match.url_name %}active{% endif %}">Новостройки</a>
+                         <a href="{% url 'main:secondary_index' %}" class="dropdown-item {% if 'secondary' in request.resolver_match.url_name %}active{% endif %}">Вторичная недвижимость</a>
                          <a href="{% url 'main:future_complexes' %}" class="dropdown-item {% if 'future_complex' in request.resolver_match.url_name %}active{% endif %}">Будущие проекты</a>
                          <a href="{% url 'main:videos' %}" class="dropdown-item {% if 'video' in request.resolver_match.url_name %}active{% endif %}">Видеообзоры</a>
                      </div>
@@ -44,7 +46,7 @@
                  
                  <a href="{% url 'main:articles' %}" class="nav-link {% if 'articles' in request.resolver_match.url_name %}active{% endif %}">Новости</a>
                  <a href="{% url 'main:mortgage' %}" class="nav-link">Ипотека</a>
-                 <a href="{% url 'main:company' %}" class="nav-link {% if request.resolver_match.url_name == 'company' %}active{% endif %}">Наша команда</a>
+                 <a href="{% url 'main:team' %}" class="nav-link {% if request.resolver_match.url_name == 'team' %}active{% endif %}">Наша команда</a>
                  <a href="{% url 'main:vacancies' %}" class="nav-link {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
                  <a href="{% url 'main:offices' %}" class="nav-link {% if 'office' in request.resolver_match.url_name %}active{% endif %}">Офисы продаж</a>
              </nav>
@@ -100,7 +102,7 @@
                 <div class="footer-section">
                     <h3 class="footer-title">Компания</h3>
                     <ul class="footer-links">
-                        <li><a href="{% url 'main:company' %}">Наша команда</a></li>
+                        <li><a href="{% url 'main:team' %}">Наша команда</a></li>
                         <li><a href="{% url 'main:articles' %}">Новости</a></li>
                         <li><a href="{% url 'main:vacancies' %}">Вакансии</a></li>
                         <li><a href="{% url 'main:offices' %}">Офисы продаж</a></li>

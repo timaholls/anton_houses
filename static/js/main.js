@@ -28,12 +28,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Плавная прокрутка для навигационных ссылок
-    const navLinks = document.querySelectorAll('.nav-link');
+    // Плавная прокрутка для навигационных ссылок (исключая кнопки выпадающего меню)
+    const navLinks = document.querySelectorAll('.nav-link:not(.dropdown-toggle)');
     navLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
-            if (href.startsWith('#')) {
+            if (href.startsWith('#') && href.length > 1) {
                 e.preventDefault();
                 const target = document.querySelector(href);
                 if (target) {

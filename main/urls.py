@@ -48,8 +48,6 @@ urlpatterns = [
     path('videos/<int:video_id>/', views.video_detail, name='video_detail'),
     path('api/videos/objects/', views.videos_objects_api, name='videos_objects_api'),
 
-    # Наша компания
-    path('company/', views.company, name='company'),
     
     # Ипотека
     path('mortgage/', views.mortgage, name='mortgage'),
