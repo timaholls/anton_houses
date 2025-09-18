@@ -665,6 +665,7 @@ class BranchOffice(models.Model):
     longitude = models.FloatField(null=True, blank=True, verbose_name='Долгота')
 
     is_active = models.BooleanField(default=True, verbose_name='Активен')
+    is_head_office = models.BooleanField(default=False, verbose_name='Головной офис')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Добавлен')
 
     class Meta:

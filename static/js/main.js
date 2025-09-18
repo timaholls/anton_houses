@@ -72,4 +72,40 @@ document.addEventListener('DOMContentLoaded', function() {
             link.classList.add('active');
         }
     });
+
+    // Обработчик кнопки чата
+    const chatButton = document.getElementById('chat-button');
+    const chatModal = document.getElementById('chat-modal');
+    const chatClose = document.getElementById('chat-close');
+    
+    if (chatButton && chatModal) {
+        // Открытие/закрытие чата
+        chatButton.addEventListener('click', function() {
+            chatModal.classList.toggle('active');
+        });
+        
+        // Закрытие чата по кнопке X
+        if (chatClose) {
+            chatClose.addEventListener('click', function() {
+                chatModal.classList.remove('active');
+            });
+        }
+        
+        // Закрытие чата по клику вне окна
+        document.addEventListener('click', function(e) {
+            if (!chatModal.contains(e.target) && !chatButton.contains(e.target)) {
+                chatModal.classList.remove('active');
+            }
+        });
+        
+        // Обработчики кнопок быстрых действий (пока заглушки)
+        const quickActionBtns = document.querySelectorAll('.quick-action-btn');
+        quickActionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const action = this.getAttribute('data-action');
+                console.log('Нажата кнопка:', action);
+                // Здесь будет функционал для каждой кнопки
+            });
+        });
+    }
 }); 

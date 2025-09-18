@@ -10,7 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon" type="image/svg+xml" href="/media/logo/icon_site.png">
+    
+    <!-- Leaflet CSS и JS для карт -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
     {% block extra_css %}{% endblock %}
+    {% block head %}{% endblock %}
 </head>
 <body>
 
@@ -53,9 +59,15 @@
 
             <div class="header-right">
                 <div class="contact-info">
-                    <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
-                    <div class="working-hours">Пн-Пт: 9:00-18:00</div>
-                    <div class="address">г. Уфа, ул. Ленина, 1</div>
+                    {% if head_office %}
+                        {% if head_office.phone %}
+                            <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" class="phone-number">{{ head_office.phone }}</a>
+                        {% endif %}
+                        <a href="{% url 'main:home' %}#office-map" class="address address-link">{{ head_office.city }}, {{ head_office.address }}</a>
+                    {% else %}
+                        <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
+                        <a href="{% url 'main:home' %}#office-map" class="address address-link">г. Уфа, ул. Ленина, 1</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -65,6 +77,70 @@
         {% block content %}
         {% endblock %}
     </main>
+
+    <!-- Кнопка чата -->
+    <div class="chat-button-container">
+        <button class="chat-button" id="chat-button">
+            <i class="fas fa-comments"></i>
+            <span class="chat-text">Чат Century21</span>
+        </button>
+    </div>
+
+    <!-- Окно чата -->
+    <div class="chat-modal" id="chat-modal">
+        <div class="chat-window">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <h3>Чат Century21</h3>
+                    <span class="online-status">● Мы онлайн</span>
+                </div>
+                <button class="chat-close" id="chat-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="chat-body">
+                <div class="chat-message support-message">
+                    <div class="message-avatar">
+                        <img src="/media/logo/icon_site.png" alt="Поддержка C21">
+                    </div>
+                    <div class="message-content">
+                        <div class="message-author">Поддержка C21</div>
+                        <div class="message-text">
+                            Рады приветствовать вас! Предлагаем вам воспользоваться кнопками быстрого доступа к нашим услугам:
+                        </div>
+                        
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" data-action="property">
+                                Продать недвижимость
+                            </button>
+                            <button class="quick-action-btn" data-action="agent">
+                                Подобрать агента
+                            </button>
+                            <button class="quick-action-btn" data-action="question">
+                                Задать вопрос
+                            </button>
+                            <button class="quick-action-btn" data-action="feedback">
+                                Фидбэк по сайту
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-input-section">
+                <div class="chat-input-wrapper">
+                    <input type="text" class="chat-input" placeholder="Напишите сообщение..." disabled>
+                    <button class="chat-send-btn" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="chat-disclaimer">
+                    В разработке: здесь будет интеграция с чат-системой
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Форма обратной связи -->
     {% if not request.resolver_match.url_name == 'vacancies' %}
@@ -113,11 +189,7 @@
                 <div class="footer-section">
                     <h3 class="footer-title">Клиентам</h3>
                     <ul class="footer-links">
-                        <li><a href="#">Ипотека</a></li>
-                        <li><a href="#">Рассрочка</a></li>
-                        <li><a href="#">Сервисы</a></li>
-                        <li><a href="#">FAQ</a></li>
-                        <li><a href="#">Отзывы</a></li>
+                        <li><a href="{% url 'main:mortgage' %}">Ипотека</a></li>
                     </ul>
                 </div>
 
@@ -125,41 +197,55 @@
                 <div class="footer-section">
                     <h3 class="footer-title">Контакты</h3>
                     <div class="footer-contacts">
-                        <div class="contact-item">
-                            <i class="fas fa-phone"></i>
-                            <a href="tel:+73472019478">+7 347 201-94-78</a>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fas fa-envelope"></i>
-                            <a href="mailto:info@antonhaus.ru">info@antonhaus.ru</a>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>г. Уфа, ул. Ленина, 1</span>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fas fa-clock"></i>
-                            <span>Пн-Пт: 9:00-18:00</span>
-                        </div>
+                        {% if head_office %}
+                            {% if head_office.phone %}
+                            <div class="contact-item">
+                                <i class="fas fa-phone"></i>
+                                <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}">{{ head_office.phone }}</a>
+                            </div>
+                            {% endif %}
+                            {% if head_office.email %}
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <a href="mailto:{{ head_office.email }}">{{ head_office.email }}</a>
+                            </div>
+                            {% endif %}
+                            <div class="contact-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>{{ head_office.city }}, {{ head_office.address }}</span>
+                            </div>
+                            {% if head_office.schedule %}
+                            <div class="contact-item">
+                                <i class="fas fa-clock"></i>
+                                <span>{{ head_office.schedule }}</span>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="contact-item">
+                                <i class="fas fa-phone"></i>
+                                <a href="tel:+73472019478">+7 347 201-94-78</a>
+                            </div>
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <a href="mailto:info@antonhaus.ru">info@antonhaus.ru</a>
+                            </div>
+                            <div class="contact-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>г. Уфа, ул. Ленина, 1</span>
+                            </div>
+                            <div class="contact-item">
+                                <i class="fas fa-clock"></i>
+                                <span>Пн-Пт: 9:00-18:00</span>
+                            </div>
+                        {% endif %}
                     </div>
                     
-                    <!-- Мессенджеры -->
-                    <div class="footer-messengers">
-                        <h4 class="messengers-title">Мессенджеры</h4>
-                        <div class="messengers-links">
-                            <a href="#" class="messenger-link whatsapp">
-                                <i class="fab fa-whatsapp"></i>
-                                <span>WhatsApp</span>
-                            </a>
-                            <a href="#" class="messenger-link telegram">
-                                <i class="fab fa-telegram"></i>
-                                <span>Telegram</span>
-                            </a>
-                            <a href="#" class="messenger-link viber">
-                                <i class="fab fa-viber"></i>
-                                <span>Viber</span>
-                            </a>
-                        </div>
+                    <!-- 2ГИС -->
+                    <div class="footer-gis">
+                        <a href="https://2gis.ru/ufa/geo/2393172957210753" target="_blank" class="gis-link">
+                            <i class="fas fa-map-marked-alt"></i>
+                            <span>Найти нас в 2ГИС</span>
+                        </a>
                     </div>
                 </div>
             </div>

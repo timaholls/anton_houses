@@ -1,0 +1,11 @@
+Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+September 18, 2025 - 06:11:09
+Django version 5.2.4, using settings 'anton_houses.settings'
+Starting development server at http://localhost:4000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/

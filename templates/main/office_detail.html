@@ -52,27 +52,51 @@
         </div>
 
         {% if employees %}
-        <div class="articles-category-section" style="margin-top:16px;">
-            <div class="category-header">
-                <h2 class="category-title">Сотрудники офиса</h2>
+        <div class="employees-section" style="margin-top:32px;">
+            <div class="section-header">
+                <h2 class="section-title">Сотрудники офиса</h2>
+                <p class="section-subtitle">Наши специалисты в {{ office.name }}</p>
             </div>
-            <div class="articles-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
-                {% for e in employees %}
-                <div class="article-card">
-                    <div class="article-image" style="height:220px;">
-                        {% if e.photo %}
-                            <img src="{{ e.photo.url }}" alt="{{ e.full_name }}">
+            
+            <!-- Сотрудники -->
+            <div class="catalog-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 24px; justify-items: center;">
+                {% for employee in employees %}
+                <div class="property-card employee-card">
+                    <div class="card-image" style="height:200px;">
+                        {% if employee.get_main_image %}
+                            <img src="{{ employee.get_main_image.image.url }}" alt="{{ employee.full_name }}">
                         {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ e.full_name }}">
+                            <img src="/media/gallery/placeholders.png" alt="{{ employee.full_name }}">
                         {% endif %}
                     </div>
-                    <div class="article-content">
-                        <h3 class="article-title" style="margin-bottom:4px;">{{ e.full_name }}</h3>
-                        <div class="article-excerpt" style="color:#666;">{{ e.position }}</div>
-                        <div class="article-footer" style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                            <a href="{% url 'main:employee_detail' e.id %}" class="btn btn-primary btn-small">Подробнее об агенте</a>
-                            {% if e.phone %}<span class="article-views"><i class="fas fa-phone" style="color:#999; margin-right:6px;"></i>{{ e.phone }}</span>{% endif %}
-                            {% if e.email %}<span class="article-views"><i class="fas fa-envelope" style="color:#999; margin-right:6px;"></i>{{ e.email }}</span>{% endif %}
+                    <div class="card-content">
+                        <div class="card-header">
+                            <h3 class="card-title">{{ employee.full_name }}</h3>
+                        </div>
+                        <div class="card-location" style="margin-top:8px;">
+                            <i class="fas fa-briefcase"></i>
+                            <span>{{ employee.position }}</span>
+                        </div>
+                        {% if employee.experience_years > 0 %}
+                        <div class="card-location" style="margin-top:6px;">
+                            <i class="fas fa-clock"></i>
+                            <span>Опыт работы: {{ employee.experience_years }} лет</span>
+                        </div>
+                        {% endif %}
+                        <div class="card-location" style="margin-top:6px;">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ employee.branch.name }}</span>
+                        </div>
+                        <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+                            <a href="{% url 'main:employee_detail' employee.id %}" class="btn btn-primary btn-small" style="width:100%; text-align:center; justify-content:center;">
+                                Подробнее об агенте
+                            </a>
+                            <a href="{% url 'main:office_detail' employee.branch.slug %}" class="btn btn-secondary btn-small" style="width:100%; text-align:center; justify-content:center;">
+                                Посмотреть филиал
+                            </a>
+                            <a href="{% url 'main:agent_properties' employee.id %}" class="btn btn-outline btn-small" style="width:100%; text-align:center; justify-content:center;">
+                                Объекты агента
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -85,6 +109,18 @@
 </div>
 
 <style>
+/* Стили для карточек сотрудников (как в team.html) */
+.employee-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    max-width: 350px;
+    width: 100%;
+}
+
+.employee-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
 .btn-primary {
     background: linear-gradient(135deg, #BEAF87 0%, #A89A6F 100%);
     border: none;

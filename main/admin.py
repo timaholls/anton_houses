@@ -34,6 +34,10 @@ class ResidentialComplexAdmin(admin.ModelAdmin):
         ('Настройки', {
             'fields': ('is_featured', 'delivery_date', 'agent')
         }),
+        ('Координаты', {
+            'fields': ('latitude', 'longitude'),
+            'classes': ('collapse',)
+        }),
     )
 
 @admin.register(SecondaryProperty)
@@ -42,6 +46,23 @@ class SecondaryPropertyAdmin(admin.ModelAdmin):
     list_filter = ['house_type', 'city', 'agent']
     search_fields = ['name', 'city', 'district', 'street', 'agent__full_name']
     list_editable = ['agent']
+    readonly_fields = ['created_at']
+    
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('name', 'price', 'city', 'district', 'street', 'commute_time')
+        }),
+        ('Характеристики', {
+            'fields': ('house_type', 'area', 'rooms', 'description')
+        }),
+        ('Настройки', {
+            'fields': ('agent', 'created_at')
+        }),
+        ('Координаты', {
+            'fields': ('latitude', 'longitude'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(FutureComplex)
@@ -602,18 +623,22 @@ class VacancyAdmin(admin.ModelAdmin):
 class EmployeeInline(admin.TabularInline):
     model = Employee
     extra = 1
-    fields = ('full_name', 'position', 'photo', 'phone', 'email', 'is_active')
+    fields = ('full_name', 'position', 'phone', 'email', 'is_active')
 
 @admin.register(BranchOffice)
 class BranchOfficeAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'city', 'address', 'phone', 'is_active']
-    list_filter = ['city', 'is_active']
+    list_display = ['id', 'name', 'city', 'address', 'phone', 'is_active', 'is_head_office']
+    list_filter = ['city', 'is_active', 'is_head_office']
     search_fields = ['name', 'city', 'address']
     prepopulated_fields = {'slug': ('name',)}
+    list_editable = ['is_active', 'is_head_office']
 
     fieldsets = (
         ('Основная информация', {
-            'fields': ('name', 'slug', 'city', 'address', 'phone', 'email', 'schedule', 'is_active')
+            'fields': ('name', 'slug', 'city', 'address', 'phone', 'email', 'schedule')
+        }),
+        ('Настройки', {
+            'fields': ('is_active', 'is_head_office')
         }),
 
         ('Координаты', {
