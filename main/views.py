@@ -106,8 +106,8 @@ def catalog(request):
     elif sort == 'area_asc':
         complexes = complexes.order_by('area_from')
     
-    # Пагинация по 10 элементов
-    paginator = Paginator(complexes, 10)
+    # Пагинация по 9 элементов
+    paginator = Paginator(complexes, 9)
     page_obj = paginator.get_page(page)
     
     # Получаем уникальные города для фильтра
@@ -197,8 +197,8 @@ def catalog_api(request):
     elif sort == 'area_asc':
         complexes = complexes.order_by('area_from')
     
-    # Пагинация по 10 элементов
-    paginator = Paginator(complexes, 10)
+    # Пагинация по 9 элементов
+    paginator = Paginator(complexes, 9)
     page_obj = paginator.get_page(page)
     
     # Подготавливаем данные для JSON
@@ -950,7 +950,7 @@ def secondary_api(request):
         except ValueError:
             pass
 
-    paginator = Paginator(qs, 10)
+    paginator = Paginator(qs, 9)
     page_obj = paginator.get_page(page)
 
     items = []
@@ -1065,7 +1065,7 @@ def catalog_landing(request, slug):
         else:
             queryset = queryset.filter(house_type=house_type)
 
-    paginator = Paginator(queryset, 10)
+    paginator = Paginator(queryset, 9)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
     categories = CatalogLanding.objects.filter(kind=landing.kind).order_by('name')
@@ -1101,7 +1101,7 @@ def _catalog_fallback(request, kind: str, title: str):
     else:
         queryset = ResidentialComplex.objects.filter(status='construction')
 
-    paginator = Paginator(queryset, 10)
+    paginator = Paginator(queryset, 9)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
     context = {

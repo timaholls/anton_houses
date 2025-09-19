@@ -34,6 +34,24 @@
 
 .catalog-grid {
     margin-bottom: 30px !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 24px !important;
+}
+
+/* Адаптивность для каталога */
+@media (max-width: 1200px) {
+    .catalog-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .catalog-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
 }
 
 .pagination-container {
@@ -104,10 +122,6 @@
             <div class="catalog-tabs">
                 <a href="{% url 'main:newbuild_index' %}" class="catalog-tab {% if dataset_type == 'newbuild' %}active{% endif %}">Новостройки</a>
                 <a href="{% url 'main:secondary_index' %}" class="catalog-tab alt {% if dataset_type == 'secondary' %}active{% endif %}">Вторичная недвижимость</a>
-            </div>
-            <div class="view-toggle">
-                <button type="button" class="view-btn" data-view="list">Списком</button>
-                <button type="button" class="view-btn" data-view="map">Картой</button>
             </div>
             {% if landing_categories %}
             <div class="catalog-categories">
@@ -243,30 +257,37 @@
             </form>
         </div>
 
-        <!-- Сортировка -->
-        <div class="sorting-section">
-            <div class="sorting-dropdown">
-                <div class="sorting-options" id="sorting-options">
-                    <div class="sorting-option" data-sort="price_asc">
-                        <span>Дешевле</span>
+        <!-- Сортировка отдельно слева -->
+        <div class="controls-section">
+            <div class="sorting-left">
+                <div class="sorting-dropdown">
+                    <div class="sorting-options" id="sorting-options">
+                        <div class="sorting-option" data-sort="price_asc">
+                            <span>Дешевле</span>
+                        </div>
+                        <div class="sorting-option" data-sort="price_desc">
+                            <span>Дороже</span>
+                        </div>
+                        <div class="sorting-option" data-sort="area_desc">
+                            <span>С большей площадью</span>
+                        </div>
+                        <div class="sorting-option" data-sort="area_asc">
+                            <span>С меньшей площадью</span>
+                        </div>
                     </div>
-                    <div class="sorting-option" data-sort="price_desc">
-                        <span>Дороже</span>
-                    </div>
-                    <div class="sorting-option" data-sort="area_desc">
-                        <span>С большей площадью</span>
-                    </div>
-                    <div class="sorting-option" data-sort="area_asc">
-                        <span>С меньшей площадью</span>
+                    <div class="sorting-active" id="sorting-active">
+                        <i class="fas fa-sort"></i>
+                        <span id="sorting-text">Дешевле</span>
+                        <i class="fas fa-chevron-up"></i>
                     </div>
                 </div>
-                <div class="sorting-active" id="sorting-active">
-                    <i class="fas fa-sort"></i>
-                    <span id="sorting-text">Дешевле</span>
-                    <i class="fas fa-chevron-up"></i>
-                </div>
+                <input type="hidden" name="sort" id="sort-hidden" value="{{ filters.sort|default:'price_asc' }}">
             </div>
-            <input type="hidden" name="sort" id="sort-hidden" value="{{ filters.sort|default:'price_asc' }}">
+            
+            <div class="view-toggle-right">
+                <button type="button" class="view-btn active" data-view="map">Картой</button>
+                <button type="button" class="view-btn" data-view="list">Списком</button>
+            </div>
         </div>
 
         <!-- Результаты поиска -->
@@ -276,121 +297,55 @@
         </div>
         {% endif %}
 
-        <div id="map" style="width: 100%; height: 520px; display:none; border-radius:12px; overflow:hidden; margin-bottom:24px;"></div>
-        <div class="catalog-grid" id="catalog-grid">
+        <div class="catalog-content">
+            <div id="map" style="width: 100%; height: 520px; display:block; border-radius:12px; overflow:hidden; margin-bottom:24px;"></div>
+            <div class="catalog-grid" id="catalog-grid">
             {% for complex in complexes %}
-            <div class="property-card-large" onclick="window.location.href='{% if dataset_type == 'secondary' %}{% url 'main:secondary_detail' complex.id %}{% else %}{% url 'main:detail' complex.id %}{% endif %}'" style="cursor: pointer;">
-                <div class="card-images">
-                    <div class="main-image">
-                        {% with catalog_images=complex.get_catalog_images %}
-                            {% if catalog_images.0.image %}
-                                <img src="{{ catalog_images.0.image.url }}" alt="{{ complex.name }}">
-                            {% else %}
-                                <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                            {% endif %}
-                        {% endwith %}
-                        <div class="image-counter">1 из 4</div>
-                        <div class="image-nav">
-                            <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
-                            <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                    <div class="thumbnail-images">
-                        {% with catalog_images=complex.get_catalog_images %}
-                            <div class="thumbnail active">
-                                {% if catalog_images.0.image %}
-                                    <img src="{{ catalog_images.0.image.url }}" alt="{{ complex.name }}">
-                                {% else %}
-                                    <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                                {% endif %}
-                            </div>
-                            <div class="thumbnail">
-                                {% if catalog_images.1.image %}
-                                    <img src="{{ catalog_images.1.image.url }}" alt="{{ complex.name }}">
-                                {% else %}
-                                    <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                                {% endif %}
-                            </div>
-                            <div class="thumbnail">
-                                {% if catalog_images.2.image %}
-                                    <img src="{{ catalog_images.2.image.url }}" alt="{{ complex.name }}">
-                                {% else %}
-                                    <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                                {% endif %}
-                            </div>
-                            <div class="thumbnail more">
-                                <span>+1</span>
-                                {% if catalog_images.3.image %}
-                                    <img src="{{ catalog_images.3.image.url }}" alt="{{ complex.name }}">
-                                {% else %}
-                                    <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                                {% endif %}
-                            </div>
-                        {% endwith %}
-                    </div>
+            <div class="property-card-compact" onclick="window.location.href='{% if dataset_type == 'secondary' %}{% url 'main:secondary_detail' complex.id %}{% else %}{% url 'main:detail' complex.id %}{% endif %}'" style="cursor: pointer;">
+                <div class="compact-card-image">
+                    {% with catalog_images=complex.get_catalog_images %}
+                        {% if catalog_images.0.image %}
+                            <img src="{{ catalog_images.0.image.url }}" alt="{{ complex.name }}">
+                        {% else %}
+                            <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
+                        {% endif %}
+                    {% endwith %}
                 </div>
                 
-                <div class="card-content-large">
-                    <div class="card-header">
-                        <div class="card-title-section">
-                            <h3 class="card-title">{{ complex.name }}</h3>
-                            <div class="card-subtitle">
-                                {{ complex.total_apartments }} квартир от застройщика
-                            </div>
-                            <div class="completion-info">
-                                {{ complex.completion_start }} - {{ complex.completion_end }}
-                                {% if complex.has_completed %}
-                                    <span class="completed-badge">Есть сданные</span>
+                <div class="compact-card-content">
+                    <div class="compact-card-header">
+                        <h3 class="compact-card-title">{{ complex.name }}</h3>
+                        <div class="compact-card-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}</span>
+                        </div>
+                        <div class="compact-card-details">
+                            {% if dataset_type != 'secondary' %}
+                                <div class="compact-detail-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>{{ complex.completion_start }} - {{ complex.completion_end }}</span>
+                                </div>
+                                <div class="compact-detail-item">
+                                    <i class="fas fa-home"></i>
+                                    <span>{{ complex.total_apartments }} квартир</span>
+                                </div>
+                            {% else %}
+                                <div class="compact-detail-item">
+                                    <i class="fas fa-expand-arrows-alt"></i>
+                                    <span>{{ complex.area_from|default:"—" }}{% if complex.area_to %} - {{ complex.area_to }}{% endif %} м²</span>
+                                </div>
+                                {% if complex.rooms %}
+                                <div class="compact-detail-item">
+                                    <i class="fas fa-bed"></i>
+                                    <span>{{ complex.rooms }}-комн.</span>
+                                </div>
                                 {% endif %}
-                            </div>
-                        </div>
-                        <div class="card-price-section">
-                            <div class="main-price">
-                                <span class="price-label">от</span>
-                                <span class="price-value">{{ complex.price_from|floatformat:1 }}</span>
-                                <span class="price-currency">млн ₽</span>
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
-                    
-                                     <div class="card-location-info">
-                         <div class="location-text">
-                             Россия - {{ complex.city }} - {{ complex.district }} - {{ complex.street }}
-                         </div>
-                     </div>
-
-                     <div class="card-price-section" style="margin-top:8px;">
-                         <div class="main-price">
-                             <span class="price-label">от</span>
-                             <span class="price-value">{{ complex.price_from|floatformat:1 }}</span>
-                             <span class="price-currency">млн ₽</span>
-                         </div>
-                     </div>
-                     
-                     <div class="apartment-prices">
-                         <div class="price-row">
-                            <span class="room-type">Студия</span>
-                            <span class="room-price">от {{ complex.studio_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">1-комн.</span>
-                            <span class="room-price">от {{ complex.one_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">2-комн.</span>
-                            <span class="room-price">от {{ complex.two_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">3-комн.</span>
-                            <span class="room-price">от {{ complex.three_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">4-комн.+</span>
-                            <span class="room-price">от {{ complex.four_room_price|default:complex.price_from|floatformat:1 }} млн ₽</span>
-                        </div>
+                    <div class="compact-card-price">
+                        <div class="compact-price-text">от {{ complex.price_from|floatformat:1 }} млн ₽</div>
                     </div>
-                    
-
                 </div>
             </div>
             {% empty %}
@@ -403,6 +358,7 @@
                 {% endif %}
             </div>
             {% endfor %}
+            </div>
         </div>
 
         <!-- Пагинация -->
@@ -455,9 +411,6 @@
 .catalog-category.active, .catalog-category:hover { border-color: var(--c21-gold); color: var(--c21-gold); }
 .filter-chip { display:inline-block; padding:8px 14px; background: var(--c21-light); color: var(--c21-dark); border-radius: 999px; text-decoration: none; font-weight:600; }
 .filter-chip.active, .filter-chip:hover { background: var(--c21-dark); color: var(--c21-gold); }
-.view-toggle { margin-top: 12px; display:flex; gap:8px; justify-content:center; }
-.view-btn { padding:6px 12px; border-radius:999px; border:1px solid var(--c21-mid); background:#fff; cursor:pointer; font-weight:600; }
-.view-btn.active { background: var(--c21-dark); color: var(--c21-gold); border-color: var(--c21-dark); }
 </style>
 
 <script>
@@ -467,74 +420,64 @@ window.renderItems = function(data){
   const resultsCount = document.querySelector('.results-count');
   const isSecondary = '{{ dataset_type }}' === 'secondary';
   
-  // Для вторичной недвижимости всегда показываем списком
-  const currentView = isSecondary ? 'list' : (localStorage.getItem('catalog_view')||'list');
+  // Для вторичной недвижимости всегда показываем списком, для новостроек - карту + список
+  const currentView = isSecondary ? 'list' : 'map';
   
-  if (currentView === 'map'){
-    // карта
-    if (isSecondary) {
-      if (typeof renderMapPoints === 'function') {
-        renderMapPoints(data.items||[], true);
-      }
+  // Всегда рендерим и карту и список для новостроек
+  if (!isSecondary) {
+    // Новостройки: рендерим и карту и список
+    if (typeof renderMapPoints === 'function') {
+      renderMapPoints(data.complexes||[], false);
+    }
+    
+    const list = data.complexes || [];
+    if (!list.length) {
+      grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
     } else {
-      if (typeof renderMapPoints === 'function') {
-        renderMapPoints(data.complexes||[], false);
+      // Используем полноценный рендер с компактными карточками
+      if (typeof updateCatalog === 'function') {
+        updateCatalog(data);
       }
     }
   } else {
-    // списком
-    if (isSecondary) {
-      if (!data.items || !data.items.length) {
-        grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
-      } else {
-        grid.innerHTML = data.items.map(item => {
-          const imageUrl = item.image_url || '/media/gallery/placeholders.png';
-          const image2 = item.image_2_url || '/media/gallery/placeholders.png';
-          const image3 = item.image_3_url || '/media/gallery/placeholders.png';
-          const image4 = item.image_4_url || '/media/gallery/placeholders.png';
-          return `
-          <div class="property-card-large" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
-            <div class="card-images">
-              <div class="main-image">
-                <img src="${imageUrl}" alt="${item.name}">
-                <div class="image-counter">1 из 4</div>
-                <div class="image-nav">
-                  <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
-                  <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
-                </div>
-              </div>
-              <div class="thumbnail-images">
-                <div class="thumbnail active"><img src="${imageUrl}" alt="${item.name}"></div>
-                <div class="thumbnail"><img src="${image2}" alt="${item.name}"></div>
-                <div class="thumbnail"><img src="${image3}" alt="${item.name}"></div>
-                <div class="thumbnail more"><span>+1</span><img src="${image4}" alt="${item.name}"></div>
-              </div>
-            </div>
-            <div class="card-content-large">
-              <div class="card-header">
-                <div class="card-title-section"><h3 class="card-title">${item.name}</h3></div>
-                <div class="card-price-section">
-                  <div class="main-price"><span class="price-label">от</span><span class="price-value">${(item.price_from || 0).toFixed ? item.price_from.toFixed(1) : item.price_from}</span><span class="price-currency">млн ₽</span></div>
-                </div>
-              </div>
-              <div class="card-location-info"><div class="location-text">Россия - ${item.city} - ${item.district || ''} - ${item.street || ''}</div></div>
-            </div>
-          </div>`;
-        }).join('');
-        if (typeof initImageCarousel === 'function') { initImageCarousel(); }
+    // Вторичка: только список
+    if (currentView === 'map') {
+      if (typeof renderMapPoints === 'function') {
+        renderMapPoints(data.items||[], true);
       }
+    }
+    
+    if (!data.items || !data.items.length) {
+      grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
     } else {
-      const list = data.complexes || [];
-      if (!list.length) {
-        grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
-      } else {
-        // Используем полноценный рендер с миниатюрами и ценами
-        if (typeof updateCatalog === 'function') {
-          updateCatalog(data);
-        }
-        // Инициализируем карусель изображений после обновления разметки
-        if (typeof initImageCarousel === 'function') { initImageCarousel(); }
-      }
+      grid.innerHTML = data.items.map(item => {
+        const imageUrl = item.image_url || '/media/gallery/placeholders.png';
+        return `
+        <div class="property-card-compact" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
+          <div class="compact-card-image">
+            <img src="${imageUrl}" alt="${item.name}">
+          </div>
+          <div class="compact-card-content">
+            <div class="compact-card-header">
+              <h3 class="compact-card-title">${item.name}</h3>
+              <div class="compact-card-location">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>${item.city}${item.district ? ', ' + item.district : ''}</span>
+              </div>
+              <div class="compact-card-details">
+                <div class="compact-detail-item">
+                  <i class="fas fa-expand-arrows-alt"></i>
+                  <span>${item.area_from || '—'}${item.area_to ? ' - ' + item.area_to : ''} м²</span>
+                </div>
+                ${item.rooms ? `<div class="compact-detail-item"><i class="fas fa-bed"></i><span>${item.rooms}-комн.</span></div>` : ''}
+              </div>
+            </div>
+            <div class="compact-card-price">
+              <div class="compact-price-text">от ${(item.price_from || 0).toFixed ? item.price_from.toFixed(1) : item.price_from} млн ₽</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
     }
   }
   // Обновляем пагинацию под список
@@ -665,82 +608,31 @@ window.updateCatalog = function(data) {
         const image4 = complex.image_4_url || '/media/gallery/placeholders.png';
         
         html += `
-            <div class="property-card-large" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
-                <div class="card-images">
-                    <div class="main-image">
-                        <img src="${imageUrl}" alt="${complex.name}">
-                        <div class="image-counter">1 из 4</div>
-                        <div class="image-nav">
-                            <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
-                            <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                    <div class="thumbnail-images">
-                        <div class="thumbnail active">
-                            <img src="${imageUrl}" alt="${complex.name}">
-                        </div>
-                        <div class="thumbnail">
-                            <img src="${image2}" alt="${complex.name}">
-                        </div>
-                        <div class="thumbnail">
-                            <img src="${image3}" alt="${complex.name}">
-                        </div>
-                        <div class="thumbnail more">
-                            <span>+1</span>
-                            <img src="${image4}" alt="${complex.name}">
-                        </div>
-                    </div>
+            <div class="property-card-compact" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
+                <div class="compact-card-image">
+                    <img src="${imageUrl}" alt="${complex.name}">
                 </div>
                 
-                <div class="card-content-large">
-                    <div class="card-header">
-                        <div class="card-title-section">
-                            <h3 class="card-title">${complex.name}</h3>
-                            <div class="card-subtitle">
-                                ${complex.total_apartments || 100} квартир от застройщика
-                            </div>
-                            <div class="completion-info">
-                                ${complex.completion_start || '3 кв. 2024'} - ${complex.completion_end || '4 кв. 2025'}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card-location-info">
-                        <div class="location-text">
+                <div class="compact-card-content">
+                    <div class="compact-card-header">
+                        <h3 class="compact-card-title">${complex.name}</h3>
+                        <div class="compact-card-location">
                             <i class="fas fa-map-marker-alt"></i>
-                            <span>${complex.location} ${complex.commute_time}</span>
+                            <span>${complex.city || 'Уфа'}${complex.district ? ', ' + complex.district : ''}</span>
+                        </div>
+                        <div class="compact-card-details">
+                            <div class="compact-detail-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>${complex.completion_start || '3 кв. 2024'} - ${complex.completion_end || '4 кв. 2025'}</span>
+                            </div>
+                            <div class="compact-detail-item">
+                                <i class="fas fa-home"></i>
+                                <span>${complex.total_apartments || 100} квартир</span>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="card-price-section" style="margin-top:8px;">
-                        <div class="main-price">
-                            <span class="price-label">от</span>
-                            <span class="price-value">${(complex.price_from || 0).toFixed ? complex.price_from.toFixed(1) : (complex.price_display ? complex.price_display.replace('от ', '').replace(' млн Р', '') : '')}</span>
-                            <span class="price-currency">млн Р</span>
-                        </div>
-                    </div>
-                    
-                    <div class="apartment-prices">
-                        <div class="price-row">
-                            <span class="room-type">Студия</span>
-                            <span class="room-price">от ${complex.studio_price || (complex.price_from * 0.8).toFixed(1)} млн Р</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">1-комн.</span>
-                            <span class="room-price">от ${complex.one_room_price || complex.price_from} млн Р</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">2-комн.</span>
-                            <span class="room-price">от ${complex.two_room_price || (complex.price_from * 1.25).toFixed(1)} млн Р</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">3-комн.</span>
-                            <span class="room-price">от ${complex.three_room_price || (complex.price_from * 1.5).toFixed(1)} млн Р</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="room-type">4-комн. +</span>
-                            <span class="room-price">от ${complex.four_room_price || (complex.price_from * 2).toFixed(1)} млн Р</span>
-                        </div>
+                    <div class="compact-card-price">
+                        <div class="compact-price-text">от ${(complex.price_from || 0).toFixed ? complex.price_from.toFixed(1) : (complex.price_display ? complex.price_display.replace('от ', '').replace(' млн Р', '') : '3.2')} млн ₽</div>
                     </div>
                 </div>
             </div>
@@ -957,14 +849,27 @@ window.setView = function(view){
   }
   
   toggleBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-view')===view));
+  
+  // Всегда показываем оба элемента, но меняем порядок
   if (view === 'map') {
-    grid.style.display = 'none';
+    // Карта сверху, список снизу
     mapEl.style.display = 'block';
+    mapEl.style.order = '1';
+    grid.style.display = 'block';
+    grid.style.order = '2';
     if (!window.map) initMap();
     fetchData();
   } else {
-    mapEl.style.display = 'none';
-    grid.style.display = '';
+    // Список сверху, карта снизу (или скрыта для вторички)
+    if (isSecondary) {
+      mapEl.style.display = 'none';
+      grid.style.display = 'block';
+    } else {
+      mapEl.style.display = 'block';
+      mapEl.style.order = '2';
+      grid.style.display = 'block';
+      grid.style.order = '1';
+    }
     fetchData();
   }
   
@@ -1346,7 +1251,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (isSecondary) {
     setView('list');
   } else {
-    setView(savedView);
+    // По умолчанию показываем карту для новостроек
+    setView('map');
+    localStorage.setItem('catalog_view', 'map');
   }
 
 
@@ -1537,6 +1444,51 @@ document.addEventListener('DOMContentLoaded', function() {
         filtersSection.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
         
         observer.observe(filtersSection);
+    }
+    
+    // Принудительная инициализация для всех типов
+    const isSecondary = '{{ dataset_type }}' === 'secondary';
+    const mapEl = document.getElementById('map');
+    const grid = document.getElementById('catalog-grid');
+    
+    if (mapEl && grid) {
+        if (!isSecondary) {
+            // Новостройки: карта сверху, список снизу
+            mapEl.style.display = 'block';
+            mapEl.style.order = '1';
+            grid.style.display = 'block';
+            grid.style.order = '2';
+            
+            // Инициализируем карту если еще не инициализирована
+            if (!window.map && typeof initMap === 'function') {
+                initMap();
+            }
+            
+            // Загружаем данные для карты и списка
+            if (typeof fetchData === 'function') {
+                fetchData();
+            }
+            
+            // Устанавливаем активную кнопку "Картой"
+            const mapBtn = document.querySelector('.view-btn[data-view="map"]');
+            const listBtn = document.querySelector('.view-btn[data-view="list"]');
+            if (mapBtn && listBtn) {
+                mapBtn.classList.add('active');
+                listBtn.classList.remove('active');
+            }
+        } else {
+            // Вторичка: только список, карта скрыта
+            mapEl.style.display = 'none';
+            grid.style.display = 'block';
+            
+            // Устанавливаем активную кнопку "Списком"
+            const mapBtn = document.querySelector('.view-btn[data-view="map"]');
+            const listBtn = document.querySelector('.view-btn[data-view="list"]');
+            if (mapBtn && listBtn) {
+                listBtn.classList.add('active');
+                mapBtn.classList.remove('active');
+            }
+        }
     }
 });
 </script>
