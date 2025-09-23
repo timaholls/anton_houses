@@ -120,9 +120,9 @@
                             <button class="quick-action-btn" data-action="question">
                                 Задать вопрос
                             </button>
-                            <button class="quick-action-btn" data-action="feedback">
-                                Фидбэк по сайту
-                            </button>
+                            <a class="quick-action-btn" href="tel:{% if head_office and head_office.phone %}{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}{% else %}+73472019478{% endif %}" data-action="call">
+                                Позвонить
+                            </a>
                         </div>
                     </div>
                 </div>

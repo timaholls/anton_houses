@@ -228,6 +228,10 @@ class ResidentialComplex(models.Model):
     three_room_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена 3-комнатной (млн)")
     four_room_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена 4+ комнатной (млн)")
     
+    # Витрина каталога: подсветки
+    highlight_sale = models.BooleanField(default=False, verbose_name='Подсветить как акцию')
+    highlight_recommended = models.BooleanField(default=False, verbose_name='Подсветить как рекомендуюмую')
+    
     is_featured = models.BooleanField(default=False, verbose_name="Популярный")
     agent = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='residential_complexes', verbose_name="Ответственный агент")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
@@ -514,6 +518,10 @@ class SecondaryProperty(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     latitude = models.FloatField(null=True, blank=True, verbose_name='Широта')
     longitude = models.FloatField(null=True, blank=True, verbose_name='Долгота')
+    
+    # Витрина каталога: подсветки
+    highlight_sale = models.BooleanField(default=False, verbose_name='Подсветить как акцию')
+    highlight_recommended = models.BooleanField(default=False, verbose_name='Подсветить как рекомендуюмую')
 
     class Meta:
         verbose_name = 'Вторичная недвижимость'

@@ -262,6 +262,8 @@ def catalog_api(request):
             'four_room_price': complex.four_room_price,
             'lat': complex.latitude,
             'lng': complex.longitude,
+            'highlight_sale': getattr(complex, 'highlight_sale', False),
+            'highlight_recommended': getattr(complex, 'highlight_recommended', False),
         })
     
     return JsonResponse({
@@ -876,9 +878,11 @@ def detail(request, complex_id):
         'complex_offers': complex_offers,
         'video': video,
         'video_embed_url': video_embed_url,
+        'videos': getattr(complex, 'get_videos', lambda: [])() if hasattr(complex, 'get_videos') else [],
         'mortgage_programs': mortgage_programs,
         'agent': agent,
         'agent_other_properties': agent_other_properties,
+        'is_secondary': False,
     }
     return render(request, 'main/detail.html', context)
 
@@ -906,7 +910,13 @@ def secondary_detail(request, pk: int):
     complex.get_house_type_display = obj.get_house_type_display if hasattr(obj, 'get_house_type_display') else lambda: ''
     complex.get_finishing_display = lambda: ''
 
-    return render(request, 'main/detail.html', {'complex': complex, 'similar_complexes': []})
+    return render(request, 'main/detail.html', {
+        'complex': complex,
+        'similar_complexes': [],
+        'is_secondary': True,
+        'mortgage_programs': [],
+        'videos': obj.get_videos(),
+    })
 
 def secondary_api(request):
     """API для вторичной недвижимости (AJAX)"""
@@ -990,6 +1000,8 @@ def secondary_api(request):
             'image_4_url': image_4_url,
             'lat': obj.latitude,
             'lng': obj.longitude,
+            'highlight_sale': getattr(obj, 'highlight_sale', False),
+            'highlight_recommended': getattr(obj, 'highlight_recommended', False),
         })
 
     return JsonResponse({

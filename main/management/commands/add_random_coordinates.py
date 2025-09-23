@@ -1,11 +1,11 @@
 import random
 from django.core.management.base import BaseCommand
 from django.db import models
-from main.models import ResidentialComplex, SecondaryProperty
+from main.models import ResidentialComplex, SecondaryProperty, BranchOffice
 
 
 class Command(BaseCommand):
-    help = 'Добавляет случайные координаты районов Уфы для ЖК и вторичной недвижимости'
+    help = 'Добавляет случайные координаты районов Уфы для ЖК, вторички и офисов продаж'
 
     def handle(self, *args, **options):
         # Примерные координаты разных районов Уфы
@@ -41,48 +41,53 @@ class Command(BaseCommand):
             (54.7020, 55.9340),
         ]
         
+        def randomize_coords():
+            lat, lng = random.choice(ufa_districts)
+            lat += random.uniform(-0.01, 0.01)
+            lng += random.uniform(-0.01, 0.01)
+            return round(lat, 6), round(lng, 6)
+        
         # Обновляем координаты для жилых комплексов
         complexes = ResidentialComplex.objects.filter(
             models.Q(latitude__isnull=True) | models.Q(longitude__isnull=True)
         )
-        
         updated_complexes = 0
         for complex in complexes:
-            # Выбираем случайные координаты из списка
-            lat, lng = random.choice(ufa_districts)
-            # Добавляем небольшое случайное отклонение (±0.01 градуса ≈ ±1км)
-            lat += random.uniform(-0.01, 0.01)
-            lng += random.uniform(-0.01, 0.01)
-            
-            complex.latitude = round(lat, 6)
-            complex.longitude = round(lng, 6)
-            complex.save()
+            lat, lng = randomize_coords()
+            complex.latitude = lat
+            complex.longitude = lng
+            complex.save(update_fields=['latitude', 'longitude'])
             updated_complexes += 1
-            
             self.stdout.write(f'ЖК "{complex.name}": {complex.latitude}, {complex.longitude}')
         
         # Обновляем координаты для вторичной недвижимости
         properties = SecondaryProperty.objects.filter(
             models.Q(latitude__isnull=True) | models.Q(longitude__isnull=True)
         )
-        
         updated_properties = 0
         for property in properties:
-            # Выбираем случайные координаты из списка
-            lat, lng = random.choice(ufa_districts)
-            # Добавляем небольшое случайное отклонение
-            lat += random.uniform(-0.01, 0.01)
-            lng += random.uniform(-0.01, 0.01)
-            
-            property.latitude = round(lat, 6)
-            property.longitude = round(lng, 6)
-            property.save()
+            lat, lng = randomize_coords()
+            property.latitude = lat
+            property.longitude = lng
+            property.save(update_fields=['latitude', 'longitude'])
             updated_properties += 1
-            
             self.stdout.write(f'Вторичка "{property.name}": {property.latitude}, {property.longitude}')
+        
+        # Обновляем координаты для офисов продаж
+        offices = BranchOffice.objects.filter(
+            models.Q(latitude__isnull=True) | models.Q(longitude__isnull=True)
+        )
+        updated_offices = 0
+        for office in offices:
+            lat, lng = randomize_coords()
+            office.latitude = lat
+            office.longitude = lng
+            office.save(update_fields=['latitude', 'longitude'])
+            updated_offices += 1
+            self.stdout.write(f'Офис "{office.name}": {office.latitude}, {office.longitude}')
         
         self.stdout.write(
             self.style.SUCCESS(
-                f'Обновлено координат: {updated_complexes} ЖК, {updated_properties} вторичных объектов'
+                f'Обновлено координат: {updated_complexes} ЖК, {updated_properties} вторичных объектов, {updated_offices} офисов'
             )
         )

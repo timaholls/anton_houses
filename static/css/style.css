@@ -112,8 +112,8 @@ body {
 }
 
 .logo-slogan {
-    font-size: 12px;
-    font-weight: 400;
+    font-size: 19.5px;
+    font-weight: 700;
     color: #0066cc !important;
     text-decoration: none;
     white-space: nowrap;
@@ -3218,7 +3218,7 @@ body {
     }
     
     .logo-slogan {
-        font-size: 10px;
+        font-size: 12px;
         margin-top: -1px;
     }
     
@@ -5664,6 +5664,8 @@ body {
     opacity: 1 !important;
     display: block !important;
     visibility: visible !important;
+    font-size: 19.5px;
+    font-weight: 700;
 }
 
 .main-nav .nav-link {
@@ -6549,5 +6551,523 @@ a:hover { color: var(--c21-gold); }
     .quick-action-btn {
         padding: 10px 12px;
         font-size: 12px;
+    }
+}
+
+/* Стили для кнопки "Перейти в каталог ЖК" */
+.btn-catalog {
+    background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+    color: var(--c21-dark);
+    border: 2px solid var(--c21-gold);
+    padding: 16px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 50px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 20px rgba(190, 175, 135, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-catalog::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-catalog:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(190, 175, 135, 0.4);
+    background: linear-gradient(135deg, var(--c21-gold-dark) 0%, var(--c21-gold) 100%);
+}
+
+.btn-catalog:hover::before {
+    left: 100%;
+}
+
+.btn-catalog:active {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(190, 175, 135, 0.3);
+}
+
+.btn-catalog i {
+    font-size: 18px;
+    transition: transform 0.3s ease;
+}
+
+.btn-catalog:hover i {
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .btn-catalog {
+        padding: 14px 28px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-catalog {
+        padding: 12px 24px;
+        font-size: 14px;
+        gap: 10px;
+    }
+    
+    .btn-catalog i {
+        font-size: 16px;
+    }
+}
+
+/* Стили для нового ипотечного калькулятора */
+.mortgage-calculator {
+    margin: 32px 0;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid rgba(190, 175, 135, 0.1);
+}
+
+.calculator-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 380px;
+}
+
+.calculator-settings {
+    padding: 24px;
+    background: #ffffff;
+    border-right: 1px solid rgba(190, 175, 135, 0.1);
+}
+
+.calculator-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.calculator-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.calculator-title i {
+    color: var(--c21-gold);
+    font-size: 18px;
+}
+
+.calculator-note {
+    color: var(--c21-gold);
+    font-weight: 600;
+}
+
+.calculator-subtitle {
+    color: #666;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--c21-dark);
+    margin: 0;
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+.form-select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--c21-light);
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--c21-dark);
+    font-size: 15px;
+    font-weight: 500;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--c21-gold);
+    box-shadow: 0 0 0 3px rgba(190, 175, 135, 0.1);
+}
+
+.select-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--c21-gold);
+    pointer-events: none;
+    font-size: 14px;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--c21-light);
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--c21-dark);
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--c21-gold);
+    box-shadow: 0 0 0 3px rgba(190, 175, 135, 0.1);
+}
+
+.form-input-small {
+    width: 80px;
+    text-align: center;
+}
+
+.input-currency,
+.input-unit {
+    position: absolute;
+    right: 16px;
+    color: var(--c21-gold);
+    font-weight: 600;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.range-wrapper {
+    position: relative;
+    margin-top: 8px;
+}
+
+.form-range {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--c21-light);
+    outline: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+
+.form-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--c21-gold);
+    border: 3px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(190, 175, 135, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.form-range::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(190, 175, 135, 0.4);
+}
+
+.form-range::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--c21-gold);
+    border: 3px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(190, 175, 135, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.range-percentage {
+    position: absolute;
+    right: 0;
+    top: -8px;
+    color: var(--c21-gold);
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.calculator-results {
+    padding: 24px;
+    background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+    color: var(--c21-dark);
+    display: flex;
+    flex-direction: column;
+}
+
+.results-header {
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.results-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--c21-dark);
+}
+
+.results-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.result-item:last-child {
+    border-bottom: none;
+}
+
+.main-result {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 16px;
+    margin: -4px 0 12px 0;
+    border: none;
+}
+
+.result-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--c21-dark);
+    opacity: 0.8;
+}
+
+.result-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c21-dark);
+}
+
+.main-result .result-value {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.bank-logos {
+    text-align: center;
+    margin: 16px 0;
+}
+
+.bank-logos-img {
+    height: 36px;
+    width: auto;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.bank-logos-img:hover {
+    opacity: 1;
+}
+
+.results-actions {
+    margin-bottom: 12px;
+}
+
+.results-actions .btn-catalog {
+    background: linear-gradient(135deg, var(--c21-dark) 0%, #2c2c2c 100%);
+    color: #ffffff;
+    border: 2px solid var(--c21-dark);
+    box-shadow: 0 4px 16px rgba(44, 44, 44, 0.3);
+}
+
+.results-actions .btn-catalog:hover {
+    background: linear-gradient(135deg, #2c2c2c 0%, var(--c21-dark) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(44, 44, 44, 0.4);
+}
+
+.results-actions .btn-catalog i {
+    color: #ffffff;
+}
+
+.calculator-disclaimer {
+    font-size: 12px;
+    color: var(--c21-dark);
+    opacity: 0.7;
+    text-align: center;
+    line-height: 1.4;
+    font-style: italic;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .calculator-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .calculator-settings {
+        border-right: none;
+        border-bottom: 1px solid rgba(190, 175, 135, 0.1);
+    }
+    
+    .calculator-results {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .mortgage-calculator {
+        margin: 20px 0;
+        border-radius: 16px;
+    }
+    
+    .calculator-settings,
+    .calculator-results {
+        padding: 20px;
+    }
+    
+    .calculator-title {
+        font-size: 18px;
+    }
+    
+    .settings-form {
+        gap: 16px;
+    }
+    
+    .form-input,
+    .form-select {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    
+    .result-value {
+        font-size: 15px;
+    }
+    
+    .main-result .result-value {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .calculator-settings,
+    .calculator-results {
+        padding: 16px;
+    }
+    
+    .calculator-title {
+        font-size: 16px;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .settings-form {
+        gap: 14px;
+    }
+    
+    .form-input,
+    .form-select {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+    
+    .form-input-small {
+        width: 65px;
+    }
+    
+    .result-value {
+        font-size: 13px;
+    }
+    
+    .main-result .result-value {
+        font-size: 18px;
+    }
+    
+    .bank-logos-img {
+        height: 28px;
+    }
+}
+
+/* Каталог: подсветки карточек */
+.property-card-compact.highlight-sale {
+    border: 2px solid #d9534f !important; /* красный акцент */
+    box-shadow: 0 8px 24px rgba(217, 83, 79, 0.15) !important;
+    position: relative;
+}
+.property-card-compact.highlight-sale::after {
+    content: 'АКЦИЯ';
+    position: absolute;
+    top: 10px; left: 10px;
+    background: linear-gradient(135deg, #e57373, #d32f2f);
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    letter-spacing: .5px;
+}
+
+.property-card-compact.highlight-recommended {
+    border: 2px solid var(--c21-gold) !important; /* фирменное золото */
+    box-shadow: 0 8px 24px rgba(190, 175, 135, 0.18) !important;
+    position: relative;
+}
+.property-card-compact.highlight-recommended::after {
+    content: 'РЕКОМЕНДУЕМ';
+    position: absolute;
+    top: 10px; left: 10px;
+    background: linear-gradient(135deg, var(--c21-gold), var(--c21-gold-dark));
+    color: var(--c21-dark);
+    font-weight: 800;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: .5px;
+}
+
+@media (max-width: 768px) {
+    .property-card-compact.highlight-sale::after,
+    .property-card-compact.highlight-recommended::after {
+        top: 8px; left: 8px; font-size: 11px; padding: 3px 8px;
     }
 }

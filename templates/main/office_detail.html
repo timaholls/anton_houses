@@ -31,31 +31,42 @@
             <div class="card-content">
                 <div class="card-location">
                     <i class="fas fa-location-dot"></i>
-                    <span>{{ office.city }}, {{ office.address }}</span>
+                    <span class="office-info-strong">{{ office.city }}, {{ office.address }}</span>
                 </div>
-                <div class="card-location" style="margin-top:6px;">
+                <div class="card-location" style="margin-top:10px;">
                     <i class="fas fa-clock"></i>
-                    <span>{{ office.schedule|default:"График работы уточняйте по телефону" }}</span>
+                    <span class="office-info-strong">{{ office.schedule|default:"График работы уточняйте по телефону" }}</span>
                 </div>
-                <div class="card-location" style="margin-top:6px;">
+                <div class="card-location" style="margin-top:10px;">
                     <i class="fas fa-phone"></i>
-                    <span>{{ office.phone|default:"—" }}</span>
+                    <a class="office-info-strong" href="tel:{{ office.phone|default:''|cut:' '|cut:'-'|cut:'('|cut:')' }}">{{ office.phone|default:"—" }}</a>
                 </div>
-                <div class="card-location" style="margin-top:6px;">
+                <div class="card-location" style="margin-top:10px;">
                     <i class="fas fa-envelope"></i>
-                    <span>{{ office.email|default:"—" }}</span>
+                    <a class="office-info-strong" href="mailto:{{ office.email|default:'' }}">{{ office.email|default:"—" }}</a>
                 </div>
                 {% if office.description %}
-                <div class="article-excerpt" style="margin-top:12px;">{{ office.description|safe }}</div>
+                <div class="article-excerpt" style="margin-top:14px;">{{ office.description|safe }}</div>
                 {% endif %}
             </div>
         </div>
+
+        {% if office.latitude and office.longitude %}
+        <div class="office-map-section" style="margin: 24px 0;">
+            <div class="section-header" style="text-align:center; margin-bottom:16px;">
+                <h2 class="section-title">Карта расположения офиса</h2>
+                <p class="section-subtitle">{{ office.city }}, {{ office.address }}</p>
+            </div>
+            <div class="map-wrapper" style="border-radius:14px; overflow:hidden; border:1px solid #e8e8e8; box-shadow:0 8px 28px rgba(0,0,0,.08);">
+                <div id="branch-office-map" style="width:100%; height:420px;"></div>
+            </div>
+        </div>
+        {% endif %}
 
         {% if employees %}
         <div class="employees-section" style="margin-top:32px;">
             <div class="section-header">
                 <h2 class="section-title">Сотрудники офиса</h2>
-                <p class="section-subtitle">Наши специалисты в {{ office.name }}</p>
             </div>
             
             <!-- Сотрудники -->
@@ -116,6 +127,17 @@
     width: 100%;
 }
 
+/* Усиленная видимость информации офиса */
+.card-content { padding: 16px; }
+.card-location { 
+    display:flex; align-items:center; gap:12px;
+    background:#ffffff; border:1px solid var(--c21-light); 
+    padding:12px 14px; border-radius:10px; color:var(--c21-dark);
+}
+.card-location i { color: var(--c21-gold); font-size: 18px; width: 20px; }
+.office-info-strong { font-size: 18px; font-weight: 700; color: var(--c21-dark); text-decoration:none; }
+.office-info-strong:hover { color: var(--c21-gold); }
+
 .employee-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
@@ -137,10 +159,6 @@
 
 .btn-primary:hover {
     background: linear-gradient(135deg, #A89A6F 0%, #BEAF87 100%);
-    color: #252526;
-    text-decoration: none;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(190,175,135,0.4);
 }
 
 .btn-primary.btn-small {
@@ -159,4 +177,29 @@
     align-items: center;
 }
 </style>
+
+{% if office.latitude and office.longitude %}
+<script>
+// Инициализация карты филиала
+(function(){
+    function initBranchMap(){
+        var el = document.getElementById('branch-office-map');
+        if (!el) return;
+        if (typeof L === 'undefined') { setTimeout(initBranchMap, 200); return; }
+        try {
+            var coords = [{{ office.latitude }}, {{ office.longitude }}];
+            var map = L.map('branch-office-map', { attributionControl: false, zoomControl: true, scrollWheelZoom: true });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+            map.setView(coords, 15);
+            var marker = L.marker(coords).addTo(map);
+            marker.bindPopup(`<div style="text-align:center;padding:6px 0;">
+                <strong>{{ office.name|escape }}</strong><br/>
+                <span>{{ office.city }}, {{ office.address }}</span>
+            </div>`);
+        } catch(e){ console.error('Ошибка инициализации карты офиса:', e); }
+    }
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(initBranchMap, 100); });
+})();
+</script>
+{% endif %}
 {% endblock %} 

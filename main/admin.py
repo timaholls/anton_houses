@@ -12,55 +12,42 @@ from .models import MortgageProgram, SpecialOffer
 
 @admin.register(ResidentialComplex)
 class ResidentialComplexAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'city', 'district', 'price_from', 'house_class', 'status', 'is_featured', 'agent']
-    list_filter = ['house_class', 'status', 'is_featured', 'city', 'finishing', 'agent']
-    search_fields = ['name', 'city', 'district', 'street', 'agent__full_name']
-    list_editable = ['is_featured', 'price_from', 'agent']
-    readonly_fields = ['created_at']
+    list_display = ['id', 'name', 'city', 'district', 'price_from', 'status']
+    list_filter = ['city', 'status', 'house_class']
+    search_fields = ['name', 'city', 'district']
     
     fieldsets = (
         ('Основная информация', {
-            'fields': ('name', 'price_from', 'city', 'district', 'street', 'commute_time')
-        }),
-        ('Характеристики', {
-            'fields': ('house_type', 'area_from', 'area_to', 'house_class', 'finishing', 'rooms', 'status')
-        }),
-        ('Детальная информация', {
-            'fields': ('total_apartments', 'completion_start', 'completion_end', 'has_completed', 'developer')
-        }),
-        ('Цены по типам квартир', {
-            'fields': ('studio_price', 'one_room_price', 'two_room_price', 'three_room_price', 'four_room_price')
-        }),
-        ('Настройки', {
-            'fields': ('is_featured', 'delivery_date', 'agent')
+            'fields': ('name', 'city', 'district', 'street', 'commute_time', 'price_from', 'delivery_date', 'status', 'house_class', 'finishing', 'rooms')
         }),
         ('Координаты', {
             'fields': ('latitude', 'longitude'),
             'classes': ('collapse',)
+        }),
+        ('Детали', {
+            'fields': ('total_apartments', 'completion_start', 'completion_end', 'developer', 'studio_price', 'one_room_price', 'two_room_price', 'three_room_price', 'four_room_price')
+        }),
+        ('Витрина каталога', {
+            'fields': ('highlight_sale', 'highlight_recommended')
         }),
     )
 
 @admin.register(SecondaryProperty)
 class SecondaryPropertyAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'house_type', 'city', 'district', 'price', 'agent']
-    list_filter = ['house_type', 'city', 'agent']
-    search_fields = ['name', 'city', 'district', 'street', 'agent__full_name']
-    list_editable = ['agent']
-    readonly_fields = ['created_at']
+    list_display = ['id', 'name', 'price', 'city', 'district', 'house_type']
+    list_filter = ['city', 'house_type']
+    search_fields = ['name', 'city', 'district']
     
     fieldsets = (
         ('Основная информация', {
-            'fields': ('name', 'price', 'city', 'district', 'street', 'commute_time')
-        }),
-        ('Характеристики', {
-            'fields': ('house_type', 'area', 'rooms', 'description')
-        }),
-        ('Настройки', {
-            'fields': ('agent', 'created_at')
+            'fields': ('name', 'price', 'city', 'district', 'street', 'commute_time', 'house_type', 'area', 'rooms', 'description', 'agent')
         }),
         ('Координаты', {
             'fields': ('latitude', 'longitude'),
             'classes': ('collapse',)
+        }),
+        ('Витрина каталога', {
+            'fields': ('highlight_sale', 'highlight_recommended')
         }),
     )
 
