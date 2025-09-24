@@ -29,7 +29,8 @@ def home(request):
         company_gallery = company_info.get_images()[:6]
     # Статьи для главной
     home_articles = Article.objects.filter(show_on_home=True).order_by('-published_date')[:3]
-    # Акции для главной - случайные 6 активных предложений
+    
+    # Акции для главной - случайные 4 активных предложения
     offers = SpecialOffer.get_active_offers(limit=4)
     
     context = {
