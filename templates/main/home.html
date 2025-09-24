@@ -214,20 +214,7 @@
         .carousel-dot.active{background:var(--c21-gold);transform:scale(1.2)}
         .carousel-dot:hover{background:var(--c21-gold);opacity:.7}
         
-        @media(max-width: 768px){
-            .offer-slide{flex:0 0 50%;padding:0 6px}
-            .offer-card{grid-template-columns:100px 1fr;gap:8px;height:160px;padding:8px}
-            .offer-media{aspect-ratio:3/2;min-height:60px}
-            .offer-content{min-height:60px}
-            .offer-title{font-size:13px}
-        }
-        @media(max-width: 480px){
-            .offer-slide{flex:0 0 100%;padding:0 4px}
-            .offer-card{grid-template-columns:1fr;height:auto;padding:8px}
-            .offer-media{aspect-ratio:16/9;min-height:120px}
-            .offer-content{min-height:auto}
-            .offer-title{font-size:14px}
-        }
+        
          
          /* Секция кнопки "Посмотреть все акции" */
          .offers-more-section {
@@ -326,8 +313,42 @@
                         }
                     });
                 }
+
+                // На мобильных: при достижении края загружаем следующую/предыдущую страницу
+                if (window.innerWidth < 992) {
+                    const scroller = document.querySelector('.offers-carousel');
+                    if (scroller) {
+                        let isPaging = false; // защита от дребезга
+                        scroller.addEventListener('scroll', function() {
+                            if (isPaging) return;
+                            const nearRight = scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 3;
+                            const nearLeft = scroller.scrollLeft <= 3;
+                            if (nearRight && currentPage < totalPages - 1) {
+                                isPaging = true;
+                                currentPage += 1;
+                                // начинаем новую страницу с первой карточки, без авто-долистывания
+                                updateOfferCards(currentPage);
+                                updateActiveDot(currentPage);
+                                scroller.classList.add('no-snap');
+                                scroller.scrollLeft = 0;
+                                setTimeout(() => scroller.classList.remove('no-snap'), 50);
+                                setTimeout(() => { isPaging = false; }, 120);
+                            } else if (nearLeft && currentPage > 0) {
+                                isPaging = true;
+                                currentPage -= 1;
+                                // начинаем страницу с первой карточки
+                                updateOfferCards(currentPage);
+                                updateActiveDot(currentPage);
+                                scroller.classList.add('no-snap');
+                                scroller.scrollLeft = 0;
+                                setTimeout(() => scroller.classList.remove('no-snap'), 50);
+                                setTimeout(() => { isPaging = false; }, 120);
+                            }
+                        });
+                    }
+                }
                 function autoSlide() {
-                    if (totalPages > 1) {
+                    if (totalPages > 1 && window.innerWidth >= 992) {
                         currentPage = (currentPage + 1) % totalPages;
                         updateOfferCards(currentPage);
                         updateActiveDot(currentPage);
@@ -335,7 +356,7 @@
                 }
                 updateOfferCards(0);
                 updateActiveDot(0);
-                if (totalPages > 1) {
+                if (totalPages > 1 && window.innerWidth >= 992) {
                     setInterval(autoSlide, 8000);
                 }
             } catch (error) {
@@ -354,8 +375,7 @@
         <style>
         /* Улучшенный грид карточек */
         .home-grid{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:18px}
-        @media(max-width:1100px){.home-grid{grid-template-columns:repeat(2,minmax(240px,1fr))}}
-        @media(max-width:720px){.home-grid{grid-template-columns:1fr}}
+        
         /* Карточка */
         .home-property-card{background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:transform .2s ease, box-shadow .2s ease}
         .home-property-card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(0,0,0,.12)}
@@ -714,75 +734,7 @@
 }
 
 /* Адаптивность для слайд-шоу */
-@media (max-width: 768px) {
-    .company-gallery-slider {
-        height: 300px;
-        border-radius: 16px;
-        margin-left: 10px;
-    }
-    
-    .slider-btn {
-        width: 35px;
-        height: 35px;
-    }
-    
-    .prev-btn {
-        left: 10px;
-    }
-    
-    .next-btn {
-        right: 10px;
-    }
-    
-    .slide-caption {
-        padding: 15px;
-    }
-    
-    .slide-caption h4 {
-        font-size: 1rem;
-    }
-    
-    .slide-caption p {
-        font-size: 0.8rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .company-gallery-slider {
-        height: 250px;
-        border-radius: 12px;
-        margin-left: 0;
-    }
-    
-    .slide img {
-        border-radius: 12px;
-    }
-    
-    .slider-btn {
-        width: 30px;
-        height: 30px;
-    }
-    
-    .prev-btn {
-        left: 8px;
-    }
-    
-    .next-btn {
-        right: 8px;
-    }
-    
-    .slide-caption {
-        padding: 12px;
-    }
-    
-    .slide-caption h4 {
-        font-size: 0.9rem;
-    }
-    
-    .slide-caption p {
-        font-size: 0.7rem;
-    }
-}
+ 
 </style>
 
 <script>
@@ -935,19 +887,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         observer.observe(aboutSection);
         
-        // Легкий эффект параллакса только после завершения анимации печатной машинки
+        // Отключен эффект параллакса при прокрутке: изображение не «следит» за скроллом
         window.addEventListener('scroll', function() {
-            if (!isTypewriterActive) {
-                const scrolled = window.pageYOffset;
-                const aboutSectionTop = aboutSection.offsetTop;
-                const aboutSectionHeight = aboutSection.offsetHeight;
-                
-                if (scrolled >= aboutSectionTop - window.innerHeight && 
-                    scrolled <= aboutSectionTop + aboutSectionHeight) {
-                    const rate = (scrolled - aboutSectionTop) * 0.1;
-                    aboutImage.style.transform = `perspective(1000px) rotateY(-5deg) translateY(${rate}px)`;
-                }
-            }
+            // без действий — фиксированное изображение
         });
     }
     
@@ -1087,38 +1029,6 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 8px 24px rgba(0,0,0,0.1);
 }
 
-@media (max-width: 768px) {
-    .office-map-container {
-        grid-template-columns: 1fr;
-        gap: 24px;
-    }
-    
-    .office-info-card {
-        padding: 24px;
-        order: 2;
-    }
-    
-    .map-wrapper {
-        order: 1;
-    }
-    
-    #home-office-map {
-        height: 300px !important;
-    }
-}
-
-@media (max-width: 480px) {
-    .office-info-card {
-        padding: 20px;
-    }
-    
-    .office-info-card h3 {
-        font-size: 20px;
-    }
-    
-    .contact-item {
-        font-size: 14px;
-    }
-}
+ 
 </style>
 {% endblock %}

@@ -29,8 +29,16 @@
             <div class="video-player-container">
                 {% if video_embed_url %}
                     <div class="video-embed">
-                        <!-- Создаем iframe с полученным URL -->
-                        <iframe src="{{ video_embed_url|safe }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <!-- Responsive Rutube/YouTube embed -->
+                        <iframe src="{{ video_embed_url|safe }}"
+                                frameborder="0"
+                                allow="autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                loading="lazy"
+                                allowfullscreen></iframe>
+                        <noscript>
+                            <p><a href="{{ video_embed_url|safe }}" target="_blank" rel="noopener">Смотреть видео</a></p>
+                        </noscript>
                     </div>
                 {% elif video.video_url %}
                     <iframe src="{{ video.video_url|safe }}" class="video-player" frameborder="0" allowfullscreen></iframe>
@@ -517,97 +525,6 @@
     font-size: 0.9rem;
 }
 
-/* Адаптивность */
-@media (max-width: 1024px) {
-    .video-detail-layout {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .video-sidebar {
-        position: static;
-        order: -1;
-    }
-    
-    .sidebar-videos {
-        max-height: none;
-    }
-}
-
-@media (max-width: 768px) {
-    .video-title {
-        font-size: 1.5rem;
-    }
-    
-    .video-meta {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .complex-link-btn {
-        padding: 0.75rem 1.5rem;
-        font-size: 0.9rem;
-    }
-    
-    .similar-videos-full-section {
-        padding: 2rem 0;
-    }
-    
-    .similar-videos-full-section .section-title {
-        font-size: 1.5rem;
-    }
-    
-    .similar-videos-full-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .sidebar-video-card {
-        padding: 0.5rem;
-    }
-    
-    .sidebar-video-image {
-        width: 60px;
-        height: 45px;
-    }
-    
-    .sidebar-video-title {
-        font-size: 0.8rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .video-header {
-        padding: 1rem;
-    }
-    
-    .video-title {
-        font-size: 1.3rem;
-    }
-    
-    .video-description,
-    .complex-link-section {
-        padding: 1rem;
-    }
-    
-    .complex-link-btn {
-        padding: 0.75rem 1rem;
-        font-size: 0.85rem;
-        gap: 0.5rem;
-    }
-    
-    .similar-videos-full-section {
-        padding: 1.5rem 0;
-    }
-    
-    .similar-videos-full-section .section-title {
-        font-size: 1.3rem;
-    }
-    
-    .similar-videos-full-section .section-subtitle {
-        font-size: 1rem;
-    }
-}
+/* Адаптивность вынесена в static/css/mobile.css */
 </style>
 {% endblock %} 

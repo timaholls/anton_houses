@@ -108,4 +108,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // Mobile off-canvas menu
+    const mobileToggle = document.querySelector('.mobile-menu-toggle');
+    const mobileDrawer = document.getElementById('mobile-drawer');
+    const mobileClose = document.querySelector('.mobile-menu-close');
+    function openMobile(){ if (mobileDrawer){ mobileDrawer.classList.add('open'); document.body.style.overflow='hidden'; } }
+    function closeMobile(){ if (mobileDrawer){ mobileDrawer.classList.remove('open'); document.body.style.overflow=''; } }
+    if (mobileToggle) mobileToggle.addEventListener('click', openMobile);
+    if (mobileClose) mobileClose.addEventListener('click', closeMobile);
+    if (mobileDrawer) mobileDrawer.addEventListener('click', function(e){ if (e.target === mobileDrawer) closeMobile(); });
 }); 

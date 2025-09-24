@@ -257,19 +257,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 4000);
     }
 
-    // Эффект параллакса для фона формы
-    window.addEventListener('scroll', function() {
-        const feedbackSection = document.querySelector('.feedback-section');
-        if (feedbackSection) {
-            const rect = feedbackSection.getBoundingClientRect();
-            const scrolled = window.pageYOffset;
-            
-            // Применяем параллакс только когда секция видна в viewport
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                const rate = (scrolled - rect.top) * 0.05;
-                feedbackSection.style.transform = `translateY(${rate}px)`;
-            }
+    // Эффект параллакса для фона формы — только на экранах >= 769px
+    function bindParallax() {
+        if (window.innerWidth < 769) {
+            const section = document.querySelector('.feedback-section');
+            if (section) section.style.transform = 'none';
+            return;
         }
-    });
+        window.addEventListener('scroll', function() {
+            const feedbackSection = document.querySelector('.feedback-section');
+            if (feedbackSection) {
+                const rect = feedbackSection.getBoundingClientRect();
+                const scrolled = window.pageYOffset;
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    const rate = (scrolled - rect.top) * 0.05;
+                    feedbackSection.style.transform = `translateY(${rate}px)`;
+                }
+            }
+        });
+    }
+    bindParallax();
+    window.addEventListener('resize', bindParallax);
 });
 </script> 

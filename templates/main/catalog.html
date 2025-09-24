@@ -5,98 +5,18 @@
 
 {% block extra_css %}
 <style>
-/* Специальные исправления для страницы каталога ЖК */
-.catalog-section ~ .feedback-wrapper {
-    margin-top: 100px !important;
-    padding: 120px 0 250px 0 !important;
-}
-
-.catalog-section ~ .feedback-wrapper .feedback-container {
-    margin-bottom: 200px !important;
-}
-
-.catalog-section ~ .footer-transition {
-    padding-top: 200px !important;
-}
-
-.catalog-section ~ .footer-transition .deco-logo.on-dark {
-    top: 40px !important;
-    z-index: 200 !important;
-}
-
-.catalog-section ~ .footer .footer-content {
-    margin-top: 120px !important;
-}
-
-.catalog-section {
-    margin-bottom: 30px !important;
-}
-
-.catalog-grid {
-    margin-bottom: 30px !important;
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 24px !important;
-}
-
-/* Адаптивность для каталога */
-@media (max-width: 1200px) {
-    .catalog-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 20px !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .catalog-grid {
-        grid-template-columns: 1fr !important;
-        gap: 16px !important;
-    }
-}
-
-.pagination-container {
-    margin-top: 30px !important;
-    margin-bottom: 50px !important;
-}
-
-@media (max-width: 768px) {
-    .catalog-section ~ .feedback-wrapper {
-        margin-top: 80px !important;
-        padding: 80px 0 180px 0 !important;
-    }
-    
-    .catalog-section ~ .footer-transition {
-        padding-top: 150px !important;
-    }
-    
-    .catalog-section ~ .footer-transition .deco-logo.on-dark {
-        top: 30px !important;
-        z-index: 200 !important;
-    }
-    
-    .catalog-section ~ .footer .footer-content {
-        margin-top: 100px !important;
-    }
-}
-
-@media (max-width: 600px) {
-    .catalog-section ~ .feedback-wrapper {
-        margin-top: 60px !important;
-        padding: 60px 0 150px 0 !important;
-    }
-    
-    .catalog-section ~ .footer-transition {
-        padding-top: 120px !important;
-    }
-    
-    .catalog-section ~ .footer-transition .deco-logo.on-dark {
-        top: 25px !important;
-        z-index: 200 !important;
-    }
-    
-    .catalog-section ~ .footer .footer-content {
-        margin-top: 80px !important;
-    }
+/* Специальные правки страницы каталога ЖК (без адаптива) */
+.catalog-section ~ .feedback-wrapper { margin-top: 100px !important; padding: 120px 0 250px 0 !important; }
+.catalog-section ~ .feedback-wrapper .feedback-container { margin-bottom: 200px !important; }
+.catalog-section ~ .footer-transition { padding-top: 200px !important; }
+.catalog-section ~ .footer-transition .deco-logo.on-dark { top: 40px !important; z-index: 200 !important; }
+.catalog-section ~ .footer .footer-content { margin-top: 120px !important; }
+.catalog-section { margin-bottom: 30px !important; }
+.catalog-grid { margin-bottom: 30px !important; display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 24px !important; }
+.pagination-container { margin-top: 30px !important; margin-bottom: 50px !important; }
+/* Мобильная версия: одна карточка в ряд */
+@media (max-width: 768px){
+  .catalog-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
 }
 </style>
 {% endblock %}
@@ -139,8 +59,16 @@
             <span class="breadcrumb-current">{% if dataset_type == 'secondary' %}Вторичная недвижимость{% else %}Каталог ЖК{% endif %}</span>
         </div>
 
+        <!-- Мобильная кнопка открытия фильтра -->
+        <button type="button" class="mobile-filter-toggle" id="mobile-filter-open">Фильтры</button>
+        <div class="filters-backdrop" id="filters-backdrop" aria-hidden="true"></div>
+
         <!-- Фильтры -->
-        <div class="filters-section">
+        <div class="filters-section" id="filters-sheet">
+            <div class="filters-sheet-header">
+                <span>Фильтры</span>
+                <button type="button" class="sheet-close" id="mobile-filter-close" aria-label="Закрыть">×</button>
+            </div>
             <form class="filters-form" id="filters-form">
                 <div class="filters-row filters-row-grid fixed-grid">
                     <div class="filter-group">
@@ -1447,6 +1375,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         observer.observe(filtersSection);
     }
+
+    // Управление мобильным bottom-sheet фильтром
+    const openBtn = document.getElementById('mobile-filter-open');
+    const closeBtn = document.getElementById('mobile-filter-close');
+    const sheet = document.getElementById('filters-sheet');
+    const backdrop = document.getElementById('filters-backdrop');
+    function openSheet(){ if(sheet){ sheet.classList.add('open'); } if(backdrop){ backdrop.classList.add('open'); } document.body.style.overflow='hidden'; }
+    function closeSheet(){ if(sheet){ sheet.classList.remove('open'); } if(backdrop){ backdrop.classList.remove('open'); } document.body.style.overflow=''; }
+    if (openBtn) openBtn.addEventListener('click', openSheet);
+    if (closeBtn) closeBtn.addEventListener('click', closeSheet);
+    if (backdrop) backdrop.addEventListener('click', closeSheet);
     
     // Принудительная инициализация для всех типов
     const isSecondary = '{{ dataset_type }}' === 'secondary';

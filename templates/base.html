@@ -7,6 +7,7 @@
     {% block meta %}{% endblock %}
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon" type="image/svg+xml" href="/media/logo/icon_site.png">
@@ -24,16 +25,34 @@
     <!-- Основная шапка -->
     <header class="main-header">
         <div class="container">
-            <div class="header-left">
-                <div class="logo">
-                    <a href="{% url 'main:home' %}">
-                        <span class="logo-text">CENTURY&nbsp;21</span>
-                        <span class="logo-slogan">Мир в Квадратах</span>
-                    </a>
+            <div class="header-row">
+                <button class="mobile-menu-toggle" aria-label="Открыть меню">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-left">
+                    <div class="logo">
+                        <a href="{% url 'main:home' %}">
+                            <span class="logo-text">CENTURY&nbsp;21</span>
+                            <span class="logo-slogan">Мир в Квадратах</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="contact-info">
+                        {% if head_office %}
+                            {% if head_office.phone %}
+                                <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" class="phone-number">{{ head_office.phone }}</a>
+                            {% endif %}
+                            <a href="{% url 'main:home' %}#office-map" class="address address-link">{{ head_office.city }}, {{ head_office.address }}</a>
+                        {% else %}
+                            <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
+                            <a href="{% url 'main:home' %}#office-map" class="address address-link">г. Уфа, ул. Ленина, 1</a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
-                        <nav class="main-nav">
+            <nav class="main-nav">
                  <a href="{% url 'main:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Главная</a>
                  
                  <!-- Выпадающее меню Жилые комплексы -->
@@ -56,21 +75,36 @@
                  <a href="{% url 'main:team' %}" class="nav-link {% if request.resolver_match.url_name == 'team' %}active{% endif %}">Наша команда</a>
                  <a href="{% url 'main:vacancies' %}" class="nav-link {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
                  <a href="{% url 'main:offices' %}" class="nav-link {% if 'office' in request.resolver_match.url_name %}active{% endif %}">Офисы продаж</a>
-             </nav>
+            </nav>
 
-            <div class="header-right">
-                <div class="contact-info">
-                    {% if head_office %}
-                        {% if head_office.phone %}
-                            <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" class="phone-number">{{ head_office.phone }}</a>
-                        {% endif %}
-                        <a href="{% url 'main:home' %}#office-map" class="address address-link">{{ head_office.city }}, {{ head_office.address }}</a>
-                    {% else %}
-                        <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
-                        <a href="{% url 'main:home' %}#office-map" class="address address-link">г. Уфа, ул. Ленина, 1</a>
-                    {% endif %}
+            <!-- Off-canvas mobile menu -->
+            <aside class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+                <div class="mobile-drawer-header">
+                    <span class="logo-text">CENTURY&nbsp;21</span>
+                    <button class="mobile-menu-close" aria-label="Закрыть меню"><i class="fas fa-times"></i></button>
                 </div>
-            </div>
+                <nav class="mobile-drawer-nav">
+                    <a href="{% url 'main:home' %}" class="drawer-link">Главная</a>
+                    <div class="drawer-group">
+                        <div class="drawer-title">Жилые комплексы</div>
+                        <a href="{% url 'main:newbuild_index' %}" class="drawer-sublink">Новостройки</a>
+                        <a href="{% url 'main:secondary_index' %}" class="drawer-sublink">Вторичная недвижимость</a>
+                        <a href="{% url 'main:future_complexes' %}" class="drawer-sublink">Будущие проекты</a>
+                        <a href="{% url 'main:videos' %}" class="drawer-sublink">Видеообзоры</a>
+                        <a href="{% url 'main:all_offers' %}" class="drawer-sublink">Все акции</a>
+                    </div>
+                    <a href="{% url 'main:articles' %}" class="drawer-link">Новости</a>
+                    <a href="{% url 'main:mortgage' %}" class="drawer-link">Ипотека</a>
+                    <a href="{% url 'main:team' %}" class="drawer-link">Наша команда</a>
+                    <a href="{% url 'main:vacancies' %}" class="drawer-link">Вакансии</a>
+                    <a href="{% url 'main:offices' %}" class="drawer-link">Офисы продаж</a>
+                </nav>
+                <div class="mobile-drawer-footer">
+                    <a class="drawer-phone" href="tel:{% if head_office and head_office.phone %}{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}{% else %}+73472019478{% endif %}"><i class="fas fa-phone"></i> Позвонить</a>
+                </div>
+            </aside>
+
+            
         </div>
     </header>
 
@@ -198,47 +232,24 @@
                 <div class="footer-section">
                     <h3 class="footer-title">Контакты</h3>
                     <div class="footer-contacts">
-                        {% if head_office %}
-                            {% if head_office.phone %}
-                            <div class="contact-item">
-                                <i class="fas fa-phone"></i>
-                                <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}">{{ head_office.phone }}</a>
-                            </div>
-                            {% endif %}
-                            {% if head_office.email %}
-                            <div class="contact-item">
-                                <i class="fas fa-envelope"></i>
-                                <a href="mailto:{{ head_office.email }}">{{ head_office.email }}</a>
-                            </div>
-                            {% endif %}
-                            <div class="contact-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                <span>{{ head_office.city }}, {{ head_office.address }}</span>
-                            </div>
-                            {% if head_office.schedule %}
-                            <div class="contact-item">
-                                <i class="fas fa-clock"></i>
-                                <span>{{ head_office.schedule }}</span>
-                            </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="contact-item">
-                                <i class="fas fa-phone"></i>
-                                <a href="tel:+73472019478">+7 347 201-94-78</a>
-                            </div>
-                            <div class="contact-item">
-                                <i class="fas fa-envelope"></i>
-                                <a href="mailto:info@antonhaus.ru">info@antonhaus.ru</a>
-                            </div>
-                            <div class="contact-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                <span>г. Уфа, ул. Ленина, 1</span>
-                            </div>
-                            <div class="contact-item">
-                                <i class="fas fa-clock"></i>
-                                <span>Пн-Пт: 9:00-18:00</span>
-                            </div>
-                        {% endif %}
+                        {% with phone=head_office.phone email=head_office.email %}
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <a href="tel:{{ phone|cut:' '|cut:'-'|cut:'('|cut:')' }}">{{ phone }}</a>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-envelope"></i>
+                            <a href="mailto:{{ email }}">{{ email }}</a>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{% if head_office %}{{ head_office.city }}, {{ head_office.address }}{% else %}г. Уфа, ул. Ленина, 1{% endif %}</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-clock"></i>
+                            <span>{% if head_office and head_office.schedule %}{{ head_office.schedule }}{% else %}Пн-Пт: 9:00-18:00{% endif %}</span>
+                        </div>
+                        {% endwith %}
                     </div>
                     
                     <!-- 2ГИС -->
