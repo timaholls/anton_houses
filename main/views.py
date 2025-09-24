@@ -13,11 +13,11 @@ from django.db import models
 def home(request):
     """Главная страница"""
     # Получаем 9 популярных ЖК для главной страницы
-    complexes = ResidentialComplex.objects.filter(is_featured=True).order_by('-created_at')[:9]
+    complexes = ResidentialComplex.objects.filter(is_featured=True).order_by('-created_at')[:6]
     
     # Если популярных ЖК меньше 9, добавляем обычные
-    if complexes.count() < 9:
-        remaining_count = 9 - complexes.count()
+    if complexes.count() < 6:
+        remaining_count = 6 - complexes.count()
         additional_complexes = ResidentialComplex.objects.filter(is_featured=False).order_by('-created_at')[:remaining_count]
         complexes = list(complexes) + list(additional_complexes)
     
@@ -30,8 +30,8 @@ def home(request):
     # Статьи для главной
     home_articles = Article.objects.filter(show_on_home=True).order_by('-published_date')[:3]
     
-    # Акции для главной - случайные 4 активных предложения
-    offers = SpecialOffer.get_active_offers(limit=4)
+    # Акции для главной - все активные предложения
+    offers = SpecialOffer.get_active_offers()
     
     context = {
         'complexes': complexes,

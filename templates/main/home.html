@@ -50,113 +50,299 @@
         <div class="offers-header">
             <h2 class="section-title">Специальные предложения по ЖК</h2>
         </div>
-        <div class="offers-grid">
-            {% for o in offers %}
-            <a href="{% url 'main:offer_detail' o.id %}" class="offer-card">
-                <div class="offer-media">
-                    {% if o.get_main_image and o.get_main_image.image %}
-                        <img src="{{ o.get_main_image.image.url }}" alt="{{ o.title }}" loading="lazy" decoding="async">
-                    {% else %}
-                        <img src="/media/gallery/placeholders.png" alt="{{ o.title }}" loading="lazy" decoding="async">
+        
+        <!-- Карусель акций -->
+        <div class="offers-carousel-container">
+            <div class="offers-carousel" id="offersCarousel">
+                <!-- Фиксированные 3 позиции для карточек -->
+                <div class="offer-slide">
+                    <div class="offer-card" id="offer-card-1">
+                        {% if offers.0 %}
+                        <a href="{% url 'main:offer_detail' offers.0.id %}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                            <div class="offer-media">
+                                {% if offers.0.get_main_image and offers.0.get_main_image.image %}
+                                    <img src="{{ offers.0.get_main_image.image.url }}" alt="{{ offers.0.title }}" loading="lazy" decoding="async">
+                                {% else %}
+                                    <img src="/media/gallery/placeholders.png" alt="{{ offers.0.title }}" loading="lazy" decoding="async">
+                                {% endif %}
+                                <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
+                            </div>
+                            <div class="offer-content">
+                                <div class="offer-head">
+                                    <span class="offer-chip">{{ offers.0.residential_complex.name }}</span>
+                                    <h3 class="offer-title">{{ offers.0.title }}</h3>
+                                </div>
+                                
+                                <div class="offer-limited">
+                                    <i class="far fa-clock"></i>
+                                    <span>{% if offers.0.expires_at %}До {{ offers.0.expires_at|date:"d.m.Y" }}{% else %}Временное предложение{% endif %}</span>
+                                </div>
+                                
+                            </div>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="offer-slide">
+                    <div class="offer-card" id="offer-card-2">
+                        {% if offers.1 %}
+                        <a href="{% url 'main:offer_detail' offers.1.id %}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                            <div class="offer-media">
+                                {% if offers.1.get_main_image and offers.1.get_main_image.image %}
+                                    <img src="{{ offers.1.get_main_image.image.url }}" alt="{{ offers.1.title }}" loading="lazy" decoding="async">
+                                {% else %}
+                                    <img src="/media/gallery/placeholders.png" alt="{{ offers.1.title }}" loading="lazy" decoding="async">
+                                {% endif %}
+                                <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
+                            </div>
+                            <div class="offer-content">
+                                <div class="offer-head">
+                                    <span class="offer-chip">{{ offers.1.residential_complex.name }}</span>
+                                    <h3 class="offer-title">{{ offers.1.title }}</h3>
+                                </div>
+                                
+                                <div class="offer-limited">
+                                    <i class="far fa-clock"></i>
+                                    <span>{% if offers.1.expires_at %}До {{ offers.1.expires_at|date:"d.m.Y" }}{% else %}Временное предложение{% endif %}</span>
+                                </div>
+                                
+                            </div>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="offer-slide">
+                    <div class="offer-card" id="offer-card-3">
+                        {% if offers.2 %}
+                        <a href="{% url 'main:offer_detail' offers.2.id %}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                            <div class="offer-media">
+                                {% if offers.2.get_main_image and offers.2.get_main_image.image %}
+                                    <img src="{{ offers.2.get_main_image.image.url }}" alt="{{ offers.2.title }}" loading="lazy" decoding="async">
+                                {% else %}
+                                    <img src="/media/gallery/placeholders.png" alt="{{ offers.2.title }}" loading="lazy" decoding="async">
+                                {% endif %}
+                                <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
+                            </div>
+                            <div class="offer-content">
+                                <div class="offer-head">
+                                    <span class="offer-chip">{{ offers.2.residential_complex.name }}</span>
+                                    <h3 class="offer-title">{{ offers.2.title }}</h3>
+                                </div>
+                                
+                                <div class="offer-limited">
+                                    <i class="far fa-clock"></i>
+                                    <span>{% if offers.2.expires_at %}До {{ offers.2.expires_at|date:"d.m.Y" }}{% else %}Временное предложение{% endif %}</span>
+                                </div>
+                                
+                            </div>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Навигационные точки -->
+            {% if offers|length > 3 %}
+            <div class="carousel-dots">
+                {% for i in "123456789"|make_list %}
+                    {% if forloop.counter0|add:3 <= offers|length %}
+                    <button type="button" class="carousel-dot {% if forloop.first %}active{% endif %}" data-page="{{ forloop.counter0 }}"></button>
                     {% endif %}
-                    <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
-                </div>
-                <div class="offer-content">
-                    <div class="offer-head">
-                        <span class="offer-chip">{{ o.residential_complex.name }}</span>
-                        <h3 class="offer-title">{{ o.title }}</h3>
-                    </div>
-                    <p class="offer-text">{{ o.description|truncatechars:160 }}</p>
-                    <div class="offer-limited">
-                        <i class="far fa-clock"></i>
-                        <span>
-                            {% if o.expires_at %}
-                                До {{ o.expires_at|date:"d.m.Y" }}
-                            {% else %}
-                                Временное предложение
-                            {% endif %}
-                        </span>
-                    </div>
-                    <div class="offer-actions">
-                        <span class="btn btn-primary btn-small offer-cta">Подробнее об акции</span>
-                    </div>
-                </div>
-            </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Отладочная информация -->
+        <div style="display: none;">
+            <p>Количество акций: {{ offers|length }}</p>
+            {% for o in offers %}
+            <p>Акция {{ forloop.counter }}: {{ o.title }} ({{ o.residential_complex.name }})</p>
             {% endfor %}
         </div>
         
+        <!-- Скрытые данные для JavaScript -->
+        <script type="application/json" id="offers-data">
+        [
+            {% for o in offers %}
+            {
+                "id": {{ o.id }},
+                "title": "{{ o.title|escapejs }}",
+                "complex_name": "{{ o.residential_complex.name|escapejs }}",
+                "description": "{{ o.description|escapejs }}",
+                "expires_at": "{% if o.expires_at %}{{ o.expires_at|date:'d.m.Y' }}{% else %}Временное предложение{% endif %}",
+                "image_url": "{% if o.get_main_image and o.get_main_image.image %}{{ o.get_main_image.image.url }}{% else %}/media/gallery/placeholders.png{% endif %}",
+                "detail_url": "{% url 'main:offer_detail' o.id %}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+        </script>
+        
         <!-- Кнопка "Посмотреть все акции" -->
         <div class="offers-more-section">
-            <a href="{% url 'main:all_offers' %}" class="btn btn-secondary btn-large offers-more-btn">
+            <a href="{% url 'main:all_offers' %}" class="btn btn-primary btn-large">
                 <span>Посмотреть все акции</span>
                 <i class="fas fa-arrow-right"></i>
             </a>
         </div>
         <style>
         .offers-section{margin:28px 0 4px 0}
-        .offers-header{text-align:center;margin-bottom:12px}
-        .offers-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(400px, 1fr));gap:20px;justify-items:center}
-                 .offer-card{width:100%;max-width:600px;display:grid;grid-template-columns:200px 1fr;gap:16px;background:#fff;border:1px solid #efe7ce;border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:box-shadow .2s ease, transform .2s ease, border-color .2s ease;text-decoration:none;color:inherit}
-        .offer-card:hover{box-shadow:0 16px 36px rgba(0,0,0,.14);transform:translateY(-2px);border-color:var(--c21-gold)}
-        .offer-media{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/10;min-height:120px}
+        .offers-header{text-align:center;margin-bottom:20px}
+        
+        /* Карусель акций */
+        .offers-carousel-container{position:relative;margin:0 auto;max-width:1200px}
+        .offers-carousel{display:flex;border-radius:16px;position:relative}
+        .offer-slide{flex:0 0 33.333%;min-width:0;padding:0 8px}
+        .offer-card{width:100%;display:grid;grid-template-columns:140px 1fr;gap:12px;background:#fff;border:1px solid #efe7ce;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.08);transition:box-shadow .3s ease, transform .3s ease, border-color .3s ease;text-decoration:none;color:inherit;height:180px;opacity:1;transition:opacity .5s ease}
+        .offer-card:hover{box-shadow:0 12px 28px rgba(0,0,0,.15);transform:translateY(-3px);border-color:var(--c21-gold)}
+        .offer-card.fade-out{opacity:0}
+        .offer-card.fade-in{opacity:1}
+        .offer-media{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:4/3;min-height:80px}
         .offer-media img{width:100%;height:100%;object-fit:cover;display:block}
-        .offer-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.00) 40%, rgba(0,0,0,.18) 100%)}
-        .offer-badge-hot{position:absolute;left:8px;top:8px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:4px 8px;border-radius:999px;font-weight:800;display:inline-flex;gap:4px;align-items:center;font-size:11px;box-shadow:0 4px 10px rgba(190,175,135,.35)}
-        .offer-badge-hot i{font-size:11px}
-        .offer-content{display:flex;flex-direction:column;justify-content:space-between;min-height:120px}
-        .offer-head{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-        .offer-chip{display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:3px 8px;border-radius:999px;font-weight:700;font-size:11px;white-space:nowrap}
-        .offer-title{margin:0;font-size:16px;font-weight:800;color:#222;line-height:1.3;word-wrap:break-word;hyphens:auto}
-        .offer-text{color:#444;margin:8px 0 0 0;font-size:14px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis}
-        .offer-limited{display:flex;align-items:center;gap:6px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:8px;padding:6px 8px;margin-top:8px;font-weight:600;font-size:12px}
-        .offer-limited i{color:var(--c21-gold);font-size:12px}
-        .offer-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;justify-content:flex-start}
-                 .offer-cta{flex:none;text-align:center;padding:8px 16px !important;border-radius:8px;background:linear-gradient(180deg,var(--c21-gold), var(--c21-gold-dark)) !important;color:var(--c21-dark) !important;border:none !important;box-shadow:0 4px 12px rgba(190,175,135,.45);font-size:13px;font-weight:700;min-width:140px}
-         .offer-cta:hover{filter:brightness(.98);transform:translateY(-1px)}
+        .offer-badge-hot{position:absolute;left:6px;top:6px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:3px 6px;border-radius:999px;font-weight:800;display:inline-flex;gap:3px;align-items:center;font-size:10px;box-shadow:0 3px 8px rgba(190,175,135,.4)}
+        .offer-badge-hot i{font-size:10px}
+        .offer-content{display:flex;flex-direction:column;justify-content:space-between;min-height:80px}
+        .offer-head{display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+        .offer-chip{display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:2px 6px;border-radius:999px;font-weight:700;font-size:10px;white-space:nowrap}
+        .offer-title{margin:0;font-size:14px;font-weight:800;color:#222;line-height:1.2;word-wrap:break-word;hyphens:auto}
+        .offer-limited{display:flex;align-items:center;gap:4px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:6px;padding:4px 6px;margin-top:6px;font-weight:600;font-size:10px;width:fit-content}
+        .offer-limited i{color:var(--c21-gold);font-size:10px}
+        
+        /* Навигационные точки */
+        .carousel-dots{display:flex;justify-content:center;gap:8px;margin-top:20px}
+        .carousel-dot{width:12px;height:12px;border-radius:50%;border:none;background:#ddd;cursor:pointer;transition:all .3s ease}
+        .carousel-dot.active{background:var(--c21-gold);transform:scale(1.2)}
+        .carousel-dot:hover{background:var(--c21-gold);opacity:.7}
+        
         @media(max-width: 768px){
-            .offers-grid{grid-template-columns:1fr;gap:16px}
-            .offer-card{grid-template-columns:1fr;max-width:100%}
-            .offer-media{aspect-ratio:16/9}
-            .offer-content{min-height:auto}
-            .offer-title{font-size:18px}
-            .offer-text{font-size:15px}
+            .offer-slide{flex:0 0 50%;padding:0 6px}
+            .offer-card{grid-template-columns:100px 1fr;gap:8px;height:160px;padding:8px}
+            .offer-media{aspect-ratio:3/2;min-height:60px}
+            .offer-content{min-height:60px}
+            .offer-title{font-size:13px}
         }
-                 @media(max-width: 480px){
-             .offer-card{padding:12px;gap:12px}
-             .offer-title{font-size:16px}
-             .offer-text{font-size:14px}
-             .offer-actions{flex-direction:column;align-items:center}
-             .offer-cta{flex:none;width:100%;max-width:200px}
-         }
+        @media(max-width: 480px){
+            .offer-slide{flex:0 0 100%;padding:0 4px}
+            .offer-card{grid-template-columns:1fr;height:auto;padding:8px}
+            .offer-media{aspect-ratio:16/9;min-height:120px}
+            .offer-content{min-height:auto}
+            .offer-title{font-size:14px}
+        }
          
-         /* Стили для кнопки "Посмотреть все акции" */
+         /* Секция кнопки "Посмотреть все акции" */
          .offers-more-section {
              text-align: center;
-             margin-top: 32px;
-         }
-         
-         .offers-more-btn {
-             display: inline-flex;
-             align-items: center;
-             gap: 8px;
-             padding: 16px 32px;
-             border-radius: 12px;
-             text-decoration: none;
-             font-weight: 700;
-             font-size: 16px;
-             transition: all 0.2s ease;
-             background: #fff;
-             color: #6a5e2e;
-             border: 2px solid #e8e4d5;
-             box-shadow: 0 4px 12px rgba(0,0,0,.08);
-         }
-         
-         .offers-more-btn:hover {
-             background: #faf7ee;
-             transform: translateY(-2px);
-             box-shadow: 0 8px 16px rgba(0,0,0,.12);
+             margin: 32px 0 36px 0; /* верхний и нижний отступ */
          }
         </style>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                const offersDataElement = document.getElementById('offers-data');
+                if (!offersDataElement) {
+                    console.error('Offers data element not found');
+                    return;
+                }
+                const offersData = JSON.parse(offersDataElement.textContent);
+                console.log('[offers] data loaded', offersData.length);
+                if (!offersData || offersData.length === 0) {
+                    console.log('No offers data available');
+                    return;
+                }
+                const dotsContainer = document.querySelector('.carousel-dots');
+                let carouselDots = document.querySelectorAll('.carousel-dot');
+                const offerCards = [
+                    document.getElementById('offer-card-1'),
+                    document.getElementById('offer-card-2'),
+                    document.getElementById('offer-card-3')
+                ];
+                let currentPage = 0;
+                const offersPerPage = 3;
+                const totalPages = Math.ceil(offersData.length / offersPerPage);
+                console.log('[offers] init', { totalOffers: offersData.length, totalPages, offersPerPage });
+                if (dotsContainer) {
+                    let dotsMarkup = '';
+                    for (let i = 0; i < totalPages; i += 1) {
+                        dotsMarkup += `<button type="button" class="carousel-dot${i === 0 ? ' active' : ''}" data-page="${i}"></button>`;
+                    }
+                    dotsContainer.innerHTML = dotsMarkup;
+                    carouselDots = dotsContainer.querySelectorAll('.carousel-dot');
+                    console.log('[offers] dots rendered', carouselDots.length);
+                }
+                function updateOfferCards(page) {
+                    const startIndex = page * offersPerPage;
+                    offerCards.forEach((card, index) => {
+                        if (!card) return;
+                        const offerIndex = startIndex + index;
+                        if (offerIndex < offersData.length) {
+                            const offer = offersData[offerIndex];
+                            card.innerHTML = `
+                                <a href="${offer.detail_url}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                                    <div class="offer-media">
+                                        <img src="${offer.image_url}" alt="${offer.title}" loading="lazy" decoding="async">
+                                        <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
+                                    </div>
+                                    <div class="offer-content">
+                                        <div class="offer-head">
+                                            <span class="offer-chip">${offer.complex_name}</span>
+                                            <h3 class="offer-title">${offer.title}</h3>
+                                        </div>
+                                        <div class="offer-limited">
+                                            <i class="far fa-clock"></i>
+                                            <span>До ${offer.expires_at}</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            `;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                }
+                function updateActiveDot(page) {
+                    carouselDots.forEach((dot, index) => {
+                        if (index === page) {
+                            dot.classList.add('active');
+                        } else {
+                            dot.classList.remove('active');
+                        }
+                    });
+                }
+                if (dotsContainer) {
+                    dotsContainer.addEventListener('click', function(event) {
+                        const target = event.target;
+                        if (!(target instanceof Element)) return;
+                        if (target.classList.contains('carousel-dot')) {
+                            event.preventDefault();
+                            const indexAttr = target.getAttribute('data-page');
+                            const index = indexAttr ? parseInt(indexAttr, 10) : Array.prototype.indexOf.call(dotsContainer.querySelectorAll('.carousel-dot'), target);
+                            if (!Number.isNaN(index)) {
+                                console.log('[offers] dot click', { index });
+                                currentPage = index;
+                                updateOfferCards(currentPage);
+                                updateActiveDot(currentPage);
+                            }
+                        }
+                    });
+                }
+                function autoSlide() {
+                    if (totalPages > 1) {
+                        currentPage = (currentPage + 1) % totalPages;
+                        updateOfferCards(currentPage);
+                        updateActiveDot(currentPage);
+                    }
+                }
+                updateOfferCards(0);
+                updateActiveDot(0);
+                if (totalPages > 1) {
+                    setInterval(autoSlide, 8000);
+                }
+            } catch (error) {
+                console.error('Error initializing offers carousel:', error);
+            }
+        });
+        </script>
     </section>
     {% endif %}
 
@@ -935,4 +1121,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
-{% endblock %} 
+{% endblock %}

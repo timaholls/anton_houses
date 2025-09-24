@@ -47,6 +47,7 @@
                          <a href="{% url 'main:secondary_index' %}" class="dropdown-item {% if 'secondary' in request.resolver_match.url_name %}active{% endif %}">Вторичная недвижимость</a>
                          <a href="{% url 'main:future_complexes' %}" class="dropdown-item {% if 'future_complex' in request.resolver_match.url_name %}active{% endif %}">Будущие проекты</a>
                          <a href="{% url 'main:videos' %}" class="dropdown-item {% if 'video' in request.resolver_match.url_name %}active{% endif %}">Видеообзоры</a>
+                         <a href="{% url 'main:all_offers' %}" class="dropdown-item {% if 'all_offers' in request.resolver_match.url_name %}active{% endif %}">Все акции</a>
                      </div>
                  </div>
                  
