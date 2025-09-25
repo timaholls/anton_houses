@@ -77,10 +77,7 @@ body {
 }
 
 .main-header .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 40px;
+    display: block;
 }
 
 /* Левая часть шапки */
@@ -88,6 +85,27 @@ body {
     display: flex;
     align-items: center;
     gap: 20px;
+}
+
+/* Общая строка шапки на десктопе: бургер | логотип | меню | контакты */
+@media (min-width: 769px) {
+    .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+    }
+
+    /* Размещаем меню по центру, контакты справа */
+    .header-row .main-nav {
+        flex: 1 1 auto;
+        display: flex;
+        justify-content: center;
+    }
+
+    .header-right {
+        margin-left: auto;
+    }
 }
 
 .logo {

@@ -34,6 +34,13 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .address { font-size: 11px; color:#999; line-height:1; }
   /* Enable drawer in mobile */
   .mobile-drawer { display:flex; }
+
+  /* ===== Video detail explicit fixes ===== */
+  .video-detail-layout { display:grid; grid-template-columns: 1fr; gap: 12px; }
+  .video-main-content { display:block; overflow:visible; }
+  .video-player-container { min-height: 220px; }
+  .video-embed { position: relative; padding-bottom: 56.25%; height: 0; overflow: visible; }
+  .video-embed iframe { position:absolute; top:0; left:0; width:100%; height:100%; display:block; }
 }
 
 /* Очень узкие экраны: убираем слоган, чтобы всё поместилось в один ряд */

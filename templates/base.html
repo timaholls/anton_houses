@@ -37,22 +37,7 @@
                         </a>
                     </div>
                 </div>
-                <div class="header-right">
-                    <div class="contact-info">
-                        {% if head_office %}
-                            {% if head_office.phone %}
-                                <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" class="phone-number">{{ head_office.phone }}</a>
-                            {% endif %}
-                            <a href="{% url 'main:home' %}#office-map" class="address address-link">{{ head_office.city }}, {{ head_office.address }}</a>
-                        {% else %}
-                            <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
-                            <a href="{% url 'main:home' %}#office-map" class="address address-link">г. Уфа, ул. Ленина, 1</a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <nav class="main-nav">
+                <nav class="main-nav">
                  <a href="{% url 'main:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Главная</a>
                  
                  <!-- Выпадающее меню Жилые комплексы -->
@@ -75,7 +60,21 @@
                  <a href="{% url 'main:team' %}" class="nav-link {% if request.resolver_match.url_name == 'team' %}active{% endif %}">Наша команда</a>
                  <a href="{% url 'main:vacancies' %}" class="nav-link {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
                  <a href="{% url 'main:offices' %}" class="nav-link {% if 'office' in request.resolver_match.url_name %}active{% endif %}">Офисы продаж</a>
-            </nav>
+                </nav>
+                <div class="header-right">
+                    <div class="contact-info">
+                        {% if head_office %}
+                            {% if head_office.phone %}
+                                <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" class="phone-number">{{ head_office.phone }}</a>
+                            {% endif %}
+                            <a href="{% url 'main:home' %}#office-map" class="address address-link">{{ head_office.city }}, {{ head_office.address }}</a>
+                        {% else %}
+                            <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
+                            <a href="{% url 'main:home' %}#office-map" class="address address-link">г. Уфа, ул. Ленина, 1</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
 
             <!-- Off-canvas mobile menu -->
             <aside class="mobile-drawer" id="mobile-drawer" aria-hidden="true">

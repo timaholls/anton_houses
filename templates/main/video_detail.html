@@ -28,17 +28,42 @@
             <!-- Видео плеер -->
             <div class="video-player-container">
                 {% if video_embed_url %}
-                    <div class="video-embed">
-                        <!-- Responsive Rutube/YouTube embed -->
+                    <!-- Desktop: полный плеер -->
+                    <div class="video-embed desktop-only">
                         <iframe src="{{ video_embed_url|safe }}"
                                 frameborder="0"
                                 allow="autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                                 referrerpolicy="no-referrer-when-downgrade"
-                                loading="lazy"
-                                allowfullscreen></iframe>
-                        <noscript>
-                            <p><a href="{{ video_embed_url|safe }}" target="_blank" rel="noopener">Смотреть видео</a></p>
-                        </noscript>
+                                width="100%" height="100%"
+                                webkitAllowFullScreen mozallowfullscreen allowfullscreen></iframe>
+                    </div>
+                    
+                    <!-- Mobile: карточка с превью -->
+                    <div class="video-mobile-card mobile-only" onclick="loadMobileVideo()">
+                        <div class="video-mobile-preview">
+                            {% if video.video_thumbnail %}
+                                <img src="{{ video.video_thumbnail.url }}" alt="{{ video.title }}">
+                            {% else %}
+                                <img src="/media/gallery/placeholders.png" alt="{{ video.title }}">
+                            {% endif %}
+                            <div class="video-mobile-play-btn">
+                                <i class="fas fa-play"></i>
+                            </div>
+                        </div>
+                        <div class="video-mobile-info">
+                            <h3>{{ video.title }}</h3>
+                            <p>Нажмите для просмотра</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile: скрытый iframe для загрузки по клику -->
+                    <div class="video-mobile-iframe mobile-only" style="display:none;">
+                        <iframe id="mobile-video-iframe" src="" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                    <div class="video-fallback" style="padding:8px 0; text-align:center;">
+                        <a href="{{ video_embed_url|safe }}" target="_blank" rel="noopener" style="font-size:14px; color: var(--c21-gold); text-decoration:underline;">
+                            Если видео не загрузилось, открыть на Rutube
+                        </a>
                     </div>
                 {% elif video.video_url %}
                     <iframe src="{{ video.video_url|safe }}" class="video-player" frameborder="0" allowfullscreen></iframe>
@@ -51,6 +76,11 @@
                         {% endif %}
                     </div>
                 {% endif %}
+            </div>
+
+            <!-- ТЕСТОВЫЙ БЛОК: удалить после проверки отображения -->
+            <div style="margin:12px 0; padding:12px; border-radius:8px; background:#fff7d6; color:#6a5900; border:1px solid #f0d98c; text-align:center;">
+                Тест: этот блок должен быть виден под видео. Если вы его видите, но плеер не появился, значит проблема в загрузке Rutube.
             </div>
 
             <!-- Описание видео -->
@@ -525,6 +555,121 @@
     font-size: 0.9rem;
 }
 
+/* Mobile video card styles */
+.video-mobile-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.video-mobile-card:hover {
+    transform: translateY(-2px);
+}
+
+.video-mobile-preview {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.video-mobile-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-mobile-play-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: all 0.3s ease;
+}
+
+.video-mobile-card:hover .video-mobile-play-btn {
+    background: var(--c21-gold);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.video-mobile-info {
+    padding: 16px;
+}
+
+.video-mobile-info h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 8px 0;
+}
+
+.video-mobile-info p {
+    font-size: 14px;
+    color: var(--c21-gray);
+    margin: 0;
+}
+
+.video-mobile-iframe {
+    width: 100%;
+    height: 250px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.video-mobile-iframe iframe {
+    width: 100%;
+    height: 100%;
+}
+
+/* Desktop/Mobile visibility */
+.desktop-only {
+    display: block;
+}
+
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .desktop-only {
+        display: none;
+    }
+    
+    .mobile-only {
+        display: block;
+    }
+    /* Strong overrides to prevent collapsing */
+    .video-detail-layout { display: block !important; }
+    .video-main-content { display:block !important; overflow:visible !important; }
+    .video-player-container { min-height: 240px !important; }
+    .video-embed { padding-bottom: 56.25% !important; height: 0 !important; }
+    .video-embed iframe { position:absolute !important; top:0; left:0; width:100%; height:100%; display:block; }
+}
+
 /* Адаптивность вынесена в static/css/mobile.css */
 </style>
+
+<script>
+function loadMobileVideo() {
+    const embedUrl = '{{ video_embed_url|safe }}';
+    const iframe = document.getElementById('mobile-video-iframe');
+    const card = document.querySelector('.video-mobile-card');
+    const iframeContainer = document.querySelector('.video-mobile-iframe');
+    
+    iframe.src = embedUrl;
+    card.style.display = 'none';
+    iframeContainer.style.display = 'block';
+}
+</script>
 {% endblock %} 
