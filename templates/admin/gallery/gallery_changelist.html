@@ -575,16 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
                              thumbnailInput.accept = 'image/*';
                              thumbnailInput.dataset.id = item.id;
                              
-                             // Показываем текущее превью, если есть
-                             if (item.video_thumbnail_url) {
-                                 const currentThumbnail = document.createElement('div');
-                                 currentThumbnail.className = 'current-thumbnail';
-                                 currentThumbnail.innerHTML = `
-                                     <img src="${item.video_thumbnail_url}" alt="Текущее превью" style="max-width: 150px; max-height: 90px; border-radius: 4px;">
-                                     <small>Текущее превью</small>
-                                 `;
-                                 thumbnailInputContainer.appendChild(currentThumbnail);
-                             }
+                             // Video thumbnails removed
                              
                              thumbnailInputContainer.appendChild(videoUrlContainer);
                              thumbnailInputContainer.appendChild(thumbnailLabel);
@@ -860,8 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
                  return;
              }
              
-             formData.append('video_thumbnail', file);
-             console.log('Adding video thumbnail:', file.name, 'Size:', file.size, 'Type:', file.type);
+             // Video thumbnails removed
          }
          
          fetch('/admin/main/gallery/update-content/', {

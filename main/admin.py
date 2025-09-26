@@ -253,7 +253,7 @@ class GalleryAdmin(admin.ModelAdmin):
                 category=category,
                 object_id=object_id,
                 content_type=content_type
-            ).values('id', 'title', 'content_type', 'order', 'is_main', 'is_active', 'created_at', 'image', 'video_url', 'video_thumbnail', 'description')
+            ).values('id', 'title', 'content_type', 'order', 'is_main', 'is_active', 'created_at', 'image', 'video_url', 'description')
             
             print(f"Found {content.count()} items in database")
             for item in content:
@@ -282,16 +282,7 @@ class GalleryAdmin(admin.ModelAdmin):
                 
                 # Убрано - больше не поддерживается загрузка видео файлов
                 
-                # Обрабатываем превью видео
-                if item['video_thumbnail']:
-                    gallery_obj = Gallery.objects.get(id=item['id'])
-                    try:
-                        thumbnail_url = request.build_absolute_uri(gallery_obj.video_thumbnail.url) if gallery_obj.video_thumbnail else None
-                        content_item['video_thumbnail_url'] = thumbnail_url
-                        print(f"Generated thumbnail URL: {thumbnail_url}")
-                    except Exception as e:
-                        print(f"Error generating thumbnail URL: {e}")
-                        content_item['video_thumbnail_url'] = None
+                # Video thumbnails removed
                 
                 content_list.append(content_item)
             
@@ -384,21 +375,6 @@ class GalleryAdmin(admin.ModelAdmin):
             gallery_item.video_url = video_url
             logger.info(f"Updated fields: new title='{gallery_item.title}', new description='{gallery_item.description}', video_url='{gallery_item.video_url}'")
             
-            # Обрабатываем загрузку превью видео
-            if 'video_thumbnail' in request.FILES:
-                thumbnail_file = request.FILES['video_thumbnail']
-                logger.info(f"Uploading video thumbnail: {thumbnail_file.name}")
-                
-                # Валидация файла превью
-                if not thumbnail_file.content_type.startswith('image/'):
-                    raise ValueError(f"Превью должно быть изображением. Получен тип: {thumbnail_file.content_type}")
-                
-                # Валидация размера файла (максимум 5MB)
-                if thumbnail_file.size > 5 * 1024 * 1024:
-                    raise ValueError(f"Размер файла превью не должен превышать 5MB. Размер файла: {thumbnail_file.size} байт")
-                
-                gallery_item.video_thumbnail = thumbnail_file
-                logger.info(f"Video thumbnail set to: {gallery_item.video_thumbnail}")
             
             # Если этот элемент становится главным, снимаем флаг с других
             if is_main:
@@ -417,10 +393,7 @@ class GalleryAdmin(admin.ModelAdmin):
             gallery_item.refresh_from_db()
             logger.info(f"After save - title: '{gallery_item.title}', description: '{gallery_item.description}'")
             
-            if gallery_item.video_thumbnail:
-                logger.info(f"Video thumbnail confirmed in DB: {gallery_item.video_thumbnail}")
-            else:
-                logger.warning(f"Video thumbnail not saved in DB for item {file_id}")
+            # Video thumbnails removed
             
             return JsonResponse({'success': True})
         except Gallery.DoesNotExist:

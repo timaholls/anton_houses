@@ -195,10 +195,10 @@
         <div class="video-card" style="background:#000; border-radius:12px; overflow:hidden; position:relative; aspect-ratio:16/9;">
             {% if v.video_url %}
             <iframe src="{{ v.video_url|safe }}" title="Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
-            {% elif v.video_thumbnail %}
-            <img src="{{ v.video_thumbnail.url }}" alt="video" style="width:100%;height:100%;object-fit:cover;display:block;">
             {% else %}
-            <img src="/media/gallery/placeholders.png" alt="video" style="width:100%;height:100%;object-fit:cover;display:block;">
+            <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f5f5f5; color: #666;">
+                <i class="fas fa-play" style="font-size: 48px;"></i>
+            </div>
             {% endif %}
         </div>
         {% endfor %}

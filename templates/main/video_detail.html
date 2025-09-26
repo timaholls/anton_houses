@@ -18,7 +18,6 @@
         <!-- Левая колонка - основное видео -->
         <div class="video-main-content">
             <div class="video-header">
-                <h1 class="video-title">{{ video.title }}</h1>
                 <div class="video-meta">
                     <span class="complex-name">{{ residential_complex.name }}</span>
                     <span class="video-date">{{ video.created_at|date:"j E Y" }}</span>
@@ -27,9 +26,10 @@
 
             <!-- Видео плеер -->
             <div class="video-player-container">
+                <h1 class="video-title">{{ video.title }}</h1>
                 {% if video_embed_url %}
-                    <!-- Desktop: полный плеер -->
-                    <div class="video-embed desktop-only">
+                    <!-- Единый плеер для всех устройств -->
+                    <div class="video-embed">
                         <iframe src="{{ video_embed_url|safe }}"
                                 frameborder="0"
                                 allow="autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
@@ -37,51 +37,17 @@
                                 width="100%" height="100%"
                                 webkitAllowFullScreen mozallowfullscreen allowfullscreen></iframe>
                     </div>
-                    
-                    <!-- Mobile: карточка с превью -->
-                    <div class="video-mobile-card mobile-only" onclick="loadMobileVideo()">
-                        <div class="video-mobile-preview">
-                            {% if video.video_thumbnail %}
-                                <img src="{{ video.video_thumbnail.url }}" alt="{{ video.title }}">
-                            {% else %}
-                                <img src="/media/gallery/placeholders.png" alt="{{ video.title }}">
-                            {% endif %}
-                            <div class="video-mobile-play-btn">
-                                <i class="fas fa-play"></i>
-                            </div>
-                        </div>
-                        <div class="video-mobile-info">
-                            <h3>{{ video.title }}</h3>
-                            <p>Нажмите для просмотра</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Mobile: скрытый iframe для загрузки по клику -->
-                    <div class="video-mobile-iframe mobile-only" style="display:none;">
-                        <iframe id="mobile-video-iframe" src="" frameborder="0" allowfullscreen></iframe>
-                    </div>
-                    <div class="video-fallback" style="padding:8px 0; text-align:center;">
-                        <a href="{{ video_embed_url|safe }}" target="_blank" rel="noopener" style="font-size:14px; color: var(--c21-gold); text-decoration:underline;">
-                            Если видео не загрузилось, открыть на Rutube
-                        </a>
-                    </div>
                 {% elif video.video_url %}
                     <iframe src="{{ video.video_url|safe }}" class="video-player" frameborder="0" allowfullscreen></iframe>
                 {% else %}
                     <div class="video-placeholder">
-                        {% if video.video_thumbnail %}
-                            <img src="{{ video.video_thumbnail.url }}" alt="{{ video.title }}">
-                        {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ video.title }}">
-                        {% endif %}
+                        <div style="display: flex; align-items: center; justify-content: center; height: 200px; background: #f5f5f5; color: #666;">
+                            <i class="fas fa-video" style="font-size: 48px;"></i>
+                        </div>
                     </div>
                 {% endif %}
             </div>
 
-            <!-- ТЕСТОВЫЙ БЛОК: удалить после проверки отображения -->
-            <div style="margin:12px 0; padding:12px; border-radius:8px; background:#fff7d6; color:#6a5900; border:1px solid #f0d98c; text-align:center;">
-                Тест: этот блок должен быть виден под видео. Если вы его видите, но плеер не появился, значит проблема в загрузке Rutube.
-            </div>
 
             <!-- Описание видео -->
             {% if video.description %}
@@ -91,8 +57,8 @@
             </div>
             {% endif %}
 
-            <!-- Кнопка перехода к ЖК -->
-            <div class="complex-link-section">
+            <!-- Кнопка перехода к ЖК (только на десктопе) -->
+            <div class="complex-link-section desktop-only">
                 <a href="{% url 'main:detail' residential_complex.id %}" class="complex-link-btn">
                     <i class="fas fa-building"></i>
                     <span>Перейти к {{ residential_complex.name }}</span>
@@ -110,15 +76,8 @@
                     {% for v in same_complex_videos %}
                     <a href="{% url 'main:video_detail' v.id %}" class="sidebar-video-card {% if v.id == video.id %}active{% endif %}">
                         <div class="sidebar-video-image">
-                            {% if v.video_thumbnail %}
-                                <img src="{{ v.video_thumbnail.url }}" alt="{{ v.title }}">
-                            {% elif v.image and v.image.url %}
-                                <img src="{{ v.image.url }}" alt="{{ v.title }}">
-                            {% else %}
-                                <img src="/media/gallery/placeholders.png" alt="{{ v.title }}">
-                            {% endif %}
-                            <div class="video-play-overlay">
-                                <i class="fas fa-play"></i>
+                            <div style="display: flex; align-items: center; justify-content: center; width: 80px; height: 60px; background: #f5f5f5; color: #666; border-radius: 6px;">
+                                <i class="fas fa-play" style="font-size: 20px;"></i>
                             </div>
                         </div>
                         <div class="sidebar-video-content">
@@ -136,6 +95,15 @@
                 </div>
                 {% endif %}
             </div>
+            
+            <!-- Кнопка перехода к ЖК (только на мобильном) -->
+            <div class="complex-link-section mobile-only" style="margin-top: 1.5rem;">
+                <a href="{% url 'main:detail' residential_complex.id %}" class="complex-link-btn">
+                    <i class="fas fa-building"></i>
+                    <span>Перейти к {{ residential_complex.name }}</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -152,13 +120,7 @@
             {% for v in similar_videos %}
             <a href="{% url 'main:video_detail' v.id %}" class="similar-video-full-card">
                 <div class="similar-video-full-image">
-                    {% if v.video_thumbnail %}
-                        <img src="{{ v.video_thumbnail.url }}" alt="{{ v.title }}">
-                    {% elif v.image and v.image.url %}
-                        <img src="{{ v.image.url }}" alt="{{ v.title }}">
-                    {% else %}
-                        <img src="/media/gallery/placeholders.png" alt="{{ v.title }}">
-                    {% endif %}
+                    <i class="fas fa-play"></i>
                     <div class="video-play-overlay">
                         <i class="fas fa-play"></i>
                     </div>
@@ -235,15 +197,15 @@
 }
 
 .video-header {
-    padding: 1.5rem;
+    padding: 1.2rem 1.5rem;
     border-bottom: 1px solid var(--c21-border);
 }
 
 .video-title {
-    font-size: 1.8rem;
-    font-weight: 800;
+    font-size: 1.4rem;
+    font-weight: 700;
     color: var(--c21-dark);
-    margin: 0 0 0.5rem 0;
+    margin: 0;
     line-height: 1.3;
 }
 
@@ -252,12 +214,19 @@
     align-items: center;
     gap: 1rem;
     color: var(--c21-gray);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
 }
 
 .complex-name {
     color: var(--c21-gold);
     font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.video-date {
+    font-size: 0.8rem;
+    color: #999;
 }
 
 /* Видео плеер */
@@ -500,17 +469,15 @@
     position: relative;
     height: 180px;
     overflow: hidden;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
 }
 
-.similar-video-full-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.similar-video-full-card:hover .similar-video-full-image img {
-    transform: scale(1.05);
+.similar-video-full-image i {
+    font-size: 48px;
 }
 
 .video-play-overlay {
@@ -641,6 +608,7 @@
     display: none;
 }
 
+/* Strong overrides to prevent collapsing on mobile */
 @media (max-width: 768px) {
     .desktop-only {
         display: none;
@@ -649,7 +617,7 @@
     .mobile-only {
         display: block;
     }
-    /* Strong overrides to prevent collapsing */
+    
     .video-detail-layout { display: block !important; }
     .video-main-content { display:block !important; overflow:visible !important; }
     .video-player-container { min-height: 240px !important; }
@@ -660,16 +628,4 @@
 /* Адаптивность вынесена в static/css/mobile.css */
 </style>
 
-<script>
-function loadMobileVideo() {
-    const embedUrl = '{{ video_embed_url|safe }}';
-    const iframe = document.getElementById('mobile-video-iframe');
-    const card = document.querySelector('.video-mobile-card');
-    const iframeContainer = document.querySelector('.video-mobile-iframe');
-    
-    iframe.src = embedUrl;
-    card.style.display = 'none';
-    iframeContainer.style.display = 'block';
-}
-</script>
 {% endblock %} 

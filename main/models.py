@@ -85,7 +85,6 @@ class Gallery(models.Model):
     image = models.ImageField(upload_to='gallery/', verbose_name="Изображение", blank=True, null=True)
     video_url = models.URLField(blank=True, null=True, verbose_name="Ссылка на видео (YouTube)")
     # video_file = models.FileField(upload_to='gallery/videos/', blank=True, null=True, verbose_name="Файл видео")  # Убрано - только ссылки на видео
-    video_thumbnail = models.ImageField(upload_to='gallery/thumbnails/', blank=True, null=True, verbose_name="Превью видео")
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, verbose_name="Категория")
     object_id = models.PositiveIntegerField(verbose_name="ID объекта")
     description = models.TextField(blank=True, verbose_name="Описание")
@@ -110,21 +109,6 @@ class Gallery(models.Model):
         """Валидация модели"""
         from django.core.exceptions import ValidationError
         
-        # Валидация превью видео
-        if self.video_thumbnail:
-            # Проверяем размер файла (максимум 5MB)
-            if self.video_thumbnail.size > 5 * 1024 * 1024:
-                raise ValidationError({
-                    'video_thumbnail': 'Размер файла превью не должен превышать 5MB.'
-                })
-            
-            # Проверяем, что это изображение (по расширению файла)
-            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-            file_extension = self.video_thumbnail.name.lower().split('.')[-1]
-            if f'.{file_extension}' not in allowed_extensions:
-                raise ValidationError({
-                    'video_thumbnail': f'Неподдерживаемый формат файла. Разрешены: {", ".join(allowed_extensions)}'
-                })
     
     def save(self, *args, **kwargs):
         """Переопределяем save для выполнения валидации"""

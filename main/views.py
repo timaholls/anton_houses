@@ -4,23 +4,26 @@ from django.shortcuts import redirect
 from django.core.paginator import Paginator
 from django.http import JsonResponse, Http404
 from django.contrib import messages
-from .models import ResidentialComplex, Article, Tag, CompanyInfo, CatalogLanding, SecondaryProperty, Category, Employee, EmployeeReview, FutureComplex
+from .models import ResidentialComplex, Article, Tag, CompanyInfo, CatalogLanding, SecondaryProperty, Category, \
+    Employee, EmployeeReview, FutureComplex
 from .models import Vacancy
 from .models import BranchOffice
 from .models import Gallery, MortgageProgram, SpecialOffer
 from django.db import models
 
+
 def home(request):
     """Главная страница"""
     # Получаем 9 популярных ЖК для главной страницы
     complexes = ResidentialComplex.objects.filter(is_featured=True).order_by('-created_at')[:6]
-    
+
     # Если популярных ЖК меньше 9, добавляем обычные
     if complexes.count() < 6:
         remaining_count = 6 - complexes.count()
-        additional_complexes = ResidentialComplex.objects.filter(is_featured=False).order_by('-created_at')[:remaining_count]
+        additional_complexes = ResidentialComplex.objects.filter(is_featured=False).order_by('-created_at')[
+                               :remaining_count]
         complexes = list(complexes) + list(additional_complexes)
-    
+
     # Получаем информацию о компании
     company_info = CompanyInfo.get_active()
     # Галерея компании
@@ -29,10 +32,10 @@ def home(request):
         company_gallery = company_info.get_images()[:6]
     # Статьи для главной
     home_articles = Article.objects.filter(show_on_home=True).order_by('-published_date')[:3]
-    
+
     # Акции для главной - все активные предложения
     offers = SpecialOffer.get_active_offers()
-    
+
     context = {
         'complexes': complexes,
         'company_info': company_info,
@@ -42,10 +45,11 @@ def home(request):
     }
     return render(request, 'main/home.html', context)
 
+
 def catalog(request):
     """Каталог ЖК"""
     page = request.GET.get('page', 1)
-    
+
     # Получаем параметры фильтрации
     rooms = request.GET.get('rooms', '')
     city = request.GET.get('city', '')
@@ -57,15 +61,15 @@ def catalog(request):
     price_to = request.GET.get('price_to', '')
     delivery_date = request.GET.get('delivery_date', '')
     sort = request.GET.get('sort', 'price_asc')
-    
+
     # Базовый queryset
     complexes = ResidentialComplex.objects.all()
-    
+
     # Применяем фильтры только если есть параметры поиска
     filters_applied = False
     if rooms or city or district or street or area_from or area_to or price_from or price_to or delivery_date:
         filters_applied = True
-        
+
         if rooms:
             complexes = complexes.filter(rooms=rooms)
         if city:
@@ -96,7 +100,7 @@ def catalog(request):
                 pass
         if delivery_date:
             complexes = complexes.filter(delivery_date__lte=delivery_date)
-    
+
     # Применяем сортировку
     if sort == 'price_asc':
         complexes = complexes.order_by('price_from')
@@ -106,14 +110,14 @@ def catalog(request):
         complexes = complexes.order_by('-area_to')
     elif sort == 'area_asc':
         complexes = complexes.order_by('area_from')
-    
+
     # Пагинация по 9 элементов
     paginator = Paginator(complexes, 9)
     page_obj = paginator.get_page(page)
-    
+
     # Получаем уникальные города для фильтра
     cities = ResidentialComplex.objects.values_list('city', flat=True).distinct()
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -137,10 +141,11 @@ def catalog(request):
     }
     return render(request, 'main/catalog.html', context)
 
+
 def catalog_api(request):
     """API для каталога ЖК с пагинацией и фильтрацией"""
     page = request.GET.get('page', 1)
-    
+
     # Получаем параметры фильтрации
     rooms = request.GET.get('rooms', '')
     city = request.GET.get('city', '')
@@ -152,10 +157,10 @@ def catalog_api(request):
     price_to = request.GET.get('price_to', '')
     delivery_date = request.GET.get('delivery_date', '')
     sort = request.GET.get('sort', 'price_asc')
-    
+
     # Базовый queryset
     complexes = ResidentialComplex.objects.all()
-    
+
     # Применяем фильтры
     if rooms:
         complexes = complexes.filter(rooms=rooms)
@@ -187,7 +192,7 @@ def catalog_api(request):
             pass
     if delivery_date:
         complexes = complexes.filter(delivery_date__lte=delivery_date)
-    
+
     # Применяем сортировку
     if sort == 'price_asc':
         complexes = complexes.order_by('price_from')
@@ -197,11 +202,11 @@ def catalog_api(request):
         complexes = complexes.order_by('-area_to')
     elif sort == 'area_asc':
         complexes = complexes.order_by('area_from')
-    
+
     # Пагинация по 9 элементов
     paginator = Paginator(complexes, 9)
     page_obj = paginator.get_page(page)
-    
+
     # Подготавливаем данные для JSON
     complexes_data = []
     for complex in page_obj:
@@ -213,23 +218,23 @@ def catalog_api(request):
             location_parts.append(complex.district)
         if complex.street:
             location_parts.append(complex.street)
-        
+
         location = ' - '.join(location_parts) if location_parts else 'Локация не указана'
-        
+
         # Получаем изображения для каталога
         catalog_images = complex.get_catalog_images()
-        
+
         # Подготавливаем отдельные URL для каждого изображения
         image_url = None
         image_2_url = None
         image_3_url = None
         image_4_url = None
-        
+
         if catalog_images:
             # Главное изображение
             if len(catalog_images) > 0 and catalog_images[0].image:
                 image_url = catalog_images[0].image.url
-            
+
             # Дополнительные изображения
             if len(catalog_images) > 1 and catalog_images[1].image:
                 image_2_url = catalog_images[1].image.url
@@ -237,7 +242,7 @@ def catalog_api(request):
                 image_3_url = catalog_images[2].image.url
             if len(catalog_images) > 3 and catalog_images[3].image:
                 image_4_url = catalog_images[3].image.url
-        
+
         complexes_data.append({
             'id': complex.id if complex.id else 0,
             'name': complex.name,
@@ -266,7 +271,7 @@ def catalog_api(request):
             'highlight_sale': getattr(complex, 'highlight_sale', False),
             'highlight_recommended': getattr(complex, 'highlight_recommended', False),
         })
-    
+
     return JsonResponse({
         'complexes': complexes_data,
         'has_previous': page_obj.has_previous(),
@@ -276,14 +281,15 @@ def catalog_api(request):
         'total_count': paginator.count
     })
 
+
 def articles(request):
     """Страница статей"""
     category = request.GET.get('category', '')
     article_type = request.GET.get('type', 'news')  # По умолчанию показываем новости
-    
+
     # Получаем статьи по типу
     articles_list = Article.objects.filter(article_type=article_type)
-    
+
     # Дополнительная фильтрация по категории
     if category:
         try:
@@ -291,47 +297,48 @@ def articles(request):
             articles_list = articles_list.filter(category=category_obj)
         except Category.DoesNotExist:
             articles_list = Article.objects.none()
-    
+
     # Получаем статьи по категориям для отображения в секциях (только для текущего типа)
     try:
         mortgage_category = Category.objects.get(slug='mortgage')
-        mortgage_articles = Article.objects.filter(article_type=article_type, category=mortgage_category, is_featured=True)[:3]
+        mortgage_articles = Article.objects.filter(article_type=article_type, category=mortgage_category,
+                                                   is_featured=True)[:3]
     except Category.DoesNotExist:
         mortgage_articles = Article.objects.none()
-    
+
     try:
         laws_category = Category.objects.get(slug='laws')
         laws_articles = Article.objects.filter(article_type=article_type, category=laws_category)[:3]
     except Category.DoesNotExist:
         laws_articles = Article.objects.none()
-    
+
     try:
         instructions_category = Category.objects.get(slug='instructions')
         instructions_articles = Article.objects.filter(article_type=article_type, category=instructions_category)[:3]
     except Category.DoesNotExist:
         instructions_articles = Article.objects.none()
-    
+
     try:
         market_category = Category.objects.get(slug='market')
         market_articles = Article.objects.filter(article_type=article_type, category=market_category)[:3]
     except Category.DoesNotExist:
         market_articles = Article.objects.none()
-    
+
     try:
         tips_category = Category.objects.get(slug='tips')
         tips_articles = Article.objects.filter(article_type=article_type, category=tips_category)[:3]
     except Category.DoesNotExist:
         tips_articles = Article.objects.none()
-    
+
     # Получаем все категории для фильтрации
     categories = Category.objects.filter(is_active=True)
-    
+
     # Получаем популярные теги
     popular_tags = Tag.objects.all()[:10]
-    
+
     # Получаем рекомендуемые статьи для блока "Похожие статьи"
     featured_articles = Article.objects.filter(is_featured=True).order_by('-views_count')[:3]
-    
+
     context = {
         'articles': articles_list,
         'mortgage_articles': mortgage_articles,
@@ -347,36 +354,37 @@ def articles(request):
     }
     return render(request, 'main/articles.html', context)
 
+
 def article_detail(request, slug):
     """Детальная страница статьи"""
     article = get_object_or_404(Article, slug=slug)
-    
+
     # Увеличиваем счетчик просмотров
     article.views_count += 1
     article.save()
-    
+
     # Обновляем статистику автора
     if article.author:
         article.author.articles_count = article.author.article_set.count()
         article.author.total_views = sum(article.author.article_set.values_list('views_count', flat=True))
         article.author.total_likes = sum(article.author.article_set.values_list('likes_count', flat=True))
         article.author.save()
-    
+
     # Получаем похожие статьи (сначала из связанных, потом по категории)
     related_articles = article.related_articles.all()
     if not related_articles.exists():
         related_articles = Article.objects.filter(category=article.category).exclude(id=article.id)[:3]
-    
+
     # Если все еще нет похожих статей, берем последние статьи
     if not related_articles.exists():
         related_articles = Article.objects.exclude(id=article.id).order_by('-published_date')[:3]
-    
+
     # Получаем теги статьи
     article_tags = article.tags.all()
-    
+
     # Получаем популярные теги
     popular_tags = Tag.objects.all()[:10]
-    
+
     context = {
         'article': article,
         'related_articles': related_articles,
@@ -385,11 +393,12 @@ def article_detail(request, slug):
     }
     return render(request, 'main/article_detail_new.html', context)
 
+
 def tag_detail(request, slug):
     """Страница тега"""
     tag = get_object_or_404(Tag, slug=slug)
     articles = tag.articles.all()
-    
+
     context = {
         'tag': tag,
         'articles': articles,
@@ -458,19 +467,19 @@ def videos(request):
     """Список видеообзоров ЖК"""
     category = request.GET.get('category', '')  # 'newbuild' или 'secondary'
     complex_id = request.GET.get('complex', '')
-    
+
     # Получаем видео из галереи
     videos_qs = Gallery.objects.filter(
         content_type='video',
         is_active=True
     )
-    
+
     # Фильтруем по категории
     if category == 'newbuild':
         videos_qs = videos_qs.filter(category='residential_video')
     elif category == 'secondary':
         videos_qs = videos_qs.filter(category='secondary_video')
-    
+
     if complex_id:
         try:
             videos_qs = videos_qs.filter(object_id=int(complex_id))
@@ -488,7 +497,7 @@ def videos(request):
                 video.residential_complex_name = property_obj.name
         except (ResidentialComplex.DoesNotExist, SecondaryProperty.DoesNotExist):
             video.residential_complex_name = "Неизвестный объект"
-    
+
     # Если фильтруем по конкретному объекту и нет видео, показываем сообщение
     if complex_id and not videos_qs.exists():
         # Получаем категории для фильтра
@@ -496,7 +505,7 @@ def videos(request):
             {'value': 'newbuild', 'name': 'Новостройки'},
             {'value': 'secondary', 'name': 'Вторичная недвижимость'},
         ]
-        
+
         context = {
             'videos': [],
             'page_obj': None,
@@ -509,7 +518,7 @@ def videos(request):
             'no_videos_for_complex': True
         }
         return render(request, 'main/videos.html', context)
-    
+
     # Проверяем, есть ли результаты поиска
     if not videos_qs.exists():
         # Получаем категории для фильтра
@@ -517,7 +526,7 @@ def videos(request):
             {'value': 'newbuild', 'name': 'Новостройки'},
             {'value': 'secondary', 'name': 'Вторичная недвижимость'},
         ]
-        
+
         context = {
             'videos': [],
             'page_obj': None,
@@ -530,7 +539,7 @@ def videos(request):
             'no_videos_for_complex': False
         }
         return render(request, 'main/videos.html', context)
-    
+
     paginator = Paginator(videos_qs, 12)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
@@ -556,7 +565,7 @@ def videos(request):
 def video_detail(request, video_id):
     """Детальная страница видеообзора"""
     video = get_object_or_404(Gallery, id=video_id, content_type='video', is_active=True)
-    
+
     # Получаем связанный объект в зависимости от категории
     if video.category == 'residential_video':
         residential_complex = ResidentialComplex.objects.get(id=video.object_id)
@@ -566,12 +575,12 @@ def video_detail(request, video_id):
         object_type = 'Объект'
     else:
         raise Http404("Неизвестная категория видео")
-    
+
     # Формируем embed URL для видео
     video_embed_url = None
     if video.video_url:
         url = video.video_url.strip()
-        
+
         # Проверяем, является ли это iframe кодом
         if url.startswith('<iframe'):
             # Извлекаем src из iframe
@@ -604,7 +613,7 @@ def video_detail(request, video_id):
                     video_embed_url = url
         else:
             video_embed_url = url
-    
+
     # Видео из того же объекта
     same_complex_videos = Gallery.objects.filter(
         category=video.category,
@@ -612,13 +621,15 @@ def video_detail(request, video_id):
         is_active=True,
         object_id=video.object_id
     ).exclude(id=video.id)[:5]
-    
+
     # Похожие видео (из других объектов того же города)
     if video.category == 'residential_video':
-        complex_ids = ResidentialComplex.objects.filter(city=residential_complex.city).exclude(id=video.object_id).values_list('id', flat=True)
+        complex_ids = ResidentialComplex.objects.filter(city=residential_complex.city).exclude(
+            id=video.object_id).values_list('id', flat=True)
     else:
-        complex_ids = SecondaryProperty.objects.filter(city=residential_complex.city).exclude(id=video.object_id).values_list('id', flat=True)
-    
+        complex_ids = SecondaryProperty.objects.filter(city=residential_complex.city).exclude(
+            id=video.object_id).values_list('id', flat=True)
+
     similar_videos = Gallery.objects.filter(
         category=video.category,
         content_type='video',
@@ -636,15 +647,16 @@ def video_detail(request, video_id):
     }
     return render(request, 'main/video_detail.html', context)
 
+
 # Быстрые ссылки каталога
 def catalog_completed(request):
     """Сданные ЖК"""
     page = request.GET.get('page', 1)
     complexes = ResidentialComplex.objects.filter(status='completed')
-    
+
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -658,14 +670,15 @@ def catalog_completed(request):
     }
     return render(request, 'main/catalog.html', context)
 
+
 def catalog_construction(request):
     """Строящиеся ЖК"""
     page = request.GET.get('page', 1)
     complexes = ResidentialComplex.objects.filter(status='construction')
-    
+
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -679,14 +692,15 @@ def catalog_construction(request):
     }
     return render(request, 'main/catalog.html', context)
 
+
 def catalog_economy(request):
     """Эконом-класс"""
     page = request.GET.get('page', 1)
     complexes = ResidentialComplex.objects.filter(house_class='economy')
-    
+
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -700,14 +714,15 @@ def catalog_economy(request):
     }
     return render(request, 'main/catalog.html', context)
 
+
 def catalog_comfort(request):
     """Комфорт-класс"""
     page = request.GET.get('page', 1)
     complexes = ResidentialComplex.objects.filter(house_class='comfort')
-    
+
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -721,14 +736,15 @@ def catalog_comfort(request):
     }
     return render(request, 'main/catalog.html', context)
 
+
 def catalog_premium(request):
     """Премиум-класс"""
     page = request.GET.get('page', 1)
     complexes = ResidentialComplex.objects.filter(house_class='premium')
-    
+
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -742,14 +758,15 @@ def catalog_premium(request):
     }
     return render(request, 'main/catalog.html', context)
 
+
 def catalog_finished(request):
     """С отделкой"""
     page = request.GET.get('page', 1)
     complexes = ResidentialComplex.objects.filter(finishing='finished')
-    
+
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -763,14 +780,15 @@ def catalog_finished(request):
     }
     return render(request, 'main/catalog.html', context)
 
+
 def catalog_unfinished(request):
     """Без отделки"""
     page = request.GET.get('page', 1)
     complexes = ResidentialComplex.objects.filter(finishing='unfinished')
-    
+
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -784,22 +802,23 @@ def catalog_unfinished(request):
     }
     return render(request, 'main/catalog.html', context)
 
+
 def detail(request, complex_id):
     """Детальная страница ЖК"""
     complex = get_object_or_404(ResidentialComplex, id=complex_id)
-    
+
     # Проверяем, пришли ли мы от агента
     agent_id = request.GET.get('agent_id')
     agent = None
     agent_other_properties = []
-    
+
     if agent_id:
         try:
             agent = Employee.objects.get(id=agent_id, is_active=True)
             # Получаем другие объекты этого агента (исключая текущий ЖК)
             agent_residential = agent.residential_complexes.exclude(id=complex_id)[:3]
             agent_secondary = agent.secondary_properties.all()[:3]
-            
+
             # Объединяем объекты агента
             for complex_obj in agent_residential:
                 agent_other_properties.append({
@@ -811,7 +830,7 @@ def detail(request, complex_id):
                     'image': complex_obj.get_main_image(),
                     'url': f"/complex/{complex_obj.id}/",
                 })
-            
+
             for property_obj in agent_secondary:
                 agent_other_properties.append({
                     'type': 'secondary',
@@ -824,20 +843,20 @@ def detail(request, complex_id):
                 })
         except Employee.DoesNotExist:
             pass
-    
+
     # Получаем общие похожие ЖК (если нет других объектов агента или их мало)
     similar_complexes = ResidentialComplex.objects.filter(
         city=complex.city,
         house_class=complex.house_class
     ).exclude(id=complex.id)
-    
+
     # Если есть объекты агента, ограничиваем количество общих похожих
     if agent_other_properties:
         remaining_slots = max(0, 6 - len(agent_other_properties))
         similar_complexes = similar_complexes[:remaining_slots]
     else:
         similar_complexes = similar_complexes[:3]
-    
+
     # Получаем акции для данного ЖК
     from django.utils import timezone
     complex_offers = SpecialOffer.objects.filter(
@@ -846,7 +865,7 @@ def detail(request, complex_id):
     ).filter(
         models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
     ).order_by('-priority', '-created_at')
-    
+
     # Первое активное видеообзор этого ЖК
     video = complex.get_main_video()
     video_embed_url = None
@@ -860,19 +879,20 @@ def detail(request, complex_id):
             video_embed_url = f'https://www.youtube.com/embed/{vid}'
         else:
             video_embed_url = url
-     
+
     mortgage_programs = list(MortgageProgram.objects.filter(is_active=True))
     if not mortgage_programs:
         # Защита: если нет записей, используем дефолтный набор в памяти
         class P:
             def __init__(self, name, rate):
                 self.name, self.rate = name, rate
+
         mortgage_programs = [
             P('Базовая', 18.0),
             P('IT-ипотека', 6.0),
             P('Семейная', 6.0),
         ]
-     
+
     context = {
         'complex': complex,
         'similar_complexes': similar_complexes,
@@ -887,11 +907,14 @@ def detail(request, complex_id):
     }
     return render(request, 'main/detail.html', context)
 
+
 def secondary_detail(request, pk: int):
     obj = get_object_or_404(SecondaryProperty, pk=pk)
+
     # Используем существующий шаблон detail.html с минимальным контекстом-адаптером
     class Adapter:
         pass
+
     complex = Adapter()
     complex.name = obj.name
 
@@ -908,7 +931,8 @@ def secondary_detail(request, pk: int):
     complex.completion_end = ''
     complex.has_completed = True
     complex.get_house_class_display = ''
-    complex.get_house_type_display = obj.get_house_type_display if hasattr(obj, 'get_house_type_display') else lambda: ''
+    complex.get_house_type_display = obj.get_house_type_display if hasattr(obj,
+                                                                           'get_house_type_display') else lambda: ''
     complex.get_finishing_display = lambda: ''
 
     return render(request, 'main/detail.html', {
@@ -918,6 +942,7 @@ def secondary_detail(request, pk: int):
         'mortgage_programs': [],
         'videos': obj.get_videos(),
     })
+
 
 def secondary_api(request):
     """API для вторичной недвижимости (AJAX)"""
@@ -968,18 +993,18 @@ def secondary_api(request):
     for obj in page_obj:
         # Получаем изображения для каталога
         catalog_images = obj.get_catalog_images()
-        
+
         # Подготавливаем отдельные URL для каждого изображения
         image_url = None
         image_2_url = None
         image_3_url = None
         image_4_url = None
-        
+
         if catalog_images:
             # Главное изображение
             if len(catalog_images) > 0 and catalog_images[0].image:
                 image_url = catalog_images[0].image.url
-            
+
             # Дополнительные изображения
             if len(catalog_images) > 1 and catalog_images[1].image:
                 image_2_url = catalog_images[1].image.url
@@ -987,7 +1012,7 @@ def secondary_api(request):
                 image_3_url = catalog_images[2].image.url
             if len(catalog_images) > 3 and catalog_images[3].image:
                 image_4_url = catalog_images[3].image.url
-        
+
         items.append({
             'id': obj.id if obj.id else 0,
             'name': obj.name,
@@ -1014,6 +1039,7 @@ def secondary_api(request):
         'has_next': page_obj.has_next(),
     })
 
+
 def districts_api(request):
     """API для получения районов по городу"""
     city = request.GET.get('city', '')
@@ -1022,20 +1048,22 @@ def districts_api(request):
         districts = [district for district in districts if district]  # Убираем пустые значения
     else:
         districts = []
-    
+
     return JsonResponse({'districts': list(districts)})
+
 
 def streets_api(request):
     """API для получения улиц по городу"""
     city = request.GET.get('city', '')
-    
+
     if city:
         streets = ResidentialComplex.objects.filter(city=city).values_list('street', flat=True).distinct()
         streets = [street for street in streets if street]  # Убираем пустые значения
     else:
         streets = []
-    
+
     return JsonResponse({'streets': list(streets)})
+
 
 def article_view_api(request, article_id):
     """API для увеличения счетчика просмотров статьи"""
@@ -1049,9 +1077,11 @@ def article_view_api(request, article_id):
             return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
     return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
 
+
 def privacy_policy(request):
     """Страница политики конфиденциальности"""
     return render(request, 'main/privacy.html')
+
 
 def catalog_landing(request, slug):
     landing = get_object_or_404(CatalogLanding, slug=slug)
@@ -1068,7 +1098,7 @@ def catalog_landing(request, slug):
         'house': 'house',
         'cottage': 'cottage',
         'townhouse': 'townhouse',
-        'commercial': None,        # коммерция отсутствует — оставляем как есть
+        'commercial': None,  # коммерция отсутствует — оставляем как есть
         'all': None,
     }
     house_type = category_map.get(landing.category)
@@ -1149,10 +1179,11 @@ def secondary_index(request):
         return catalog_landing(request, slug=landing.slug)
     return _catalog_fallback(request, kind='secondary', title='Вторичная недвижимость')
 
+
 def team(request):
     """Страница команды"""
     employees = Employee.objects.filter(is_active=True).order_by('-is_featured', 'full_name')
-    
+
     context = {
         'employees': employees,
     }
@@ -1162,24 +1193,24 @@ def team(request):
 def agent_properties(request, employee_id):
     """Страница объектов агента"""
     employee = get_object_or_404(Employee, id=employee_id, is_active=True)
-    
+
     # Получаем параметры фильтрации и сортировки
     property_type = request.GET.get('property_type', '')
     sort_by = request.GET.get('sort_by', 'date-desc')
-    
+
     # Получаем все объекты агента (новостройки и вторичная недвижимость)
     residential_complexes = ResidentialComplex.objects.filter(agent=employee)
     secondary_properties = SecondaryProperty.objects.filter(agent=employee)
-    
+
     # Фильтрация по типу недвижимости
     if property_type == 'residential':
         secondary_properties = SecondaryProperty.objects.none()
     elif property_type == 'secondary':
         residential_complexes = ResidentialComplex.objects.none()
-    
+
     # Объединяем все объекты
     all_properties = []
-    
+
     # Добавляем новостройки
     for complex in residential_complexes:
         all_properties.append({
@@ -1192,7 +1223,7 @@ def agent_properties(request, employee_id):
             'url': f"/complex/{complex.id}/",
             'created_at': complex.created_at,
         })
-    
+
     # Добавляем вторичную недвижимость
     for property in secondary_properties:
         all_properties.append({
@@ -1205,7 +1236,7 @@ def agent_properties(request, employee_id):
             'url': f"/secondary/{property.id}/",
             'created_at': property.created_at,
         })
-    
+
     # Применяем сортировку
     if sort_by == 'date-desc':
         all_properties.sort(key=lambda x: x['created_at'], reverse=True)
@@ -1217,11 +1248,11 @@ def agent_properties(request, employee_id):
         all_properties.sort(key=lambda x: float(x['price']), reverse=True)
     elif sort_by == 'name-asc':
         all_properties.sort(key=lambda x: x['name'].lower())
-    
+
     # Пагинация по 9 элементов
     paginator = Paginator(all_properties, 9)
     page_obj = paginator.get_page(request.GET.get('page', 1))
-    
+
     context = {
         'employee': employee,
         'properties': page_obj,
@@ -1244,10 +1275,10 @@ def future_complexes(request):
     price_to = request.GET.get('price_to', '')
     delivery_date = request.GET.get('delivery_date', '')
     sort = request.GET.get('sort', 'delivery_date_asc')
-    
+
     # Базовый queryset
     complexes = FutureComplex.objects.filter(is_active=True)
-    
+
     # Применяем фильтры
     if city:
         complexes = complexes.filter(city__icontains=city)
@@ -1265,7 +1296,7 @@ def future_complexes(request):
             pass
     if delivery_date:
         complexes = complexes.filter(delivery_date__lte=delivery_date)
-    
+
     # Применяем сортировку
     if sort == 'delivery_date_asc':
         complexes = complexes.order_by('delivery_date')
@@ -1279,11 +1310,11 @@ def future_complexes(request):
         complexes = complexes.order_by('name')
     else:
         complexes = complexes.order_by('-is_featured', 'delivery_date')
-    
+
     # Пагинация
     paginator = Paginator(complexes, 12)
     page_obj = paginator.get_page(request.GET.get('page', 1))
-    
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -1306,15 +1337,15 @@ def future_complex_detail(request, complex_id):
         complex = FutureComplex.objects.get(id=complex_id, is_active=True)
     except FutureComplex.DoesNotExist:
         raise Http404("ЖК не найден")
-    
+
     # Получаем изображения ЖК
     images = complex.get_images()
-    
+
     # Получаем другие будущие ЖК для блока "Другие проекты"
     other_complexes = FutureComplex.objects.filter(
         is_active=True
     ).exclude(id=complex_id).order_by('?')[:6]
-    
+
     context = {
         'complex': complex,
         'images': images,
@@ -1326,17 +1357,17 @@ def future_complex_detail(request, complex_id):
 def employee_detail(request, employee_id):
     """Детальная страница сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id, is_active=True)
-    
+
     # Получаем объекты недвижимости агента (по 2 новостройки и 2 вторички = 4 всего)
     residential_complexes = employee.residential_complexes.all()[:2]
     secondary_properties = employee.secondary_properties.all()[:2]
-    
+
     # Считаем общее количество объектов
     total_properties_count = employee.residential_complexes.count() + employee.secondary_properties.count()
-    
+
     # Получаем опубликованные отзывы
     reviews = employee.reviews.filter(is_approved=True, is_published=True).order_by('-created_at')[:10]
-    
+
     # Обработка формы отзыва
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
@@ -1344,7 +1375,7 @@ def employee_detail(request, employee_id):
         phone = request.POST.get('phone', '').strip()
         rating = request.POST.get('rating', 5)
         text = request.POST.get('text', '').strip()
-        
+
         if name and text and rating:
             try:
                 rating = int(rating)
@@ -1361,9 +1392,9 @@ def employee_detail(request, employee_id):
                     return redirect('main:employee_detail', employee_id=employee.id)
             except ValueError:
                 pass
-        
+
         messages.error(request, 'Пожалуйста, заполните все обязательные поля корректно.')
-    
+
     context = {
         'employee': employee,
         'residential_complexes': residential_complexes,
@@ -1378,7 +1409,7 @@ def mortgage(request):
     """Страница ипотеки с калькулятором"""
     # Получаем ипотечные программы для калькулятора
     mortgage_programs = MortgageProgram.objects.filter(is_active=True).order_by('rate')
-    
+
     # Если нет программ, создаем базовую
     if not mortgage_programs.exists():
         mortgage_programs = [
@@ -1387,7 +1418,7 @@ def mortgage(request):
                 'rate': 11.4
             })()
         ]
-    
+
     context = {
         'mortgage_programs': mortgage_programs,
     }
@@ -1397,14 +1428,14 @@ def mortgage(request):
 def all_offers(request):
     """Страница всех акций"""
     from django.utils import timezone
-    
+
     # Получаем все активные акции
     offers = SpecialOffer.objects.filter(
         is_active=True
     ).filter(
         models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
     ).select_related('residential_complex').order_by('?')
-    
+
     context = {
         'offers': offers,
     }
@@ -1414,40 +1445,41 @@ def all_offers(request):
 def offer_detail(request, offer_id):
     """Детальная страница акции"""
     from django.utils import timezone
-    
+
     # Получаем акцию
     offer = get_object_or_404(SpecialOffer, id=offer_id, is_active=True)
-    
+
     # Проверяем, не истекла ли акция
     if offer.expires_at and offer.expires_at < timezone.now():
         raise Http404("Акция истекла")
-    
+
     # Получаем другие активные акции (без лимита)
     other_offers = SpecialOffer.objects.filter(
         is_active=True
     ).filter(
         models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
     ).exclude(id=offer_id).select_related('residential_complex').order_by('?')[:8]
-    
+
     context = {
         'offer': offer,
         'other_offers': other_offers,
     }
     return render(request, 'main/offer_detail.html', context)
 
+
 def videos_objects_api(request):
     """API для получения списка объектов по категории недвижимости"""
     from django.http import JsonResponse
-    
+
     category = request.GET.get('category', '')
-    
+
     if category == 'newbuild':
         objects = ResidentialComplex.objects.values('id', 'name')
     elif category == 'secondary':
         objects = SecondaryProperty.objects.values('id', 'name')
     else:
         objects = []
-    
+
     return JsonResponse({
         'success': True,
         'objects': list(objects)
