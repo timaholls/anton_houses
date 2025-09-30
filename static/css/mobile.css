@@ -8,6 +8,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
 /* Desktop defaults: hide mobile UI */
 .mobile-menu-toggle { display: none; }
 .mobile-drawer { display: none; }
+#mobile-filter-open,
+#mobile-filter-close { display: none; }
 
 /* ===== Header (main-header) ===== */
 @media (max-width: 992px) {
@@ -158,12 +160,12 @@ html, body { max-width: 100%; overflow-x: hidden; }
     .catalog-section ~ .footer .footer-content { margin-top: 100px !important; }
 
     /* Compact mobile filters */
-    .mobile-filter-toggle{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #eee;border-radius:999px;background:#fff;font-weight:700; margin:8px 0 12px 0}
+    .mobile-filter-toggle{display:none;align-items:center;gap:8px;padding:10px 14px;border:1px solid #eee;border-radius:999px;background:#fff;font-weight:700; margin:8px 0 12px 0}
     .filters-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:5000}
     .filters-backdrop.open{opacity:1;pointer-events:auto}
     .filters-section { position: fixed; left:0; right:0; bottom:-110%; z-index:5001; background:#fff; border-radius:16px 16px 0 0; padding:12px; box-shadow:0 -8px 24px rgba(0,0,0,.15); margin-bottom:0; transition:bottom .28s ease; max-height:80vh; overflow-y:auto; }
     .filters-section.open{bottom:0}
-    .filters-sheet-header{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 10px 6px;border-bottom:1px solid #eee;margin-bottom:10px}
+    .filters-sheet-header{display:none;align-items:center;justify-content:space-between;padding:6px 6px 10px 6px;border-bottom:1px solid #eee;margin-bottom:10px}
     .sheet-close{border:none;background:#f3f4f6;border-radius:8px;width:36px;height:36px;font-size:22px;line-height:22px}
     .filters-form { display:block; }
     /* Перестраиваем сетку фильтров под мобильный UX */
@@ -191,6 +193,14 @@ html, body { max-width: 100%; overflow-x: hidden; }
     .filters-actions .btn { padding:10px 14px; font-size:14px; border-radius:10px; }
     .clear-filters { font-size:12px; color:#a77; display:inline-flex; align-items:center; gap:6px; }
     .results-count { font-size:12px; color:#666; }
+
+    /* Show mobile-only controls only on small screens */
+    @media (max-width: 1024px){
+        .mobile-filter-toggle{ display:inline-flex; }
+        .filters-sheet-header{ display:flex; }
+        #mobile-filter-open,
+        #mobile-filter-close { display:inline-flex; }
+    }
 
     /* Горизонтальная лента кнопок комнат */
     .button-filter { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
