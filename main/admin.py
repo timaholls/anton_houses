@@ -27,9 +27,6 @@ class ResidentialComplexAdmin(admin.ModelAdmin):
         ('Детали', {
             'fields': ('total_apartments', 'completion_start', 'completion_end', 'developer', 'studio_price', 'one_room_price', 'two_room_price', 'three_room_price', 'four_room_price')
         }),
-        ('Витрина каталога', {
-            'fields': ('highlight_sale', 'highlight_recommended')
-        }),
     )
 
 @admin.register(SecondaryProperty)
@@ -45,9 +42,6 @@ class SecondaryPropertyAdmin(admin.ModelAdmin):
         ('Координаты', {
             'fields': ('latitude', 'longitude'),
             'classes': ('collapse',)
-        }),
-        ('Витрина каталога', {
-            'fields': ('highlight_sale', 'highlight_recommended')
         }),
     )
 

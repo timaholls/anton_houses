@@ -33,7 +33,7 @@
                     <div class="logo">
                         <a href="{% url 'main:home' %}">
                             <span class="logo-text">CENTURY&nbsp;21</span>
-                            <span class="logo-slogan">Мир в Квадратах</span>
+                            <span class="logo-slogan">Мир&nbsp;в&nbsp;Квадратах</span>
                         </a>
                     </div>
                 </div>
@@ -67,10 +67,8 @@
                             {% if head_office.phone %}
                                 <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" class="phone-number">{{ head_office.phone }}</a>
                             {% endif %}
-                            <a href="{% url 'main:home' %}#office-map" class="address address-link">{{ head_office.city }}, {{ head_office.address }}</a>
                         {% else %}
                             <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
-                            <a href="{% url 'main:home' %}#office-map" class="address address-link">г. Уфа, ул. Ленина, 1</a>
                         {% endif %}
                     </div>
                 </div>
@@ -241,10 +239,6 @@
                             <a href="mailto:{{ email }}">{{ email }}</a>
                         </div>
                         <div class="contact-item">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>{% if head_office %}{{ head_office.city }}, {{ head_office.address }}{% else %}г. Уфа, ул. Ленина, 1{% endif %}</span>
-                        </div>
-                        <div class="contact-item">
                             <i class="fas fa-clock"></i>
                             <span>{% if head_office and head_office.schedule %}{{ head_office.schedule }}{% else %}Пн-Пт: 9:00-18:00{% endif %}</span>
                         </div>
@@ -267,6 +261,10 @@
                     <p>&copy; 2024 CENTURY 21. Все права защищены.</p>
                 </div>
                 <div class="footer-bottom-right">
+                    <a href="https://www.century21.ru/" target="_blank" class="franchise-link" rel="noopener noreferrer">
+                        <i class="fas fa-external-link-alt"></i>
+                        Головной сайт Century 21
+                    </a>
                     <a href="{% url 'main:privacy' %}" class="privacy-link">Политика конфиденциальности</a>
                 </div>
             </div>

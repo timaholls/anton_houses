@@ -60,6 +60,7 @@ def catalog(request):
     price_from = request.GET.get('price_from', '')
     price_to = request.GET.get('price_to', '')
     delivery_date = request.GET.get('delivery_date', '')
+    has_offers = request.GET.get('has_offers', '')
     sort = request.GET.get('sort', 'price_asc')
 
     # Базовый queryset
@@ -67,7 +68,7 @@ def catalog(request):
 
     # Применяем фильтры только если есть параметры поиска
     filters_applied = False
-    if rooms or city or district or street or area_from or area_to or price_from or price_to or delivery_date:
+    if rooms or city or district or street or area_from or area_to or price_from or price_to or delivery_date or has_offers:
         filters_applied = True
 
         if rooms:
@@ -100,6 +101,8 @@ def catalog(request):
                 pass
         if delivery_date:
             complexes = complexes.filter(delivery_date__lte=delivery_date)
+        if has_offers:
+            complexes = complexes.filter(offers__is_active=True).distinct()
 
     # Применяем сортировку
     if sort == 'price_asc':
@@ -134,6 +137,7 @@ def catalog(request):
             'price_from': price_from,
             'price_to': price_to,
             'delivery_date': delivery_date,
+            'has_offers': has_offers,
             'sort': sort,
         },
         'filters_applied': filters_applied,
@@ -156,6 +160,7 @@ def catalog_api(request):
     price_from = request.GET.get('price_from', '')
     price_to = request.GET.get('price_to', '')
     delivery_date = request.GET.get('delivery_date', '')
+    has_offers = request.GET.get('has_offers', '')
     sort = request.GET.get('sort', 'price_asc')
 
     # Базовый queryset
@@ -192,6 +197,8 @@ def catalog_api(request):
             pass
     if delivery_date:
         complexes = complexes.filter(delivery_date__lte=delivery_date)
+    if has_offers:
+        complexes = complexes.filter(offers__is_active=True).distinct()
 
     # Применяем сортировку
     if sort == 'price_asc':
@@ -268,8 +275,6 @@ def catalog_api(request):
             'four_room_price': complex.four_room_price,
             'lat': complex.latitude,
             'lng': complex.longitude,
-            'highlight_sale': getattr(complex, 'highlight_sale', False),
-            'highlight_recommended': getattr(complex, 'highlight_recommended', False),
         })
 
     return JsonResponse({
@@ -1026,8 +1031,6 @@ def secondary_api(request):
             'image_4_url': image_4_url,
             'lat': obj.latitude,
             'lng': obj.longitude,
-            'highlight_sale': getattr(obj, 'highlight_sale', False),
-            'highlight_recommended': getattr(obj, 'highlight_recommended', False),
         })
 
     return JsonResponse({

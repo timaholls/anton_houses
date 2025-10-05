@@ -164,6 +164,19 @@
                         </div>
                         <input type="hidden" name="rooms" id="rooms-hidden" value="{{ filters.rooms|default:'' }}">
                     </div>
+                    
+                    <div class="filter-group">
+                        <label>Специальные предложения</label>
+                        <div class="button-filter">
+                            <button type="button" class="filter-btn" data-value="" data-active="{% if not filters.has_offers %}true{% else %}false{% endif %}">
+                                Любое
+                            </button>
+                            <button type="button" class="filter-btn" data-value="true" data-active="{% if filters.has_offers %}true{% else %}false{% endif %}">
+                                Скидки
+                            </button>
+                        </div>
+                        <input type="hidden" name="has_offers" id="has_offers-hidden" value="{{ filters.has_offers|default:'' }}">
+                    </div>
                     {% endif %}
                 </div>
 
@@ -229,7 +242,7 @@
             <div id="map" style="width: 100%; height: 520px; display:block; border-radius:12px; overflow:hidden; margin-bottom:24px;"></div>
             <div class="catalog-grid" id="catalog-grid">
             {% for complex in complexes %}
-            <div class="property-card-compact{% if complex.highlight_sale %} highlight-sale{% endif %}{% if complex.highlight_recommended %} highlight-recommended{% endif %}" onclick="window.location.href='{% if dataset_type == 'secondary' %}{% url 'main:secondary_detail' complex.id %}{% else %}{% url 'main:detail' complex.id %}{% endif %}'" style="cursor: pointer;">
+            <div class="property-card-compact" onclick="window.location.href='{% if dataset_type == 'secondary' %}{% url 'main:secondary_detail' complex.id %}{% else %}{% url 'main:detail' complex.id %}{% endif %}'" style="cursor: pointer;">
                 <div class="compact-card-image">
                     {% with catalog_images=complex.get_catalog_images %}
                         {% if catalog_images.0.image %}
@@ -380,7 +393,7 @@ window.renderItems = function(data){
     } else {
       grid.innerHTML = data.items.map(item => {
         const imageUrl = item.image_url || '/media/gallery/placeholders.png';
-        const cardClasses = `property-card-compact${item.highlight_sale ? ' highlight-sale' : ''}${item.highlight_recommended ? ' highlight-recommended' : ''}`;
+        const cardClasses = `property-card-compact`;
         return `
         <div class="${cardClasses}" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
           <div class="compact-card-image">
@@ -535,7 +548,7 @@ window.updateCatalog = function(data) {
         const image2 = complex.image_2_url || '/media/gallery/placeholders.png';
         const image3 = complex.image_3_url || '/media/gallery/placeholders.png';
         const image4 = complex.image_4_url || '/media/gallery/placeholders.png';
-        const cardClasses = `property-card-compact${complex.highlight_sale ? ' highlight-sale' : ''}${complex.highlight_recommended ? ' highlight-recommended' : ''}`;
+        const cardClasses = `property-card-compact`;
         
         html += `
             <div class="${cardClasses}" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
@@ -717,6 +730,10 @@ window.fetchData = async function(){
     if (requestId !== window.latestRequestId) return;
     renderItems(data);
   } catch(e){
+    // Игнорируем AbortError - это нормальная отмена запроса
+    if (e.name === 'AbortError') {
+      return;
+    }
     if (grid) grid.innerHTML = '<div class="error">Ошибка загрузки</div>';
     console.error(e);
   }
@@ -885,14 +902,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
 
     
-    // Обработка кнопок фильтра количества комнат
+    // Обработка кнопок фильтра количества комнат и скидок
     const filterBtns = document.querySelectorAll('.filter-btn');
     const roomsHidden = document.getElementById('rooms-hidden');
+    const hasOffersHidden = document.getElementById('has_offers-hidden');
     
     filterBtns.forEach(btn => {
         btn.addEventListener('click', function() {
-            // Убираем активное состояние у всех кнопок
-            filterBtns.forEach(b => {
+            const parentGroup = this.closest('.filter-group');
+            const groupBtns = parentGroup.querySelectorAll('.filter-btn');
+            const hiddenField = parentGroup.querySelector('input[type="hidden"]');
+            
+            // Убираем активное состояние у всех кнопок в группе
+            groupBtns.forEach(b => {
                 b.setAttribute('data-active', 'false');
                 b.classList.remove('active');
             });
@@ -901,9 +923,9 @@ document.addEventListener('DOMContentLoaded', function() {
             this.setAttribute('data-active', 'true');
             this.classList.add('active');
             
-            // Обновляем скрытое поле
-            if (roomsHidden) {
-                roomsHidden.value = this.getAttribute('data-value');
+            // Обновляем соответствующее скрытое поле
+            if (hiddenField) {
+                hiddenField.value = this.getAttribute('data-value');
             }
             
             // Мгновенный запуск поиска без перезагрузки страницы
@@ -1235,11 +1257,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // reset rooms filter (newbuild)
     const roomsHidden = document.getElementById('rooms-hidden');
     if (roomsHidden) roomsHidden.value = '';
-    const roomBtns = document.querySelectorAll('.filter-btn');
-    if (roomBtns && roomBtns.length) {
-      roomBtns.forEach(b => { b.setAttribute('data-active','false'); b.classList.remove('active'); });
-      const anyBtn = Array.from(roomBtns).find(b => (b.getAttribute('data-value') || '') === '');
-      if (anyBtn) { anyBtn.setAttribute('data-active','true'); anyBtn.classList.add('active'); }
+    const hasOffersHidden = document.getElementById('has_offers-hidden');
+    if (hasOffersHidden) hasOffersHidden.value = '';
+    
+    // reset all filter buttons
+    const allFilterBtns = document.querySelectorAll('.filter-btn');
+    if (allFilterBtns && allFilterBtns.length) {
+      allFilterBtns.forEach(b => { 
+        b.setAttribute('data-active','false'); 
+        b.classList.remove('active'); 
+      });
+      
+      // activate "Any" buttons
+      const anyBtns = Array.from(allFilterBtns).filter(b => (b.getAttribute('data-value') || '') === '');
+      anyBtns.forEach(btn => {
+        btn.setAttribute('data-active','true'); 
+        btn.classList.add('active');
+      });
     }
 
     // reset secondary type chips
