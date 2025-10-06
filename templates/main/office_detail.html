@@ -6,7 +6,7 @@
 <div class="container">
     <section class="articles-section">
         <div class="articles-header">
-            <h1 class="section-title">{{ office.name }}</h1>
+            <h1 class="section-title">{{ office.name|safe }}</h1>
             <p class="section-subtitle">{{ office.city }}, {{ office.address }}</p>
         </div>
 
@@ -15,7 +15,7 @@
             <span class="breadcrumb-separator">•</span>
             <a href="{% url 'main:offices' %}" class="breadcrumb-link">Офисы продаж</a>
             <span class="breadcrumb-separator">•</span>
-            <span class="breadcrumb-current">{{ office.name }}</span>
+            <span class="breadcrumb-current">{{ office.name|safe }}</span>
         </div>
 
         <div class="property-card" style="margin-bottom:24px;">

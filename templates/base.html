@@ -8,228 +8,276 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon" type="image/svg+xml" href="/media/logo/icon_site.png">
-    
+
     <!-- Leaflet CSS и JS для карт -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     {% block extra_css %}{% endblock %}
     {% block head %}{% endblock %}
 </head>
 <body>
 
 
-    <!-- Основная шапка -->
-    <header class="main-header">
-        <div class="container">
-            <div class="header-row">
-                <button class="mobile-menu-toggle" aria-label="Открыть меню">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="header-left">
-                    <div class="logo">
-                        <a href="{% url 'main:home' %}">
-                            <span class="logo-text">CENTURY&nbsp;21</span>
-                            <span class="logo-slogan">Мир&nbsp;в&nbsp;Квадратах</span>
+<!-- Основная шапка -->
+<header class="main-header">
+    <div class="container">
+        <div class="header-row">
+            <button class="mobile-menu-toggle" aria-label="Открыть меню">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="header-left">
+                <div class="logo">
+                    <a href="{% url 'main:home' %}">
+                        <span class="logo-text">CENTURY&nbsp;21</span>
+                        <span class="logo-slogan">Мир&nbsp;в&nbsp;Квадратах</span>
+                    </a>
+                </div>
+            </div>
+            <nav class="main-nav">
+                <a href="{% url 'main:home' %}"
+                   class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Главная</a>
+
+                <!-- Выпадающее меню Жилые комплексы -->
+                <div class="nav-dropdown">
+                    <a href="#"
+                       class="nav-link dropdown-toggle {% if 'catalog' in request.resolver_match.url_name or 'newbuild' in request.resolver_match.url_name or 'secondary' in request.resolver_match.url_name or 'future_complex' in request.resolver_match.url_name or 'video' in request.resolver_match.url_name %}active{% endif %}">
+                        Жилые комплексы
+                        <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="{% url 'main:newbuild_index' %}"
+                           class="dropdown-item {% if 'newbuild' in request.resolver_match.url_name %}active{% endif %}">Новостройки</a>
+                        <a href="{% url 'main:secondary_index' %}"
+                           class="dropdown-item {% if 'secondary' in request.resolver_match.url_name %}active{% endif %}">Вторичная
+                            недвижимость</a>
+                        <a href="{% url 'main:future_complexes' %}"
+                           class="dropdown-item {% if 'future_complex' in request.resolver_match.url_name %}active{% endif %}">Будущие
+                            проекты</a>
+                        <a href="{% url 'main:videos' %}"
+                           class="dropdown-item {% if 'video' in request.resolver_match.url_name %}active{% endif %}">Видеообзоры</a>
+                        <a href="{% url 'main:all_offers' %}"
+                           class="dropdown-item {% if 'all_offers' in request.resolver_match.url_name %}active{% endif %}">Все
+                            акции</a>
+                    </div>
+                </div>
+
+                <a href="{% url 'main:articles' %}"
+                   class="nav-link {% if 'articles' in request.resolver_match.url_name %}active{% endif %}">Новости</a>
+                <a href="{% url 'main:mortgage' %}" class="nav-link">Ипотека</a>
+                <a href="{% url 'main:team' %}"
+                   class="nav-link {% if request.resolver_match.url_name == 'team' %}active{% endif %}">Наша команда</a>
+                <a href="{% url 'main:vacancies' %}"
+                   class="nav-link {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
+                <a href="{% url 'main:offices' %}"
+                   class="nav-link {% if 'office' in request.resolver_match.url_name %}active{% endif %}">Офисы
+                    продаж</a>
+            </nav>
+            <div class="header-right">
+                <div class="contact-info">
+                    {% if head_office %}
+                        {% if head_office.phone %}
+                            <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}"
+                               class="phone-number">{{ head_office.phone }}</a>
+                        {% endif %}
+                        <a href="{% url 'main:home' %}#office-map"
+                           class="address address-link">{{ head_office.city }}, {{ head_office.address }}</a>
+                    {% else %}
+                        <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Off-canvas mobile menu -->
+        <aside class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+            <div class="mobile-drawer-header">
+                <span class="logo-text">CENTURY&nbsp;21</span>
+                <button class="mobile-menu-close" aria-label="Закрыть меню"><i class="fas fa-times"></i></button>
+            </div>
+            <nav class="mobile-drawer-nav">
+                <a href="{% url 'main:home' %}" class="drawer-link">Главная</a>
+                <div class="drawer-group">
+                    <div class="drawer-title">Жилые комплексы</div>
+                    <a href="{% url 'main:newbuild_index' %}" class="drawer-sublink">Новостройки</a>
+                    <a href="{% url 'main:secondary_index' %}" class="drawer-sublink">Вторичная недвижимость</a>
+                    <a href="{% url 'main:future_complexes' %}" class="drawer-sublink">Будущие проекты</a>
+                    <a href="{% url 'main:videos' %}" class="drawer-sublink">Видеообзоры</a>
+                    <a href="{% url 'main:all_offers' %}" class="drawer-sublink">Все акции</a>
+                </div>
+                <a href="{% url 'main:articles' %}" class="drawer-link">Новости</a>
+                <a href="{% url 'main:mortgage' %}" class="drawer-link">Ипотека</a>
+                <a href="{% url 'main:team' %}" class="drawer-link">Наша команда</a>
+                <a href="{% url 'main:vacancies' %}" class="drawer-link">Вакансии</a>
+                <a href="{% url 'main:offices' %}" class="drawer-link">Офисы продаж</a>
+            </nav>
+            <div class="mobile-drawer-footer">
+                <a class="drawer-phone" href="tel:
+                        {% if head_office and head_office.phone %}{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}{% else %}+73472019478{% endif %}"><i
+                        class="fas fa-phone"></i> Позвонить</a>
+            </div>
+        </aside>
+
+
+    </div>
+</header>
+
+<main class="main-content">
+    {% block content %}
+    {% endblock %}
+</main>
+
+<!-- Кнопка чата -->
+<div class="chat-button-container">
+    <button class="chat-button" id="chat-button">
+        <i class="fas fa-comments"></i>
+        <span class="chat-text">Чат</span>
+    </button>
+</div>
+
+<!-- Окно чата -->
+<div class="chat-modal" id="chat-modal">
+    <div class="chat-window">
+        <div class="chat-header">
+            <div class="chat-title">
+                <h3>Чат</h3>
+                <span class="online-status">● Мы онлайн</span>
+            </div>
+            <button class="chat-close" id="chat-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="chat-body">
+            <div class="chat-message support-message">
+                <div class="message-avatar">
+                    <img src="/media/logo/icon_site.png" alt="Поддержка C21">
+                </div>
+                <div class="message-content">
+                    <div class="message-author">Поддержка C21</div>
+                    <div class="message-text">
+                        Рады приветствовать вас! Предлагаем вам воспользоваться кнопками быстрого доступа к нашим
+                        услугам:
+                    </div>
+
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" data-action="property">
+                            Продать недвижимость
+                        </button>
+                        <button class="quick-action-btn" data-action="agent">
+                            Подобрать агента
+                        </button>
+                        <button class="quick-action-btn" data-action="question">
+                            Задать вопрос
+                        </button>
+                        <a class="quick-action-btn" href="tel:
+                                {% if head_office and head_office.phone %}{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}{% else %}+73472019478{% endif %}"
+                           data-action="call">
+                            Позвонить
                         </a>
                     </div>
                 </div>
-                <nav class="main-nav">
-                 <a href="{% url 'main:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Главная</a>
-                 
-                 <!-- Выпадающее меню Жилые комплексы -->
-                 <div class="nav-dropdown">
-                     <a href="#" class="nav-link dropdown-toggle {% if 'catalog' in request.resolver_match.url_name or 'newbuild' in request.resolver_match.url_name or 'secondary' in request.resolver_match.url_name or 'future_complex' in request.resolver_match.url_name or 'video' in request.resolver_match.url_name %}active{% endif %}">
-                         Жилые комплексы
-                         <i class="fas fa-chevron-down"></i>
-                     </a>
-                     <div class="dropdown-menu">
-                         <a href="{% url 'main:newbuild_index' %}" class="dropdown-item {% if 'newbuild' in request.resolver_match.url_name %}active{% endif %}">Новостройки</a>
-                         <a href="{% url 'main:secondary_index' %}" class="dropdown-item {% if 'secondary' in request.resolver_match.url_name %}active{% endif %}">Вторичная недвижимость</a>
-                         <a href="{% url 'main:future_complexes' %}" class="dropdown-item {% if 'future_complex' in request.resolver_match.url_name %}active{% endif %}">Будущие проекты</a>
-                         <a href="{% url 'main:videos' %}" class="dropdown-item {% if 'video' in request.resolver_match.url_name %}active{% endif %}">Видеообзоры</a>
-                         <a href="{% url 'main:all_offers' %}" class="dropdown-item {% if 'all_offers' in request.resolver_match.url_name %}active{% endif %}">Все акции</a>
-                     </div>
-                 </div>
-                 
-                 <a href="{% url 'main:articles' %}" class="nav-link {% if 'articles' in request.resolver_match.url_name %}active{% endif %}">Новости</a>
-                 <a href="{% url 'main:mortgage' %}" class="nav-link">Ипотека</a>
-                 <a href="{% url 'main:team' %}" class="nav-link {% if request.resolver_match.url_name == 'team' %}active{% endif %}">Наша команда</a>
-                 <a href="{% url 'main:vacancies' %}" class="nav-link {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
-                 <a href="{% url 'main:offices' %}" class="nav-link {% if 'office' in request.resolver_match.url_name %}active{% endif %}">Офисы продаж</a>
-                </nav>
-                <div class="header-right">
-                    <div class="contact-info">
-                        {% if head_office %}
-                            {% if head_office.phone %}
-                                <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" class="phone-number">{{ head_office.phone }}</a>
-                            {% endif %}
-                        {% else %}
-                            <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
-                        {% endif %}
-                    </div>
-                </div>
             </div>
-
-            <!-- Off-canvas mobile menu -->
-            <aside class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
-                <div class="mobile-drawer-header">
-                    <span class="logo-text">CENTURY&nbsp;21</span>
-                    <button class="mobile-menu-close" aria-label="Закрыть меню"><i class="fas fa-times"></i></button>
-                </div>
-                <nav class="mobile-drawer-nav">
-                    <a href="{% url 'main:home' %}" class="drawer-link">Главная</a>
-                    <div class="drawer-group">
-                        <div class="drawer-title">Жилые комплексы</div>
-                        <a href="{% url 'main:newbuild_index' %}" class="drawer-sublink">Новостройки</a>
-                        <a href="{% url 'main:secondary_index' %}" class="drawer-sublink">Вторичная недвижимость</a>
-                        <a href="{% url 'main:future_complexes' %}" class="drawer-sublink">Будущие проекты</a>
-                        <a href="{% url 'main:videos' %}" class="drawer-sublink">Видеообзоры</a>
-                        <a href="{% url 'main:all_offers' %}" class="drawer-sublink">Все акции</a>
-                    </div>
-                    <a href="{% url 'main:articles' %}" class="drawer-link">Новости</a>
-                    <a href="{% url 'main:mortgage' %}" class="drawer-link">Ипотека</a>
-                    <a href="{% url 'main:team' %}" class="drawer-link">Наша команда</a>
-                    <a href="{% url 'main:vacancies' %}" class="drawer-link">Вакансии</a>
-                    <a href="{% url 'main:offices' %}" class="drawer-link">Офисы продаж</a>
-                </nav>
-                <div class="mobile-drawer-footer">
-                    <a class="drawer-phone" href="tel:{% if head_office and head_office.phone %}{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}{% else %}+73472019478{% endif %}"><i class="fas fa-phone"></i> Позвонить</a>
-                </div>
-            </aside>
-
-            
         </div>
-    </header>
 
-    <main class="main-content">
-        {% block content %}
-        {% endblock %}
-    </main>
-
-    <!-- Кнопка чата -->
-    <div class="chat-button-container">
-        <button class="chat-button" id="chat-button">
-            <i class="fas fa-comments"></i>
-            <span class="chat-text">Чат Century21</span>
-        </button>
-    </div>
-
-    <!-- Окно чата -->
-    <div class="chat-modal" id="chat-modal">
-        <div class="chat-window">
-            <div class="chat-header">
-                <div class="chat-title">
-                    <h3>Чат Century21</h3>
-                    <span class="online-status">● Мы онлайн</span>
-                </div>
-                <button class="chat-close" id="chat-close">
-                    <i class="fas fa-times"></i>
+        <div class="chat-input-section">
+            <div class="chat-input-wrapper">
+                <input type="text" class="chat-input" placeholder="Напишите сообщение..." disabled>
+                <button class="chat-send-btn" disabled>
+                    <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
-            
-            <div class="chat-body">
-                <div class="chat-message support-message">
-                    <div class="message-avatar">
-                        <img src="/media/logo/icon_site.png" alt="Поддержка C21">
-                    </div>
-                    <div class="message-content">
-                        <div class="message-author">Поддержка C21</div>
-                        <div class="message-text">
-                            Рады приветствовать вас! Предлагаем вам воспользоваться кнопками быстрого доступа к нашим услугам:
-                        </div>
-                        
-                        <div class="quick-actions">
-                            <button class="quick-action-btn" data-action="property">
-                                Продать недвижимость
-                            </button>
-                            <button class="quick-action-btn" data-action="agent">
-                                Подобрать агента
-                            </button>
-                            <button class="quick-action-btn" data-action="question">
-                                Задать вопрос
-                            </button>
-                            <a class="quick-action-btn" href="tel:{% if head_office and head_office.phone %}{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}{% else %}+73472019478{% endif %}" data-action="call">
-                                Позвонить
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="chat-input-section">
-                <div class="chat-input-wrapper">
-                    <input type="text" class="chat-input" placeholder="Напишите сообщение..." disabled>
-                    <button class="chat-send-btn" disabled>
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-                <div class="chat-disclaimer">
-                    В разработке: здесь будет интеграция с чат-системой
-                </div>
+            <div class="chat-disclaimer">
+                В разработке: здесь будет интеграция с чат-системой
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Форма обратной связи -->
-    {% if not request.resolver_match.url_name == 'vacancies' %}
+<!-- Форма обратной связи -->
+{% if not request.resolver_match.url_name == 'vacancies' %}
     <div class="feedback-wrapper">
         {% include 'includes/feedback_form.html' %}
     </div>
-    {% endif %}
+{% endif %}
 
-    <!-- Переход к футеру с логотипом по центру -->
-    <div class="footer-transition">
-        <div class="deco-logo on-dark" aria-hidden="true">
-            <svg id="Layer_2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 406.2 509.46"><defs><style>.cls-1{fill:#bcaf8a;}</style></defs><g id="Layer_1-2"><g><g><g><path class="cls-1" d="M216.53,322.73l47.13-68.08,1.09-1.57c7.48-11.09,11.85-24.44,11.85-38.82,0-5.67-.68-11.17-1.96-16.45-7.39-30.48-34.85-53.11-67.6-53.11-38.42,0-69.56,31.14-69.56,69.56,0,.87,.02,1.73,.05,2.59h42.1c-.08-.85-.13-1.71-.13-2.59,0-15.18,12.35-27.53,27.53-27.53s28.25,11.49,27.53,27.53c-.32,7.08-6.5,17.95-8.85,21.38-2.35,3.43-89.39,129.11-89.39,129.11h49.33s69.69,0,69.69,0l29.1-42.02h-67.93Z"/><polygon class="cls-1" points="324.09 144.7 323.63 144.7 294.53 186.72 331.09 186.72 331.09 364.76 373.11 364.76 373.11 144.7 324.09 144.7"/></g><path class="cls-1" d="M337.51,450.73c-26.2,11.08-54.05,16.7-82.78,16.7s-56.58-5.62-82.78-16.7c-25.32-10.71-48.07-26.05-67.62-45.6-19.55-19.55-34.89-42.3-45.6-67.62-11.08-26.2-16.7-54.05-16.7-82.78s5.62-56.58,16.7-82.78c10.71-25.32,26.05-48.07,45.6-67.62,19.55-19.55,42.3-34.89,67.62-45.6,26.2-11.08,54.05-16.7,82.78-16.7s56.58,5.62,82.78,16.7c11.74,4.97,22.92,10.94,33.5,17.86l23.95-34.52C354.74,15.49,306.54,0,254.73,0,114.05,0,0,114.05,0,254.73s114.05,254.73,254.73,254.73c54,0,104.06-16.82,145.27-45.48l-23.95-34.51c-12.04,8.38-24.92,15.5-38.55,21.26Z"/></g><path class="cls-1" d="M401.09,345.05c1.59,.88,2.84,2.13,3.75,3.73,.91,1.61,1.37,3.42,1.37,5.44s-.46,3.84-1.37,5.45c-.91,1.6-2.16,2.84-3.75,3.73-1.59,.88-3.38,1.32-5.38,1.32s-3.78-.45-5.38-1.32c-1.59-.89-2.84-2.13-3.75-3.73-.91-1.61-1.37-3.42-1.37-5.45s.46-3.83,1.37-5.44c.91-1.6,2.16-2.85,3.75-3.73,1.6-.88,3.39-1.32,5.38-1.32s3.79,.45,5.38,1.32m-.95,16.79c1.3-.73,2.32-1.76,3.06-3.08,.73-1.31,1.1-2.82,1.1-4.53s-.37-3.21-1.1-4.53c-.74-1.31-1.76-2.34-3.06-3.07-1.3-.74-2.78-1.11-4.43-1.11s-3.12,.37-4.45,1.11c-1.31,.73-2.33,1.76-3.05,3.07-.73,1.32-1.09,2.83-1.09,4.53s.36,3.22,1.09,4.53c.72,1.32,1.74,2.35,3.05,3.08,1.32,.74,2.81,1.11,4.45,1.11s3.13-.37,4.43-1.11m-.89-7.68c-.51,.59-1.21,.96-2.11,1.11l3.35,4.55h-2.34l-3.12-4.47h-1.65v4.47h-1.86v-11.24h4.78c1.12,0,2.02,.31,2.71,.91,.68,.6,1.02,1.42,1.02,2.42,0,.9-.25,1.64-.76,2.24m-5.88-.58h2.91c1.21,0,1.82-.55,1.82-1.65,0-.52-.16-.91-.49-1.19-.32-.27-.76-.41-1.34-.41h-2.91v3.25Z"/></g></g></svg>
-        </div>
+<!-- Переход к футеру с логотипом по центру -->
+<div class="footer-transition">
+    <div class="deco-logo on-dark" aria-hidden="true">
+        <svg id="Layer_2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 406.2 509.46">
+            <defs>
+                <style>.cls-1 {
+                    fill: #bcaf8a;
+                }</style>
+            </defs>
+            <g id="Layer_1-2">
+                <g>
+                    <g>
+                        <g>
+                            <path class="cls-1"
+                                  d="M216.53,322.73l47.13-68.08,1.09-1.57c7.48-11.09,11.85-24.44,11.85-38.82,0-5.67-.68-11.17-1.96-16.45-7.39-30.48-34.85-53.11-67.6-53.11-38.42,0-69.56,31.14-69.56,69.56,0,.87,.02,1.73,.05,2.59h42.1c-.08-.85-.13-1.71-.13-2.59,0-15.18,12.35-27.53,27.53-27.53s28.25,11.49,27.53,27.53c-.32,7.08-6.5,17.95-8.85,21.38-2.35,3.43-89.39,129.11-89.39,129.11h49.33s69.69,0,69.69,0l29.1-42.02h-67.93Z"/>
+                            <polygon class="cls-1"
+                                     points="324.09 144.7 323.63 144.7 294.53 186.72 331.09 186.72 331.09 364.76 373.11 364.76 373.11 144.7 324.09 144.7"/>
+                        </g>
+                        <path class="cls-1"
+                              d="M337.51,450.73c-26.2,11.08-54.05,16.7-82.78,16.7s-56.58-5.62-82.78-16.7c-25.32-10.71-48.07-26.05-67.62-45.6-19.55-19.55-34.89-42.3-45.6-67.62-11.08-26.2-16.7-54.05-16.7-82.78s5.62-56.58,16.7-82.78c10.71-25.32,26.05-48.07,45.6-67.62,19.55-19.55,42.3-34.89,67.62-45.6,26.2-11.08,54.05-16.7,82.78-16.7s56.58,5.62,82.78,16.7c11.74,4.97,22.92,10.94,33.5,17.86l23.95-34.52C354.74,15.49,306.54,0,254.73,0,114.05,0,0,114.05,0,254.73s114.05,254.73,254.73,254.73c54,0,104.06-16.82,145.27-45.48l-23.95-34.51c-12.04,8.38-24.92,15.5-38.55,21.26Z"/>
+                    </g>
+                    <path class="cls-1"
+                          d="M401.09,345.05c1.59,.88,2.84,2.13,3.75,3.73,.91,1.61,1.37,3.42,1.37,5.44s-.46,3.84-1.37,5.45c-.91,1.6-2.16,2.84-3.75,3.73-1.59,.88-3.38,1.32-5.38,1.32s-3.78-.45-5.38-1.32c-1.59-.89-2.84-2.13-3.75-3.73-.91-1.61-1.37-3.42-1.37-5.45s.46-3.83,1.37-5.44c.91-1.6,2.16-2.85,3.75-3.73,1.6-.88,3.39-1.32,5.38-1.32s3.79,.45,5.38,1.32m-.95,16.79c1.3-.73,2.32-1.76,3.06-3.08,.73-1.31,1.1-2.82,1.1-4.53s-.37-3.21-1.1-4.53c-.74-1.31-1.76-2.34-3.06-3.07-1.3-.74-2.78-1.11-4.43-1.11s-3.12,.37-4.45,1.11c-1.31,.73-2.33,1.76-3.05,3.07-.73,1.32-1.09,2.83-1.09,4.53s.36,3.22,1.09,4.53c.72,1.32,1.74,2.35,3.05,3.08,1.32,.74,2.81,1.11,4.45,1.11s3.13-.37,4.43-1.11m-.89-7.68c-.51,.59-1.21,.96-2.11,1.11l3.35,4.55h-2.34l-3.12-4.47h-1.65v4.47h-1.86v-11.24h4.78c1.12,0,2.02,.31,2.71,.91,.68,.6,1.02,1.42,1.02,2.42,0,.9-.25,1.64-.76,2.24m-5.88-.58h2.91c1.21,0,1.82-.55,1.82-1.65,0-.52-.16-.91-.49-1.19-.32-.27-.76-.41-1.34-.41h-2.91v3.25Z"/>
+                </g>
+            </g>
+        </svg>
     </div>
+</div>
 
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <!-- Каталог -->
-                <div class="footer-section">
-                    <h3 class="footer-title">Каталог</h3>
-                    <ul class="footer-links">
-                        <li><a href="{% url 'main:catalog_completed' %}">Сданные</a></li>
-                        <li><a href="{% url 'main:catalog_construction' %}">Строящиеся</a></li>
-                        <li><a href="{% url 'main:future_complexes' %}">Будущие проекты</a></li>
-                        <li><a href="{% url 'main:catalog_economy' %}">Эконом-класс</a></li>
-                        <li><a href="{% url 'main:catalog_comfort' %}">Комфорт-класс</a></li>
-                        <li><a href="{% url 'main:catalog_premium' %}">Премиум-класс</a></li>
-                        <li><a href="{% url 'main:catalog_finished' %}">С отделкой</a></li>
-                        <li><a href="{% url 'main:catalog_unfinished' %}">Без отделки</a></li>
-                    </ul>
-                </div>
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <!-- Каталог -->
+            <div class="footer-section">
+                <h3 class="footer-title">Каталог</h3>
+                <ul class="footer-links">
+                    <li><a href="{% url 'main:catalog_completed' %}">Сданные</a></li>
+                    <li><a href="{% url 'main:catalog_construction' %}">Строящиеся</a></li>
+                    <li><a href="{% url 'main:future_complexes' %}">Будущие проекты</a></li>
+                    <li><a href="{% url 'main:catalog_economy' %}">Эконом-класс</a></li>
+                    <li><a href="{% url 'main:catalog_comfort' %}">Комфорт-класс</a></li>
+                    <li><a href="{% url 'main:catalog_premium' %}">Премиум-класс</a></li>
+                    <li><a href="{% url 'main:catalog_finished' %}">С отделкой</a></li>
+                    <li><a href="{% url 'main:catalog_unfinished' %}">Без отделки</a></li>
+                </ul>
+            </div>
 
-                <!-- Компания -->
-                <div class="footer-section">
-                    <h3 class="footer-title">Компания</h3>
-                    <ul class="footer-links">
-                        <li><a href="{% url 'main:team' %}">Наша команда</a></li>
-                        <li><a href="{% url 'main:articles' %}">Новости</a></li>
-                        <li><a href="{% url 'main:vacancies' %}">Вакансии</a></li>
-                        <li><a href="{% url 'main:offices' %}">Офисы продаж</a></li>
-                    </ul>
-                </div>
+            <!-- Компания -->
+            <div class="footer-section">
+                <h3 class="footer-title">Компания</h3>
+                <ul class="footer-links">
+                    <li><a href="{% url 'main:team' %}">Наша команда</a></li>
+                    <li><a href="{% url 'main:articles' %}">Новости</a></li>
+                    <li><a href="{% url 'main:vacancies' %}">Вакансии</a></li>
+                    <li><a href="{% url 'main:offices' %}">Офисы продаж</a></li>
+                </ul>
+            </div>
 
-                <!-- Клиентам -->
-                <div class="footer-section">
-                    <h3 class="footer-title">Клиентам</h3>
-                    <ul class="footer-links">
-                        <li><a href="{% url 'main:mortgage' %}">Ипотека</a></li>
-                    </ul>
-                </div>
+            <!-- Клиентам -->
+            <div class="footer-section">
+                <h3 class="footer-title">Клиентам</h3>
+                <ul class="footer-links">
+                    <li><a href="{% url 'main:mortgage' %}">Ипотека</a></li>
+                </ul>
+            </div>
 
-                <!-- Контакты -->
-                <div class="footer-section">
-                    <h3 class="footer-title">Контакты</h3>
-                    <div class="footer-contacts">
-                        {% with phone=head_office.phone email=head_office.email %}
+            <!-- Контакты -->
+            <div class="footer-section">
+                <h3 class="footer-title">Контакты</h3>
+                <div class="footer-contacts">
+                    {% with phone=head_office.phone email=head_office.email %}
                         <div class="contact-item">
                             <i class="fas fa-phone"></i>
                             <a href="tel:{{ phone|cut:' '|cut:'-'|cut:'('|cut:')' }}">{{ phone }}</a>
@@ -240,39 +288,41 @@
                         </div>
                         <div class="contact-item">
                             <i class="fas fa-clock"></i>
-                            <span>{% if head_office and head_office.schedule %}{{ head_office.schedule }}{% else %}Пн-Пт: 9:00-18:00{% endif %}</span>
+                            <span>{% if head_office and head_office.schedule %}{{ head_office.schedule }}{% else %}
+                                Пн-Пт: 9:00-18:00{% endif %}</span>
                         </div>
-                        {% endwith %}
-                    </div>
-                    
-                    <!-- 2ГИС -->
-                    <div class="footer-gis">
-                        <a href="https://2gis.ru/ufa/geo/2393172957210753" target="_blank" class="gis-link">
-                            <i class="fas fa-map-marked-alt"></i>
-                            <span>Найти нас в 2ГИС</span>
-                        </a>
-                    </div>
+                    {% endwith %}
+                </div>
+
+                <!-- 2ГИС -->
+                <div class="footer-gis">
+                    <a href="https://2gis.ru/ufa/geo/2393172957210753" target="_blank" class="gis-link">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>Найти нас в 2ГИС</span>
+                    </a>
                 </div>
             </div>
+        </div>
 
-            <!-- Нижняя часть футера -->
+        <!-- Нижняя часть футера -->
             <div class="footer-bottom">
                 <div class="footer-bottom-left">
-                    <p>&copy; 2024 CENTURY 21. Все права защищены.</p>
+                    <p>&copy; 2026 CENTURY&nbsp;21. Все права защищены.</p>
+                    <p style="margin-top:6px; font-size:12px; color:#888;">Каждый офис находится в независимом владении и управлении</p>
                 </div>
                 <div class="footer-bottom-right">
                     <a href="https://www.century21.ru/" target="_blank" class="franchise-link" rel="noopener noreferrer">
                         <i class="fas fa-external-link-alt"></i>
-                        Головной сайт Century 21
+                        Головной&nbsp;сайт&nbsp;CENTURY&nbsp;21
                     </a>
                     <a href="{% url 'main:privacy' %}" class="privacy-link">Политика конфиденциальности</a>
                 </div>
             </div>
-        </div>
-    </footer>
+    </div>
+</footer>
 
-    <script src="{% static 'js/main.js' %}"></script>
-    <script src="{% static 'js/anchor-scroll.js' %}"></script>
-    <script src="{% static 'js/dropdown-menu.js' %}"></script>
+<script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/anchor-scroll.js' %}"></script>
+<script src="{% static 'js/dropdown-menu.js' %}"></script>
 </body>
 </html> 

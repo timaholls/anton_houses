@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container">
     <section class="hero-section">
-        <h1 class="hero-title">Добро пожаловать в CENTURY 21</h1>
+        <h1 class="hero-title">Добро пожаловать<br><span class="hero-title-brand">CENTURY 21</span> <span class="hero-title-subline">мир в квадратах</span></h1>
         <p class="hero-subtitle">Найдите свой идеальный дом в лучших жилых комплексах</p>
         <div class="hero-ticker" aria-label="Информационная строка">
             <div class="ticker-track">
@@ -25,6 +25,8 @@
         display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     }
     .hero-title{font-size:44px;line-height:1.15;margin:0 12px 8px 12px;color:#fff;font-weight:800;letter-spacing:.4px}
+    .hero-title-brand{display:inline-block;font-size:52px;font-weight:900}
+    .hero-title-subline{display:inline-block;margin-top:4px;font-size:22px}
     .hero-subtitle{font-size:18px;color:#f5f5f5;margin:0 12px 6px 12px;opacity:.95}
 
     /* Бегущая строка в едином стиле */
@@ -39,6 +41,8 @@
     @media (max-width: 900px){
         .hero-section{min-height:280px;border-radius:12px}
         .hero-title{font-size:30px}
+        .hero-title-brand{font-size:34px}
+        .hero-title-subline{font-size:15px}
         .hero-subtitle{font-size:16px}
         .hero-ticker{margin-top:8px}
         .ticker-item{padding:0 22px}
