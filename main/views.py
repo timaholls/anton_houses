@@ -10,6 +10,12 @@ from .models import Vacancy
 from .models import BranchOffice
 from .models import Gallery, MortgageProgram, SpecialOffer
 from django.db import models
+from pymongo import MongoClient
+from bson import ObjectId
+import os
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 
 def home(request):
@@ -1487,3 +1493,268 @@ def videos_objects_api(request):
         'success': True,
         'objects': list(objects)
     })
+
+
+# =============== РУЧНОЕ СОПОСТАВЛЕНИЕ MONGODB ===============
+
+def get_mongo_connection():
+    """Получить подключение к MongoDB"""
+    MONGO_URI = os.getenv("MONGO_URI", "mongodb://root:Kfleirb_17@176.98.177.188:27017/admin")
+    DB_NAME = os.getenv("DB_NAME", "houses")
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
+    return db
+
+
+def manual_matching(request):
+    """Интерфейс ручного сопоставления данных из MongoDB"""
+    return render(request, 'main/manual_matching.html')
+
+
+@require_http_methods(["GET"])
+def get_unmatched_records(request):
+    """API: Получить несопоставленные записи из трех коллекций"""
+    try:
+        db = get_mongo_connection()
+        
+        # Получаем коллекции
+        domrf_col = db['domrf']
+        avito_col = db['avito']
+        domclick_col = db['domclick']
+        unified_col = db['unified_houses']
+        
+        # Получаем ID уже сопоставленных записей
+        matched_records = list(unified_col.find({}, {
+            'domrf.name': 1, 
+            'avito._id': 1, 
+            'domclick._id': 1
+        }))
+        
+        # Собираем ID сопоставленных записей
+        matched_domrf_names = set()
+        matched_avito_ids = set()
+        matched_domclick_ids = set()
+        
+        for record in matched_records:
+            if record.get('domrf', {}).get('name'):
+                matched_domrf_names.add(record['domrf']['name'])
+            if record.get('avito', {}).get('_id'):
+                matched_avito_ids.add(ObjectId(record['avito']['_id']))
+            if record.get('domclick', {}).get('_id'):
+                matched_domclick_ids.add(ObjectId(record['domclick']['_id']))
+        
+        # Получаем параметры пагинации и поиска
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 50))  # Увеличиваем до 50 записей
+        search = request.GET.get('search', '').strip()
+        
+        # Формируем фильтры для поиска
+        domrf_filter = {}
+        avito_filter = {}
+        domclick_filter = {}
+        
+        if search:
+            domrf_filter['objCommercNm'] = {'$regex': search, '$options': 'i'}
+            avito_filter['development.name'] = {'$regex': search, '$options': 'i'}
+            domclick_filter['development.complex_name'] = {'$regex': search, '$options': 'i'}
+        
+        # Получаем несопоставленные записи (убираем ограничение для лучшего отображения)
+        domrf_records = list(domrf_col.find(domrf_filter).limit(100))
+        domrf_unmatched = [
+            {
+                '_id': str(r['_id']),
+                'name': r.get('objCommercNm', 'Без названия'),
+                'url': r.get('url', ''),
+                'address': r.get('address', ''),
+                'latitude': r.get('latitude'),
+                'longitude': r.get('longitude')
+            }
+            for r in domrf_records 
+            if r.get('objCommercNm') not in matched_domrf_names
+        ][:per_page]
+        
+        avito_records = list(avito_col.find(avito_filter).limit(100))
+        avito_unmatched = [
+            {
+                '_id': str(r['_id']),
+                'name': r.get('development', {}).get('name', 'Без названия'),
+                'url': r.get('url', ''),
+                'address': r.get('location', {}).get('address', ''),
+            }
+            for r in avito_records 
+            if r['_id'] not in matched_avito_ids
+        ][:per_page]
+        
+        domclick_records = list(domclick_col.find(domclick_filter).limit(100))
+        domclick_unmatched = [
+            {
+                '_id': str(r['_id']),
+                'name': r.get('development', {}).get('complex_name', 'Без названия'),
+                'url': r.get('url', ''),
+                'address': r.get('location', {}).get('address', ''),
+            }
+            for r in domclick_records 
+            if r['_id'] not in matched_domclick_ids
+        ][:per_page]
+        
+        # Считаем общее количество
+        total_domrf = domrf_col.count_documents(domrf_filter)
+        total_avito = avito_col.count_documents(avito_filter)
+        total_domclick = domclick_col.count_documents(domclick_filter)
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'domrf': domrf_unmatched,
+                'avito': avito_unmatched,
+                'domclick': domclick_unmatched
+            },
+            'totals': {
+                'domrf': len(domrf_unmatched),
+                'avito': len(avito_unmatched),
+                'domclick': len(domclick_unmatched),
+                'total_domrf': total_domrf - len(matched_domrf_names),
+                'total_avito': total_avito - len(matched_avito_ids),
+                'total_domclick': total_domclick - len(matched_domclick_ids)
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def save_manual_match(request):
+    """API: Сохранить ручное сопоставление"""
+    try:
+        data = json.loads(request.body)
+        domrf_id = data.get('domrf_id')
+        avito_id = data.get('avito_id')
+        domclick_id = data.get('domclick_id')
+        
+        # Проверка: должен быть хотя бы один DomRF и еще один источник
+        if not domrf_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'DomRF обязателен для сопоставления'
+            }, status=400)
+        
+        if not avito_id and not domclick_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Необходимо выбрать хотя бы Avito или DomClick'
+            }, status=400)
+        
+        db = get_mongo_connection()
+        
+        # Получаем полные записи
+        domrf_col = db['domrf']
+        avito_col = db['avito']
+        domclick_col = db['domclick']
+        unified_col = db['unified_houses']
+        
+        domrf_record = domrf_col.find_one({'_id': ObjectId(domrf_id)})
+        if not domrf_record:
+            return JsonResponse({
+                'success': False,
+                'error': 'Запись DomRF не найдена'
+            }, status=404)
+        
+        avito_record = None
+        if avito_id:
+            avito_record = avito_col.find_one({'_id': ObjectId(avito_id)})
+        
+        domclick_record = None
+        if domclick_id:
+            domclick_record = domclick_col.find_one({'_id': ObjectId(domclick_id)})
+        
+        # Создаем объединенную запись
+        unified_record = {
+            'source': 'manual',
+            'domrf': {
+                'name': domrf_record.get('objCommercNm'),
+                'latitude': domrf_record.get('latitude'),
+                'longitude': domrf_record.get('longitude'),
+                '_id': str(domrf_record['_id']),
+                'url': domrf_record.get('url', '')
+            },
+            'avito': avito_record if avito_record else None,
+            'domclick': domclick_record if domclick_record else None,
+            'created_at': data.get('created_at'),
+            'created_by': 'manual'
+        }
+        
+        # Преобразуем ObjectId в строки для JSON
+        if unified_record['avito']:
+            unified_record['avito']['_id'] = str(unified_record['avito']['_id'])
+        if unified_record['domclick']:
+            unified_record['domclick']['_id'] = str(unified_record['domclick']['_id'])
+        
+        # Сохраняем
+        result = unified_col.insert_one(unified_record)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Сопоставление успешно сохранено',
+            'unified_id': str(result.inserted_id)
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Неверный формат JSON'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_unified_records(request):
+    """API: Получить уже объединенные записи"""
+    try:
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        
+        # Параметры пагинации
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 20))
+        skip = (page - 1) * per_page
+        
+        # Получаем записи
+        records = list(unified_col.find({}).skip(skip).limit(per_page))
+        total = unified_col.count_documents({})
+        
+        # Форматируем записи
+        formatted_records = []
+        for record in records:
+            formatted_records.append({
+                '_id': str(record['_id']),
+                'domrf_name': record.get('domrf', {}).get('name', 'N/A'),
+                'avito_name': record.get('avito', {}).get('development', {}).get('name', 'N/A') if record.get('avito') else 'N/A',
+                'domclick_name': record.get('domclick', {}).get('development', {}).get('complex_name', 'N/A') if record.get('domclick') else 'N/A',
+                'source': record.get('source', 'unknown')
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': formatted_records,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'pages': (total + per_page - 1) // per_page
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

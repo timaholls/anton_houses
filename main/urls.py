@@ -60,4 +60,10 @@ urlpatterns = [
     path('team/<int:employee_id>/properties/', views.agent_properties, name='agent_properties'),
     path('future-complexes/', views.future_complexes, name='future_complexes'),
     path('future-complexes/<int:complex_id>/', views.future_complex_detail, name='future_complex_detail'),
+    
+    # Ручное сопоставление MongoDB
+    path('manual-matching/', views.manual_matching, name='manual_matching'),
+    path('api/manual-matching/unmatched/', views.get_unmatched_records, name='get_unmatched_records'),
+    path('api/manual-matching/save/', views.save_manual_match, name='save_manual_match'),
+    path('api/manual-matching/unified/', views.get_unified_records, name='get_unified_records'),
 ] 
