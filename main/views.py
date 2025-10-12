@@ -153,144 +153,129 @@ def catalog(request):
 
 
 def catalog_api(request):
-    """API для каталога ЖК с пагинацией и фильтрацией"""
-    page = request.GET.get('page', 1)
-
-    # Получаем параметры фильтрации
-    rooms = request.GET.get('rooms', '')
-    city = request.GET.get('city', '')
-    district = request.GET.get('district', '')
-    street = request.GET.get('street', '')
-    area_from = request.GET.get('area_from', '')
-    area_to = request.GET.get('area_to', '')
-    price_from = request.GET.get('price_from', '')
-    price_to = request.GET.get('price_to', '')
-    delivery_date = request.GET.get('delivery_date', '')
-    has_offers = request.GET.get('has_offers', '')
-    sort = request.GET.get('sort', 'price_asc')
-
-    # Базовый queryset
-    complexes = ResidentialComplex.objects.all()
-
-    # Применяем фильтры
-    if rooms:
-        complexes = complexes.filter(rooms=rooms)
-    if city:
-        complexes = complexes.filter(city=city)
-    if district:
-        complexes = complexes.filter(district=district)
-    if street:
-        complexes = complexes.filter(street=street)
-    if area_from:
-        try:
-            complexes = complexes.filter(area_from__gte=float(area_from))
-        except ValueError:
-            pass
-    if area_to:
-        try:
-            complexes = complexes.filter(area_to__lte=float(area_to))
-        except ValueError:
-            pass
-    if price_from:
-        try:
-            complexes = complexes.filter(price_from__gte=float(price_from))
-        except ValueError:
-            pass
-    if price_to:
-        try:
-            complexes = complexes.filter(price_from__lte=float(price_to))
-        except ValueError:
-            pass
-    if delivery_date:
-        complexes = complexes.filter(delivery_date__lte=delivery_date)
-    if has_offers:
-        complexes = complexes.filter(offers__is_active=True).distinct()
-
-    # Применяем сортировку
-    if sort == 'price_asc':
-        complexes = complexes.order_by('price_from')
-    elif sort == 'price_desc':
-        complexes = complexes.order_by('-price_from')
-    elif sort == 'area_desc':
-        complexes = complexes.order_by('-area_to')
-    elif sort == 'area_asc':
-        complexes = complexes.order_by('area_from')
-
-    # Пагинация по 9 элементов
-    paginator = Paginator(complexes, 9)
-    page_obj = paginator.get_page(page)
-
-    # Подготавливаем данные для JSON
-    complexes_data = []
-    for complex in page_obj:
-        # Создаем локацию из существующих полей
-        location_parts = []
-        if complex.city:
-            location_parts.append(complex.city)
-        if complex.district:
-            location_parts.append(complex.district)
-        if complex.street:
-            location_parts.append(complex.street)
-
-        location = ' - '.join(location_parts) if location_parts else 'Локация не указана'
-
-        # Получаем изображения для каталога
-        catalog_images = complex.get_catalog_images()
-
-        # Подготавливаем отдельные URL для каждого изображения
-        image_url = None
-        image_2_url = None
-        image_3_url = None
-        image_4_url = None
-
-        if catalog_images:
-            # Главное изображение
-            if len(catalog_images) > 0 and catalog_images[0].image:
-                image_url = catalog_images[0].image.url
-
-            # Дополнительные изображения
-            if len(catalog_images) > 1 and catalog_images[1].image:
-                image_2_url = catalog_images[1].image.url
-            if len(catalog_images) > 2 and catalog_images[2].image:
-                image_3_url = catalog_images[2].image.url
-            if len(catalog_images) > 3 and catalog_images[3].image:
-                image_4_url = catalog_images[3].image.url
+    """API для каталога ЖК из MongoDB unified_houses"""
+    page = int(request.GET.get('page', 1))
+    per_page = 9
+    search = request.GET.get('search', '').strip()
+    
+    try:
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        
+        # Формируем фильтр (поддержка обеих структур)
+        filter_query = {}
+        if search:
+            filter_query['$or'] = [
+                # Старая структура
+                {'domrf.name': {'$regex': search, '$options': 'i'}},
+                {'avito.development.name': {'$regex': search, '$options': 'i'}},
+                {'domclick.development.complex_name': {'$regex': search, '$options': 'i'}},
+                # Новая структура
+                {'development.name': {'$regex': search, '$options': 'i'}}
+            ]
+        
+        # Получаем общее количество
+        total_count = unified_col.count_documents(filter_query)
+        
+        # Пагинация
+        skip = (page - 1) * per_page
+        records = list(unified_col.find(filter_query).skip(skip).limit(per_page))
+        
+        # Форматируем данные для каталога
+        complexes_data = []
+        for record in records:
+            # Определяем структуру записи
+            is_new_structure = 'development' in record and 'avito' not in record
+            
+            if is_new_structure:
+                # === НОВАЯ УПРОЩЕННАЯ СТРУКТУРА ===
+                development = record.get('development', {})
+                
+                name = development.get('name', 'Без названия')
+                address_full = development.get('address', '')
+                address = address_full.split('/')[0].strip() if address_full else ''
+                price_range = development.get('price_range', 'Цена не указана')
+                photos = development.get('photos', [])
+                latitude = record.get('latitude')
+                longitude = record.get('longitude')
+                parameters = development.get('parameters', {})
+                
+            else:
+                # === СТАРАЯ СТРУКТУРА ===
+                avito_dev = record.get('avito', {}).get('development', {}) if record.get('avito') else {}
+                domclick_dev = record.get('domclick', {}).get('development', {}) if record.get('domclick') else {}
+                domrf_data = record.get('domrf', {})
+                
+                # Название (приоритет: avito -> domclick -> domrf)
+                name = avito_dev.get('name') or domclick_dev.get('complex_name') or domrf_data.get('name', 'Без названия')
+                
+                # Адрес из avito - обрезаем до первого слеша
+                address_full = avito_dev.get('address', '')
+                address = address_full.split('/')[0].strip() if address_full else ''
+                
+                # Цена из avito
+                price_range = avito_dev.get('price_range', 'Цена не указана')
+                
+                # Фото из domclick - берем ВСЕ фото
+                photos = domclick_dev.get('photos', [])
+                
+                # Координаты из domrf
+                latitude = domrf_data.get('latitude')
+                longitude = domrf_data.get('longitude')
+                
+                # Параметры из avito
+                parameters = avito_dev.get('parameters', {})
 
         complexes_data.append({
-            'id': complex.id if complex.id else 0,
-            'name': complex.name,
-            'price_display': complex.price_display,
-            'price_from': complex.price_from,
-            'location': location,
-            'commute_time': complex.commute_time,
-            'image_url': image_url,
-            'image_2_url': image_2_url,
-            'image_3_url': image_3_url,
-            'image_4_url': image_4_url,
-            'house_type': complex.house_type,
-            'house_type_display': complex.get_house_type_display(),
-            'area_from': complex.area_from,
-            'area_to': complex.area_to,
-            'total_apartments': complex.total_apartments,
-            'completion_start': complex.completion_start,
-            'completion_end': complex.completion_end,
-            'studio_price': complex.studio_price,
-            'one_room_price': complex.one_room_price,
-            'two_room_price': complex.two_room_price,
-            'three_room_price': complex.three_room_price,
-            'four_room_price': complex.four_room_price,
-            'lat': complex.latitude,
-            'lng': complex.longitude,
+                'id': str(record['_id']),
+                'name': name,
+                'address': address,
+                'price_range': price_range,
+                'price_display': price_range,
+                'photos': photos,  # Все фото для галереи
+                'image_url': f"/media/{photos[0]}" if photos else None,
+                'image_2_url': f"/media/{photos[1]}" if len(photos) > 1 else None,
+                'image_3_url': f"/media/{photos[2]}" if len(photos) > 2 else None,
+                'image_4_url': f"/media/{photos[3]}" if len(photos) > 3 else None,
+                'lat': latitude,
+                'lng': longitude,
+                'latitude': latitude,
+                'longitude': longitude,
+                'parameters': parameters,
+                'completion_date': parameters.get('Срок сдачи', ''),
+                'housing_class': parameters.get('Класс жилья', ''),
+                'housing_type': parameters.get('Тип жилья', ''),
+                'avito_url': record.get('avito', {}).get('url', '') if record.get('avito') else '',
+                'domclick_url': record.get('domclick', {}).get('url', '') if record.get('domclick') else '',
+                'total_apartments': record.get('avito', {}).get('total_apartments', 0) if record.get('avito') else 0,
+                'location': address,
+                'city': 'Уфа',  # можно парсить из address
+            })
+        
+        total_pages = (total_count + per_page - 1) // per_page
+        
+        return JsonResponse({
+            'complexes': complexes_data,
+            'has_previous': page > 1,
+            'has_next': page < total_pages,
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_count': total_count
         })
-
-    return JsonResponse({
-        'complexes': complexes_data,
-        'has_previous': page_obj.has_previous(),
-        'has_next': page_obj.has_next(),
-        'current_page': page_obj.number,
-        'total_pages': paginator.num_pages,
-        'total_count': paginator.count
-    })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        # Возвращаем пустой результат при ошибке
+        return JsonResponse({
+            'complexes': [],
+            'has_previous': False,
+            'has_next': False,
+            'current_page': 1,
+            'total_pages': 0,
+            'total_count': 0,
+            'error': str(e)
+        })
 
 
 def articles(request):
@@ -815,8 +800,188 @@ def catalog_unfinished(request):
 
 
 def detail(request, complex_id):
-    """Детальная страница ЖК"""
-    complex = get_object_or_404(ResidentialComplex, id=complex_id)
+    """Детальная страница ЖК (MongoDB или SQL)"""
+    
+    # Получаем ипотечные программы (нужны для обоих версий)
+    mortgage_programs = list(MortgageProgram.objects.filter(is_active=True))
+    if not mortgage_programs:
+        class P:
+            def __init__(self, name, rate):
+                self.name, self.rate = name, rate
+        mortgage_programs = [
+            P('Базовая', 18.0),
+            P('IT-ипотека', 6.0),
+            P('Семейная', 6.0),
+        ]
+    
+    # Проверяем, является ли ID MongoDB ObjectId (24 hex символа)
+    is_mongodb_id = len(str(complex_id)) == 24 and all(c in '0123456789abcdef' for c in str(complex_id).lower())
+    
+    if is_mongodb_id:
+        # ============ MONGODB VERSION ============
+        try:
+            db = get_mongo_connection()
+            unified_col = db['unified_houses']
+            
+            # Получаем запись по ID
+            record = unified_col.find_one({'_id': ObjectId(complex_id)})
+            
+            if not record:
+                raise Http404("ЖК не найден")
+            
+            # Проверяем структуру: старая (с вложенностью) или новая (упрощенная)
+            is_new_structure = 'development' in record and 'avito' not in record
+            
+            # Инициализируем переменные для обеих структур
+            avito_data = {}
+            domclick_data = {}
+            
+            if is_new_structure:
+                # === НОВАЯ УПРОЩЕННАЯ СТРУКТУРА ===
+                development = record.get('development', {})
+                
+                # Основные данные
+                name = development.get('name', 'Без названия')
+                address = development.get('address', '').split('/')[0].strip()
+                price_range = development.get('price_range', '')
+                
+                # Фото ЖК
+                photos = development.get('photos', [])
+                
+                # Координаты напрямую в корне
+                latitude = record.get('latitude')
+                longitude = record.get('longitude')
+                
+                # Параметры ЖК
+                parameters = development.get('parameters', {})
+                korpuses = development.get('korpuses', [])
+                
+                # Типы квартир уже в упрощенной структуре
+                apartment_types_data = record.get('apartment_types', {})
+                
+            else:
+                # === СТАРАЯ СТРУКТУРА (для обратной совместимости) ===
+                avito_data = record.get('avito', {})
+                domclick_data = record.get('domclick', {})
+                domrf_data = record.get('domrf', {})
+                
+                avito_dev = avito_data.get('development', {}) if avito_data else {}
+                domclick_dev = domclick_data.get('development', {}) if domclick_data else {}
+                
+                # Основные данные
+                name = avito_dev.get('name') or domclick_dev.get('complex_name') or domrf_data.get('name', 'Без названия')
+                address = avito_dev.get('address', '').split('/')[0].strip() if avito_dev.get('address') else ''
+                price_range = avito_dev.get('price_range', '')
+                
+                # Фото ЖК из domclick
+                photos = domclick_dev.get('photos', [])
+                
+                # Координаты
+                latitude = domrf_data.get('latitude')
+                longitude = domrf_data.get('longitude')
+                
+                # Параметры ЖК
+                parameters = avito_dev.get('parameters', {})
+                korpuses = avito_dev.get('korpuses', [])
+            
+            # Обработка типов квартир в зависимости от структуры
+            apartment_variants = []
+            apartment_types_list = []
+            
+            if is_new_structure:
+                # === НОВАЯ СТРУКТУРА: данные уже объединены ===
+                for apt_type, apt_data in apartment_types_data.items():
+                    apartments = apt_data.get('apartments', [])
+                    
+                    if apartments:
+                        apartment_types_list.append(apt_type)
+                        
+                        for apt in apartments:
+                            # Получаем все фото планировки - это уже массив!
+                            layout_photos = apt.get('image', [])
+                            # Если это не массив, а строка - преобразуем в массив
+                            if isinstance(layout_photos, str):
+                                layout_photos = [layout_photos] if layout_photos else []
+                            
+                            apartment_variants.append({
+                                'type': apt_type,
+                                'title': apt.get('title', ''),
+                                'price': apt.get('price', ''),
+                                'price_per_square': apt.get('pricePerSquare', ''),
+                                'completion_date': apt.get('completionDate', ''),
+                                'image': layout_photos[0] if layout_photos else '',  # Первое фото для превью
+                                'url': apt.get('url', ''),
+                                'layout_photos': layout_photos  # Все фото для галереи
+                            })
+            
+            else:
+                # === СТАРАЯ СТРУКТУРА: нужно объединять данные ===
+                avito_apartment_types = avito_data.get('apartment_types', {})
+                domclick_apartment_types = domclick_data.get('apartment_types', {})
+                
+                for apt_type, apt_data in avito_apartment_types.items():
+                    apartments = apt_data.get('apartments', [])
+                    
+                    # Добавляем тип в список если есть квартиры
+                    if apartments and apt_type not in apartment_types_list:
+                        apartment_types_list.append(apt_type)
+                    
+                    # Ищем фото планировок из domclick для этого типа
+                    domclick_photos = []
+                    if apt_type in domclick_apartment_types:
+                        dc_apartments = domclick_apartment_types[apt_type].get('apartments', [])
+                        for dc_apt in dc_apartments:
+                            domclick_photos.extend(dc_apt.get('photos', []))
+                    
+                    for apt in apartments:
+                        apartment_variants.append({
+                            'type': apt_type,
+                            'title': apt.get('title', ''),
+                            'price': apt.get('price', ''),
+                            'price_per_square': apt.get('pricePerSquare', ''),
+                            'completion_date': apt.get('completionDate', ''),
+                            'image': apt.get('image', {}).get('128x96', ''),
+                            'url': apt.get('urlPath', ''),
+                            'layout_photos': domclick_photos[:5]  # Первые 5 фото планировок
+                        })
+            
+            # Формируем контекст для MongoDB версии
+            import json
+            context = {
+                'complex': {
+                    'id': str(record['_id']),
+                    'name': name,
+                    'address': address,
+                    'city': 'Уфа',
+                    'price_range': price_range,
+                    'photos': photos,
+                    'photos_json': json.dumps(photos),
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'parameters': parameters,
+                    'korpuses': korpuses,
+                    'apartment_variants': apartment_variants,
+                    'apartment_variants_json': json.dumps(apartment_variants),
+                    'apartment_types': apartment_types_list,
+                    'total_apartments': avito_data.get('total_apartments', 0),
+                    'avito_url': avito_data.get('url', ''),
+                    'domclick_url': domclick_data.get('url', ''),
+                },
+                'mortgage_programs': mortgage_programs,
+                'is_mongodb': True,
+                'is_secondary': False,
+            }
+            
+            return render(request, 'main/detail.html', context)
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise Http404(f"Ошибка загрузки ЖК: {str(e)}")
+    
+    else:
+        # ============ SQL VERSION (старая логика) ============
+        complex = get_object_or_404(ResidentialComplex, id=complex_id)
 
     # Проверяем, пришли ли мы от агента
     agent_id = request.GET.get('agent_id')
@@ -890,19 +1055,6 @@ def detail(request, complex_id):
             video_embed_url = f'https://www.youtube.com/embed/{vid}'
         else:
             video_embed_url = url
-
-    mortgage_programs = list(MortgageProgram.objects.filter(is_active=True))
-    if not mortgage_programs:
-        # Защита: если нет записей, используем дефолтный набор в памяти
-        class P:
-            def __init__(self, name, rate):
-                self.name, self.rate = name, rate
-
-        mortgage_programs = [
-            P('Базовая', 18.0),
-            P('IT-ипотека', 6.0),
-            P('Семейная', 6.0),
-        ]
 
     context = {
         'complex': complex,
@@ -1629,7 +1781,7 @@ def get_unmatched_records(request):
 @require_http_methods(["POST"])
 @csrf_exempt
 def save_manual_match(request):
-    """API: Сохранить ручное сопоставление"""
+    """API: Сохранить ручное сопоставление (новая упрощенная структура)"""
     try:
         data = json.loads(request.body)
         domrf_id = data.get('domrf_id')
@@ -1672,27 +1824,124 @@ def save_manual_match(request):
         if domclick_id:
             domclick_record = domclick_col.find_one({'_id': ObjectId(domclick_id)})
         
-        # Создаем объединенную запись
+        # === НОВАЯ УПРОЩЕННАЯ СТРУКТУРА ===
+        
+        # 1. Координаты из DomRF (только это!)
         unified_record = {
+            'latitude': domrf_record.get('latitude'),
+            'longitude': domrf_record.get('longitude'),
             'source': 'manual',
-            'domrf': {
-                'name': domrf_record.get('objCommercNm'),
-                'latitude': domrf_record.get('latitude'),
-                'longitude': domrf_record.get('longitude'),
-                '_id': str(domrf_record['_id']),
-                'url': domrf_record.get('url', '')
-            },
-            'avito': avito_record if avito_record else None,
-            'domclick': domclick_record if domclick_record else None,
-            'created_at': data.get('created_at'),
             'created_by': 'manual'
         }
         
-        # Преобразуем ObjectId в строки для JSON
-        if unified_record['avito']:
-            unified_record['avito']['_id'] = str(unified_record['avito']['_id'])
-        if unified_record['domclick']:
-            unified_record['domclick']['_id'] = str(unified_record['domclick']['_id'])
+        # 2. Development из Avito + photos из DomClick
+        if avito_record:
+            avito_dev = avito_record.get('development', {})
+            unified_record['development'] = {
+                'name': avito_dev.get('name', ''),
+                'address': avito_dev.get('address', ''),
+                'price_range': avito_dev.get('price_range', ''),
+                'parameters': avito_dev.get('parameters', {}),
+                'korpuses': avito_dev.get('korpuses', []),
+                'photos': []  # Будет заполнено из DomClick
+            }
+            
+            # Добавляем фото ЖК из DomClick
+            if domclick_record:
+                domclick_dev = domclick_record.get('development', {})
+                unified_record['development']['photos'] = domclick_dev.get('photos', [])
+        
+        # 3. Объединяем apartment_types (Avito + фото из DomClick)
+        unified_record['apartment_types'] = {}
+        
+        if avito_record and domclick_record:
+            avito_apt_types = avito_record.get('apartment_types', {})
+            domclick_apt_types = domclick_record.get('apartment_types', {})
+            
+            # Маппинг старых названий на новые упрощенные
+            name_mapping = {
+                # Студия
+                'Студия': 'Студия',
+                # 1-комнатные (разные варианты названий из Avito и DomClick)
+                '1 ком.': '1',
+                '1-комн': '1',
+                '1-комн.': '1',
+                # 2-комнатные
+                '2': '2',
+                '2-комн': '2',
+                '2-комн.': '2',
+                # 3-комнатные
+                '3': '3',
+                '3-комн': '3',
+                '3-комн.': '3',
+                # 4-комнатные
+                '4': '4',
+                '4-комн': '4',
+                '4-комн.': '4',
+                '4-комн.+': '4',
+                '4-комн+': '4'
+            }
+            
+            # Сначала обрабатываем все типы из DomClick (чтобы не пропустить 1-комнатные)
+            processed_types = set()
+            
+            for dc_type_name, dc_type_data in domclick_apt_types.items():
+                # Упрощаем название типа
+                simplified_name = name_mapping.get(dc_type_name, dc_type_name)
+                
+                # Пропускаем если уже обработали этот упрощенный тип
+                if simplified_name in processed_types:
+                    continue
+                processed_types.add(simplified_name)
+                
+                # Получаем квартиры из DomClick
+                dc_apartments = dc_type_data.get('apartments', [])
+                if not dc_apartments:
+                    continue
+                
+                # Ищем соответствующий тип в Avito
+                avito_apartments = []
+                for avito_type_name, avito_data in avito_apt_types.items():
+                    avito_simplified = name_mapping.get(avito_type_name, avito_type_name)
+                    if avito_simplified == simplified_name:
+                        avito_apartments = avito_data.get('apartments', [])
+                        break
+                
+                # Объединяем: количество квартир = количество квартир в DomClick
+                combined_apartments = []
+                
+                for i, dc_apt in enumerate(dc_apartments):
+                    # Получаем ВСЕ фото этой квартиры из DomClick как МАССИВ
+                    apartment_photos = dc_apt.get('photos', [])
+                    
+                    # Если фото нет - пропускаем эту квартиру
+                    if not apartment_photos:
+                        continue
+                    
+                    # Берем соответствующую квартиру из Avito (циклически)
+                    avito_apt = avito_apartments[i % len(avito_apartments)] if avito_apartments else {}
+                    
+                    combined_apartments.append({
+                        'title': avito_apt.get('title', ''),
+                        'price': avito_apt.get('price', ''),
+                        'pricePerSquare': avito_apt.get('pricePerSquare', ''),
+                        'completionDate': avito_apt.get('completionDate', ''),
+                        'url': avito_apt.get('urlPath', ''),
+                        'image': apartment_photos  # МАССИВ всех фото этой планировки!
+                    })
+                
+                # Добавляем в результат только если есть квартиры с фото
+                if combined_apartments:
+                    unified_record['apartment_types'][simplified_name] = {
+                        'apartments': combined_apartments
+                    }
+        
+        # Сохраняем ссылки на исходные записи для отладки
+        unified_record['_source_ids'] = {
+            'domrf': str(domrf_record['_id']),
+            'avito': str(avito_record['_id']) if avito_record else None,
+            'domclick': str(domclick_record['_id']) if domclick_record else None
+        }
         
         # Сохраняем
         result = unified_col.insert_one(unified_record)
@@ -1709,6 +1958,8 @@ def save_manual_match(request):
             'error': 'Неверный формат JSON'
         }, status=400)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': str(e)

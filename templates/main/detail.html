@@ -2,32 +2,130 @@
 
 {% block title %}{{ complex.name }} - Антон Хаус{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Стили для галереи в карточках квартир */
+.compact-card-image-gallery {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+  background: #f9fafb;
+}
+
+.compact-card-image-gallery .gallery-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity 0.3s ease;
+}
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 10;
+  opacity: 0;
+}
+
+.compact-card-image-gallery:hover .gallery-nav {
+  opacity: 1;
+}
+
+.gallery-nav:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.gallery-prev {
+  left: 10px;
+}
+
+.gallery-next {
+  right: 10px;
+}
+
+.gallery-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.gallery-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.gallery-dots .dot.active {
+  background: rgba(255, 255, 255, 1);
+  width: 24px;
+  border-radius: 4px;
+}
+
+.gallery-dots .dot:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* Мобильная версия */
+@media (max-width: 768px){
+  .compact-card-image-gallery { height: 240px; }
+  .gallery-nav { opacity: 1; width: 32px; height: 32px; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="detail-container">
 	<!-- Hero секция с главным изображением -->
 	<div class="detail-hero">
-		<div class="hero-image">
-			{% if complex.get_main_image and complex.get_main_image.image %}
+		<div class="hero-image" id="heroGallery">
+			{% if is_mongodb and complex.photos %}
+				{% for photo in complex.photos %}
+				<img src="/media/{{ photo }}" alt="{{ complex.name }}" class="hero-main-image" style="{% if not forloop.first %}display:none;{% endif %}" data-photo-index="{{ forloop.counter0 }}">
+				{% endfor %}
+			{% elif complex.get_main_image and complex.get_main_image.image %}
 				<img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}" class="hero-main-image">
 			{% else %}
 				<img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" class="hero-main-image">
 			{% endif %}
 			
-			<!-- Бейджи на изображении -->
-            <!-- Убраны бейджи по запросу -->
-			
 			<!-- Информационная панель поверх изображения -->
             <div class="hero-info-overlay">
                 <h1 class="complex-name">{{ complex.name }}</h1>
+				{% if is_mongodb and complex.photos %}
+				<div class="photo-counter" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#fff; padding:8px 16px; border-radius:20px; font-size:14px;">
+					<span id="currentPhotoIndex">1</span> / {{ complex.photos|length }}
+				</div>
+				{% endif %}
             </div>
-			
-			<!-- Верхний правый блок кнопок удалён по требованию -->
 		</div>
 		<!-- Боковые стрелки навигации по фото -->
+		{% if is_mongodb and complex.photos|length > 1 %}
 		<div class="hero-photo-nav" style="position:absolute; top:50%; left:0; right:0; display:flex; justify-content:space-between; transform:translateY(-50%); pointer-events:none; padding:0 8px;">
-			<button class="photo-nav-btn prev" style="pointer-events:auto; background:rgba(0,0,0,0.5); border:none; color:#fff; width:40px; height:40px; border-radius:999px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-chevron-left"></i></button>
-			<button class="photo-nav-btn next" style="pointer-events:auto; background:rgba(0,0,0,0.5); border:none; color:#fff; width:40px; height:40px; border-radius:999px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-chevron-right"></i></button>
+			<button class="photo-nav-btn prev" onclick="changeHeroPhoto(-1)" style="pointer-events:auto; background:rgba(0,0,0,0.6); border:none; color:#fff; width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;"><i class="fas fa-chevron-left"></i></button>
+			<button class="photo-nav-btn next" onclick="changeHeroPhoto(1)" style="pointer-events:auto; background:rgba(0,0,0,0.6); border:none; color:#fff; width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s;"><i class="fas fa-chevron-right"></i></button>
 		</div>
+		{% endif %}
 	</div>
 	
 	<!-- Основная информация -->
@@ -37,70 +135,96 @@
 			<div class="location-section">
 				<div class="location-item">
 					<i class="fas fa-map-marker-alt"></i>
-					<span>{{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}{% if complex.street %}, {{ complex.street }}{% endif %}</span>
-				</div>
-				<div class="metro-info">
-					<i class="fas fa-subway"></i>
-					<span>{{ complex.commute_time }}</span>
+					<span>{{ complex.address|default:complex.city }}</span>
 				</div>
 			</div>
 			
 			<div class="specifications-grid">
-				<div class="spec-item">
-					<i class="fas fa-ruler-combined"></i>
-					<div class="spec-content">
-						<span class="spec-label">Площади квартир</span>
-						<span class="spec-value">{{ complex.area_from }}-{{ complex.area_to }} м²</span>
+				{% if is_mongodb %}
+					<!-- Данные из MongoDB parameters -->
+					{% if complex.parameters %}
+						{% for key, value in complex.parameters.items %}
+						<div class="spec-item">
+							{% if 'Срок' in key or 'сдачи' in key %}
+								<i class="fas fa-calendar"></i>
+							{% elif 'Класс' in key %}
+								<i class="fas fa-star"></i>
+							{% elif 'Тип' in key %}
+								<i class="fas fa-home"></i>
+							{% elif 'Отделка' in key %}
+								<i class="fas fa-paint-roller"></i>
+							{% elif 'Высота' in key or 'потолков' in key %}
+								<i class="fas fa-arrows-alt-v"></i>
+							{% elif 'Этажность' in key or 'этаж' in key %}
+								<i class="fas fa-building"></i>
+							{% elif 'корпусов' in key or 'Количество' in key %}
+								<i class="fas fa-city"></i>
+							{% elif 'дома' in key %}
+								<i class="fas fa-home"></i>
+							{% else %}
+								<i class="fas fa-info-circle"></i>
+							{% endif %}
+							<div class="spec-content">
+								<span class="spec-label">{{ key }}</span>
+								<span class="spec-value">{{ value }}</span>
+							</div>
+						</div>
+						{% endfor %}
+					{% endif %}
+					
+					{% if complex.total_apartments %}
+					<div class="spec-item">
+						<i class="fas fa-door-open"></i>
+						<div class="spec-content">
+							<span class="spec-label">Всего квартир</span>
+							<span class="spec-value">{{ complex.total_apartments }}</span>
+						</div>
 					</div>
-				</div>
-				
-				<div class="spec-item">
-					<i class="fas fa-home"></i>
-					<div class="spec-content">
-						<span class="spec-label">Тип жилья</span>
-						<span class="spec-value">{{ complex.get_house_type_display }}</span>
+					{% endif %}
+				{% else %}
+					<!-- Старые данные из SQL -->
+					<div class="spec-item">
+						<i class="fas fa-ruler-combined"></i>
+						<div class="spec-content">
+							<span class="spec-label">Площади квартир</span>
+							<span class="spec-value">{{ complex.area_from }}-{{ complex.area_to }} м²</span>
+						</div>
 					</div>
-				</div>
-				
-				<div class="spec-item">
-					<i class="fas fa-building"></i>
-					<div class="spec-content">
-						<span class="spec-label">Этажность</span>
-						<span class="spec-value">17-18</span>
+					
+					<div class="spec-item">
+						<i class="fas fa-home"></i>
+						<div class="spec-content">
+							<span class="spec-label">Тип жилья</span>
+							<span class="spec-value">{{ complex.get_house_type_display }}</span>
+						</div>
 					</div>
-				</div>
-				
-				<div class="spec-item">
-					<i class="fas fa-paint-roller"></i>
-					<div class="spec-content">
-						<span class="spec-label">Варианты отделки</span>
-						<span class="spec-value">{{ complex.get_finishing_display }}</span>
+					
+					<div class="spec-item">
+						<i class="fas fa-building"></i>
+						<div class="spec-content">
+							<span class="spec-label">Этажность</span>
+							<span class="spec-value">17-18</span>
+						</div>
 					</div>
-				</div>
-				
-				<div class="spec-item">
-					<i class="fas fa-building"></i>
-					<div class="spec-content">
-						<span class="spec-label">Количество корпусов</span>
-						<span class="spec-value">{{ complex.total_apartments|floatformat:0 }} корпусов</span>
+					
+					<div class="spec-item">
+						<i class="fas fa-paint-roller"></i>
+						<div class="spec-content">
+							<span class="spec-label">Варианты отделки</span>
+							<span class="spec-value">{{ complex.get_finishing_display }}</span>
+						</div>
 					</div>
-				</div>
+					
+					<div class="spec-item">
+						<i class="fas fa-building"></i>
+						<div class="spec-content">
+							<span class="spec-label">Количество корпусов</span>
+							<span class="spec-value">{{ complex.total_apartments|floatformat:0 }} корпусов</span>
+						</div>
+					</div>
+				{% endif %}
 			</div>
 			
-			<a href="#" class="more-info-link">Подробнее о ЖК</a>
-			
-			<div class="promotions">
-				<span class="promotions-count">12 акций от застройщика</span>
-			</div>
-		</div>
-		
-		<!-- Средняя секция с рейтингом транспорта -->
-		<div class="transport-rating-card">
-			<div class="transport-icon">
-				<i class="fas fa-crosshairs"></i>
-			</div>
-			<div class="transport-score">3.6 из 10</div>
-			<div class="transport-label">Транспортная доступность</div>
 		</div>
 		
 		<!-- Правая панель с контактами -->
@@ -129,8 +253,90 @@
 		</div>
 	</div>
 	
-    <!-- Цены по типам квартир (перед фотографиями) -->
-    {% if not is_secondary %}
+    <!-- Варианты квартир из MongoDB -->
+    {% if not is_secondary and is_mongodb and complex.apartment_variants %}
+    <div class="detail-apartments" style="margin: 32px 0;">
+        <h2 style="font-size: 28px; font-weight: 600; margin-bottom: 24px;">Варианты квартир</h2>
+        
+        <!-- Фильтр по типам (только существующие) -->
+        <div class="apartment-types-filter" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+            {% for type in complex.apartment_types %}
+            <button class="apt-filter-btn {% if forloop.first %}active{% endif %}" data-type="{{ type }}" onclick="filterApartmentsByType('{{ type }}')" style="padding: 10px 20px; border: 2px solid {% if forloop.first %}#2563eb{% else %}#e5e7eb{% endif %}; background: {% if forloop.first %}#2563eb{% else %}white{% endif %}; color: {% if forloop.first %}white{% else %}#374151{% endif %}; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.3s;">
+                {% if type == 'Студия' %}Студия{% else %}{{type}}-комн{% endif %}
+            </button>
+            {% endfor %}
+        </div>
+        
+        <!-- Список квартир по типам с пагинацией -->
+        {% for apt_type in complex.apartment_types %}
+        <div class="apartments-type-section" data-type-section="{{ apt_type }}" style="display: {% if forloop.first %}block{% else %}none{% endif %};">
+            <div class="apartments-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px;">
+                {% for apt in complex.apartment_variants %}
+                {% if apt.type == apt_type %}
+                <div class="apartment-card" data-apt-type="{{ apt.type }}" data-apt-index="{{ forloop.counter0 }}" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; transition: all 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: {% if forloop.counter0 < 6 %}block{% else %}none{% endif %};">
+                    <!-- Галерея фото точно как в каталоге -->
+                    <div class="compact-card-image-gallery">
+                        {% if apt.layout_photos %}
+                            {% for photo in apt.layout_photos %}
+                            <img src="/media/{{ photo }}" alt="{{ apt.title }}" class="gallery-image" style="display: {% if forloop.first %}block{% else %}none{% endif %};">
+                            {% endfor %}
+                            
+                            {% if apt.layout_photos|length > 1 %}
+                            <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="gallery-nav gallery-next" onclick="event.stopPropagation(); changeImage(this, 1)">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <div class="gallery-dots">
+                                {% for photo in apt.layout_photos %}
+                                <span class="dot {% if forloop.first %}active{% endif %}" onclick="event.stopPropagation(); setImage(this, {{ forloop.counter0 }})"></span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div style="width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; color: #9ca3af; background: #f3f4f6;">
+                                <i class="fas fa-image" style="font-size: 48px;"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Информация о квартире -->
+                    <div class="compact-card-content" style="padding: 16px;">
+                        <div class="compact-card-header">
+                            <h3 class="compact-card-title" style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">{{ apt.title }}</h3>
+                        </div>
+                        <div class="compact-card-price">
+                            <div class="compact-price-text" style="font-size: 24px; font-weight: 700; color: #2563eb; margin-bottom: 4px;">{{ apt.price }}</div>
+                        </div>
+                        {% if apt.price_per_square %}
+                        <div class="apt-price-per-m" style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">{{ apt.price_per_square }}</div>
+                        {% endif %}
+                        <div class="compact-card-details" style="display: flex; flex-direction: column; gap: 4px;">
+                            {% if apt.completion_date %}
+                            <div class="compact-detail-item" style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280;">
+                                <i class="fas fa-calendar"></i>
+                                <span>{{ apt.completion_date }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- Пагинация для этого типа -->
+            <div class="apt-pagination" data-type-pagination="{{ apt_type }}" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;">
+                <!-- Будет заполнено через JS -->
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    {% if not is_secondary and not is_mongodb %}
+    <!-- Старая версия для SQL -->
     <div class="detail-prices">
         <h2>Цены по типам квартир</h2>
         <div class="prices-grid">
@@ -159,27 +365,70 @@
     {% endif %}
 
     <!-- Галерея изображений -->
-	<div class="detail-gallery">
-		<h2>Фотографии ЖК</h2>
-		<div class="gallery-grid">
-			{% for image in complex.get_images %}
-			{% if image.image %}
-			<div class="gallery-item {% if image.is_main %}main{% endif %}" data-image="{{ image.image.url }}">
-				<img src="{{ image.image.url }}" alt="{{ image.title|default:complex.name }}">
-			</div>
+	<div class="detail-gallery" style="margin: 32px 0;">
+		<h2 style="font-size: 28px; font-weight: 600; margin-bottom: 24px;">Фотографии ЖК</h2>
+		<div class="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+			{% if is_mongodb and complex.photos %}
+				{% for photo in complex.photos %}
+				<div class="gallery-item" data-image="/media/{{ photo }}" onclick="openGalleryModal({{ forloop.counter0 }})" style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3; transition: transform 0.3s;">
+					<img src="/media/{{ photo }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+					<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); padding: 12px; color: white; font-size: 14px; opacity: 0; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+						<i class="fas fa-search-plus"></i> Увеличить
+					</div>
+				</div>
+				{% endfor %}
+			{% else %}
+				{% for image in complex.get_images %}
+				{% if image.image %}
+				<div class="gallery-item {% if image.is_main %}main{% endif %}" data-image="{{ image.image.url }}" onclick="openGalleryModal({{ forloop.counter0 }})" style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3;">
+					<img src="{{ image.image.url }}" alt="{{ image.title|default:complex.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+				</div>
+				{% endif %}
+				{% empty %}
+				<div class="gallery-item main" data-image="/media/gallery/placeholders.png" style="position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3;">
+					<img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+				</div>
+				{% endfor %}
 			{% endif %}
-			{% empty %}
-			<div class="gallery-item main" data-image="/media/gallery/placeholders.png">
-<img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-			</div>
-			{% endfor %}
 		</div>
 	</div>
 	
+	<!-- Модальное окно для галереи -->
+	<div id="galleryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; align-items:center; justify-content:center;" onclick="closeGalleryModal()">
+		<button onclick="closeGalleryModal()" style="position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.2); border:none; width:50px; height:50px; border-radius:999px; cursor:pointer; color:white; font-size:24px; z-index:10001;">×</button>
+		<button onclick="event.stopPropagation(); changeGalleryPhoto(-1)" style="position:absolute; left:20px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.2); border:none; width:50px; height:50px; border-radius:999px; cursor:pointer; color:white; font-size:24px; z-index:10001;">‹</button>
+		<button onclick="event.stopPropagation(); changeGalleryPhoto(1)" style="position:absolute; right:20px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.2); border:none; width:50px; height:50px; border-radius:999px; cursor:pointer; color:white; font-size:24px; z-index:10001;">›</button>
+		<div style="max-width: 90%; max-height: 90%; display: flex; align-items: center; justify-content: center;" onclick="event.stopPropagation()">
+			<img id="galleryModalImage" src="" alt="" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px;">
+		</div>
+		<div style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:white; padding:10px 20px; border-radius:20px; font-size:16px; z-index:10001;">
+			<span id="galleryModalCounter">1</span> / <span id="galleryModalTotal">1</span>
+		</div>
+	</div>
+	
+	<!-- Корпуса и сроки сдачи -->
+	{% if is_mongodb and complex.korpuses %}
+	<div class="korpuses-section" style="margin: 32px 0;">
+		<h2 style="font-size: 28px; font-weight: 600; margin-bottom: 24px;">Корпуса и сроки сдачи</h2>
+		<div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
+				{% for korpus in complex.korpuses %}
+				<div style="display: flex; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #e5e7eb; {% if forloop.counter0|divisibleby:2 %}border-left: 1px solid #e5e7eb;{% endif %} {% if forloop.last or forloop.counter == complex.korpuses|length|add:-1 %}border-bottom: none;{% endif %}">
+					<span style="font-size: 15px; color: #374151; font-weight: 500;">
+						<i class="fas fa-building" style="color: #667eea; margin-right: 8px;"></i>{{ korpus.name }}
+					</span>
+					<span style="font-size: 15px; color: #6b7280; white-space: nowrap;">{{ korpus.quarter }} кв. {{ korpus.year }}</span>
+				</div>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
+	{% endif %}
+	
 	<!-- Карта расположения ЖК -->
 	{% if complex.latitude and complex.longitude %}
-	<div class="detail-map-section">
-		<h2>Расположение ЖК</h2>
+	<div class="detail-map-section" style="margin: 32px 0;">
+		<h2 style="font-size: 28px; font-weight: 600; margin-bottom: 24px;">Расположение ЖК</h2>
 		<div class="map-container">
 			<div id="detail-map" style="width: 100%; height: 400px; border-radius: 12px; overflow: hidden;"></div>
 		</div>
@@ -806,4 +1055,321 @@ document.addEventListener('DOMContentLoaded', function() {
 	{% endif %}
 });
 </script>
+
+<script>
+// JavaScript для MongoDB версии
+{% if is_mongodb %}
+
+// Навигация по фото в hero секции
+let currentHeroPhotoIndex = 0;
+const heroImages = document.querySelectorAll('#heroGallery .hero-main-image');
+
+function changeHeroPhoto(direction) {
+	if (heroImages.length <= 1) return;
+	
+	heroImages[currentHeroPhotoIndex].style.display = 'none';
+	currentHeroPhotoIndex = (currentHeroPhotoIndex + direction + heroImages.length) % heroImages.length;
+	heroImages[currentHeroPhotoIndex].style.display = 'block';
+	
+	const counter = document.getElementById('currentPhotoIndex');
+	if (counter) counter.textContent = currentHeroPhotoIndex + 1;
+}
+
+// Модальное окно галереи
+let currentGalleryIndex = 0;
+const galleryPhotos = {{ complex.photos_json|safe }} || [];
+
+function openGalleryModal(index) {
+	currentGalleryIndex = index;
+	const modal = document.getElementById('galleryModal');
+	const img = document.getElementById('galleryModalImage');
+	const counter = document.getElementById('galleryModalCounter');
+	const total = document.getElementById('galleryModalTotal');
+	
+	if (modal && img) {
+		img.src = '/media/' + galleryPhotos[index];
+		counter.textContent = index + 1;
+		total.textContent = galleryPhotos.length;
+		modal.style.display = 'flex';
+		document.body.style.overflow = 'hidden';
+	}
+}
+
+function closeGalleryModal() {
+	const modal = document.getElementById('galleryModal');
+	if (modal) {
+		modal.style.display = 'none';
+		document.body.style.overflow = '';
+	}
+}
+
+function changeGalleryPhoto(direction) {
+	currentGalleryIndex = (currentGalleryIndex + direction + galleryPhotos.length) % galleryPhotos.length;
+	const img = document.getElementById('galleryModalImage');
+	const counter = document.getElementById('galleryModalCounter');
+	
+	if (img && counter) {
+		img.src = '/media/' + galleryPhotos[currentGalleryIndex];
+		counter.textContent = currentGalleryIndex + 1;
+	}
+}
+
+// Клавиши для навигации в галерее
+document.addEventListener('keydown', function(e) {
+	const modal = document.getElementById('galleryModal');
+	if (modal && modal.style.display === 'flex') {
+		if (e.key === 'ArrowLeft') changeGalleryPhoto(-1);
+		if (e.key === 'ArrowRight') changeGalleryPhoto(1);
+		if (e.key === 'Escape') closeGalleryModal();
+	}
+	
+});
+
+// Переключение типов квартир
+function filterApartmentsByType(type) {
+	// Скрываем все секции
+	const sections = document.querySelectorAll('.apartments-type-section');
+	sections.forEach(section => {
+		section.style.display = 'none';
+	});
+	
+	// Показываем выбранную секцию
+	const activeSection = document.querySelector(`[data-type-section="${type}"]`);
+	if (activeSection) {
+		activeSection.style.display = 'block';
+		initializePagination(type);
+	}
+	
+	// Обновляем стили кнопок
+	const buttons = document.querySelectorAll('.apt-filter-btn');
+	buttons.forEach(btn => {
+		if (btn.dataset.type === type) {
+			btn.style.background = '#2563eb';
+			btn.style.color = 'white';
+			btn.style.borderColor = '#2563eb';
+			btn.classList.add('active');
+		} else {
+			btn.style.background = 'white';
+			btn.style.color = '#374151';
+			btn.style.borderColor = '#e5e7eb';
+			btn.classList.remove('active');
+		}
+	});
+}
+
+// Инициализация пагинации для типа квартир
+function initializePagination(type) {
+	const section = document.querySelector(`[data-type-section="${type}"]`);
+	if (!section) return;
+	
+	const cards = section.querySelectorAll('.apartment-card');
+	const totalCards = cards.length;
+	const perPage = 6;
+	const totalPages = Math.ceil(totalCards / perPage);
+	
+	if (totalPages <= 1) {
+		// Если страница одна, скрываем пагинацию
+		const pagination = section.querySelector('.apt-pagination');
+		if (pagination) pagination.style.display = 'none';
+		return;
+	}
+	
+	// Показываем пагинацию
+	const pagination = section.querySelector('.apt-pagination');
+	if (pagination) {
+		pagination.style.display = 'flex';
+		renderPagination(type, 1, totalPages);
+		showPage(type, 1, perPage);
+	}
+}
+
+// Отображение страницы
+function showPage(type, page, perPage) {
+	const section = document.querySelector(`[data-type-section="${type}"]`);
+	if (!section) return;
+	
+	const cards = section.querySelectorAll('.apartment-card');
+	const start = (page - 1) * perPage;
+	const end = start + perPage;
+	
+	cards.forEach((card, index) => {
+		if (index >= start && index < end) {
+			card.style.display = 'block';
+		} else {
+			card.style.display = 'none';
+		}
+	});
+	
+	// Прокрутка к началу секции
+	section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Рендеринг кнопок пагинации
+function renderPagination(type, currentPage, totalPages) {
+	const pagination = document.querySelector(`[data-type-pagination="${type}"]`);
+	if (!pagination) return;
+	
+	let html = '';
+	
+	// Кнопка "Назад"
+	if (currentPage > 1) {
+		html += `<button onclick="changePage('${type}', ${currentPage - 1})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s;"><i class="fas fa-chevron-left"></i></button>`;
+	}
+	
+	// Кнопки страниц
+	for (let i = 1; i <= totalPages; i++) {
+		if (i === currentPage) {
+			html += `<button style="padding: 8px 12px; border: 2px solid #2563eb; background: #2563eb; color: white; border-radius: 6px; font-weight: 600; font-size: 14px;">${i}</button>`;
+		} else {
+			html += `<button onclick="changePage('${type}', ${i})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s;">${i}</button>`;
+		}
+	}
+	
+	// Кнопка "Вперед"
+	if (currentPage < totalPages) {
+		html += `<button onclick="changePage('${type}', ${currentPage + 1})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s;"><i class="fas fa-chevron-right"></i></button>`;
+	}
+	
+	pagination.innerHTML = html;
+}
+
+// Смена страницы
+function changePage(type, page) {
+	const section = document.querySelector(`[data-type-section="${type}"]`);
+	if (!section) return;
+	
+	const cards = section.querySelectorAll('.apartment-card');
+	const totalPages = Math.ceil(cards.length / 6);
+	
+	renderPagination(type, page, totalPages);
+	showPage(type, page, 6);
+}
+
+// Функции для галереи фото (как в каталоге)
+window.changeImage = function(button, direction) {
+	const gallery = button.parentElement;
+	const images = gallery.querySelectorAll('.gallery-image');
+	const dots = gallery.querySelectorAll('.dot');
+	let currentIndex = 0;
+	
+	// Находим текущий индекс
+	images.forEach((img, i) => {
+		if (img.style.display === 'block') {
+			currentIndex = i;
+		}
+	});
+	
+	// Вычисляем новый индекс
+	let newIndex = currentIndex + direction;
+	if (newIndex < 0) newIndex = images.length - 1;
+	if (newIndex >= images.length) newIndex = 0;
+	
+	// Переключаем изображения
+	images[currentIndex].style.display = 'none';
+	images[newIndex].style.display = 'block';
+	
+	// Переключаем точки
+	if (dots.length > 0) {
+		dots[currentIndex].classList.remove('active');
+		dots[newIndex].classList.add('active');
+	}
+}
+
+window.setImage = function(dot, index) {
+	const gallery = dot.parentElement.parentElement;
+	const images = gallery.querySelectorAll('.gallery-image');
+	const dots = gallery.querySelectorAll('.dot');
+	
+	// Скрываем все изображения
+	images.forEach(img => img.style.display = 'none');
+	// Показываем выбранное
+	if (images[index]) images[index].style.display = 'block';
+	
+	// Обновляем точки
+	dots.forEach((d, i) => {
+		if (i === index) {
+			d.classList.add('active');
+		} else {
+			d.classList.remove('active');
+		}
+	});
+}
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+	// Инициализируем пагинацию для первого типа
+	const firstBtn = document.querySelector('.apt-filter-btn');
+	if (firstBtn) {
+		const firstType = firstBtn.dataset.type;
+		initializePagination(firstType);
+	}
+});
+
+
+// Hover эффекты для кнопок фильтра
+document.addEventListener('DOMContentLoaded', function() {
+	const filterBtns = document.querySelectorAll('.apt-filter-btn');
+	filterBtns.forEach(btn => {
+		btn.addEventListener('mouseenter', function() {
+			if (!this.classList.contains('active')) {
+				this.style.borderColor = '#2563eb';
+				this.style.color = '#2563eb';
+			}
+		});
+		btn.addEventListener('mouseleave', function() {
+			if (!this.classList.contains('active')) {
+				this.style.borderColor = '#e5e7eb';
+				this.style.color = '#374151';
+			}
+		});
+	});
+	
+	// Hover для карточек квартир
+	const aptCards = document.querySelectorAll('.apartment-card');
+	aptCards.forEach(card => {
+		card.addEventListener('mouseenter', function() {
+			this.style.transform = 'translateY(-4px)';
+			this.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
+		});
+		card.addEventListener('mouseleave', function() {
+			this.style.transform = 'translateY(0)';
+			this.style.boxShadow = 'none';
+		});
+	});
+});
+
+{% endif %}
+</script>
+
+<style>
+/* Дополнительные стили для MongoDB версии */
+{% if is_mongodb %}
+.apartment-card {
+	box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.apt-filter-btn:hover {
+	transform: translateY(-2px);
+}
+
+.gallery-item:hover img {
+	transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+	.apartments-grid {
+		grid-template-columns: 1fr !important;
+	}
+	
+	.apartment-types-filter {
+		overflow-x: auto;
+		flex-wrap: nowrap !important;
+	}
+	
+	.apt-filter-btn {
+		white-space: nowrap;
+	}
+}
+{% endif %}
+</style>
 {% endblock %} 

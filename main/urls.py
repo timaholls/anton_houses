@@ -13,7 +13,7 @@ urlpatterns = [
     path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
     path('api/articles/<int:article_id>/view/', views.article_view_api, name='article_view_api'),
     path('tag/<slug:slug>/', views.tag_detail, name='tag_detail'),
-    path('complex/<int:complex_id>/', views.detail, name='detail'),
+    path('complex/<str:complex_id>/', views.detail, name='detail'),
     path('api/districts/', views.districts_api, name='districts_api'),
     path('api/streets/', views.streets_api, name='streets_api'),
     
