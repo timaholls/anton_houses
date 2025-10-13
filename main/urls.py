@@ -45,8 +45,13 @@ urlpatterns = [
 
     # Видеообзоры
     path('videos/', views.videos, name='videos'),
-    path('videos/<int:video_id>/', views.video_detail, name='video_detail'),
+    path('videos/<str:video_id>/', views.video_detail, name='video_detail'),
     path('api/videos/objects/', views.videos_objects_api, name='videos_objects_api'),
+    # Videos API (Mongo)
+    path('api/videos/', views.videos_create, name='videos_create'),
+    path('api/videos/list/', views.videos_list, name='videos_list'),
+    path('api/videos/by-complex/<str:complex_id>/', views.videos_by_complex, name='videos_by_complex'),
+    path('api/videos/<str:video_id>/toggle/', views.videos_toggle, name='videos_toggle'),
 
     
     # Ипотека
@@ -54,7 +59,7 @@ urlpatterns = [
     
     # Акции
     path('offers/', views.all_offers, name='all_offers'),
-    path('offers/<int:offer_id>/', views.offer_detail, name='offer_detail'),
+    path('offers/<str:offer_id>/', views.offer_detail, name='offer_detail'),
     path('team/', views.team, name='team'),
     path('team/<int:employee_id>/', views.employee_detail, name='employee_detail'),
     path('team/<int:employee_id>/properties/', views.agent_properties, name='agent_properties'),
@@ -66,4 +71,10 @@ urlpatterns = [
     path('api/manual-matching/unmatched/', views.get_unmatched_records, name='get_unmatched_records'),
     path('api/manual-matching/save/', views.save_manual_match, name='save_manual_match'),
     path('api/manual-matching/unified/', views.get_unified_records, name='get_unified_records'),
+    path('api/manual-matching/unified/<str:unified_id>/', views.unified_delete, name='unified_delete'),
+    # Promotions API
+    path('api/promotions/', views.promotions_create, name='promotions_create'),
+    path('api/promotions/list/', views.promotions_list, name='promotions_list'),
+    path('api/promotions/<str:promo_id>/', views.promotions_delete, name='promotions_delete'),
+    path('api/promotions/<str:promo_id>/toggle/', views.promotions_toggle, name='promotions_toggle'),
 ] 

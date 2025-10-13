@@ -48,11 +48,13 @@
                     </div>
                     
                     <div class="offer-detail-actions">
-                        <a href="#feedback-submit-btn" class="btn btn-primary btn-large offer-cta anchor-feedback-btn">Получить предложение</a>
+                        <a href="#feedback-title" class="btn btn-primary btn-large offer-cta anchor-feedback-btn">Получить предложение</a>
+                        {% if offer.residential_complex.id %}
                         <a class="btn btn-secondary btn-large" href="{% url 'main:detail' offer.residential_complex.id %}">
                             <span>Подробнее о ЖК</span>
                             <i class="fas fa-arrow-right"></i>
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

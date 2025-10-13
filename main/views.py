@@ -16,6 +16,7 @@ import os
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
+from datetime import datetime
 
 
 def home(request):
@@ -39,8 +40,49 @@ def home(request):
     # Статьи для главной
     home_articles = Article.objects.filter(show_on_home=True).order_by('-published_date')[:3]
 
-    # Акции для главной - все активные предложения
-    offers = SpecialOffer.get_active_offers()
+    # Акции для главной - теперь из MongoDB promotions (с падением назад на SQL)
+    def build_offer_adapters(limit=9):
+        try:
+            db = get_mongo_connection()
+            promotions = db['promotions']
+            unified = db['unified_houses']
+            q = {'is_active': True}
+            items = []
+            for p in promotions.find(q).sort('created_at', -1).limit(limit):
+                complex_doc = unified.find_one({'_id': p.get('complex_id')}) if isinstance(p.get('complex_id'), ObjectId) else unified.find_one({'_id': ObjectId(str(p.get('complex_id')))})
+                # Адаптер для совместимости с шаблонами
+                class _Img: pass
+                class _MainImg: pass
+                class _RC: pass
+                class _Offer: pass
+                offer = _Offer()
+                offer.id = str(p.get('_id'))
+                offer.title = p.get('title', '')
+                offer.description = p.get('description', '')
+                offer.expires_at = p.get('expires_at')
+                # residential_complex.name
+                rc = _RC()
+                rc.name = (complex_doc.get('development', {}) or {}).get('name') if complex_doc else ''
+                rc.id = str(complex_doc.get('_id')) if complex_doc and complex_doc.get('_id') else ''
+                offer.residential_complex = rc
+                # get_main_image.image.url
+                photos = []
+                if complex_doc:
+                    if 'development' in complex_doc and 'avito' not in complex_doc:
+                        photos = complex_doc.get('development', {}).get('photos', []) or []
+                    else:
+                        photos = (complex_doc.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
+                main = _MainImg()
+                img = _Img()
+                img.url = ('/media/' + photos[0]) if photos else '/media/gallery/placeholders.png'
+                main.image = img
+                offer.get_main_image = main
+                items.append(offer)
+            return items
+        except Exception:
+            return list(SpecialOffer.get_active_offers())
+
+    offers = build_offer_adapters()
 
     context = {
         'complexes': complexes,
@@ -226,7 +268,7 @@ def catalog_api(request):
                 # Параметры из avito
                 parameters = avito_dev.get('parameters', {})
 
-        complexes_data.append({
+            complexes_data.append({
                 'id': str(record['_id']),
                 'name': name,
                 'address': address,
@@ -253,7 +295,7 @@ def catalog_api(request):
             })
         
         total_pages = (total_count + per_page - 1) // per_page
-        
+
         return JsonResponse({
             'complexes': complexes_data,
             'has_previous': page > 1,
@@ -262,7 +304,7 @@ def catalog_api(request):
             'total_pages': total_pages,
             'total_count': total_count
         })
-        
+
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -460,122 +502,80 @@ def office_detail(request, slug):
 
 
 def videos(request):
-    """Список видеообзоров ЖК"""
-    category = request.GET.get('category', '')  # 'newbuild' или 'secondary'
+    """Видеообзоры из Mongo `residential_videos`"""
+    category = request.GET.get('category', '')
     complex_id = request.GET.get('complex', '')
+    db = get_mongo_connection()
+    videos_col = db['residential_videos']
+    unified = db['unified_houses']
 
-    # Получаем видео из галереи
-    videos_qs = Gallery.objects.filter(
-        content_type='video',
-        is_active=True
-    )
-
-    # Фильтруем по категории
-    if category == 'newbuild':
-        videos_qs = videos_qs.filter(category='residential_video')
-    elif category == 'secondary':
-        videos_qs = videos_qs.filter(category='secondary_video')
-
+    q = {'is_active': True}
     if complex_id:
         try:
-            videos_qs = videos_qs.filter(object_id=int(complex_id))
-        except ValueError:
-            pass
+            q['complex_id'] = ObjectId(str(complex_id))
+        except Exception:
+            q['complex_id'] = None
 
-    # Добавляем название объекта к каждому видео
-    for video in videos_qs:
+    docs = list(videos_col.find(q).sort('created_at', -1))
+
+    adapted = []
+    for d in docs:
+        comp_name = ''
         try:
-            if video.category == 'residential_video':
-                complex_obj = ResidentialComplex.objects.get(id=video.object_id)
-                video.residential_complex_name = complex_obj.name
-            elif video.category == 'secondary_video':
-                property_obj = SecondaryProperty.objects.get(id=video.object_id)
-                video.residential_complex_name = property_obj.name
-        except (ResidentialComplex.DoesNotExist, SecondaryProperty.DoesNotExist):
-            video.residential_complex_name = "Неизвестный объект"
+            comp = unified.find_one({'_id': d.get('complex_id')}) if isinstance(d.get('complex_id'), ObjectId) else unified.find_one({'_id': ObjectId(str(d.get('complex_id')))})
+            if comp:
+                if 'development' in comp and 'avito' not in comp:
+                    comp_name = (comp.get('development', {}) or {}).get('name', '')
+                else:
+                    comp_name = (comp.get('avito', {}) or {}).get('development', {}) .get('name') or (comp.get('domclick', {}) or {}).get('development', {}) .get('complex_name', '')
+        except Exception:
+            comp_name = ''
+        adapted.append(type('V', (), {
+            'id': str(d.get('_id')),
+            'title': d.get('title', ''),
+            'video_url': d.get('url', ''),
+            'residential_complex_name': comp_name,
+            'created_at': d.get('created_at') or datetime.utcnow()
+        }))
 
-    # Если фильтруем по конкретному объекту и нет видео, показываем сообщение
-    if complex_id and not videos_qs.exists():
-        # Получаем категории для фильтра
-        categories = [
-            {'value': 'newbuild', 'name': 'Новостройки'},
-            {'value': 'secondary', 'name': 'Вторичная недвижимость'},
-        ]
+    page = int(request.GET.get('page', 1))
+    per_page = 12
+    total = len(adapted)
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_slice = adapted[start:end]
 
-        context = {
-            'videos': [],
-            'page_obj': None,
-            'paginator': None,
-            'categories': categories,
-            'filters': {
-                'category': category,
-                'complex': complex_id,
-            },
-            'no_videos_for_complex': True
-        }
-        return render(request, 'main/videos.html', context)
+    paginator = Paginator(range(total), per_page)
+    page_obj = paginator.get_page(page)
 
-    # Проверяем, есть ли результаты поиска
-    if not videos_qs.exists():
-        # Получаем категории для фильтра
-        categories = [
-            {'value': 'newbuild', 'name': 'Новостройки'},
-            {'value': 'secondary', 'name': 'Вторичная недвижимость'},
-        ]
-
-        context = {
-            'videos': [],
-            'page_obj': None,
-            'paginator': None,
-            'categories': categories,
-            'filters': {
-                'category': category,
-                'complex': complex_id,
-            },
-            'no_videos_for_complex': False
-        }
-        return render(request, 'main/videos.html', context)
-
-    paginator = Paginator(videos_qs, 12)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
-
-    # Получаем категории для фильтра
     categories = [
         {'value': 'newbuild', 'name': 'Новостройки'},
         {'value': 'secondary', 'name': 'Вторичная недвижимость'},
     ]
 
-    context = {
-        'videos': page_obj,
+    return render(request, 'main/videos.html', {
+        'videos': page_slice,
         'page_obj': page_obj,
         'paginator': paginator,
         'categories': categories,
-        'filters': {
-            'category': category,
-            'complex': complex_id,
-        }
-    }
-    return render(request, 'main/videos.html', context)
+        'filters': {'category': category, 'complex': complex_id},
+        'no_videos_for_complex': bool(complex_id and total == 0)
+    })
 
 
 def video_detail(request, video_id):
-    """Детальная страница видеообзора"""
-    video = get_object_or_404(Gallery, id=video_id, content_type='video', is_active=True)
+    """Детальная страница видеообзора (Mongo)"""
+    db = get_mongo_connection()
+    videos_col = db['residential_videos']
+    unified = db['unified_houses']
+    d = videos_col.find_one({'_id': ObjectId(str(video_id))})
+    if not d:
+        raise Http404("Видео не найдено")
 
-    # Получаем связанный объект в зависимости от категории
-    if video.category == 'residential_video':
-        residential_complex = ResidentialComplex.objects.get(id=video.object_id)
-        object_type = 'ЖК'
-    elif video.category == 'secondary_video':
-        residential_complex = SecondaryProperty.objects.get(id=video.object_id)
-        object_type = 'Объект'
-    else:
-        raise Http404("Неизвестная категория видео")
-
-    # Формируем embed URL для видео
+    # Формируем embed URL
     video_embed_url = None
-    if video.video_url:
-        url = video.video_url.strip()
+    url = (d.get('url') or '').strip()
+    if url:
 
         # Проверяем, является ли это iframe кодом
         if url.startswith('<iframe'):
@@ -603,20 +603,25 @@ def video_detail(request, video_id):
                 import re
                 rutube_match = re.search(r'rutube\.ru/video/([a-f0-9]+)', url)
                 if rutube_match:
-                    video_id = rutube_match.group(1)
-                    video_embed_url = f'https://rutube.ru/play/embed/{video_id}/'
+                    rvid = rutube_match.group(1)
+                    video_embed_url = f'https://rutube.ru/play/embed/{rvid}/'
                 else:
                     video_embed_url = url
         else:
             video_embed_url = url
 
-    # Видео из того же объекта
-    same_complex_videos = Gallery.objects.filter(
-        category=video.category,
-        content_type='video',
-        is_active=True,
-        object_id=video.object_id
-    ).exclude(id=video.id)[:5]
+    # ЖК имя и другие видео этого же ЖК
+    comp_name = ''
+    same_complex_videos = []
+    if d.get('complex_id'):
+        comp = unified.find_one({'_id': d.get('complex_id')}) if isinstance(d.get('complex_id'), ObjectId) else unified.find_one({'_id': ObjectId(str(d.get('complex_id')))})
+        if comp:
+            if 'development' in comp and 'avito' not in comp:
+                comp_name = (comp.get('development', {}) or {}).get('name', '')
+            else:
+                comp_name = (comp.get('avito', {}) or {}).get('development', {}) .get('name') or (comp.get('domclick', {}) or {}).get('development', {}) .get('complex_name', '')
+        for sd in videos_col.find({'complex_id': d.get('complex_id'), '_id': {'$ne': d['_id']}, 'is_active': True}).limit(5):
+            same_complex_videos.append(type('V', (), {'id': str(sd.get('_id')), 'title': sd.get('title','')}))
 
     # Похожие видео (из других объектов того же города)
     if video.category == 'residential_video':
@@ -626,20 +631,22 @@ def video_detail(request, video_id):
         complex_ids = SecondaryProperty.objects.filter(city=residential_complex.city).exclude(
             id=video.object_id).values_list('id', flat=True)
 
-    similar_videos = Gallery.objects.filter(
-        category=video.category,
-        content_type='video',
-        is_active=True,
-        object_id__in=complex_ids
-    ).exclude(id=video.id)[:3]
+    similar_videos = []
+
+    video_obj = type('V', (), {
+        'id': str(d.get('_id')),
+        'title': d.get('title',''),
+        'description': d.get('description',''),
+        'residential_complex_name': comp_name
+    })
 
     context = {
-        'video': video,
+        'video': video_obj,
         'video_embed_url': video_embed_url,
-        'residential_complex': residential_complex,
+        'residential_complex': None,
         'same_complex_videos': same_complex_videos,
         'similar_videos': similar_videos,
-        'object_type': object_type,
+        'object_type': 'ЖК',
     }
     return render(request, 'main/video_detail.html', context)
 
@@ -981,7 +988,7 @@ def detail(request, complex_id):
     
     else:
         # ============ SQL VERSION (старая логика) ============
-        complex = get_object_or_404(ResidentialComplex, id=complex_id)
+    complex = get_object_or_404(ResidentialComplex, id=complex_id)
 
     # Проверяем, пришли ли мы от агента
     agent_id = request.GET.get('agent_id')
@@ -1587,15 +1594,44 @@ def mortgage(request):
 
 
 def all_offers(request):
-    """Страница всех акций"""
-    from django.utils import timezone
+    """Страница всех акций (Mongo promotions; fallback SQL)."""
+    def build_all_offers():
+        try:
+            db = get_mongo_connection()
+            promotions = db['promotions']
+            unified = db['unified_houses']
+            q = {'is_active': True}
+            adapters = []
+            for p in promotions.find(q).sort('created_at', -1):
+                class _Img: pass
+                class _MainImg: pass
+                class _RC: pass
+                class _Offer: pass
+                offer = _Offer()
+                offer.id = str(p.get('_id'))
+                offer.title = p.get('title', '')
+                offer.description = p.get('description', '')
+                offer.expires_at = p.get('expires_at')
+                rc = _RC()
+                comp = unified.find_one({'_id': p.get('complex_id')}) if isinstance(p.get('complex_id'), ObjectId) else unified.find_one({'_id': ObjectId(str(p.get('complex_id')))})
+                rc.name = (comp.get('development', {}) or {}).get('name') if comp else ''
+                rc.id = str(comp.get('_id')) if comp and comp.get('_id') else ''
+                offer.residential_complex = rc
+                photos = []
+                if comp:
+                    if 'development' in comp and 'avito' not in comp:
+                        photos = comp.get('development', {}).get('photos', []) or []
+                    else:
+                        photos = (comp.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
+                m = _MainImg(); i = _Img(); i.url = ('/media/' + photos[0]) if photos else '/media/gallery/placeholders.png'; m.image = i
+                offer.get_main_image = m
+                adapters.append(offer)
+            return adapters
+        except Exception:
+            from django.utils import timezone
+            return list(SpecialOffer.objects.filter(is_active=True).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).select_related('residential_complex').order_by('?'))
 
-    # Получаем все активные акции
-    offers = SpecialOffer.objects.filter(
-        is_active=True
-    ).filter(
-        models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
-    ).select_related('residential_complex').order_by('?')
+    offers = build_all_offers()
 
     context = {
         'offers': offers,
@@ -1604,47 +1640,191 @@ def all_offers(request):
 
 
 def offer_detail(request, offer_id):
-    """Детальная страница акции"""
-    from django.utils import timezone
+    """Детальная страница акции (Mongo promotions со спадением на SQL)."""
+    def build_offer_and_others(offer_id_str):
+        try:
+            db = get_mongo_connection()
+            promotions = db['promotions']
+            unified = db['unified_houses']
+            p = promotions.find_one({'_id': ObjectId(str(offer_id_str))})
+            if not p:
+                raise Exception('not found')
+            class _Img: pass
+            class _MainImg: pass
+            class _RC: pass
+            class _Offer: pass
+            def adapt(doc):
+                comp = unified.find_one({'_id': doc.get('complex_id')}) if isinstance(doc.get('complex_id'), ObjectId) else unified.find_one({'_id': ObjectId(str(doc.get('complex_id')))})
+                offer = _Offer()
+                offer.id = str(doc.get('_id'))
+                offer.title = doc.get('title', '')
+                offer.description = doc.get('description', '')
+                offer.expires_at = doc.get('expires_at')
+                rc = _RC(); rc.name = (comp.get('development', {}) or {}).get('name') if comp else ''
+                rc.id = str(comp.get('_id')) if comp and comp.get('_id') else ''
+                offer.residential_complex = rc
+                photos = []
+                if comp:
+                    if 'development' in comp and 'avito' not in comp:
+                        photos = comp.get('development', {}).get('photos', []) or []
+                    else:
+                        photos = (comp.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
+                m=_MainImg(); i=_Img(); i.url = ('/media/' + photos[0]) if photos else '/media/gallery/placeholders.png'; m.image=i
+                offer.get_main_image = m
+                return offer
+            offer = adapt(p)
+            others = [adapt(doc) for doc in promotions.find({'_id': {'$ne': p['_id']}, 'is_active': True}).sort('created_at', -1).limit(8)]
+            return offer, others
+        except Exception:
+            from django.utils import timezone
+            offer = get_object_or_404(SpecialOffer, id=int(offer_id_str), is_active=True)
+            other_offers = SpecialOffer.objects.filter(is_active=True).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exclude(id=offer.id).select_related('residential_complex').order_by('?')[:8]
+            return offer, list(other_offers)
 
-    # Получаем акцию
-    offer = get_object_or_404(SpecialOffer, id=offer_id, is_active=True)
-
-    # Проверяем, не истекла ли акция
-    if offer.expires_at and offer.expires_at < timezone.now():
-        raise Http404("Акция истекла")
-
-    # Получаем другие активные акции (без лимита)
-    other_offers = SpecialOffer.objects.filter(
-        is_active=True
-    ).filter(
-        models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
-    ).exclude(id=offer_id).select_related('residential_complex').order_by('?')[:8]
-
-    context = {
-        'offer': offer,
-        'other_offers': other_offers,
-    }
-    return render(request, 'main/offer_detail.html', context)
+    offer, other_offers = build_offer_and_others(offer_id)
+    return render(request, 'main/offer_detail.html', {'offer': offer, 'other_offers': other_offers})
 
 
 def videos_objects_api(request):
-    """API для получения списка объектов по категории недвижимости"""
-    from django.http import JsonResponse
-
+    """API: список объектов для фильтра (Mongo версия для newbuild)."""
     category = request.GET.get('category', '')
-
+    objects = []
     if category == 'newbuild':
-        objects = ResidentialComplex.objects.values('id', 'name')
-    elif category == 'secondary':
-        objects = SecondaryProperty.objects.values('id', 'name')
-    else:
-        objects = []
+        db = get_mongo_connection()
+        unified = db['unified_houses']
+        # Берём первые 1000 для селекта
+        for r in unified.find({}, {'development.name': 1}).limit(1000):
+            name = (r.get('development', {}) or {}).get('name') or (r.get('avito', {}) or {}).get('development', {}) .get('name') or (r.get('domclick', {}) or {}).get('development', {}) .get('complex_name') or 'ЖК'
+            objects.append({'id': str(r.get('_id')), 'name': name})
+    return JsonResponse({'success': True, 'objects': objects})
 
-    return JsonResponse({
-        'success': True,
-        'objects': list(objects)
-    })
+
+# ===================== MONGO VIDEOS API =====================
+@csrf_exempt
+@require_http_methods(["POST"]) 
+def videos_create(request):
+    """Создать видеообзор (residential_videos)."""
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+        complex_id = payload.get('complex_id')
+        url = (payload.get('url') or '').strip()
+        title = (payload.get('title') or '').strip()
+        description = (payload.get('description') or '').strip()
+        is_active = bool(payload.get('is_active', True))
+        if not complex_id or not url or not title:
+            return JsonResponse({'success': False, 'error': 'complex_id, url и title обязательны'}, status=400)
+
+        db = get_mongo_connection()
+        videos_col = db['residential_videos']
+        doc = {
+            'complex_id': ObjectId(str(complex_id)),
+            'url': url,
+            'title': title[:200],
+            'description': description[:2000],
+            'is_active': is_active,
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow(),
+        }
+        res = videos_col.insert_one(doc)
+        return JsonResponse({'success': True, 'id': str(res.inserted_id)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"]) 
+def videos_list(request):
+    """Список видеообзоров (для админ-UI/страницы)."""
+    try:
+        active = request.GET.get('active')
+        db = get_mongo_connection()
+        videos_col = db['residential_videos']
+        unified = db['unified_houses']
+        q = {}
+        if active in ('1', 'true', 'True'):
+            q['is_active'] = True
+        items = []
+        for d in videos_col.find(q).sort('created_at', -1):
+            comp_name = ''
+            try:
+                comp = unified.find_one({'_id': d.get('complex_id')}) if isinstance(d.get('complex_id'), ObjectId) else unified.find_one({'_id': ObjectId(str(d.get('complex_id')))})
+                if comp:
+                    if 'development' in comp and 'avito' not in comp:
+                        comp_name = (comp.get('development', {}) or {}).get('name', '')
+                    else:
+                        comp_name = (comp.get('avito', {}) or {}).get('development', {}) .get('name') or (comp.get('domclick', {}) or {}).get('development', {}) .get('complex_name', '')
+            except Exception:
+                comp_name = ''
+            items.append({
+                '_id': str(d.get('_id')),
+                'complex_id': str(d.get('complex_id')) if d.get('complex_id') else None,
+                'complex_name': comp_name,
+                'title': d.get('title'),
+                'description': d.get('description'),
+                'is_active': d.get('is_active', True),
+                'created_at': d.get('created_at').isoformat() if d.get('created_at') else None,
+            })
+        return JsonResponse({'success': True, 'data': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"]) 
+def videos_by_complex(request, complex_id):
+    """Видео по конкретному ЖК для детальной страницы."""
+    try:
+        db = get_mongo_connection()
+        videos_col = db['residential_videos']
+        vids = []
+        q = {'is_active': True}
+        try:
+            q['complex_id'] = ObjectId(str(complex_id))
+        except Exception:
+            return JsonResponse({'success': True, 'data': []})
+        for d in videos_col.find(q).sort('created_at', -1):
+            url = (d.get('url') or '').strip()
+            embed = None
+            if url.startswith('<iframe'):
+                import re
+                m = re.search(r'src=["\']([^"\']+)["\']', url)
+                embed = m.group(1) if m else url
+            elif 'youtu.be/' in url:
+                vid = url.split('youtu.be/')[-1].split('?')[0]
+                embed = f'https://www.youtube.com/embed/{vid}'
+            elif 'watch?v=' in url:
+                vid = url.split('watch?v=')[-1].split('&')[0]
+                embed = f'https://www.youtube.com/embed/{vid}'
+            elif 'rutube.ru' in url:
+                if '/play/embed/' in url:
+                    embed = url
+                else:
+                    import re
+                    rm = re.search(r'rutube\.ru/video/([a-f0-9]+)', url)
+                    embed = f'https://rutube.ru/play/embed/{rm.group(1)}/' if rm else url
+            else:
+                embed = url
+            vids.append({'id': str(d.get('_id')), 'title': d.get('title',''), 'video_url': embed})
+        return JsonResponse({'success': True, 'data': vids})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PATCH"]) 
+def videos_toggle(request, video_id):
+    try:
+        db = get_mongo_connection()
+        videos_col = db['residential_videos']
+        payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        if 'is_active' in payload:
+            new_val = bool(payload.get('is_active'))
+        else:
+            doc = videos_col.find_one({'_id': ObjectId(video_id)})
+            current = bool(doc.get('is_active', True)) if doc else True
+            new_val = not current
+        videos_col.update_one({'_id': ObjectId(video_id)}, {'$set': {'is_active': new_val, 'updated_at': datetime.utcnow()}})
+        return JsonResponse({'success': True, 'is_active': new_val})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 # =============== РУЧНОЕ СОПОСТАВЛЕНИЕ MONGODB ===============
@@ -1945,9 +2125,9 @@ def save_manual_match(request):
         
         # Сохраняем
         result = unified_col.insert_one(unified_record)
-        
-        return JsonResponse({
-            'success': True,
+
+    return JsonResponse({
+        'success': True,
             'message': 'Сопоставление успешно сохранено',
             'unified_id': str(result.inserted_id)
         })
@@ -1985,8 +2165,18 @@ def get_unified_records(request):
         # Форматируем записи
         formatted_records = []
         for record in records:
+            # Имя ЖК для новой и старой структуры
+            unified_name = None
+            if 'development' in record and 'avito' not in record:
+                unified_name = record.get('development', {}).get('name')
+            if not unified_name:
+                unified_name = (record.get('avito', {}) or {}).get('development', {}) .get('name') or \
+                               (record.get('domclick', {}) or {}).get('development', {}) .get('complex_name') or \
+                               (record.get('domrf', {}) or {}).get('name', 'N/A')
+
             formatted_records.append({
                 '_id': str(record['_id']),
+                'name': unified_name or 'N/A',
                 'domrf_name': record.get('domrf', {}).get('name', 'N/A'),
                 'avito_name': record.get('avito', {}).get('development', {}).get('name', 'N/A') if record.get('avito') else 'N/A',
                 'domclick_name': record.get('domclick', {}).get('development', {}).get('complex_name', 'N/A') if record.get('domclick') else 'N/A',
@@ -2009,3 +2199,117 @@ def get_unified_records(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"]) 
+def promotions_create(request):
+    """Создать акцию для ЖК (MongoDB promotions)."""
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+        complex_id = payload.get('complex_id')
+        title = (payload.get('title') or '').strip()
+        description = (payload.get('description') or '').strip()
+        starts_at = payload.get('starts_at')
+        ends_at = payload.get('ends_at')
+
+        if not complex_id or not title:
+            return JsonResponse({'success': False, 'error': 'complex_id и title обязательны'}, status=400)
+
+        db = get_mongo_connection()
+        promotions = db['promotions']
+
+        doc = {
+            'complex_id': ObjectId(complex_id),
+            'title': title[:120],
+            'description': description[:2000],
+            'is_active': True,
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow()
+        }
+        if starts_at: doc['starts_at'] = starts_at
+        if ends_at: doc['ends_at'] = ends_at
+
+        inserted = promotions.insert_one(doc)
+        return JsonResponse({'success': True, 'id': str(inserted.inserted_id)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"]) 
+def promotions_list(request):
+    """Список акций (опционально только активные)."""
+    try:
+        active = request.GET.get('active')
+        db = get_mongo_connection()
+        promotions = db['promotions']
+        q = {}
+        if active in ('1', 'true', 'True'):
+            q['is_active'] = True
+        items = []
+        unified = db['unified_houses']
+        for p in promotions.find(q).sort('created_at', -1):
+            comp_name = ''
+            try:
+                comp = unified.find_one({'_id': ObjectId(str(p.get('complex_id')))})
+                if comp:
+                    if 'development' in comp and 'avito' not in comp:
+                        comp_name = (comp.get('development', {}) or {}).get('name', '')
+                    else:
+                        comp_name = (comp.get('avito', {}) or {}).get('development', {}) .get('name') or (comp.get('domclick', {}) or {}).get('development', {}) .get('complex_name', '')
+            except Exception:
+                comp_name = ''
+            items.append({
+                '_id': str(p.get('_id')),
+                'complex_id': str(p.get('complex_id')) if p.get('complex_id') else None,
+                'complex_name': comp_name,
+                'title': p.get('title'),
+                'description': p.get('description'),
+                'is_active': p.get('is_active', True)
+            })
+        return JsonResponse({'success': True, 'data': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"]) 
+def promotions_delete(request, promo_id):
+    try:
+        db = get_mongo_connection()
+        promotions = db['promotions']
+        promotions.delete_one({'_id': ObjectId(promo_id)})
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PATCH"]) 
+def promotions_toggle(request, promo_id):
+    try:
+        db = get_mongo_connection()
+        promotions = db['promotions']
+        payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        if 'is_active' in payload:
+            new_val = bool(payload.get('is_active'))
+        else:
+            doc = promotions.find_one({'_id': ObjectId(promo_id)})
+            current = bool(doc.get('is_active', True)) if doc else True
+            new_val = not current
+        promotions.update_one({'_id': ObjectId(promo_id)}, {'$set': {'is_active': new_val, 'updated_at': datetime.utcnow()}})
+        return JsonResponse({'success': True, 'is_active': new_val})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"]) 
+def unified_delete(request, unified_id):
+    try:
+        db = get_mongo_connection()
+        unified = db['unified_houses']
+        unified.delete_one({'_id': ObjectId(unified_id)})
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

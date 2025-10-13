@@ -616,10 +616,8 @@
             <table class="unified-table">
                 <thead>
                     <tr>
-                        <th>DomRF</th>
-                        <th>Avito</th>
-                        <th>DomClick</th>
-                        <th>Источник</th>
+                        <th>Название ЖК</th>
+                        <th style="width:280px;">Действия</th>
                     </tr>
                 </thead>
                 <tbody id="unifiedTableBody">
@@ -631,6 +629,31 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Promotions Section -->
+        <div class="unified-section" style="margin-top:20px;">
+            <h2>🎟️ Акции</h2>
+            <div id="promotionsList">
+                <div class="empty-state">
+                    <div class="spinner"></div>
+                    <p>Загрузка акций...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Videos Section -->
+        <div class="unified-section" style="margin-top:20px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <h2>🎬 Видеообзоры</h2>
+                <button class="btn btn-success" onclick="openCreateVideoModal()">Создать видеообзор</button>
+            </div>
+            <div id="videosList">
+                <div class="empty-state">
+                    <div class="spinner"></div>
+                    <p>Загрузка видео...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -868,7 +891,7 @@
             if (!records || records.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        <td colspan="2" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                             <p>Пока нет объединенных записей</p>
                             <p style="font-size: 12px; margin-top: 10px;">Выберите записи из источников и нажмите "Объединить"</p>
                         </td>
@@ -879,14 +902,211 @@
             
             tbody.innerHTML = records.map(record => `
                 <tr>
-                    <td>${escapeHtml(record.domrf_name)}</td>
-                    <td>${escapeHtml(record.avito_name)}</td>
-                    <td>${escapeHtml(record.domclick_name)}</td>
+                    <td>${escapeHtml(record.name)}</td>
                     <td>
-                        <span class="source-badge ${record.source}">${record.source === 'manual' ? '👤 Ручное' : '🤖 Авто'}</span>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-success" onclick="openCreatePromoModal('${record._id}', '${escapeHtml(record.name)}')">Создать акцию</button>
+                            <a class="btn" style="background:#475569; color:white;" target="_blank" href="/complex/${record._id}/">Открыть ЖК</a>
+                            <button class="btn btn-danger" onclick="deleteUnified('${record._id}')">Удалить</button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        // Модал создания акции (простейшая версия)
+        function openCreatePromoModal(complexId, name){
+            const modal = document.createElement('div');
+            modal.style.position='fixed';modal.style.top='0';modal.style.left='0';modal.style.right='0';modal.style.bottom='0';modal.style.background='rgba(0,0,0,0.6)';modal.style.zIndex='9999';modal.style.display='flex';modal.style.alignItems='center';modal.style.justifyContent='center';
+            modal.innerHTML = `
+                <div style="background:#1e293b; color:#fff; width:520px; border-radius:12px; border:1px solid #475569; box-shadow:0 20px 50px rgba(0,0,0,.4);">
+                    <div style="padding:16px 20px; border-bottom:1px solid #475569; font-weight:700;">Новая акция для «${escapeHtml(name)}»</div>
+                    <div style="padding:16px 20px; display:flex; flex-direction:column; gap:12px;">
+                        <label>Заголовок
+                            <input id="promo-title" type="text" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;">
+                        </label>
+                        <label>Описание
+                            <textarea id="promo-desc" rows="3" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"></textarea>
+                        </label>
+                        <label>Дата окончания (YYYY-MM-DD)
+                            <input id="promo-exp" type="date" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;">
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px;">
+                            <input id="promo-active" type="checkbox" checked>
+                            Активна
+                        </label>
+                    </div>
+                    <div style="padding:16px 20px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #475569;">
+                        <button id="promo-cancel" class="btn" style="background:#475569; color:#fff;">Отмена</button>
+                        <button id="promo-save" class="btn btn-success">Сохранить</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#promo-cancel').onclick = ()=> modal.remove();
+            modal.querySelector('#promo-save').onclick = ()=>{
+                const title = modal.querySelector('#promo-title').value.trim();
+                const description = modal.querySelector('#promo-desc').value.trim();
+                const expires_at = modal.querySelector('#promo-exp').value || null;
+                const is_active = modal.querySelector('#promo-active').checked;
+                if(!title){ showToast('Введите заголовок','error'); return; }
+                fetch('/api/promotions/', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ complex_id: complexId, title, description, expires_at, is_active }) })
+                .then(r=>r.json()).then(res=>{ if(res.success){ showToast('Акция создана'); modal.remove(); loadPromotions(); } else { showToast(res.error||'Ошибка','error'); } })
+                .catch(()=>showToast('Ошибка сети','error'));
+            }
+        }
+        
+        function deleteUnified(id){
+            if(!confirm('Удалить объединенную запись?')) return;
+            fetch(`/api/manual-matching/unified/${id}/`, { method:'DELETE' })
+            .then(r=>r.json()).then(res=>{
+                if(res.success){ loadUnifiedRecords(); showToast('Удалено'); }
+                else showToast(res.error||'Ошибка удаления','error');
+            }).catch(()=>showToast('Ошибка сети','error'));
+        }
+
+        async function loadPromotions(){
+            try{
+                const resp = await fetch('/api/promotions/list/?active=1');
+                const data = await resp.json();
+                const holder = document.getElementById('promotionsList');
+                if(!data.success || !data.data || data.data.length===0){
+                    holder.innerHTML = `<div class="empty-state"><h3>Акций пока нет</h3></div>`;
+                    return;
+                }
+                holder.innerHTML = `
+                    <table class="unified-table">
+                        <thead>
+                            <tr>
+                                <th>ЖК</th>
+                                <th>Заголовок</th>
+                                <th>Статус</th>
+                                <th style="width:160px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.data.map(p=>`
+                                <tr>
+                                    <td>${p.complex_name || p.complex_id || ''}</td>
+                                    <td>${escapeHtml(p.title||'')}</td>
+                                    <td>${p.is_active? 'Активна':'Выключена'}</td>
+                                    <td>
+                                        <button class="btn" style="background:#475569;color:#fff;" onclick="togglePromotion('${p._id}', ${p.is_active? 'false':'true'})">${p.is_active? 'Деактивировать':'Активировать'}</button>
+                                        <button class="btn btn-danger" onclick="deletePromotion('${p._id}')">Удалить</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }catch(e){
+                document.getElementById('promotionsList').innerHTML = `<div class='empty-state'>Ошибка загрузки</div>`
+            }
+        }
+
+        function togglePromotion(id, toActive){
+            fetch(`/api/promotions/${id}/toggle/`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_active: toActive })})
+            .then(r=>r.json()).then(res=>{ if(res.success){ loadPromotions(); showToast('Статус обновлён'); } else { showToast(res.error||'Ошибка', 'error'); }})
+            .catch(()=>showToast('Ошибка сети','error'));
+        }
+
+        function deletePromotion(id){
+            if(!confirm('Удалить акцию?')) return;
+            fetch(`/api/promotions/${id}/`, { method:'DELETE' })
+            .then(r=>r.json()).then(res=>{ if(res.success){ loadPromotions(); showToast('Удалено'); } else { showToast(res.error||'Ошибка удаления','error'); }})
+            .catch(()=>showToast('Ошибка сети','error'));
+        }
+
+        async function loadVideos(){
+            try{
+                const resp = await fetch('/api/videos/?active=1');
+                const data = await resp.json();
+                const holder = document.getElementById('videosList');
+                if(!data.success || !data.data || data.data.length===0){
+                    holder.innerHTML = `<div class="empty-state"><h3>Видео ещё нет</h3></div>`;
+                    return;
+                }
+                holder.innerHTML = `
+                    <table class="unified-table">
+                        <thead>
+                            <tr>
+                                <th>ЖК</th>
+                                <th>Название</th>
+                                <th>Статус</th>
+                                <th style="width:180px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.data.map(v=>`
+                                <tr>
+                                    <td>${v.complex_name||v.complex_id||''}</td>
+                                    <td>${escapeHtml(v.title||'')}</td>
+                                    <td>${v.is_active? 'Активно' : 'Выключено'}</td>
+                                    <td>
+                                        <button class="btn" style="background:#475569;color:#fff;" onclick="toggleVideo('${v._id}', ${v.is_active? 'false':'true'})">${v.is_active? 'Деактивировать':'Активировать'}</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }catch(e){
+                document.getElementById('videosList').innerHTML = `<div class='empty-state'>Ошибка загрузки</div>`
+            }
+        }
+
+        function toggleVideo(id, toActive){
+            fetch(`/api/videos/${id}/toggle/`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_active: toActive }) })
+            .then(r=>r.json()).then(res=>{ if(res.success){ loadVideos(); showToast('Статус видео обновлён'); } else { showToast(res.error||'Ошибка','error'); }})
+            .catch(()=>showToast('Ошибка сети','error'));
+        }
+
+        function openCreateVideoModal(){
+            // Загружаем объединённые записи для селекта ЖК
+            fetch('/api/manual-matching/unified/?per_page=1000')
+            .then(r=>r.json()).then(res=>{
+                const options = (res.success? res.data:[]).map(r=>`<option value="${r._id}">${escapeHtml(r.name)}</option>`).join('');
+                const modal = document.createElement('div');
+                modal.style.position='fixed';modal.style.top='0';modal.style.left='0';modal.style.right='0';modal.style.bottom='0';modal.style.background='rgba(0,0,0,0.6)';modal.style.zIndex='9999';modal.style.display='flex';modal.style.alignItems='center';modal.style.justifyContent='center';
+                modal.innerHTML = `
+                    <div style="background:#1e293b; color:#fff; width:560px; border-radius:12px; border:1px solid #475569; box-shadow:0 20px 50px rgba(0,0,0,.4);">
+                        <div style="padding:16px 20px; border-bottom:1px solid #475569; font-weight:700;">Новый видеообзор</div>
+                        <div style="padding:16px 20px; display:flex; flex-direction:column; gap:12px;">
+                            <label>ЖК
+                                <select id="video-complex" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;">${options}</select>
+                            </label>
+                            <label>URL видео
+                                <input id="video-url" type="text" placeholder="https://youtu.be/..." style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;">
+                            </label>
+                            <label>Заголовок
+                                <input id="video-title" type="text" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;">
+                            </label>
+                            <label>Описание
+                                <textarea id="video-desc" rows="3" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"></textarea>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input id="video-active" type="checkbox" checked>
+                                Активно
+                            </label>
+                        </div>
+                        <div style="padding:16px 20px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #475569;">
+                            <button id="video-cancel" class="btn" style="background:#475569; color:#fff;">Отмена</button>
+                            <button id="video-save" class="btn btn-success">Сохранить</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+                modal.querySelector('#video-cancel').onclick = ()=> modal.remove();
+                modal.querySelector('#video-save').onclick = ()=>{
+                    const complex_id = modal.querySelector('#video-complex').value;
+                    const url = modal.querySelector('#video-url').value.trim();
+                    const title = modal.querySelector('#video-title').value.trim();
+                    const description = modal.querySelector('#video-desc').value.trim();
+                    const is_active = modal.querySelector('#video-active').checked;
+                    if(!complex_id || !url || !title){ showToast('Заполните ЖК, URL и заголовок','error'); return; }
+                    fetch('/api/videos/', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ complex_id, url, title, description, is_active }) })
+                    .then(r=>r.json()).then(res=>{ if(res.success){ showToast('Видео создано'); modal.remove(); loadVideos(); } else { showToast(res.error||'Ошибка','error'); }})
+                    .catch(()=>showToast('Ошибка сети','error'));
+                };
+            });
         }
 
         // Экранирование HTML
@@ -905,6 +1125,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadData();
             loadUnifiedRecords();
+            loadPromotions();
             
             // Поиск по Enter
             document.getElementById('searchInput').addEventListener('keypress', function(e) {

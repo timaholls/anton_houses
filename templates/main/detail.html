@@ -275,7 +275,7 @@
                 {% if apt.type == apt_type %}
                 <div class="apartment-card" data-apt-type="{{ apt.type }}" data-apt-index="{{ forloop.counter0 }}" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; transition: all 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: {% if forloop.counter0 < 6 %}block{% else %}none{% endif %};">
                     <!-- Галерея фото точно как в каталоге -->
-                    <div class="compact-card-image-gallery">
+                    <div class="compact-card-image-gallery" onclick="openAptGalleryFromCard(this)">
                         {% if apt.layout_photos %}
                             {% for photo in apt.layout_photos %}
                             <img src="/media/{{ photo }}" alt="{{ apt.title }}" class="gallery-image" style="display: {% if forloop.first %}block{% else %}none{% endif %};">
@@ -655,7 +655,7 @@
 				</div>
 				
 				<div class="results-actions">
-					<a href="#feedback-submit-btn" class="btn btn-catalog anchor-feedback-btn">
+                    <a href="#feedback-title" class="btn btn-catalog anchor-feedback-btn">
 						<i class="fas fa-paper-plane"></i>
 						Подать заявку
 					</a>
@@ -1075,24 +1075,48 @@ function changeHeroPhoto(direction) {
 	if (counter) counter.textContent = currentHeroPhotoIndex + 1;
 }
 
-// Модальное окно галереи
+// Модальное окно галереи (унифицированное)
 let currentGalleryIndex = 0;
 const galleryPhotos = {{ complex.photos_json|safe }} || [];
+let galleryActivePhotos = galleryPhotos.slice();
+
+function resolveImageUrl(pathOrUrl) {
+    if (!pathOrUrl) return '';
+    try {
+        const u = new URL(pathOrUrl, window.location.origin);
+        const p = u.pathname;
+        return p.startsWith('/media/') ? p : '/media/' + p.replace(/^\//, '');
+    } catch (e) {
+        return pathOrUrl.startsWith('/media/') ? pathOrUrl : '/media/' + pathOrUrl.replace(/^\//, '');
+    }
+}
+
+function openGalleryWithPhotos(photos, startIndex) {
+    galleryActivePhotos = (photos || []).map(resolveImageUrl);
+    if (!Number.isFinite(startIndex) || startIndex < 0) startIndex = 0;
+    currentGalleryIndex = Math.min(startIndex, Math.max(0, galleryActivePhotos.length - 1));
+    const modal = document.getElementById('galleryModal');
+    const img = document.getElementById('galleryModalImage');
+    const counter = document.getElementById('galleryModalCounter');
+    const total = document.getElementById('galleryModalTotal');
+    if (modal && img && galleryActivePhotos.length) {
+        img.src = galleryActivePhotos[currentGalleryIndex];
+        if (counter) counter.textContent = currentGalleryIndex + 1;
+        if (total) total.textContent = galleryActivePhotos.length;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
 
 function openGalleryModal(index) {
-	currentGalleryIndex = index;
-	const modal = document.getElementById('galleryModal');
-	const img = document.getElementById('galleryModalImage');
-	const counter = document.getElementById('galleryModalCounter');
-	const total = document.getElementById('galleryModalTotal');
-	
-	if (modal && img) {
-		img.src = '/media/' + galleryPhotos[index];
-		counter.textContent = index + 1;
-		total.textContent = galleryPhotos.length;
-		modal.style.display = 'flex';
-		document.body.style.overflow = 'hidden';
-	}
+    openGalleryWithPhotos(galleryPhotos, index);
+}
+
+function openAptGalleryFromCard(containerEl) {
+    if (!containerEl) return;
+    const imgs = containerEl.querySelectorAll('img.gallery-image');
+    const photos = Array.from(imgs).map(img => img.getAttribute('src'));
+    openGalleryWithPhotos(photos, 0);
 }
 
 function closeGalleryModal() {
@@ -1104,14 +1128,14 @@ function closeGalleryModal() {
 }
 
 function changeGalleryPhoto(direction) {
-	currentGalleryIndex = (currentGalleryIndex + direction + galleryPhotos.length) % galleryPhotos.length;
-	const img = document.getElementById('galleryModalImage');
-	const counter = document.getElementById('galleryModalCounter');
-	
-	if (img && counter) {
-		img.src = '/media/' + galleryPhotos[currentGalleryIndex];
-		counter.textContent = currentGalleryIndex + 1;
-	}
+    if (!galleryActivePhotos.length) return;
+    currentGalleryIndex = (currentGalleryIndex + direction + galleryActivePhotos.length) % galleryActivePhotos.length;
+    const img = document.getElementById('galleryModalImage');
+    const counter = document.getElementById('galleryModalCounter');
+    if (img && counter) {
+        img.src = galleryActivePhotos[currentGalleryIndex];
+        counter.textContent = currentGalleryIndex + 1;
+    }
 }
 
 // Клавиши для навигации в галерее
