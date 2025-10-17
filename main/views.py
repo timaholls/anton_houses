@@ -17,6 +17,22 @@ import requests
 from main.s3_service import s3_client, PLACEHOLDER_IMAGE_URL
 
 
+def _extract_price_from_range(price_range):
+    """Извлекает числовое значение цены из строки диапазона цен"""
+    if not price_range:
+        return 0
+    
+    # Ищем числа в строке (например, "от 2.5 млн ₽" -> 2.5)
+    import re
+    numbers = re.findall(r'(\d+\.?\d*)', str(price_range))
+    if numbers:
+        try:
+            return float(numbers[0])
+        except ValueError:
+            return 0
+    return 0
+
+
 def get_mongo_user(email: str):
     """Получить пользователя из Mongo по email."""
     try:
@@ -139,8 +155,17 @@ def home(request):
     
     # Статьи для главной из MongoDB
     try:
+        import logging
+        logger = logging.getLogger(__name__)
         home_articles = list(db['articles'].find({'show_on_home': True, 'is_active': True}).sort('published_date', -1).limit(3))
-    except:
+        logger.info(f"Home articles query: {{'show_on_home': True, 'is_active': True}}")
+        logger.info(f"Found {len(home_articles)} home articles")
+        for article in home_articles:
+            logger.info(f"Home: {article.get('title', 'No title')} - Show on home: {article.get('show_on_home', 'No status')} - Active: {article.get('is_active', 'No status')}")
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error loading home articles: {e}")
         home_articles = []
 
     # Акции для главной - теперь из MongoDB promotions (с падением назад на SQL)
@@ -193,6 +218,7 @@ def home(request):
         'company_gallery': company_gallery,
         'home_articles': home_articles,
         'offers': offers,
+        'PLACEHOLDER_IMAGE_URL': PLACEHOLDER_IMAGE_URL,
     }
     return render(request, 'main/home.html', context)
 
@@ -419,12 +445,17 @@ def catalog_api(request):
 
 def articles(request):
     """Страница статей - читает из MongoDB"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     db = get_mongo_connection()
     category = request.GET.get('category', '')
-    article_type = request.GET.get('type', 'news')  # По умолчанию показываем новости
+    article_type = request.GET.get('type', '')  # По умолчанию показываем все типы
 
-    # Получаем статьи по типу
-    query = {'article_type': article_type, 'is_active': True}
+    # Получаем статьи по типу (если тип не указан, показываем все)
+    query = {'is_active': True}
+    if article_type:
+        query['article_type'] = article_type
 
     # Дополнительная фильтрация по категории
     if category:
@@ -432,21 +463,55 @@ def articles(request):
         if category_obj:
             query['category_id'] = category_obj['_id']
     
+    logger.info(f"Articles query: {query}")
     articles_list = list(db['articles'].find(query).sort('published_date', -1))
+    logger.info(f"Found {len(articles_list)} articles")
+    
+    # Логируем каждую статью
+    for article in articles_list:
+        logger.info(f"Article: {article.get('title', 'No title')} - Type: {article.get('article_type', 'No type')} - Active: {article.get('is_active', 'No status')}")
 
     # Получаем статьи по категориям для отображения в секциях
     def get_articles_by_category_slug(slug, limit=3):
         cat = db['categories'].find_one({'slug': slug, 'is_active': True})
         if cat:
-            return list(db['articles'].find({
-                'article_type': article_type,
+            category_query = {
                 'category_id': cat['_id'],
                 'is_active': True
-            }).sort('published_date', -1).limit(limit))
+            }
+            if article_type:
+                category_query['article_type'] = article_type
+            return list(db['articles'].find(category_query).sort('published_date', -1).limit(limit))
         return []
     
-    # Разделы на странице. Показываем только те, у которых реально есть категория
-    # в БД и есть хотя бы одна статья.
+    # Получаем все категории с их статьями
+    all_categories_with_articles = []
+    
+    # Получаем все активные категории
+    all_categories = list(db['categories'].find({'is_active': True}).sort('name', 1))
+    
+    for category in all_categories:
+        # Получаем статьи для каждой категории
+        category_query = {
+            'category_id': category['_id'],
+            'is_active': True
+        }
+        if article_type:
+            category_query['article_type'] = article_type
+            
+        category_articles = list(db['articles'].find(category_query).sort('published_date', -1))
+        
+        if category_articles:  # Только если есть статьи в категории
+            all_categories_with_articles.append({
+                'category': {
+                    'name': category.get('name', 'Категория'),
+                    'slug': category.get('slug', ''),
+                    'description': category.get('description', '')
+                },
+                'articles': category_articles
+            })
+    
+    # Старые переменные для совместимости (если нужны)
     mortgage_articles = get_articles_by_category_slug('mortgage', 3)
     laws_articles = get_articles_by_category_slug('laws', 3)
     instructions_articles = get_articles_by_category_slug('instructions', 3)
@@ -470,9 +535,47 @@ def articles(request):
         'is_featured': True,
         'is_active': True
     }).sort('views_count', -1).limit(3))
+    
+    logger.info(f"Featured articles query: {{'is_featured': True, 'is_active': True}}")
+    logger.info(f"Found {len(featured_articles)} featured articles")
+    for article in featured_articles:
+        logger.info(f"Featured: {article.get('title', 'No title')} - Featured: {article.get('is_featured', 'No status')} - Active: {article.get('is_active', 'No status')}")
+    
+    # Загружаем категории и теги для всех статей
+    def enrich_articles_with_relations(articles_list):
+        """Обогащает статьи данными категорий и тегов"""
+        for article in articles_list:
+            # Загружаем категорию
+            if article.get('category_id'):
+                article['category'] = db['categories'].find_one({'_id': article['category_id']})
+            
+            # Загружаем теги
+            if article.get('tags'):
+                tag_ids = article.get('tags', [])
+                article['tags'] = list(db['tags'].find({'_id': {'$in': tag_ids}}))
+            
+            # Загружаем автора
+            if article.get('author_id'):
+                article['author'] = db['authors'].find_one({'_id': article['author_id']})
+        
+        return articles_list
+    
+    # Обогащаем все списки статей
+    articles_list = enrich_articles_with_relations(articles_list)
+    mortgage_articles = enrich_articles_with_relations(mortgage_articles)
+    laws_articles = enrich_articles_with_relations(laws_articles)
+    instructions_articles = enrich_articles_with_relations(instructions_articles)
+    market_articles = enrich_articles_with_relations(market_articles)
+    tips_articles = enrich_articles_with_relations(tips_articles)
+    featured_articles = enrich_articles_with_relations(featured_articles)
+    
+    # Обогащаем статьи в категориях
+    for category_data in all_categories_with_articles:
+        category_data['articles'] = enrich_articles_with_relations(category_data['articles'])
 
     context = {
         'articles': articles_list,
+        'all_categories_with_articles': all_categories_with_articles,  # Новая переменная
         'mortgage_articles': mortgage_articles,
         'laws_articles': laws_articles,
         'instructions_articles': instructions_articles,
@@ -771,7 +874,8 @@ def offices(request):
         'cities': cities,
         'filters': {
             'city': city,
-        }
+        },
+        'PLACEHOLDER_IMAGE_URL': PLACEHOLDER_IMAGE_URL,
     }
     return render(request, 'main/offices.html', context)
 
@@ -800,7 +904,8 @@ def office_detail(request, slug):
 
     context = {
         'office': office,
-        'employees': employees
+        'employees': employees,
+        'PLACEHOLDER_IMAGE_URL': PLACEHOLDER_IMAGE_URL,
     }
     return render(request, 'main/office_detail.html', context)
 
@@ -1864,6 +1969,7 @@ def team(request):
 
     context = {
         'employees': employees,
+        'PLACEHOLDER_IMAGE_URL': PLACEHOLDER_IMAGE_URL,
     }
     return render(request, 'main/team.html', context)
 
@@ -1884,10 +1990,47 @@ def agent_properties(request, employee_id):
     property_type = request.GET.get('property_type', '')
     sort_by = request.GET.get('sort_by', 'date-desc')
 
-    # Получаем все объекты агента (новостройки и вторичная недвижимость)
-    # Для новостроек получаем из MongoDB
-    residential_complexes = []  # Пока пустой список, так как в MongoDB нет связи с агентами
-    secondary_properties = []  # Вторичка теперь в MongoDB
+    # Получаем все объекты агента из MongoDB
+    residential_complexes = []
+    secondary_properties = []
+    
+    try:
+        # Новостройки: unified_houses по agent_id
+        rc_cursor = db['unified_houses'].find({'agent_id': ObjectId(employee_id)})
+        for d in rc_cursor:
+            development = d.get('development', {}) or {}
+            item = {
+                'id': str(d.get('_id')),
+                'name': development.get('name') or d.get('name',''),
+                'photo': '',
+                'price': _extract_price_from_range(development.get('price_range', '')) or d.get('price', 0),
+                'city': development.get('address', '') or d.get('city', ''),
+                'district': d.get('district', ''),
+                'created_at': d.get('created_at', datetime.now())
+            }
+            # Фото из development.photos
+            photos = development.get('photos') or d.get('photos') or []
+            if isinstance(photos, list) and photos:
+                item['photo'] = photos[0]
+            residential_complexes.append(item)
+    except Exception:
+        residential_complexes = []
+    
+    try:
+        # Вторичка: secondary_properties по agent_id
+        sp_cursor = db['secondary_properties'].find({'agent_id': ObjectId(employee_id)})
+        for d in sp_cursor:
+            secondary_properties.append({
+                'id': str(d.get('_id')),
+                'name': d.get('name',''),
+                'city': d.get('city',''),
+                'district': d.get('district',''),
+                'photo': (d.get('photos') or [''])[0] if (d.get('photos') or []) else '',
+                'price': d.get('price', 0),
+                'created_at': d.get('created_at', datetime.now())
+            })
+    except Exception:
+        secondary_properties = []
 
     # Фильтрация по типу недвижимости
     if property_type == 'residential':
@@ -1903,12 +2046,12 @@ def agent_properties(request, employee_id):
         all_properties.append({
             'type': 'residential',
             'object': complex,
-            'name': complex.name,
-            'price': complex.price_from,
-            'location': f"{complex.district or complex.city}",
-            'image': complex.get_main_image(),
-            'url': f"/complex/{complex.id}/",
-            'created_at': complex.created_at,
+            'name': complex['name'],
+            'price': complex.get('price', 0),
+            'location': f"{complex.get('district', '') or complex.get('city', '')}",
+            'image': complex.get('photo', ''),
+            'url': f"/complex/{complex['id']}/",
+            'created_at': complex.get('created_at', datetime.now()),
         })
 
     # Добавляем вторичную недвижимость
@@ -1916,12 +2059,12 @@ def agent_properties(request, employee_id):
         all_properties.append({
             'type': 'secondary',
             'object': property,
-            'name': property.name,
-            'price': property.price,
-            'location': f"{property.district or property.city}",
-            'image': property.get_main_image(),
-            'url': f"/secondary/{property.id}/",
-            'created_at': property.created_at,
+            'name': property['name'],
+            'price': property.get('price', 0),
+            'location': f"{property.get('district', '') or property.get('city', '')}",
+            'image': property.get('photo', ''),
+            'url': f"/secondary/{property['id']}/",
+            'created_at': property.get('created_at', datetime.now()),
         })
 
     # Применяем сортировку
@@ -1940,13 +2083,20 @@ def agent_properties(request, employee_id):
     paginator = Paginator(all_properties, 9)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
+    # Добавляем id для шаблона
+    employee['id'] = str(employee.get('_id'))
+    
+    # Считаем общее количество объектов
+    total_residential_count = len([p for p in all_properties if p['type'] == 'residential'])
+    total_secondary_count = len([p for p in all_properties if p['type'] == 'secondary'])
+    
     context = {
         'employee': employee,
         'properties': page_obj,
         'page_obj': page_obj,
         'total_count': len(all_properties),
-        'residential_count': 0,  # Пока 0, так как в MongoDB нет связи с агентами
-        'secondary_count': 0,  # Вторичка теперь в MongoDB
+        'residential_count': total_residential_count,
+        'secondary_count': total_secondary_count,
         'current_property_type': property_type,
         'current_sort': sort_by,
     }
@@ -2067,27 +2217,29 @@ def employee_detail(request, employee_id):
     if not employee:
         raise Http404("Сотрудник не найден")
 
-    # Получаем объекты агента из MongoDB
+    # Получаем объекты агента из MongoDB (ограничиваем до 4 примеров)
     residential_complexes = []
     secondary_properties = []
     try:
-        # Новостройки: unified_houses по agent_id
-        rc_cursor = db['unified_houses'].find({'agent_id': ObjectId(employee_id)})
+        # Новостройки: unified_houses по agent_id (максимум 4)
+        rc_cursor = db['unified_houses'].find({'agent_id': ObjectId(employee_id)}).limit(4)
         for d in rc_cursor:
+            development = d.get('development', {}) or {}
             item = {
                 'id': str(d.get('_id')),
-                'name': (d.get('development', {}) or {}).get('name') or d.get('name',''),
+                'name': development.get('name') or d.get('name',''),
                 'photo': ''
             }
-            photos = (d.get('development', {}) or {}).get('photos') or d.get('photos') or []
+            # Фото из development.photos
+            photos = development.get('photos') or d.get('photos') or []
             if isinstance(photos, list) and photos:
                 item['photo'] = photos[0]
             residential_complexes.append(item)
     except Exception:
         residential_complexes = []
     try:
-        # Вторичка: secondary_properties по agent_id
-        sp_cursor = db['secondary_properties'].find({'agent_id': ObjectId(employee_id)})
+        # Вторичка: secondary_properties по agent_id (максимум 4)
+        sp_cursor = db['secondary_properties'].find({'agent_id': ObjectId(employee_id)}).limit(4)
         for d in sp_cursor:
             secondary_properties.append({
                 'id': str(d.get('_id')),
@@ -2099,11 +2251,29 @@ def employee_detail(request, employee_id):
     except Exception:
         secondary_properties = []
 
-    # Считаем общее количество объектов
-    total_properties_count = len(residential_complexes) + len(secondary_properties)
+    # Считаем общее количество объектов (реальное количество для кнопки)
+    total_residential_count = 0
+    total_secondary_count = 0
+    try:
+        total_residential_count = db['unified_houses'].count_documents({'agent_id': ObjectId(employee_id)})
+    except Exception:
+        pass
+    try:
+        total_secondary_count = db['secondary_properties'].count_documents({'agent_id': ObjectId(employee_id)})
+    except Exception:
+        pass
+    
+    total_properties_count = total_residential_count + total_secondary_count
 
-    # Получаем опубликованные отзывы (пока пустой список, можно добавить коллекцию employee_reviews в MongoDB)
-    reviews = []
+    # Получаем опубликованные отзывы из MongoDB
+    try:
+        reviews_cursor = db['employee_reviews'].find({
+            'employee_id': ObjectId(employee_id),
+            'is_published': True
+        }).sort('created_at', -1)
+        reviews = list(reviews_cursor)
+    except Exception:
+        reviews = []
 
     # Обработка формы отзыва
     if request.method == 'POST':
@@ -2117,30 +2287,175 @@ def employee_detail(request, employee_id):
             try:
                 rating = int(rating)
                 if 1 <= rating <= 5:
-                    # TODO: создать отзыв в MongoDB
-                    # EmployeeReview.objects.create(
-                    #     employee=employee,
-                    #     name=name,
-                    #     email=email,
-                    #     phone=phone,
-                    #     rating=rating,
-                    #     text=text
-                    # )
+                    # Создаем отзыв в MongoDB
+                    review_data = {
+                        'employee_id': ObjectId(employee_id),
+                        'name': name,
+                        'email': email,
+                        'phone': phone,
+                        'rating': rating,
+                        'text': text,
+                        'is_published': False,  # На модерации
+                        'created_at': datetime.now(),
+                    }
+                    db['employee_reviews'].insert_one(review_data)
                     messages.success(request, 'Спасибо! Ваш отзыв отправлен на модерацию.')
-                    return redirect('main:employee_detail', employee_id=employee.id)
+                    return redirect('main:employee_detail', employee_id=str(employee.get('_id')))
             except ValueError:
                 pass
 
         messages.error(request, 'Пожалуйста, заполните все обязательные поля корректно.')
 
+    # Добавляем id для шаблона
+    employee['id'] = str(employee.get('_id'))
+    
+    # Обработка видео для отображения
+    videos_with_thumbnails = []
+    if employee.get('videos'):
+        for video_url in employee.get('videos', []):
+            if video_url.strip():
+                videos_with_thumbnails.append({
+                    'url': video_url.strip(),
+                    'thumbnail': get_video_thumbnail(video_url.strip())
+                })
+    
     context = {
         'employee': employee,
         'residential_complexes': residential_complexes,
         'secondary_properties': secondary_properties,
         'reviews': reviews,
         'total_properties_count': total_properties_count,
+        'videos': videos_with_thumbnails,
+        'PLACEHOLDER_IMAGE_URL': PLACEHOLDER_IMAGE_URL,
     }
     return render(request, 'main/employee_detail.html', context)
+
+
+@require_http_methods(["GET"])
+def employee_reviews_api(request):
+    """API: получить отзывы сотрудников для модерации."""
+    try:
+        db = get_mongo_connection()
+        col = db['employee_reviews']
+        employees_col = db['employees']
+        
+        # Получаем все отзывы, отсортированные по дате
+        reviews = list(col.find().sort('created_at', -1))
+        
+        # Преобразуем ObjectId в строки и добавляем информацию о сотруднике
+        for review in reviews:
+            review['_id'] = str(review['_id'])
+            review['employee_id'] = str(review['employee_id'])
+            
+            # Получаем информацию о сотруднике
+            try:
+                employee = employees_col.find_one({'_id': ObjectId(review['employee_id'])})
+                if employee:
+                    review['employee_name'] = employee.get('full_name', 'Неизвестный сотрудник')
+                    review['employee_position'] = employee.get('position', '')
+                else:
+                    review['employee_name'] = 'Сотрудник удален'
+                    review['employee_position'] = ''
+            except:
+                review['employee_name'] = 'Ошибка загрузки'
+                review['employee_position'] = ''
+        
+        return JsonResponse({'success': True, 'reviews': reviews})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def employee_review_toggle(request, review_id):
+    """API: переключить статус публикации отзыва."""
+    try:
+        db = get_mongo_connection()
+        col = db['employee_reviews']
+        
+        # Получаем текущий статус
+        review = col.find_one({'_id': ObjectId(review_id)})
+        if not review:
+            return JsonResponse({'success': False, 'error': 'Отзыв не найден'}, status=404)
+        
+        current_status = review.get('is_published', False)
+        new_status = not current_status
+        
+        col.update_one(
+            {'_id': ObjectId(review_id)},
+            {'$set': {'is_published': new_status}}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Отзыв {"опубликован" if new_status else "скрыт"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def employee_review_update(request, review_id):
+    """API: обновить отзыв."""
+    try:
+        db = get_mongo_connection()
+        col = db['employee_reviews']
+        
+        # Проверяем существование отзыва
+        review = col.find_one({'_id': ObjectId(review_id)})
+        if not review:
+            return JsonResponse({'success': False, 'error': 'Отзыв не найден'}, status=404)
+        
+        # Обновляем данные
+        update_data = {
+            'name': request.POST.get('name', '').strip(),
+            'email': request.POST.get('email', '').strip(),
+            'phone': request.POST.get('phone', '').strip(),
+            'rating': int(request.POST.get('rating', 5)),
+            'text': request.POST.get('text', '').strip(),
+            'is_published': request.POST.get('is_published') == 'on',
+        }
+        
+        # Валидация
+        if not update_data['name'] or not update_data['text']:
+            return JsonResponse({'success': False, 'error': 'Имя и текст отзыва обязательны'}, status=400)
+        
+        if not (1 <= update_data['rating'] <= 5):
+            return JsonResponse({'success': False, 'error': 'Рейтинг должен быть от 1 до 5'}, status=400)
+        
+        col.update_one(
+            {'_id': ObjectId(review_id)},
+            {'$set': update_data}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Отзыв обновлен'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def employee_review_delete(request, review_id):
+    """API: удалить отзыв."""
+    try:
+        db = get_mongo_connection()
+        col = db['employee_reviews']
+        
+        result = col.delete_one({'_id': ObjectId(review_id)})
+        
+        if result.deleted_count == 0:
+            return JsonResponse({'success': False, 'error': 'Отзыв не найден'}, status=404)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Отзыв удален'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 def mortgage(request):
@@ -4411,6 +4726,72 @@ def tags_api_delete(request, tag_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def tags_api_get(request, tag_id):
+    """API: получить один тег для редактирования."""
+    try:
+        db = get_mongo_connection()
+        col = db['tags']
+        
+        tag = col.find_one({'_id': ObjectId(tag_id)})
+        if not tag:
+            return JsonResponse({'success': False, 'error': 'Тег не найден'}, status=404)
+        
+        tag['_id'] = str(tag['_id'])
+        return JsonResponse({'success': True, 'item': tag})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def tags_api_update(request, tag_id):
+    """API: обновить тег."""
+    try:
+        db = get_mongo_connection()
+        col = db['tags']
+        
+        # Проверяем существование тега
+        tag = col.find_one({'_id': ObjectId(tag_id)})
+        if not tag:
+            return JsonResponse({'success': False, 'error': 'Тег не найден'}, status=404)
+        
+        update = {}
+        
+        if 'name' in request.POST:
+            update['name'] = request.POST.get('name', '').strip()
+        
+        if 'slug' in request.POST:
+            slug = request.POST.get('slug', '').strip()
+            if slug and slug != tag.get('slug'):
+                # Проверяем уникальность нового slug
+                if col.find_one({'slug': slug, '_id': {'$ne': ObjectId(tag_id)}}):
+                    return JsonResponse({'success': False, 'error': 'Тег с таким slug уже существует'}, status=400)
+                update['slug'] = slug
+        
+        if 'h1_title' in request.POST:
+            update['h1_title'] = request.POST.get('h1_title', '').strip()
+        
+        if 'meta_title' in request.POST:
+            update['meta_title'] = request.POST.get('meta_title', '').strip()
+        
+        if 'meta_description' in request.POST:
+            update['meta_description'] = request.POST.get('meta_description', '').strip()
+        
+        # Обновляем тег
+        result = col.update_one(
+            {'_id': ObjectId(tag_id)},
+            {'$set': update}
+        )
+        
+        if result.matched_count == 0:
+            return JsonResponse({'success': False, 'error': 'Тег не найден'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'Тег обновлен'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # ========== CATEGORIES API ==========
 @require_http_methods(["GET"])
 def categories_api_list(request):
@@ -4521,6 +4902,66 @@ def categories_api_delete(request, category_id):
             return JsonResponse({'success': False, 'error': 'Категория не найдена'}, status=404)
         
         return JsonResponse({'success': True, 'message': 'Категория удалена'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def categories_api_get(request, category_id):
+    """API: получить одну категорию для редактирования."""
+    try:
+        db = get_mongo_connection()
+        col = db['categories']
+        
+        category = col.find_one({'_id': ObjectId(category_id)})
+        if not category:
+            return JsonResponse({'success': False, 'error': 'Категория не найдена'}, status=404)
+        
+        category['_id'] = str(category['_id'])
+        return JsonResponse({'success': True, 'item': category})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def categories_api_update(request, category_id):
+    """API: обновить категорию."""
+    try:
+        db = get_mongo_connection()
+        col = db['categories']
+        
+        # Проверяем существование категории
+        category = col.find_one({'_id': ObjectId(category_id)})
+        if not category:
+            return JsonResponse({'success': False, 'error': 'Категория не найдена'}, status=404)
+        
+        update = {}
+        
+        if 'name' in request.POST:
+            update['name'] = request.POST.get('name', '').strip()
+        
+        if 'slug' in request.POST:
+            slug = request.POST.get('slug', '').strip()
+            if slug and slug != category.get('slug'):
+                # Проверяем уникальность нового slug
+                if col.find_one({'slug': slug, '_id': {'$ne': ObjectId(category_id)}}):
+                    return JsonResponse({'success': False, 'error': 'Категория с таким slug уже существует'}, status=400)
+                update['slug'] = slug
+        
+        if 'description' in request.POST:
+            update['description'] = request.POST.get('description', '').strip()
+        
+        # Обновляем категорию
+        result = col.update_one(
+            {'_id': ObjectId(category_id)},
+            {'$set': update}
+        )
+        
+        if result.matched_count == 0:
+            return JsonResponse({'success': False, 'error': 'Категория не найдена'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'Категория обновлена'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
@@ -4823,6 +5264,142 @@ def articles_api_delete(request, article_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def articles_api_get(request, article_id):
+    """API: получить одну статью для редактирования."""
+    try:
+        db = get_mongo_connection()
+        col = db['articles']
+        
+        article = col.find_one({'_id': ObjectId(article_id)})
+        if not article:
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+        
+        # Преобразуем ObjectId в строки
+        article['_id'] = str(article['_id'])
+        if article.get('category_id'):
+            article['category_id'] = str(article['category_id'])
+        if article.get('author_id'):
+            article['author_id'] = str(article['author_id'])
+        if article.get('tags'):
+            article['tags'] = [str(tag_id) for tag_id in article['tags']]
+        
+        return JsonResponse({'success': True, 'item': article})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def articles_api_update(request, article_id):
+    """API: обновить статью с загрузкой фото в S3."""
+    try:
+        db = get_mongo_connection()
+        col = db['articles']
+        
+        # Проверяем существование статьи
+        article = col.find_one({'_id': ObjectId(article_id)})
+        if not article:
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+        
+        update = {}
+        
+        # Обновляем основные поля
+        if 'title' in request.POST:
+            update['title'] = request.POST.get('title', '').strip()
+        
+        if 'slug' in request.POST:
+            slug = request.POST.get('slug', '').strip()
+            if slug and slug != article.get('slug'):
+                # Проверяем уникальность нового slug
+                if col.find_one({'slug': slug, '_id': {'$ne': ObjectId(article_id)}}):
+                    return JsonResponse({'success': False, 'error': 'Статья с таким slug уже существует'}, status=400)
+                update['slug'] = slug
+        
+        if 'article_type' in request.POST:
+            update['article_type'] = request.POST.get('article_type', 'news')
+        
+        if 'category_id' in request.POST:
+            category_id = request.POST.get('category_id', '').strip()
+            if category_id:
+                update['category_id'] = ObjectId(category_id)
+        
+        if 'author_id' in request.POST:
+            author_id = request.POST.get('author_id', '').strip()
+            update['author_id'] = ObjectId(author_id) if author_id else None
+        
+        if 'content' in request.POST:
+            update['content'] = request.POST.get('content', '').strip()
+        
+        if 'excerpt' in request.POST:
+            update['excerpt'] = request.POST.get('excerpt', '').strip()
+        
+        # Обработка тегов
+        if 'tags' in request.POST:
+            tags = request.POST.getlist('tags')
+            tag_ids = [ObjectId(tag_id) for tag_id in tags if tag_id]
+            update['tags'] = tag_ids
+        
+        # Булевы поля
+        update['show_on_home'] = request.POST.get('show_on_home') == 'on'
+        update['is_featured'] = request.POST.get('is_featured') == 'on'
+        
+        # Загрузка главного изображения в S3 (если новое)
+        if 'main_image' in request.FILES:
+            main_image = request.FILES['main_image']
+            main_image_filename = f"main_{main_image.name}"
+            slug = update.get('slug') or article.get('slug', 'article')
+            s3_key = f'articles/{slug}/{main_image_filename}'
+            
+            try:
+                s3_url = s3_client.upload_fileobj(
+                    main_image,
+                    s3_key,
+                    content_type=main_image.content_type or 'image/jpeg'
+                )
+                update['main_image'] = s3_url
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Ошибка загрузки главного изображения: {str(e)}'}, status=500)
+        
+        # Загрузка дополнительных изображений в S3 (если новые)
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            if images:
+                images_paths = []
+                slug = update.get('slug') or article.get('slug', 'article')
+                
+                for idx, img in enumerate(images):
+                    img_filename = f"{idx+1}_{img.name}"
+                    s3_key = f'articles/{slug}/{img_filename}'
+                    
+                    try:
+                        s3_url = s3_client.upload_fileobj(
+                            img,
+                            s3_key,
+                            content_type=img.content_type or 'image/jpeg'
+                        )
+                        images_paths.append(s3_url)
+                    except Exception as e:
+                        return JsonResponse({'success': False, 'error': f'Ошибка загрузки изображения {idx+1}: {str(e)}'}, status=500)
+                
+                update['images'] = images_paths
+        
+        update['updated_date'] = datetime.now()
+        
+        # Обновляем статью
+        result = col.update_one(
+            {'_id': ObjectId(article_id)},
+            {'$set': update}
+        )
+        
+        if result.matched_count == 0:
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'Статья обновлена'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # ========== CATALOG LANDINGS API ==========
 @require_http_methods(["GET"])
 def catalog_landings_api_list(request):
@@ -4957,7 +5534,9 @@ def catalog_landings_api_delete(request, landing_id):
 # ========== VIEW для страницы управления контентом ==========
 def content_management(request):
     """Страница управления контентом (Tags, Authors, Categories, Articles, CatalogLandings)."""
-    return render(request, 'main/content_management.html')
+    from django.middleware.csrf import get_token
+    csrf_token = get_token(request)
+    return render(request, 'main/content_management.html', {'csrf_token': csrf_token})
 
 
 # ============================================
@@ -4999,7 +5578,7 @@ def company_info_api_list(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def company_info_api_create(request):
-    """API: создать информацию о компании с загрузкой фото."""
+    """API: создать информацию о компании с загрузкой фото в S3."""
     try:
         db = get_mongo_connection()
         col = db['company_info']
@@ -5010,33 +5589,44 @@ def company_info_api_create(request):
         if not founder_name or not company_name:
             return JsonResponse({'success': False, 'error': 'Имя основателя и название компании обязательны'}, status=400)
         
-        # Создаем папку для компании
+        # Создаем slug для компании
         slug = slugify(company_name, allow_unicode=True)
-        company_folder = os.path.join(settings.MEDIA_ROOT, 'company', slug)
-        os.makedirs(company_folder, exist_ok=True)
         
-        # Загрузка главного изображения
-        main_image_path = ''
+        # Загрузка главного изображения в S3
+        main_image_url = ''
         if 'main_image' in request.FILES:
             main_image = request.FILES['main_image']
             main_image_filename = f"main_{main_image.name}"
-            main_image_full_path = os.path.join(company_folder, main_image_filename)
-            with open(main_image_full_path, 'wb+') as destination:
-                for chunk in main_image.chunks():
-                    destination.write(chunk)
-            main_image_path = f'company/{slug}/{main_image_filename}'
+            s3_key = f"company/{slug}/{main_image_filename}"
+            
+            try:
+                # Загружаем в S3
+                main_image_url = s3_client.upload_fileobj(
+                    main_image,
+                    s3_key,
+                    content_type=main_image.content_type or 'image/jpeg'
+                )
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Ошибка загрузки главного изображения: {str(e)}'}, status=500)
         
-        # Загрузка дополнительных изображений
-        images_paths = []
+        # Загрузка дополнительных изображений в S3
+        images_urls = []
         if 'images' in request.FILES:
             images = request.FILES.getlist('images')
             for idx, img in enumerate(images):
                 img_filename = f"{idx+1}_{img.name}"
-                img_full_path = os.path.join(company_folder, img_filename)
-                with open(img_full_path, 'wb+') as destination:
-                    for chunk in img.chunks():
-                        destination.write(chunk)
-                images_paths.append(f'company/{slug}/{img_filename}')
+                s3_key = f"company/{slug}/{img_filename}"
+                
+                try:
+                    # Загружаем в S3
+                    s3_url = s3_client.upload_fileobj(
+                        img,
+                        s3_key,
+                        content_type=img.content_type or 'image/jpeg'
+                    )
+                    images_urls.append(s3_url)
+                except Exception as e:
+                    return JsonResponse({'success': False, 'error': f'Ошибка загрузки изображения {idx+1}: {str(e)}'}, status=500)
         
         company_data = {
             'founder_name': founder_name,
@@ -5044,8 +5634,8 @@ def company_info_api_create(request):
             'company_name': company_name,
             'quote': request.POST.get('quote', '').strip(),
             'description': request.POST.get('description', '').strip(),
-            'main_image': main_image_path,
-            'images': images_paths,
+            'main_image': main_image_url,
+            'images': images_urls,
             'is_active': True,
             'created_at': datetime.now(),
         }
@@ -5129,37 +5719,48 @@ def company_info_api_update(request, company_id):
             'is_active': request.POST.get('is_active') == 'on',
         }
         
-        # Загрузка главного изображения
+        # Получаем slug для загрузки файлов
+        slug = slugify(update['company_name'] or company['company_name'], allow_unicode=True)
+        
+        # Загрузка главного изображения в S3
         if 'main_image' in request.FILES:
             main_image = request.FILES['main_image']
-            slug = slugify(update['company_name'] or company['company_name'], allow_unicode=True)
-            company_folder = os.path.join(settings.MEDIA_ROOT, 'company', slug)
-            os.makedirs(company_folder, exist_ok=True)
-            
             main_image_filename = f"main_{main_image.name}"
-            main_image_full_path = os.path.join(company_folder, main_image_filename)
-            with open(main_image_full_path, 'wb+') as destination:
-                for chunk in main_image.chunks():
-                    destination.write(chunk)
-            update['main_image'] = f'company/{slug}/{main_image_filename}'
+            s3_key = f"company/{slug}/{main_image_filename}"
+            
+            try:
+                # Загружаем в S3
+                s3_url = s3_client.upload_fileobj(
+                    main_image,
+                    s3_key,
+                    content_type=main_image.content_type or 'image/jpeg'
+                )
+                update['main_image'] = s3_url
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Ошибка загрузки главного изображения: {str(e)}'}, status=500)
         
-        # Загрузка дополнительных изображений
+        # Загрузка дополнительных изображений в S3
         if 'images' in request.FILES:
             images = request.FILES.getlist('images')
             if images:
-                slug = slugify(update['company_name'] or company['company_name'], allow_unicode=True)
-                company_folder = os.path.join(settings.MEDIA_ROOT, 'company', slug)
-                os.makedirs(company_folder, exist_ok=True)
+                images_urls = []
                 
-                images_paths = []
                 for idx, img in enumerate(images):
                     img_filename = f"{idx+1}_{img.name}"
-                    img_full_path = os.path.join(company_folder, img_filename)
-                    with open(img_full_path, 'wb+') as destination:
-                        for chunk in img.chunks():
-                            destination.write(chunk)
-                    images_paths.append(f'company/{slug}/{img_filename}')
-                update['images'] = images_paths
+                    s3_key = f"company/{slug}/{img_filename}"
+                    
+                    try:
+                        # Загружаем в S3
+                        s3_url = s3_client.upload_fileobj(
+                            img,
+                            s3_key,
+                            content_type=img.content_type or 'image/jpeg'
+                        )
+                        images_urls.append(s3_url)
+                    except Exception as e:
+                        return JsonResponse({'success': False, 'error': f'Ошибка загрузки изображения {idx+1}: {str(e)}'}, status=500)
+                
+                update['images'] = images_urls
         
         result = col.update_one(
             {'_id': ObjectId(company_id)},
@@ -5255,32 +5856,40 @@ def branch_office_api_create(request):
         if col.find_one({'slug': slug}):
             return JsonResponse({'success': False, 'error': 'Офис с таким slug уже существует'}, status=400)
         
-        # Создаем папку для офиса
-        office_folder = os.path.join(settings.MEDIA_ROOT, 'offices', slug)
-        os.makedirs(office_folder, exist_ok=True)
-        
-        # Загрузка главного изображения
+        # Загрузка главного изображения в S3
         main_image_path = ''
         if 'main_image' in request.FILES:
             main_image = request.FILES['main_image']
             main_image_filename = f"main_{main_image.name}"
-            main_image_full_path = os.path.join(office_folder, main_image_filename)
-            with open(main_image_full_path, 'wb+') as destination:
-                for chunk in main_image.chunks():
-                    destination.write(chunk)
-            main_image_path = f'offices/{slug}/{main_image_filename}'
+            s3_key = f"offices/{slug}/{main_image_filename}"
+            
+            try:
+                s3_url = s3_client.upload_fileobj(
+                    main_image,
+                    s3_key,
+                    content_type=main_image.content_type or 'image/jpeg'
+                )
+                main_image_path = s3_url
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Ошибка загрузки главного изображения: {str(e)}'}, status=500)
         
-        # Загрузка дополнительных изображений
+        # Загрузка дополнительных изображений в S3
         images_paths = []
         if 'images' in request.FILES:
             images = request.FILES.getlist('images')
             for idx, img in enumerate(images):
                 img_filename = f"{idx+1}_{img.name}"
-                img_full_path = os.path.join(office_folder, img_filename)
-                with open(img_full_path, 'wb+') as destination:
-                    for chunk in img.chunks():
-                        destination.write(chunk)
-                images_paths.append(f'offices/{slug}/{img_filename}')
+                s3_key = f"offices/{slug}/{img_filename}"
+                
+                try:
+                    s3_url = s3_client.upload_fileobj(
+                        img,
+                        s3_key,
+                        content_type=img.content_type or 'image/jpeg'
+                    )
+                    images_paths.append(s3_url)
+                except Exception as e:
+                    return JsonResponse({'success': False, 'error': f'Ошибка загрузки изображения {idx+1}: {str(e)}'}, status=500)
         
         # Парсим координаты, если переданы
         lat_raw = request.POST.get('latitude', '').strip()
@@ -5296,6 +5905,15 @@ def branch_office_api_create(request):
             latitude = None
             longitude = None
 
+        # Обработка видео (массив URL)
+        videos_data = []
+        video_urls = request.POST.get('video_urls', '').strip()
+        if video_urls:
+            for url in video_urls.split('\n'):
+                url = url.strip()
+                if url:
+                    videos_data.append(url)
+
         office_data = {
             'name': name,
             'slug': slug,
@@ -5307,6 +5925,7 @@ def branch_office_api_create(request):
             'is_head_office': request.POST.get('is_head_office') == 'on',
             'main_image': main_image_path,
             'images': images_paths,
+            'videos': videos_data,
             'latitude': latitude,
             'longitude': longitude,
             'is_active': True,
@@ -5368,31 +5987,51 @@ def branch_office_api_update(request, office_id):
         except ValueError:
             pass
 
-        # Обновление изображений (опционально)
+        # Обновление изображений (опционально) - загрузка в S3
         slug = update['slug'] or 'office'
-        office_folder = os.path.join(settings.MEDIA_ROOT, 'offices', slug)
-        os.makedirs(office_folder, exist_ok=True)
 
         if 'main_image' in request.FILES:
             main_image = request.FILES['main_image']
             main_image_filename = f"main_{main_image.name}"
-            main_image_full_path = os.path.join(office_folder, main_image_filename)
-            with open(main_image_full_path, 'wb+') as destination:
-                for chunk in main_image.chunks():
-                    destination.write(chunk)
-            update['main_image'] = f'offices/{slug}/{main_image_filename}'
+            s3_key = f"offices/{slug}/{main_image_filename}"
+            
+            try:
+                s3_url = s3_client.upload_fileobj(
+                    main_image,
+                    s3_key,
+                    content_type=main_image.content_type or 'image/jpeg'
+                )
+                update['main_image'] = s3_url
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Ошибка загрузки главного изображения: {str(e)}'}, status=500)
 
         if 'images' in request.FILES:
             images = request.FILES.getlist('images')
             images_paths = []
             for idx, img in enumerate(images):
                 img_filename = f"{idx+1}_{img.name}"
-                img_full_path = os.path.join(office_folder, img_filename)
-                with open(img_full_path, 'wb+') as destination:
-                    for chunk in img.chunks():
-                        destination.write(chunk)
-                images_paths.append(f'offices/{slug}/{img_filename}')
+                s3_key = f"offices/{slug}/{img_filename}"
+                
+                try:
+                    s3_url = s3_client.upload_fileobj(
+                        img,
+                        s3_key,
+                        content_type=img.content_type or 'image/jpeg'
+                    )
+                    images_paths.append(s3_url)
+                except Exception as e:
+                    return JsonResponse({'success': False, 'error': f'Ошибка загрузки изображения {idx+1}: {str(e)}'}, status=500)
             update['images'] = images_paths
+
+        # Обновление видео
+        video_urls = request.POST.get('video_urls', '').strip()
+        if video_urls:
+            videos_data = []
+            for url in video_urls.split('\n'):
+                url = url.strip()
+                if url:
+                    videos_data.append(url)
+            update['videos'] = videos_data
 
         col.update_one({'_id': ObjectId(office_id)}, {'$set': update})
         return JsonResponse({'success': True})
@@ -5511,32 +6150,23 @@ def employee_api_create(request):
         if col.find_one({'slug': slug}):
             return JsonResponse({'success': False, 'error': 'Сотрудник с таким slug уже существует'}, status=400)
         
-        # Создаем папку для сотрудника
-        employee_folder = os.path.join(settings.MEDIA_ROOT, 'employees', slug)
-        os.makedirs(employee_folder, exist_ok=True)
-        
-        # Загрузка главного изображения
-        main_image_path = ''
-        if 'main_image' in request.FILES:
-            main_image = request.FILES['main_image']
-            main_image_filename = f"main_{main_image.name}"
-            main_image_full_path = os.path.join(employee_folder, main_image_filename)
-            with open(main_image_full_path, 'wb+') as destination:
-                for chunk in main_image.chunks():
-                    destination.write(chunk)
-            main_image_path = f'employees/{slug}/{main_image_filename}'
-        
-        # Загрузка дополнительных изображений
+        # Загрузка изображений в S3 (все в массив images)
         images_paths = []
         if 'images' in request.FILES:
             images = request.FILES.getlist('images')
             for idx, img in enumerate(images):
                 img_filename = f"{idx+1}_{img.name}"
-                img_full_path = os.path.join(employee_folder, img_filename)
-                with open(img_full_path, 'wb+') as destination:
-                    for chunk in img.chunks():
-                        destination.write(chunk)
-                images_paths.append(f'employees/{slug}/{img_filename}')
+                s3_key = f"employees/{slug}/{img_filename}"
+                
+                try:
+                    s3_url = s3_client.upload_fileobj(
+                        img,
+                        s3_key,
+                        content_type=img.content_type or 'image/jpeg'
+                    )
+                    images_paths.append(s3_url)
+                except Exception as e:
+                    return JsonResponse({'success': False, 'error': f'Ошибка загрузки изображения {idx+1}: {str(e)}'}, status=500)
         
         # Обработка видео (массив URL)
         videos_data = []
@@ -5560,7 +6190,6 @@ def employee_api_create(request):
             'specialization': request.POST.get('specialization', '').strip(),
             'bio': request.POST.get('bio', '').strip(),
             'achievements': request.POST.get('achievements', '').strip(),
-            'main_image': main_image_path,
             'images': images_paths,
             'videos': videos_data,
             'is_active': True,
@@ -5653,18 +6282,37 @@ def employee_api_update(request, employee_id):
             'slug': slug,
         }
         
-        # Загрузка фото сотрудника
-        if 'photo' in request.FILES:
-            photo = request.FILES['photo']
-            employee_folder = os.path.join(settings.MEDIA_ROOT, 'employees', slug)
-            os.makedirs(employee_folder, exist_ok=True)
-            
-            photo_filename = f"photo_{photo.name}"
-            photo_full_path = os.path.join(employee_folder, photo_filename)
-            with open(photo_full_path, 'wb+') as destination:
-                for chunk in photo.chunks():
-                    destination.write(chunk)
-            update['photo'] = f'employees/{slug}/{photo_filename}'
+        # Загрузка изображений в S3 (все в массив images)
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            if images:
+                images_urls = []
+                
+                for idx, img in enumerate(images):
+                    img_filename = f"{idx+1}_{img.name}"
+                    s3_key = f"employees/{slug}/{img_filename}"
+                    
+                    try:
+                        s3_url = s3_client.upload_fileobj(
+                            img,
+                            s3_key,
+                            content_type=img.content_type or 'image/jpeg'
+                        )
+                        images_urls.append(s3_url)
+                    except Exception as e:
+                        return JsonResponse({'success': False, 'error': f'Ошибка загрузки изображения {idx+1}: {str(e)}'}, status=500)
+                
+                update['images'] = images_urls
+        
+        # Обработка видео
+        video_urls = request.POST.get('video_urls', '').strip()
+        if video_urls:
+            videos_data = []
+            for url in video_urls.split('\n'):
+                url = url.strip()
+                if url:
+                    videos_data.append(url)
+            update['videos'] = videos_data
         
         result = col.update_one(
             {'_id': ObjectId(employee_id)},

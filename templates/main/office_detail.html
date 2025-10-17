@@ -20,10 +20,8 @@
 
         <div class="property-card" style="margin-bottom:24px;">
             <div class="card-image" style="height:360px;">
-                {% if office.image %}
-                    <img src="{{ office.image.url }}" alt="{{ office.name }}">
-                {% elif office.photo %}
-                    <img src="{{ office.photo.url }}" alt="{{ office.name }}">
+                {% if office.main_image %}
+                    <img src="{{ office.main_image }}" alt="{{ office.name }}">
                 {% else %}
                     <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ office.name }}">
                 {% endif %}

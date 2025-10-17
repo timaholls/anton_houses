@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Управление контентом и SEO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -471,6 +472,9 @@
                                 <div class="item-meta">Slug: ${tag.slug || '—'}</div>
                             </div>
                             <div class="item-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editTag('${tag._id}')">
+                                    <i class="fas fa-edit"></i> Редактировать
+                                </button>
                                 <button class="btn btn-sm btn-toggle ${tag.is_active ? '' : 'inactive'}" 
                                         onclick="toggleTag('${tag._id}', ${tag.is_active})">
                                     <i class="fas fa-${tag.is_active ? 'eye-slash' : 'eye'}"></i>
@@ -526,8 +530,15 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
             try {
-                const response = await fetch('/api/tags/', {
+                const response = await fetch('/api/tags/create/', {
                     method: 'POST',
                     body: formData
                 });
@@ -549,7 +560,7 @@
         async function toggleTag(id, currentStatus) {
             try {
                 const response = await fetch(`/api/tags/${id}/toggle/`, {
-                    method: 'PATCH',
+                    method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({is_active: !currentStatus})
                 });
@@ -604,6 +615,9 @@
                                 <div class="item-meta">${cat.description || 'Без описания'} • Slug: ${cat.slug}</div>
                             </div>
                             <div class="item-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editCategory('${cat._id}')">
+                                    <i class="fas fa-edit"></i> Редактировать
+                                </button>
                                 <button class="btn btn-sm btn-toggle ${cat.is_active ? '' : 'inactive'}" 
                                         onclick="toggleCategory('${cat._id}', ${cat.is_active})">
                                     <i class="fas fa-${cat.is_active ? 'eye-slash' : 'eye'}"></i>
@@ -651,8 +665,15 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
             try {
-                const response = await fetch('/api/categories/', {
+                const response = await fetch('/api/categories/create/', {
                     method: 'POST',
                     body: formData
                 });
@@ -673,7 +694,7 @@
         async function toggleCategory(id, currentStatus) {
             try {
                 const response = await fetch(`/api/categories/${id}/toggle/`, {
-                    method: 'PATCH',
+                    method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({is_active: !currentStatus})
                 });
@@ -731,6 +752,9 @@
                                 </div>
                             </div>
                             <div class="item-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editAuthor('${author._id}')">
+                                    <i class="fas fa-edit"></i> Редактировать
+                                </button>
                                 <button class="btn btn-sm btn-toggle ${author.is_active ? '' : 'inactive'}" 
                                         onclick="toggleAuthor('${author._id}', ${author.is_active})">
                                     <i class="fas fa-${author.is_active ? 'eye-slash' : 'eye'}"></i>
@@ -778,8 +802,15 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
             try {
-                const response = await fetch('/api/authors/', {
+                const response = await fetch('/api/authors/create/', {
                     method: 'POST',
                     body: formData
                 });
@@ -800,7 +831,7 @@
         async function toggleAuthor(id, currentStatus) {
             try {
                 const response = await fetch(`/api/authors/${id}/toggle/`, {
-                    method: 'PATCH',
+                    method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({is_active: !currentStatus})
                 });
@@ -859,6 +890,9 @@
                                 </div>
                             </div>
                             <div class="item-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editArticle('${article._id}')">
+                                    <i class="fas fa-edit"></i> Редактировать
+                                </button>
                                 <button class="btn btn-sm btn-toggle ${article.is_active ? '' : 'inactive'}" 
                                         onclick="toggleArticle('${article._id}', ${article.is_active})">
                                     <i class="fas fa-${article.is_active ? 'eye-slash' : 'eye'}"></i>
@@ -970,8 +1004,15 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
             try {
-                const response = await fetch('/api/articles/', {
+                const response = await fetch('/api/articles/create/', {
                     method: 'POST',
                     body: formData
                 });
@@ -992,7 +1033,7 @@
         async function toggleArticle(id, currentStatus) {
             try {
                 const response = await fetch(`/api/articles/${id}/toggle/`, {
-                    method: 'PATCH',
+                    method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({is_active: !currentStatus})
                 });
@@ -1051,6 +1092,9 @@
                                 </div>
                             </div>
                             <div class="item-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editCatalogLanding('${landing._id}')">
+                                    <i class="fas fa-edit"></i> Редактировать
+                                </button>
                                 <button class="btn btn-sm btn-toggle ${landing.is_active ? '' : 'inactive'}" 
                                         onclick="toggleCatalogLanding('${landing._id}', ${landing.is_active})">
                                     <i class="fas fa-${landing.is_active ? 'eye-slash' : 'eye'}"></i>
@@ -1124,8 +1168,15 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
             try {
-                const response = await fetch('/api/catalog-landings/', {
+                const response = await fetch('/api/catalog-landings/create/', {
                     method: 'POST',
                     body: formData
                 });
@@ -1146,7 +1197,7 @@
         async function toggleCatalogLanding(id, currentStatus) {
             try {
                 const response = await fetch(`/api/catalog-landings/${id}/toggle/`, {
-                    method: 'PATCH',
+                    method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({is_active: !currentStatus})
                 });
@@ -1178,6 +1229,439 @@
                 }
             } catch (error) {
                 showToast('Ошибка удаления страницы', 'error');
+            }
+        }
+
+        // ========== ФУНКЦИИ РЕДАКТИРОВАНИЯ ==========
+        
+        // Редактирование тега
+        async function editTag(id) {
+            try {
+                const response = await fetch(`/api/tags/${id}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tag = data.item;
+                    const modalContent = `
+                        <form id="edit-tag-form" onsubmit="updateTag(event, '${id}')">
+                            <div class="form-group">
+                                <label class="form-label">Название тега *</label>
+                                <input type="text" class="form-input" name="name" value="${tag.name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Slug</label>
+                                <input type="text" class="form-input" name="slug" value="${tag.slug || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">H1 заголовок</label>
+                                <input type="text" class="form-input" name="h1_title" value="${tag.h1_title || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Meta Title</label>
+                                <input type="text" class="form-input" name="meta_title" value="${tag.meta_title || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Meta Description</label>
+                                <textarea class="form-textarea" name="meta_description">${tag.meta_description || ''}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Сохранить изменения
+                            </button>
+                        </form>
+                    `;
+                    document.getElementById('modal-container').innerHTML = createModal('Редактировать тег', modalContent);
+                } else {
+                    showToast('Ошибка загрузки тега', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка загрузки тега', 'error');
+            }
+        }
+
+        async function updateTag(event, id) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
+            try {
+                const response = await fetch(`/api/tags/${id}/update/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Тег успешно обновлен', 'success');
+                    closeModal();
+                    loadTags();
+                } else {
+                    showToast(data.error || 'Ошибка обновления тега', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка обновления тега', 'error');
+            }
+        }
+
+        // Редактирование категории
+        async function editCategory(id) {
+            try {
+                const response = await fetch(`/api/categories/${id}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const category = data.item;
+                    const modalContent = `
+                        <form id="edit-category-form" onsubmit="updateCategory(event, '${id}')">
+                            <div class="form-group">
+                                <label class="form-label">Название категории *</label>
+                                <input type="text" class="form-input" name="name" value="${category.name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Slug</label>
+                                <input type="text" class="form-input" name="slug" value="${category.slug || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Описание</label>
+                                <textarea class="form-textarea" name="description">${category.description || ''}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Сохранить изменения
+                            </button>
+                        </form>
+                    `;
+                    document.getElementById('modal-container').innerHTML = createModal('Редактировать категорию', modalContent);
+                } else {
+                    showToast('Ошибка загрузки категории', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка загрузки категории', 'error');
+            }
+        }
+
+        async function updateCategory(event, id) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
+            try {
+                const response = await fetch(`/api/categories/${id}/update/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Категория успешно обновлена', 'success');
+                    closeModal();
+                    loadCategories();
+                } else {
+                    showToast(data.error || 'Ошибка обновления категории', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка обновления категории', 'error');
+            }
+        }
+
+        // Редактирование автора
+        async function editAuthor(id) {
+            try {
+                const response = await fetch(`/api/authors/${id}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const author = data.item;
+                    const modalContent = `
+                        <form id="edit-author-form" onsubmit="updateAuthor(event, '${id}')">
+                            <div class="form-group">
+                                <label class="form-label">Имя автора *</label>
+                                <input type="text" class="form-input" name="name" value="${author.name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Должность</label>
+                                <input type="text" class="form-input" name="position" value="${author.position || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Описание</label>
+                                <textarea class="form-textarea" name="description">${author.description || ''}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Сохранить изменения
+                            </button>
+                        </form>
+                    `;
+                    document.getElementById('modal-container').innerHTML = createModal('Редактировать автора', modalContent);
+                } else {
+                    showToast('Ошибка загрузки автора', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка загрузки автора', 'error');
+            }
+        }
+
+        async function updateAuthor(event, id) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
+            try {
+                const response = await fetch(`/api/authors/${id}/update/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Автор успешно обновлен', 'success');
+                    closeModal();
+                    loadAuthors();
+                } else {
+                    showToast(data.error || 'Ошибка обновления автора', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка обновления автора', 'error');
+            }
+        }
+
+        // Редактирование статьи
+        async function editArticle(id) {
+            try {
+                const response = await fetch(`/api/articles/${id}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const article = data.item;
+                    
+                    // Загружаем категории, авторов и теги для селектов
+                    const [categoriesRes, authorsRes, tagsRes] = await Promise.all([
+                        fetch('/api/categories/?admin=true'),
+                        fetch('/api/authors/?admin=true'),
+                        fetch('/api/tags/?admin=true')
+                    ]);
+                    
+                    const categories = await categoriesRes.json();
+                    const authors = await authorsRes.json();
+                    const tags = await tagsRes.json();
+                    
+                    const modalContent = `
+                        <form id="edit-article-form" onsubmit="updateArticle(event, '${id}')" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label class="form-label">Заголовок *</label>
+                                <input type="text" class="form-input" name="title" value="${article.title}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Тип статьи</label>
+                                <select class="form-select" name="article_type">
+                                    <option value="news" ${article.article_type === 'news' ? 'selected' : ''}>Новости</option>
+                                    <option value="company" ${article.article_type === 'company' ? 'selected' : ''}>Новости компании</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Категория *</label>
+                                <select class="form-select" name="category_id" required>
+                                    <option value="">Выберите категорию</option>
+                                    ${categories.items ? categories.items.filter(c => c.is_active).map(c => 
+                                        `<option value="${c._id}" ${c._id === article.category_id ? 'selected' : ''}>${c.name}</option>`
+                                    ).join('') : ''}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Автор</label>
+                                <select class="form-select" name="author_id">
+                                    <option value="">Без автора</option>
+                                    ${authors.items ? authors.items.filter(a => a.is_active).map(a => 
+                                        `<option value="${a._id}" ${a._id === article.author_id ? 'selected' : ''}>${a.name}</option>`
+                                    ).join('') : ''}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Теги (удерживайте Ctrl для множественного выбора)</label>
+                                <select class="form-select" name="tags" multiple style="height: 120px;">
+                                    ${tags.items ? tags.items.filter(t => t.is_active).map(t => 
+                                        `<option value="${t._id}" ${article.tags && article.tags.includes(t._id) ? 'selected' : ''}>${t.name}</option>`
+                                    ).join('') : ''}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Краткое описание *</label>
+                                <textarea class="form-textarea" name="excerpt" required>${article.excerpt || ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Содержание *</label>
+                                <textarea class="form-textarea" name="content" required style="min-height: 200px;">${article.content || ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Главное изображение</label>
+                                <input type="file" class="form-input" name="main_image" accept="image/*">
+                                ${article.main_image ? `<p style="margin-top: 5px; color: #666;">Текущее: <a href="${article.main_image}" target="_blank">${article.main_image}</a></p>` : ''}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Дополнительные изображения (можно выбрать несколько)</label>
+                                <input type="file" class="form-input" name="images" accept="image/*" multiple>
+                                ${article.images && article.images.length > 0 ? `<p style="margin-top: 5px; color: #666;">Текущие: ${article.images.length} изображений</p>` : ''}
+                            </div>
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" name="show_on_home" ${article.show_on_home ? 'checked' : ''}>
+                                    Показывать на главной странице
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" name="is_featured" ${article.is_featured ? 'checked' : ''}>
+                                    Рекомендуемая статья
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Сохранить изменения
+                            </button>
+                        </form>
+                    `;
+                    document.getElementById('modal-container').innerHTML = createModal('Редактировать статью', modalContent);
+                } else {
+                    showToast('Ошибка загрузки статьи', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка загрузки статьи', 'error');
+            }
+        }
+
+        async function updateArticle(event, id) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
+            try {
+                const response = await fetch(`/api/articles/${id}/update/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Статья успешно обновлена', 'success');
+                    closeModal();
+                    loadArticles();
+                } else {
+                    showToast(data.error || 'Ошибка обновления статьи', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка обновления статьи', 'error');
+            }
+        }
+
+        // Редактирование SEO страницы каталога
+        async function editCatalogLanding(id) {
+            try {
+                const response = await fetch(`/api/catalog-landings/${id}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const landing = data.item;
+                    const modalContent = `
+                        <form id="edit-catalog-landing-form" onsubmit="updateCatalogLanding(event, '${id}')">
+                            <div class="form-group">
+                                <label class="form-label">Название страницы *</label>
+                                <input type="text" class="form-input" name="name" value="${landing.name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Slug *</label>
+                                <input type="text" class="form-input" name="slug" value="${landing.slug}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Тип страницы *</label>
+                                <select class="form-select" name="kind" required>
+                                    <option value="newbuild" ${landing.kind === 'newbuild' ? 'selected' : ''}>Новостройки</option>
+                                    <option value="secondary" ${landing.kind === 'secondary' ? 'selected' : ''}>Вторичная недвижимость</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Категория *</label>
+                                <select class="form-select" name="category" required>
+                                    <option value="all" ${landing.category === 'all' ? 'selected' : ''}>Все объекты</option>
+                                    <option value="apartment" ${landing.category === 'apartment' ? 'selected' : ''}>Квартиры</option>
+                                    <option value="house" ${landing.category === 'house' ? 'selected' : ''}>Дома</option>
+                                    <option value="cottage" ${landing.category === 'cottage' ? 'selected' : ''}>Коттеджи</option>
+                                    <option value="townhouse" ${landing.category === 'townhouse' ? 'selected' : ''}>Таунхаусы</option>
+                                    <option value="commercial" ${landing.category === 'commercial' ? 'selected' : ''}>Коммерческие помещения</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Meta Title</label>
+                                <input type="text" class="form-input" name="meta_title" value="${landing.meta_title || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Meta Description</label>
+                                <textarea class="form-textarea" name="meta_description">${landing.meta_description || ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Meta Keywords</label>
+                                <input type="text" class="form-input" name="meta_keywords" value="${landing.meta_keywords || ''}">
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Сохранить изменения
+                            </button>
+                        </form>
+                    `;
+                    document.getElementById('modal-container').innerHTML = createModal('Редактировать SEO страницу', modalContent);
+                } else {
+                    showToast('Ошибка загрузки SEO страницы', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка загрузки SEO страницы', 'error');
+            }
+        }
+
+        async function updateCatalogLanding(event, id) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('csrfmiddlewaretoken', csrfToken);
+            }
+            
+            try {
+                const response = await fetch(`/api/catalog-landings/${id}/update/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('SEO страница успешно обновлена', 'success');
+                    closeModal();
+                    loadCatalogLandings();
+                } else {
+                    showToast(data.error || 'Ошибка обновления SEO страницы', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка обновления SEO страницы', 'error');
             }
         }
     </script>

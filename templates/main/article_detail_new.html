@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load main_extras %}
 
 {% block title %}{{ article.title }} - CENTURY 21{% endblock %}
 
@@ -61,16 +62,36 @@
             </header>
 
             <!-- Главное изображение -->
-            {% if article.image %}
+            {% if article.main_image %}
             <div class="article-hero-image">
-                <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                <img src="{{ article.main_image }}" alt="{{ article.title }}">
             </div>
             {% endif %}
 
             <!-- Содержание статьи -->
-            <div class="article-content">
-                {{ article.content|safe }}
+            <div class="article-content" style="line-height: 1.6; margin: 0; padding: 0;">
+                {{ article.content|format_article_content|safe }}
             </div>
+            
+            <style>
+            .article-content p {
+                margin: 8px 0 !important;
+                padding: 0 !important;
+                line-height: 1.6 !important;
+            }
+            .article-content h3 {
+                margin: 16px 0 8px 0 !important;
+                padding: 0 !important;
+                font-size: 1.2em !important;
+                font-weight: 700 !important;
+            }
+            .article-content strong {
+                font-weight: 700 !important;
+            }
+            .article-content em {
+                font-style: italic !important;
+            }
+            </style>
 
             <!-- Блок "Читайте также" -->
             {% if article.related_articles.all %}
@@ -162,8 +183,8 @@
             {% for related in related_articles %}
             <a href="{% url 'main:article_detail' related.slug %}" class="similar-article-card">
                 <div class="similar-article-image">
-                    {% if related.image %}
-                        <img src="{{ related.image.url }}" alt="{{ related.title }}">
+                    {% if related.main_image %}
+                        <img src="{{ related.main_image }}" alt="{{ related.title }}">
                     {% else %}
                         <img src="/media/gallery/placeholders.png" alt="{{ related.title }}">
                     {% endif %}

@@ -14,9 +14,9 @@ urlpatterns = [
     path('api/secondary/', views.secondary_api, name='secondary_api'),
     path('api/secondary/list/', views.secondary_api_list, name='secondary_api_list'),
     path('articles/', views.articles, name='articles'),
-    path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
+    path('articles/<str:slug>/', views.article_detail, name='article_detail'),
     path('api/articles/<int:article_id>/view/', views.article_view_api, name='article_view_api'),
-    path('tag/<slug:slug>/', views.tag_detail, name='tag_detail'),
+    path('tag/<str:slug>/', views.tag_detail, name='tag_detail'),
     path('complex/<str:complex_id>/', views.detail, name='detail'),
     path('api/districts/', views.districts_api, name='districts_api'),
     path('api/streets/', views.streets_api, name='streets_api'),
@@ -34,7 +34,7 @@ urlpatterns = [
     path('privacy/', views.privacy_policy, name='privacy'),
 
     # Лэндинги каталога с SEO
-    path('catalog/l/<slug:slug>/', views.catalog_landing, name='catalog_landing'),
+    path('catalog/l/<str:slug>/', views.catalog_landing, name='catalog_landing'),
     path('newbuilds/', views.newbuild_index, name='newbuild_index'),
     path('secondary/', views.secondary_index, name='secondary_index'),
     path('secondary/<int:pk>/', views.secondary_detail, name='secondary_detail'),
@@ -42,11 +42,11 @@ urlpatterns = [
 
     # Вакансии
     path('vacancies/', views.vacancies, name='vacancies'),
-    path('vacancies/<slug:slug>/', views.vacancy_detail, name='vacancy_detail'),
+    path('vacancies/<str:slug>/', views.vacancy_detail, name='vacancy_detail'),
 
     # Офисы продаж
     path('offices/', views.offices, name='offices'),
-    path('offices/<slug:slug>/', views.office_detail, name='office_detail'),
+    path('offices/<str:slug>/', views.office_detail, name='office_detail'),
 
     # Видеообзоры
     path('videos/', views.videos, name='videos'),
@@ -115,14 +115,18 @@ urlpatterns = [
     # Tags API
     path('api/tags/', views.tags_api_list, name='tags_api_list'),
     path('api/tags/create/', views.tags_api_create, name='tags_api_create'),
+    path('api/tags/<str:tag_id>/', views.tags_api_get, name='tags_api_get'),
+    path('api/tags/<str:tag_id>/update/', views.tags_api_update, name='tags_api_update'),
     path('api/tags/<str:tag_id>/toggle/', views.tags_api_toggle, name='tags_api_toggle'),
-    path('api/tags/<str:tag_id>/', views.tags_api_delete, name='tags_api_delete'),
+    path('api/tags/<str:tag_id>/delete/', views.tags_api_delete, name='tags_api_delete'),
     
     # Categories API
     path('api/categories/', views.categories_api_list, name='categories_api_list'),
     path('api/categories/create/', views.categories_api_create, name='categories_api_create'),
+    path('api/categories/<str:category_id>/', views.categories_api_get, name='categories_api_get'),
+    path('api/categories/<str:category_id>/update/', views.categories_api_update, name='categories_api_update'),
     path('api/categories/<str:category_id>/toggle/', views.categories_api_toggle, name='categories_api_toggle'),
-    path('api/categories/<str:category_id>/', views.categories_api_delete, name='categories_api_delete'),
+    path('api/categories/<str:category_id>/delete/', views.categories_api_delete, name='categories_api_delete'),
     
     # Authors API
     path('api/authors/', views.authors_api_list, name='authors_api_list'),
@@ -133,6 +137,8 @@ urlpatterns = [
     # Articles API (MongoDB)
     path('api/articles/', views.articles_api_list, name='articles_api_list_mongo'),
     path('api/articles/create/', views.articles_api_create, name='articles_api_create'),
+    path('api/articles/<str:article_id>/', views.articles_api_get, name='articles_api_get'),
+    path('api/articles/<str:article_id>/update/', views.articles_api_update, name='articles_api_update'),
     path('api/articles/<str:article_id>/toggle/', views.articles_api_toggle, name='articles_api_toggle'),
     path('api/articles/<str:article_id>/delete/', views.articles_api_delete, name='articles_api_delete'),
     
@@ -169,6 +175,12 @@ urlpatterns = [
     path('api/employees/<str:employee_id>/update/', views.employee_api_update, name='employee_api_update'),
     path('api/employees/<str:employee_id>/toggle/', views.employee_api_toggle, name='employee_api_toggle'),
     path('api/employees/<str:employee_id>/', views.employee_api_delete, name='employee_api_delete'),
+    
+    # Employee Reviews API
+    path('api/employee-reviews/', views.employee_reviews_api, name='employee_reviews_api'),
+    path('api/employee-reviews/<str:review_id>/toggle/', views.employee_review_toggle, name='employee_review_toggle'),
+    path('api/employee-reviews/<str:review_id>/update/', views.employee_review_update, name='employee_review_update'),
+    path('api/employee-reviews/<str:review_id>/delete/', views.employee_review_delete, name='employee_review_delete'),
     
     # Manual Matching API
     path('api/manual-matching/records/', views.get_unmatched_records, name='get_unmatched_records'),

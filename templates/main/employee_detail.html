@@ -18,7 +18,11 @@
         <div class="hero-content">
             <div class="hero-left">
                 <div class="employee-photo-container">
-                    <img src="{% if employee.main_image %}{{ employee.main_image }}{% else %}{{ PLACEHOLDER_IMAGE_URL }}{% endif %}" class="employee-photo" alt="{{ employee.full_name }}">
+                    {% if employee.images and employee.images.0 %}
+                        <img src="{{ employee.images.0 }}" class="employee-photo" alt="{{ employee.full_name }}">
+                    {% else %}
+                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" class="employee-photo" alt="{{ employee.full_name }}">
+                    {% endif %}
                     
                     {% if employee.is_featured %}
                     <div class="featured-badge">
@@ -92,20 +96,32 @@
         <!-- Левая колонка -->
         <div class="content-main">
             <!-- Видео -->
-            {% if employee.get_main_video %}
+            {% if videos %}
             <div class="info-section">
                 <div class="section-header">
                     <h2><i class="fas fa-video"></i> Видео-презентация</h2>
                 </div>
                 <div class="section-content">
-                    {% if employee.get_main_video.video_url %}
-                    <div class="video-container">
-                        <iframe src="{{ employee.get_main_video.video_url }}" allowfullscreen></iframe>
+                    <div class="videos-grid">
+                        {% for video in videos %}
+                        <div class="video-item">
+                            <div class="video-thumbnail">
+                                {% if video.thumbnail %}
+                                    <img src="{{ video.thumbnail }}" alt="Превью видео" class="video-preview">
+                                {% else %}
+                                    <div class="video-placeholder">
+                                        <i class="fas fa-play-circle"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="video-overlay">
+                                    <a href="{{ video.url }}" target="_blank" class="video-play-btn">
+                                        <i class="fas fa-play"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% elif employee.get_main_video.video_url %}
-                    <iframe src="{{ employee.get_main_video.video_url|safe }}" class="video-player" frameborder="0" allowfullscreen></iframe>
-                    </video>
-                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -583,6 +599,89 @@
     border-radius: 8px;
 }
 
+/* Стили для нового блока видео */
+.videos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.video-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.video-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.video-thumbnail {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+}
+
+.video-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.video-item:hover .video-overlay {
+    opacity: 1;
+}
+
+.video-play-btn {
+    width: 60px;
+    height: 60px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    font-size: 1.5rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.video-play-btn:hover {
+    background: white;
+    transform: scale(1.1);
+    color: #333;
+}
+
 /* Объекты недвижимости */
 .property-category {
     margin-bottom: 2rem;
@@ -606,6 +705,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1rem;
+    align-items: stretch; /* Равная высота для всех карточек */
 }
 
 .property-card {
@@ -614,6 +714,9 @@
     overflow: hidden;
     box-shadow: 0 2px 12px var(--c21-shadow);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Занимает всю доступную высоту */
 }
 
 .property-card:hover {
@@ -639,6 +742,9 @@
 
 .property-info {
     padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Занимает все доступное пространство */
 }
 
 .property-info h4 {
@@ -646,6 +752,12 @@
     font-weight: 700;
     color: var(--c21-dark);
     margin-bottom: 0.5rem;
+    line-height: 1.3;
+    min-height: 2.6em; /* Минимальная высота для 2 строк */
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Ограничиваем до 2 строк */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .property-location {
@@ -670,6 +782,7 @@
     font-weight: 600;
     font-size: 0.9rem;
     transition: color 0.3s ease;
+    margin-top: auto; /* Прижимает кнопку к низу */
 }
 
 .property-link:hover {

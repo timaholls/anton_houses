@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCompanyInfo();
     loadBranchOffices();
     loadEmployees();
+    loadEmployeeReviews();
 });
 
 // ========== ИНФОРМАЦИЯ О КОМПАНИИ ==========
@@ -437,6 +438,10 @@ function openCreateBranchOfficeModal() {
               <label class="form-label">Изображения</label>
               <input class="form-input" name="images" type="file" accept="image/*" multiple>
             </div>
+            <div class="form-group">
+              <label class="form-label">Видео (YouTube/Rutube ссылки, каждое с новой строки)</label>
+              <textarea class="form-input" name="video_urls" rows="3" placeholder="https://www.youtube.com/watch?v=...&#10;https://rutube.ru/video/..."></textarea>
+            </div>
           </form>
         </div>
         <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
@@ -497,7 +502,11 @@ function openCreateEmployeeModal() {
             </div>
             <div class="form-group">
               <label class="form-label">Фото сотрудника</label>
-              <input class="form-input" name="photo" type="file" accept="image/*">
+              <input class="form-input" name="images" type="file" accept="image/*" multiple>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Видео (YouTube/Rutube ссылки, каждое с новой строки)</label>
+              <textarea class="form-input" name="video_urls" rows="3" placeholder="https://www.youtube.com/watch?v=...&#10;https://rutube.ru/video/..."></textarea>
             </div>
           </form>
         </div>
@@ -583,6 +592,7 @@ function editBranchOffice(id) {
             <div class="form-group"><label class="form-label"><input type="checkbox" name="is_head_office"> Головной офис</label></div>
             <div class="form-group"><label class="form-label">Главное изображение</label><input class="form-input" name="main_image" type="file" accept="image/*"></div>
             <div class="form-group"><label class="form-label">Изображения</label><input class="form-input" name="images" type="file" accept="image/*" multiple></div>
+            <div class="form-group"><label class="form-label">Видео (YouTube/Rutube ссылки, каждое с новой строки)</label><textarea class="form-input" name="video_urls" rows="3" placeholder="https://www.youtube.com/watch?v=...&#10;https://rutube.ru/video/..."></textarea></div>
           </form>
         </div>
         <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
@@ -610,6 +620,7 @@ function editBranchOffice(id) {
         form.latitude.value = (item.latitude ?? '').toString();
         form.longitude.value = (item.longitude ?? '').toString();
         form.is_head_office.checked = !!item.is_head_office;
+        form.video_urls.value = (item.videos || []).join('\n');
       })
       .catch(() => showToast('Ошибка сети', 'error'));
 }
@@ -657,7 +668,8 @@ function editEmployee(id) {
             <div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" name="bio" rows="4"></textarea></div>
             <div class="form-group"><label class="form-label">Достижения (через запятую)</label><input class="form-input" name="achievements"></div>
             <div class="form-group"><label class="form-label"><input type="checkbox" name="is_active"> Активен</label></div>
-            <div class="form-group"><label class="form-label">Фото сотрудника</label><input class="form-input" name="photo" type="file" accept="image/*"></div>
+            <div class="form-group"><label class="form-label">Фото сотрудника</label><input class="form-input" name="images" type="file" accept="image/*" multiple></div>
+            <div class="form-group"><label class="form-label">Видео (YouTube/Rutube ссылки, каждое с новой строки)</label><textarea class="form-input" name="video_urls" rows="3" placeholder="https://www.youtube.com/watch?v=...&#10;https://rutube.ru/video/..."></textarea></div>
           </form>
         </div>
         <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
@@ -685,6 +697,7 @@ function editEmployee(id) {
         form.bio.value = item.bio || '';
         form.achievements.value = (item.achievements || []).join(', ');
         form.is_active.checked = !!item.is_active;
+        form.video_urls.value = (item.videos || []).join('\n');
       })
       .catch(() => showToast('Ошибка сети', 'error'));
 }
@@ -831,3 +844,207 @@ document.addEventListener('keydown', function(event) {
         closeModal();
     }
 });
+
+// ========== ОТЗЫВЫ СОТРУДНИКОВ ==========
+async function loadEmployeeReviews() {
+    try {
+        const response = await fetch('/api/employee-reviews/');
+        const data = await response.json();
+        const list = document.getElementById('reviews-list');
+        
+        if (data.success && data.reviews && data.reviews.length > 0) {
+            list.innerHTML = data.reviews.map(review => `
+                <div class="item-card">
+                    <div class="item-content">
+                        <h3>${review.name || 'Аноним'}</h3>
+                        <p><strong>Сотрудник:</strong> ${review.employee_name} ${review.employee_position ? `(${review.employee_position})` : ''}</p>
+                        <p><strong>Email:</strong> ${review.email || 'Не указан'}</p>
+                        <p><strong>Телефон:</strong> ${review.phone || 'Не указан'}</p>
+                        <p><strong>Рейтинг:</strong> ${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)} (${review.rating}/5)</p>
+                        <p><strong>Отзыв:</strong> ${review.text}</p>
+                        <p><strong>Дата:</strong> ${new Date(review.created_at).toLocaleDateString('ru-RU')}</p>
+                        <p><strong>Статус:</strong> 
+                            <span class="status ${review.is_published ? 'active' : 'inactive'}">
+                                ${review.is_published ? 'Опубликован' : 'На модерации'}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="editEmployeeReview('${review._id}')">
+                            <i class="fas fa-edit"></i> Редактировать
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteEmployeeReview('${review._id}', '${review.name}')">
+                            <i class="fas fa-trash"></i> Удалить
+                        </button>
+                        <button class="btn btn-sm ${review.is_published ? 'btn-warning' : 'btn-success'}" 
+                                onclick="toggleEmployeeReview('${review._id}', ${review.is_published})">
+                            <i class="fas fa-${review.is_published ? 'eye-slash' : 'eye'}"></i> 
+                            ${review.is_published ? 'Скрыть' : 'Опубликовать'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-comments"></i>
+                    <p>Отзывы не найдены</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки отзывов:', error);
+        document.getElementById('reviews-list').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Ошибка загрузки данных</p>
+            </div>
+        `;
+    }
+}
+
+async function toggleEmployeeReview(reviewId, currentStatus) {
+    try {
+        const response = await fetch(`/api/employee-reviews/${reviewId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            loadEmployeeReviews();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        showToast('Ошибка обновления статуса отзыва', 'error');
+    }
+}
+
+async function editEmployeeReview(reviewId) {
+    // Получаем данные отзыва
+    try {
+        const response = await fetch('/api/employee-reviews/');
+        const data = await response.json();
+        
+        if (data.success && data.reviews) {
+            const review = data.reviews.find(r => r._id === reviewId);
+            if (review) {
+                openEditReviewModal(review);
+            } else {
+                showToast('Отзыв не найден', 'error');
+            }
+        } else {
+            showToast('Ошибка загрузки данных', 'error');
+        }
+    } catch (error) {
+        showToast('Ошибка загрузки отзыва', 'error');
+    }
+}
+
+function openEditReviewModal(review) {
+    const html = `
+    <div class="modal active">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Редактировать отзыв</h3>
+          <button class="close-modal" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="editReviewForm">
+            <input type="hidden" name="_id" value="${review._id}">
+            <div class="form-group">
+              <label class="form-label">Имя автора</label>
+              <input class="form-input" name="name" value="${review.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input class="form-input" name="email" type="email" value="${review.email || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Телефон</label>
+              <input class="form-input" name="phone" value="${review.phone || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Рейтинг</label>
+              <select class="form-input" name="rating" required>
+                <option value="1" ${review.rating == 1 ? 'selected' : ''}>1 звезда</option>
+                <option value="2" ${review.rating == 2 ? 'selected' : ''}>2 звезды</option>
+                <option value="3" ${review.rating == 3 ? 'selected' : ''}>3 звезды</option>
+                <option value="4" ${review.rating == 4 ? 'selected' : ''}>4 звезды</option>
+                <option value="5" ${review.rating == 5 ? 'selected' : ''}>5 звезд</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Текст отзыва</label>
+              <textarea class="form-input" name="text" rows="4" required>${review.text || ''}</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">
+                <input type="checkbox" name="is_published" ${review.is_published ? 'checked' : ''}> 
+                Опубликован
+              </label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+          <button class="btn" onclick="closeModal()">Отмена</button>
+          <button class="btn btn-primary" onclick="submitEditReview()">Сохранить</button>
+        </div>
+      </div>
+    </div>`;
+    
+    currentModal = document.createElement('div');
+    currentModal.innerHTML = html;
+    document.body.appendChild(currentModal);
+}
+
+async function submitEditReview() {
+    const form = document.getElementById('editReviewForm');
+    const formData = new FormData(form);
+    const reviewId = form.querySelector('input[name="_id"]').value;
+    
+    try {
+        const response = await fetch(`/api/employee-reviews/${reviewId}/update/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Отзыв обновлен', 'success');
+            closeModal();
+            loadEmployeeReviews();
+        } else {
+            showToast(data.error || 'Ошибка обновления', 'error');
+        }
+    } catch (e) {
+        showToast('Ошибка сети', 'error');
+    }
+}
+
+async function deleteEmployeeReview(reviewId, reviewName) {
+    if (!confirm(`Удалить отзыв от "${reviewName}"?`)) return;
+    
+    try {
+        const response = await fetch(`/api/employee-reviews/${reviewId}/delete/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Отзыв удален', 'success');
+            loadEmployeeReviews();
+        } else {
+            showToast(data.error || 'Ошибка удаления', 'error');
+        }
+    } catch (error) {
+        showToast('Ошибка удаления отзыва', 'error');
+    }
+}

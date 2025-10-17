@@ -17,20 +17,20 @@
             <span class="breadcrumb-current">Статьи</span>
         </div>
 
-        <!-- Секция "Ипотека" -->
-        {% if show_mortgage_section %}
+        <!-- Статьи по категориям -->
+        {% for category_data in all_categories_with_articles %}
         <div class="articles-category-section">
             <div class="category-header">
-                <h2 class="category-title">Ипотека</h2>
-                <a href="{% url 'main:articles' %}?category=mortgage" class="show-all-link">Показать все</a>
+                <h2 class="category-title">{{ category_data.category.name|default:"Категория" }}</h2>
+                <a href="{% url 'main:articles' %}?category={{ category_data.category.slug }}" class="show-all-link">Показать все</a>
             </div>
             
             <div class="articles-grid">
-                {% for article in mortgage_articles %}
+                {% for article in category_data.articles %}
                 <div class="article-card">
                     <div class="article-image">
-                        {% if article.image %}
-                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% if article.main_image %}
+                            <img src="{{ article.main_image }}" alt="{{ article.title }}">
                         {% else %}
                             <img src="/media/gallery/placeholders.png" alt="{{ article.title }}">
                         {% endif %}
@@ -38,7 +38,6 @@
                     
                     <div class="article-content">
                         <div class="article-meta">
-                            <span class="article-category">{{ article.get_category_display }}</span>
                             <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
                         </div>
                         
@@ -51,9 +50,9 @@
                         <div class="article-footer">
                             <span class="article-views">{{ article.views_count }} просмотров</span>
                             
-                            {% if article.tags.all %}
+                            {% if article.tags %}
                             <div class="article-tags">
-                                {% for tag in article.tags.all|slice:":2" %}
+                                {% for tag in article.tags|slice:":2" %}
                                 <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
                                 {% endfor %}
                             </div>
@@ -63,224 +62,12 @@
                 </div>
                 {% empty %}
                 <div class="no-articles">
-                    <p>Статьи по ипотеке пока не добавлены</p>
+                    <p>Статьи в категории "{{ category_data.category.name }}" пока не добавлены</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
-        {% endif %}
-
-        <!-- Секция "Законы" -->
-        {% if show_laws_section %}
-        <div class="articles-category-section">
-            <div class="category-header">
-                <h2 class="category-title">Законы</h2>
-                <a href="{% url 'main:articles' %}?category=laws" class="show-all-link">Показать все</a>
-            </div>
-            
-            <div class="articles-grid">
-                {% for article in laws_articles %}
-                <div class="article-card">
-                    <div class="article-image">
-                        {% if article.image %}
-                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
-                        {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ article.title }}">
-                        {% endif %}
-                    </div>
-                    
-                    <div class="article-content">
-                        <div class="article-meta">
-                            <span class="article-category">{{ article.get_category_display }}</span>
-                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
-                        </div>
-                        
-                        <h3 class="article-title">
-                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
-                        </h3>
-                        
-                        <div class="article-excerpt">{{ article.excerpt|safe|truncatewords_html:15 }}</div>
-                        
-                        <div class="article-footer">
-                            <span class="article-views">{{ article.views_count }} просмотров</span>
-                            
-                            {% if article.tags.all %}
-                            <div class="article-tags">
-                                {% for tag in article.tags.all|slice:":2" %}
-                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="no-articles">
-                    <p>Статьи по законам пока не добавлены</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Секция "Инструкции" -->
-        {% if show_instructions_section %}
-        <div class="articles-category-section">
-            <div class="category-header">
-                <h2 class="category-title">Инструкции</h2>
-                <a href="{% url 'main:articles' %}?category=instructions" class="show-all-link">Показать все</a>
-            </div>
-            
-            <div class="articles-grid">
-                {% for article in instructions_articles %}
-                <div class="article-card">
-                    <div class="article-image">
-                        {% if article.image %}
-                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
-                        {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ article.title }}">
-                        {% endif %}
-                    </div>
-                    
-                    <div class="article-content">
-                        <div class="article-meta">
-                            <span class="article-category">{{ article.get_category_display }}</span>
-                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
-                        </div>
-                        
-                        <h3 class="article-title">
-                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
-                        </h3>
-                        
-                        <div class="article-excerpt">{{ article.excerpt|safe|truncatewords_html:15 }}</div>
-                        
-                        <div class="article-footer">
-                            <span class="article-views">{{ article.views_count }} просмотров</span>
-                            
-                            {% if article.tags.all %}
-                            <div class="article-tags">
-                                {% for tag in article.tags.all|slice:":2" %}
-                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="no-articles">
-                    <p>Инструкции пока не добавлены</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Секция "Рынок недвижимости" -->
-        {% if show_market_section %}
-        <div class="articles-category-section">
-            <div class="category-header">
-                <h2 class="category-title">Рынок недвижимости</h2>
-                <a href="{% url 'main:articles' %}?category=market" class="show-all-link">Показать все</a>
-            </div>
-            
-            <div class="articles-grid">
-                {% for article in market_articles %}
-                <div class="article-card">
-                    <div class="article-image">
-                        {% if article.image %}
-                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
-                        {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ article.title }}">
-                        {% endif %}
-                    </div>
-                    
-                    <div class="article-content">
-                        <div class="article-meta">
-                            <span class="article-category">{{ article.get_category_display }}</span>
-                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
-                        </div>
-                        
-                        <h3 class="article-title">
-                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
-                        </h3>
-                        
-                        <div class="article-excerpt">{{ article.excerpt|safe|truncatewords_html:15 }}</div>
-                        
-                        <div class="article-footer">
-                            <span class="article-views">{{ article.views_count }} просмотров</span>
-                            
-                            {% if article.tags.all %}
-                            <div class="article-tags">
-                                {% for tag in article.tags.all|slice:":2" %}
-                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="no-articles">
-                    <p>Статьи о рынке недвижимости пока не добавлены</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Секция "Советы" -->
-        {% if show_tips_section %}
-        <div class="articles-category-section">
-            <div class="category-header">
-                <h2 class="category-title">Советы</h2>
-                <a href="{% url 'main:articles' %}?category=tips" class="show-all-link">Показать все</a>
-            </div>
-            
-            <div class="articles-grid">
-                {% for article in tips_articles %}
-                <div class="article-card">
-                    <div class="article-image">
-                        {% if article.image %}
-                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
-                        {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ article.title }}">
-                        {% endif %}
-                    </div>
-                    
-                    <div class="article-content">
-                        <div class="article-meta">
-                            <span class="article-category">{{ article.get_category_display }}</span>
-                            <span class="article-date">{{ article.published_date|date:"j E Y" }}</span>
-                        </div>
-                        
-                        <h3 class="article-title">
-                            <a href="{% url 'main:article_detail' article.slug %}">{{ article.title }}</a>
-                        </h3>
-                        
-                        <div class="article-excerpt">{{ article.excerpt|safe|truncatewords_html:15 }}</div>
-                        
-                        <div class="article-footer">
-                            <span class="article-views">{{ article.views_count }} просмотров</span>
-                            
-                            {% if article.tags.all %}
-                            <div class="article-tags">
-                                {% for tag in article.tags.all|slice:":2" %}
-                                <a href="{% url 'main:tag_detail' tag.slug %}" class="tag-link">{{ tag.name }}</a>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="no-articles">
-                    <p>Советы пока не добавлены</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
+        {% endfor %}
     </section>
     
     <!-- Блок "Похожие статьи" -->
@@ -291,15 +78,15 @@
                 {% for article in featured_articles %}
                 <a href="{% url 'main:article_detail' article.slug %}" class="similar-article-card">
                     <div class="similar-article-image">
-                        {% if article.image %}
-                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% if article.main_image %}
+                            <img src="{{ article.main_image }}" alt="{{ article.title }}">
                         {% else %}
                             <img src="/media/gallery/placeholders.png" alt="{{ article.title }}">
                         {% endif %}
                     </div>
                     <div class="similar-article-content">
                         <div class="similar-article-categories">
-                            {% for tag in article.tags.all|slice:":2" %}
+                            {% for tag in article.tags|slice:":2" %}
                                 <span class="similar-article-category">{{ tag.name }}</span>
                             {% endfor %}
                         </div>
@@ -314,59 +101,17 @@
                         {% endif %}
                         <div class="similar-article-meta">
                             <span class="similar-article-date">{{ article.published_date|date:"j E Y" }}</span>
-                            <div class="similar-article-stats">
-                                <span class="similar-article-views">{{ article.views_count }}</span>
-                                <span class="similar-article-likes">{{ article.likes_count }}</span>
-                            </div>
+                            <span class="similar-article-views">{{ article.views_count }} просмотров</span>
                         </div>
                     </div>
                 </a>
+                {% empty %}
+                <div class="no-articles">
+                    <p>Популярные статьи не найдены</p>
+                </div>
                 {% endfor %}
             </div>
         </div>
     </section>
-    
 </div>
-
-<script>
-function shareArticle(title, url) {
-    if (navigator.share) {
-        navigator.share({
-            title: title,
-            url: url
-        });
-    } else {
-        // Fallback для браузеров без поддержки Web Share API
-        const textArea = document.createElement('textarea');
-        textArea.value = url;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
-        alert('Ссылка скопирована в буфер обмена!');
-    }
-}
-
-// Анимация появления карточек
-document.addEventListener('DOMContentLoaded', function() {
-    const articleCards = document.querySelectorAll('.article-card');
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    });
-    
-    articleCards.forEach(card => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(card);
-    });
-});
-</script>
-{% endblock %} 
+{% endblock %}

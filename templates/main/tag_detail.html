@@ -33,8 +33,8 @@
                 {% for article in articles %}
                 <article class="article-card">
                     <div class="article-image">
-                        {% if article.image %}
-                            <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                        {% if article.main_image %}
+                            <img src="{{ article.main_image }}" alt="{{ article.title }}">
                         {% else %}
                             <img src="/media/gallery/placeholders.png" alt="{{ article.title }}">
                         {% endif %}

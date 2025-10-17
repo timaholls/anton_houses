@@ -21,7 +21,7 @@
     <style>
     .hero-section{
         position:relative;overflow:hidden;border-radius:16px;min-height:360px;margin:12px 0 22px 0;
-        background: linear-gradient(0deg, rgba(37,37,38,.35), rgba(37,37,38,.35)), url('{{ PLACEHOLDER_IMAGE_URL }}') center/cover no-repeat;
+        background: linear-gradient(0deg, rgba(37,37,38,.35), rgba(37,37,38,.35)), url('/media/uploads/back_home.jpg'), url('{{ PLACEHOLDER_IMAGE_URL }}') center/cover no-repeat;
         display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     }
     .hero-title{font-size:44px;line-height:1.15;margin:0 12px 8px 12px;color:#fff;font-weight:800;letter-spacing:.4px}
@@ -463,15 +463,14 @@
     <section class="catalog-section">
         <div class="catalog-header">
             <h2 class="section-title">Полезные статьи</h2>
-            <p class="section-subtitle">Отобранные материалы</p>
         </div>
 
         <div class="home-grid">
             {% for a in home_articles %}
-            <a class="home-property-card" href="{{ a.get_absolute_url }}">
+            <a class="home-property-card" href="{% if a.slug %}{% url 'main:article_detail' a.slug %}{% else %}#{% endif %}" onclick="console.log('Article link clicked:', '{{ a.slug }}'); return true;">
                 <div class="home-card-image">
-                    {% if a.get_main_image and a.get_main_image.image %}
-                        <img src="{{ a.get_main_image.image.url }}" alt="{{ a.title }}">
+                    {% if a.main_image %}
+                        <img src="{{ a.main_image }}" alt="{{ a.title }}">
                     {% else %}
                         <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ a.title }}">
                     {% endif %}
@@ -480,8 +479,8 @@
                     <div class="home-card-header">
                         <h3 class="home-card-title">{{ a.title }}</h3>
                         <div class="home-card-location">
-                            <span class="home-location-text">{{ a.get_category_display }}</span>
-                            <span class="home-commute-time">{{ a.published_date }}</span>
+                            <span class="home-location-text">{{ a.category|default:"Статья" }}</span>
+                            <span class="home-commute-time">{{ a.published_date|date:"d.m.Y" }}</span>
                         </div>
                     </div>
                     <div class="home-card-price">

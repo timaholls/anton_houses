@@ -62,6 +62,22 @@
                 </div>
             </div>
         </div>
+
+        <!-- Отзывы сотрудников -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-comments"></i> Отзывы сотрудников</h2>
+                <button class="btn btn-secondary" onclick="loadEmployeeReviews()">
+                    <i class="fas fa-refresh"></i> Обновить
+                </button>
+            </div>
+            <div id="reviews-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="modal-container"></div>

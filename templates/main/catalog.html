@@ -476,12 +476,31 @@ window.renderItems = function(data){
       grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
     } else {
       grid.innerHTML = data.items.map(item => {
+        // Отладочная информация (можно убрать в продакшене)
+        console.log('Rendering item:', item.name, 'photos:', item.photos, 'image_url:', item.image_url);
+        
         // Формируем массив фото
         let photos = [];
         if (item.photos && item.photos.length > 0) {
-          photos = item.photos.map(photo => `/media/${photo}`);
+          photos = item.photos.map(photo => {
+            // Если фото уже содержит полный путь, используем как есть
+            if (photo.startsWith('/media/') || photo.startsWith('http')) {
+              return photo;
+            }
+            // Иначе добавляем префикс /media/
+            return `/media/${photo}`;
+          });
         } else {
-          photos = [item.image_url || '/media/gallery/placeholders.png'];
+          // Проверяем image_url и формируем правильный путь
+          let fallbackImage = '/media/gallery/placeholders.png';
+          if (item.image_url) {
+            if (item.image_url.startsWith('/media/') || item.image_url.startsWith('http')) {
+              fallbackImage = item.image_url;
+            } else {
+              fallbackImage = `/media/${item.image_url}`;
+            }
+          }
+          photos = [fallbackImage];
         }
         
         // Генерируем HTML для галереи
