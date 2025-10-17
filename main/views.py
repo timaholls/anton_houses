@@ -14,6 +14,7 @@ from datetime import datetime
 import re
 import json
 import requests
+from main.s3_service import s3_client, PLACEHOLDER_IMAGE_URL
 
 
 def get_mongo_user(email: str):
@@ -92,7 +93,7 @@ def get_video_thumbnail(video_url):
             except:
                 pass
             # Fallback на placeholder если API не работает
-            return f'/media/gallery/placeholders.png'
+            return fPLACEHOLDER_IMAGE_URL
     
     # Если не удалось определить тип видео
     return None
@@ -176,7 +177,7 @@ def home(request):
                         photos = (complex_doc.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
                 main = _MainImg()
                 img = _Img()
-                img.url = ('/media/' + photos[0]) if photos else '/media/gallery/placeholders.png'
+                img.url = photos[0] if photos else PLACEHOLDER_IMAGE_URL
                 main.image = img
                 offer.get_main_image = main
                 items.append(offer)
@@ -371,10 +372,10 @@ def catalog_api(request):
                 'price_range': price_range,
                 'price_display': price_range,
                 'photos': photos,  # Все фото для галереи
-                'image_url': f"/media/{photos[0]}" if photos else None,
-                'image_2_url': f"/media/{photos[1]}" if len(photos) > 1 else None,
-                'image_3_url': f"/media/{photos[2]}" if len(photos) > 2 else None,
-                'image_4_url': f"/media/{photos[3]}" if len(photos) > 3 else None,
+                'image_url': photos[0] if photos else None,
+                'image_2_url': photos[1] if len(photos) > 1 else None,
+                'image_3_url': photos[2] if len(photos) > 2 else None,
+                'image_4_url': photos[3] if len(photos) > 3 else None,
                 'lat': latitude,
                 'lng': longitude,
                 'latitude': latitude,
@@ -1341,9 +1342,9 @@ def detail(request, complex_id):
                     img = _Img()
                     # Берем первое фото из ЖК для акции
                     if photos:
-                        img.url = f'/media/{photos[0]}'
+                        img.url = photos[0]
                     else:
-                        img.url = '/media/gallery/placeholders.png'
+                        img.url = PLACEHOLDER_IMAGE_URL
                     main.image = img
                     offer.get_main_image = main
                     
@@ -1505,12 +1506,12 @@ def secondary_detail_mongo(request, complex_id: str):
                 if self.photos:
                     class ImageAdapter:
                         def __init__(self, photo_path):
-                            self.image = type('obj', (object,), {'url': f'/media/{photo_path}'})()
+                            self.image = type('obj', (object,), {'url': photo_path})()
                     return ImageAdapter(self.photos[0])
                 return None
             
             def get_all_images(self):
-                return [f'/media/{photo}' for photo in self.photos]
+                return self.photos
             
             def get_catalog_images(self):
                 # Возвращаем адаптеры для всех фото для совместимости с шаблоном
@@ -1519,7 +1520,7 @@ def secondary_detail_mongo(request, complex_id: str):
                 
                 class CatalogImageAdapter:
                     def __init__(self, photo_path):
-                        self.image = type('obj', (object,), {'url': f'/media/{photo_path}'})()
+                        self.image = type('obj', (object,), {'url': photo_path})()
                 
                 return [CatalogImageAdapter(photo) for photo in self.photos]
             
@@ -1629,7 +1630,7 @@ def secondary_api_list(request):
             image_url = None
             if doc.get('photos'):
                 photo_path = doc['photos'][0]
-                image_url = f"/media/{photo_path}"
+                image_url = photo_path
 
             # Формируем цену
             price_range = None
@@ -2080,7 +2081,7 @@ def employee_detail(request, employee_id):
             }
             photos = (d.get('development', {}) or {}).get('photos') or d.get('photos') or []
             if isinstance(photos, list) and photos:
-                item['photo'] = f"/media/{photos[0]}"
+                item['photo'] = photos[0]
             residential_complexes.append(item)
     except Exception:
         residential_complexes = []
@@ -2093,7 +2094,7 @@ def employee_detail(request, employee_id):
                 'name': d.get('name',''),
                 'city': d.get('city',''),
                 'district': d.get('district',''),
-                'photo': f"/media/{(d.get('photos') or [''])[0]}" if (d.get('photos') or []) else ''
+                'photo': (d.get('photos') or [''])[0] if (d.get('photos') or []) else ''
             })
     except Exception:
         secondary_properties = []
@@ -2196,7 +2197,7 @@ def all_offers(request):
                         photos = comp.get('development', {}).get('photos', []) or []
                     else:
                         photos = (comp.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
-                m = _MainImg(); i = _Img(); i.url = ('/media/' + photos[0]) if photos else '/media/gallery/placeholders.png'; m.image = i
+                m = _MainImg(); i = _Img(); i.url = photos[0] if photos else PLACEHOLDER_IMAGE_URL; m.image = i
                 offer.get_main_image = m
                 adapters.append(offer)
             return adapters
@@ -2242,7 +2243,7 @@ def offer_detail(request, offer_id):
                         photos = comp.get('development', {}).get('photos', []) or []
                     else:
                         photos = (comp.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
-                m=_MainImg(); i=_Img(); i.url = ('/media/' + photos[0]) if photos else '/media/gallery/placeholders.png'; m.image=i
+                m=_MainImg(); i=_Img(); i.url = ('/media/' + photos[0]) if photos else PLACEHOLDER_IMAGE_URL; m.image=i
                 offer.get_main_image = m
                 return offer
             offer = adapt(p)
@@ -3477,16 +3478,14 @@ def delete_photo(request):
                 'error': 'Не указан путь к фото или тип'
             }, status=400)
         
-        # Удаляем файл с диска
-        # Добавляем папку future_complexes к пути
-        full_photo_path = os.path.join('future_complexes', photo_path)
-        full_path = os.path.join(settings.MEDIA_ROOT, full_photo_path)
-        if os.path.exists(full_path):
-            try:
-                os.remove(full_path)
-                print(f"✅ Файл удален: {full_path}")
-            except Exception as e:
-                print(f"⚠️ Ошибка удаления файла {full_path}: {e}")
+        # Удаляем файл из S3
+        try:
+            s3_key = s3_client.extract_key_from_url(photo_path)
+            if s3_key:
+                s3_client.delete_object(s3_key)
+                print(f"✅ Файл удален из S3: {s3_key}")
+        except Exception as e:
+            print(f"⚠️ Ошибка удаления файла из S3: {e}")
         
         # Удаляем путь из базы данных
         db = get_mongo_connection()
@@ -3998,19 +3997,19 @@ def unified_delete(request, unified_id):
         gallery_files = gallery.find({'content_type': 'residential_complex', 'object_id': str(unified_id)})
         for gallery_file in gallery_files:
             if gallery_file.get('image'):
-                image_path = os.path.join(settings.MEDIA_ROOT, gallery_file['image'].name)
-                if os.path.exists(image_path):
-                    try:
-                        os.remove(image_path)
-                    except OSError:
-                        pass  # Игнорируем ошибки удаления файлов
+                try:
+                    s3_key = s3_client.extract_key_from_url(gallery_file['image'].name)
+                    if s3_key:
+                        s3_client.delete_object(s3_key)
+                except:
+                    pass  # Игнорируем ошибки удаления файлов
             if gallery_file.get('video_file'):
-                video_path = os.path.join(settings.MEDIA_ROOT, gallery_file['video_file'].name)
-                if os.path.exists(video_path):
-                    try:
-                        os.remove(video_path)
-                    except OSError:
-                        pass  # Игнорируем ошибки удаления файлов
+                try:
+                    s3_key = s3_client.extract_key_from_url(gallery_file['video_file'].name)
+                    if s3_key:
+                        s3_client.delete_object(s3_key)
+                except:
+                    pass  # Игнорируем ошибки удаления файлов
         
         # Удаляем записи из галереи
         gallery.delete_many({'content_type': 'residential_complex', 'object_id': str(unified_id)})
@@ -4083,21 +4082,18 @@ def secondary_create(request):
         finishing = request.POST.get('finishing') or ''
         description = request.POST.get('description') or ''
 
-        # загрузка файлов
+        # загрузка файлов в S3
         files = request.FILES.getlist('photos')
         saved_paths = []
-        base_dir = os.path.join(settings.MEDIA_ROOT, 'secondary_complexes', safe_slug)
-        os.makedirs(base_dir, exist_ok=True)
         for f in files:
             filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
             ext = os.path.splitext(f.name)[1].lower()
             final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}{ext}"
-            abs_path = os.path.join(base_dir, final_name)
-            with open(abs_path, 'wb+') as dest:
-                for chunk in f.chunks():
-                    dest.write(chunk)
-            rel_path = os.path.join('secondary_complexes', safe_slug, final_name).replace('\\','/')
-            saved_paths.append(rel_path)
+            s3_key = f"secondary_complexes/{safe_slug}/{final_name}"
+            # Определяем тип контента
+            content_type = f.content_type if hasattr(f, 'content_type') else 'image/jpeg'
+            s3_url = s3_client.upload_fileobj(f, s3_key, content_type)
+            saved_paths.append(s3_url)
 
         db = get_mongo_connection()
         col = db['secondary_properties']
@@ -4256,25 +4252,16 @@ def secondary_api_delete(request, secondary_id):
             return JsonResponse({'success': False, 'error': 'Объект не найден'}, status=404)
         
         # Удаляем файлы фотографий
+        # Удаляем фотографии из S3
         photos = doc.get('photos', [])
-        for photo_path in photos:
-            if photo_path:
-                full_path = os.path.join(settings.MEDIA_ROOT, photo_path)
-                if os.path.exists(full_path):
-                    try:
-                        os.remove(full_path)
-                    except OSError:
-                        pass  # Игнорируем ошибки удаления файлов
-        
-        # Удаляем папку объекта если она пустая
-        try:
-            # Используем slug или генерируем из названия
-            object_slug = doc.get('slug') or slugify(doc.get('name', ''))
-            object_dir = os.path.join(settings.MEDIA_ROOT, 'secondary_complexes', object_slug)
-            if os.path.exists(object_dir) and not os.listdir(object_dir):
-                os.rmdir(object_dir)
-        except OSError:
-            pass  # Игнорируем ошибки удаления папки
+        for photo_url in photos:
+            if photo_url:
+                try:
+                    s3_key = s3_client.extract_key_from_url(photo_url)
+                    if s3_key:
+                        s3_client.delete_object(s3_key)
+                except:
+                    pass  # Игнорируем ошибки удаления файлов
         
         # Удаляем документ из базы
         result = col.delete_one({'_id': ObjectId(secondary_id)})
@@ -4725,32 +4712,25 @@ def articles_api_create(request):
         if col.find_one({'slug': slug}):
             return JsonResponse({'success': False, 'error': 'Статья с таким slug уже существует'}, status=400)
         
-        # Создаем папку для статьи
-        article_folder = os.path.join(settings.MEDIA_ROOT, 'articles', slug)
-        os.makedirs(article_folder, exist_ok=True)
-        
-        # Загрузка главного изображения
+        # Загрузка главного изображения в S3
         main_image_path = ''
         if 'main_image' in request.FILES:
             main_image = request.FILES['main_image']
             main_image_filename = f"main_{main_image.name}"
-            main_image_full_path = os.path.join(article_folder, main_image_filename)
-            with open(main_image_full_path, 'wb+') as destination:
-                for chunk in main_image.chunks():
-                    destination.write(chunk)
-            main_image_path = f'articles/{slug}/{main_image_filename}'
+            s3_key = f'articles/{slug}/{main_image_filename}'
+            content_type = main_image.content_type if hasattr(main_image, 'content_type') else 'image/jpeg'
+            main_image_path = s3_client.upload_fileobj(main_image, s3_key, content_type)
         
-        # Загрузка дополнительных изображений
+        # Загрузка дополнительных изображений в S3
         images_paths = []
         if 'images' in request.FILES:
             images = request.FILES.getlist('images')
             for idx, img in enumerate(images):
                 img_filename = f"{idx+1}_{img.name}"
-                img_full_path = os.path.join(article_folder, img_filename)
-                with open(img_full_path, 'wb+') as destination:
-                    for chunk in img.chunks():
-                        destination.write(chunk)
-                images_paths.append(f'articles/{slug}/{img_filename}')
+                s3_key = f'articles/{slug}/{img_filename}'
+                content_type = img.content_type if hasattr(img, 'content_type') else 'image/jpeg'
+                img_url = s3_client.upload_fileobj(img, s3_key, content_type)
+                images_paths.append(img_url)
         
         # Обработка тегов (множественный выбор)
         tags = request.POST.getlist('tags')
@@ -4830,12 +4810,10 @@ def articles_api_delete(request, article_id):
         if not article:
             return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
         
-        # Удаляем папку с изображениями
+        # Удаляем изображения из S3
         if article.get('slug'):
-            article_folder = os.path.join(settings.MEDIA_ROOT, 'articles', article['slug'])
-            if os.path.exists(article_folder):
-                import shutil
-                shutil.rmtree(article_folder)
+            s3_prefix = f"articles/{article['slug']}/"
+            s3_client.delete_prefix(s3_prefix)
         
         # Удаляем запись из БД
         col.delete_one({'_id': ObjectId(article_id)})

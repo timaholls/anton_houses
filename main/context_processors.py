@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 from django.conf import settings
+from main.s3_service import PLACEHOLDER_IMAGE_URL
 
 
 def get_mongo_connection():
@@ -21,3 +22,10 @@ def head_office(request):
         return {'head_office': head_office}
     except Exception as e:
         return {'head_office': None}
+
+
+def s3_context(request):
+    """Контекст-процессор для добавления констант S3 во все шаблоны"""
+    return {
+        'PLACEHOLDER_IMAGE_URL': PLACEHOLDER_IMAGE_URL,
+    }

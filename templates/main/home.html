@@ -21,7 +21,7 @@
     <style>
     .hero-section{
         position:relative;overflow:hidden;border-radius:16px;min-height:360px;margin:12px 0 22px 0;
-        background: linear-gradient(0deg, rgba(37,37,38,.35), rgba(37,37,38,.35)), url('/media/uploads/back_home.jpg') center/cover no-repeat;
+        background: linear-gradient(0deg, rgba(37,37,38,.35), rgba(37,37,38,.35)), url('{{ PLACEHOLDER_IMAGE_URL }}') center/cover no-repeat;
         display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     }
     .hero-title{font-size:44px;line-height:1.15;margin:0 12px 8px 12px;color:#fff;font-weight:800;letter-spacing:.4px}
@@ -67,7 +67,7 @@
                                 {% if offers.0.get_main_image and offers.0.get_main_image.image %}
                                     <img src="{{ offers.0.get_main_image.image.url }}" alt="{{ offers.0.title }}" loading="lazy" decoding="async">
                                 {% else %}
-                                    <img src="/media/gallery/placeholders.png" alt="{{ offers.0.title }}" loading="lazy" decoding="async">
+                                    <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ offers.0.title }}" loading="lazy" decoding="async">
                                 {% endif %}
                             </div>
                             <div class="offer-content">
@@ -95,7 +95,7 @@
                                 {% if offers.1.get_main_image and offers.1.get_main_image.image %}
                                     <img src="{{ offers.1.get_main_image.image.url }}" alt="{{ offers.1.title }}" loading="lazy" decoding="async">
                                 {% else %}
-                                    <img src="/media/gallery/placeholders.png" alt="{{ offers.1.title }}" loading="lazy" decoding="async">
+                                    <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ offers.1.title }}" loading="lazy" decoding="async">
                                 {% endif %}
                             </div>
                             <div class="offer-content">
@@ -123,7 +123,7 @@
                                 {% if offers.2.get_main_image and offers.2.get_main_image.image %}
                                     <img src="{{ offers.2.get_main_image.image.url }}" alt="{{ offers.2.title }}" loading="lazy" decoding="async">
                                 {% else %}
-                                    <img src="/media/gallery/placeholders.png" alt="{{ offers.2.title }}" loading="lazy" decoding="async">
+                                    <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ offers.2.title }}" loading="lazy" decoding="async">
                                 {% endif %}
                             </div>
                             <div class="offer-content">
@@ -414,7 +414,7 @@
                 <div class="home-card-image-gallery" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
                     {% if complex.development.photos %}
                         {% for photo in complex.development.photos %}
-                            <img class="gallery-image" src="/media/{{ photo }}" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw" style="{% if not forloop.first %}display: none;{% endif %}">
+                            <img class="gallery-image" src="{{ photo }}" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw" style="{% if not forloop.first %}display: none;{% endif %}">
                         {% endfor %}
                         {% if complex.development.photos|length > 1 %}
                             <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
@@ -430,7 +430,7 @@
                             </div>
                         {% endif %}
                     {% else %}
-                        <img src="/media/gallery/placeholders.png" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async">
+                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async">
                     {% endif %}
                 </div>
                 
@@ -473,7 +473,7 @@
                     {% if a.get_main_image and a.get_main_image.image %}
                         <img src="{{ a.get_main_image.image.url }}" alt="{{ a.title }}">
                     {% else %}
-                        <img src="/media/gallery/placeholders.png" alt="{{ a.title }}">
+                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ a.title }}">
                     {% endif %}
                 </div>
                 <div class="home-card-content">
@@ -513,7 +513,7 @@
                     <div class="slider-container">
                         {% for gallery_item in company_gallery %}
                         <div class="slide {% if forloop.first %}active{% endif %}" data-slide="{{ forloop.counter0 }}">
-                            <img src="/media/{{ gallery_item.image }}" alt="{{ gallery_item.title }}">
+                            <img src="{{ gallery_item.image }}" alt="{{ gallery_item.title }}">
                             {% if gallery_item.description %}
                             <div class="slide-caption">
                                 <h4>{{ gallery_item.title }}</h4>
@@ -544,9 +544,9 @@
                 {% else %}
                 <!-- Фото основателя как fallback -->
                 {% if company_info.main_image %}
-                <img src="/media/{{ company_info.main_image }}" alt="{{ company_info.founder_name }}">
+                <img src="{{ company_info.main_image }}" alt="{{ company_info.founder_name }}">
                 {% else %}
-                <img src="/media/gallery/placeholders.png" alt="{{ company_info.founder_name }}">
+                <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ company_info.founder_name }}">
                 {% endif %}
                 {% endif %}
             </div>

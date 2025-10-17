@@ -25,7 +25,7 @@
                 {% elif office.photo %}
                     <img src="{{ office.photo.url }}" alt="{{ office.name }}">
                 {% else %}
-                    <img src="/media/gallery/placeholders.png" alt="{{ office.name }}">
+                    <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ office.name }}">
                 {% endif %}
             </div>
             <div class="card-content">
@@ -74,7 +74,7 @@
                 {% for employee in employees %}
                 <div class="property-card employee-card">
                     <div class="card-image" style="height:200px;">
-                        <img src="{% if employee.main_image %}/media/{{ employee.main_image }}{% else %}/media/gallery/placeholders.png{% endif %}" alt="{{ employee.full_name }}">
+                        <img src="{% if employee.main_image %}{{ employee.main_image }}{% else %}/media/gallery/placeholders.png{% endif %}" alt="{{ employee.full_name }}">
                     </div>
                     <div class="card-content">
                         <div class="card-header">

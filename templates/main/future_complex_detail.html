@@ -33,13 +33,13 @@
         {% if complex.gallery_photos %}
         <div class="complex-gallery">
             <div class="gallery-main">
-                <img src="/media/future_complexes/{{ complex.gallery_photos.0 }}" alt="{{ complex.name }}" id="main-image" loading="lazy" onclick="openImageFullSize(this.src)" style="cursor: pointer;">
+                <img src="{{ complex.gallery_photos.0 }}" alt="{{ complex.name }}" id="main-image" loading="lazy" onclick="openImageFullSize(this.src)" style="cursor: pointer;">
             </div>
             {% if complex.gallery_photos|length > 1 %}
             <div class="gallery-thumbnails">
                 {% for photo in complex.gallery_photos %}
-                <div class="thumbnail-item" onclick="changeMainImage('/media/future_complexes/{{ photo }}')">
-                    <img src="/media/future_complexes/{{ photo }}" alt="{{ complex.name }}" loading="lazy">
+                <div class="thumbnail-item" onclick="changeMainImage('{{ photo }}')">
+                    <img src="{{ photo }}" alt="{{ complex.name }}" loading="lazy">
                 </div>
                 {% endfor %}
             </div>
@@ -186,7 +186,7 @@
                     {% if agent %}
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
                             {% if agent.photo %}
-                                <img src="/media/{{ agent.photo }}" alt="{{ agent.full_name }}" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:1px solid #e9ecef;">
+                                <img src="{{ agent.photo }}" alt="{{ agent.full_name }}" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:1px solid #e9ecef;">
                             {% else %}
                                 <div style="width:56px; height:56px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#64748b; border:1px solid #e9ecef;">
                                     <i class="fas fa-user" style="font-size:20px;"></i>
@@ -366,7 +366,7 @@
                             <div class="stage-photos">
                                 {% for photo in stage.photos %}
                                 <div class="stage-photo-item">
-                                    <img src="/media/future_complexes/{{ photo }}" alt="Этап {{ stage.stage_number }}" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                                    <img src="{{ photo }}" alt="Этап {{ stage.stage_number }}" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
                                 </div>
                                 {% endfor %}
                             </div>
@@ -383,7 +383,7 @@
                         <div class="construction-photos-grid">
                             {% for photo in complex.construction_progress_data.photos %}
                             <div class="construction-photo-item">
-                                <img src="/media/future_complexes/{{ photo }}" alt="Ход строительства" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                                <img src="{{ photo }}" alt="Ход строительства" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
                             </div>
                             {% endfor %}
                         </div>
@@ -406,7 +406,7 @@
                             <div class="stage-photos">
                                 {% for photo in stage.photos %}
                                 <div class="stage-photo-item">
-                                    <img src="/media/future_complexes/{{ photo }}" alt="Этап {{ stage.stage_number }}" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                                    <img src="{{ photo }}" alt="Этап {{ stage.stage_number }}" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
                                 </div>
                                 {% endfor %}
                             </div>
@@ -423,7 +423,7 @@
                         <div class="construction-photos-grid">
                             {% for photo in complex.object_details.construction_progress.photos %}
                             <div class="construction-photo-item">
-                                <img src="/media/future_complexes/{{ photo }}" alt="Ход строительства" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                                <img src="{{ photo }}" alt="Ход строительства" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
                             </div>
                             {% endfor %}
                         </div>
@@ -451,9 +451,9 @@
                 <div class="other-project-card">
                     <div class="other-project-media">
                         {% if other_complex.gallery_photos and other_complex.gallery_photos.0 %}
-                            <img src="/media/future_complexes/{{ other_complex.gallery_photos.0 }}" alt="{{ other_complex.name }}" loading="lazy">
+                            <img src="{{ other_complex.gallery_photos.0 }}" alt="{{ other_complex.name }}" loading="lazy">
                         {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ other_complex.name }}" loading="lazy">
+                            <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ other_complex.name }}" loading="lazy">
                         {% endif %}
                         <div class="other-project-badge">
                             <i class="fas fa-calendar-alt"></i>

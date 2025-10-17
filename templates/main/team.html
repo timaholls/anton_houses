@@ -22,7 +22,7 @@
         {% for employee in employees %}
         <div class="property-card employee-card">
             <div class="card-image" style="height:200px;">
-                <img src="{% if employee.main_image %}/media/{{ employee.main_image }}{% else %}/media/gallery/placeholders.png{% endif %}" alt="{{ employee.full_name }}">
+                <img src="{% if employee.main_image %}{{ employee.main_image }}{% else %}{{ PLACEHOLDER_IMAGE_URL }}{% endif %}" alt="{{ employee.full_name }}">
             </div>
             <div class="card-content">
                 <div class="card-header">

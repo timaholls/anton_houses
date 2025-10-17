@@ -3114,7 +3114,7 @@
                                             ${domrfData.gallery_photos && domrfData.gallery_photos.length > 0 ? 
                                                 domrfData.gallery_photos.map((photo, index) => `
                                                     <div class="photo-tile" data-photo-path="${photo}">
-                                                        <img src="/media/future_complexes/${photo}" alt="Фото ЖК" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                                                        <img src="${photo}" alt="Фото ЖК" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
                                                         <button class="photo-delete-btn" onclick="deleteGalleryPhoto('${photo}')" title="Удалить фото">
                                                             <i class="fas fa-times"></i>
                                                         </button>
@@ -3134,7 +3134,7 @@
                                             ${domrfData.construction_photos && domrfData.construction_photos.length > 0 ? 
                                                 domrfData.construction_photos.map((photo, index) => `
                                                     <div class="photo-tile" data-photo-path="${photo}">
-                                                        <img src="/media/future_complexes/${photo}" alt="Ход строительства" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                                                        <img src="${photo}" alt="Ход строительства" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
                                                         <button class="photo-delete-btn" onclick="deleteConstructionPhoto('${photo}')" title="Удалить фото">
                                                             <i class="fas fa-times"></i>
                                                         </button>

@@ -101,12 +101,12 @@
 		<div class="hero-image" id="heroGallery">
 			{% if is_mongodb and complex.photos %}
 				{% for photo in complex.photos %}
-				<img src="/media/{{ photo }}" alt="{{ complex.name }}" class="hero-main-image" style="{% if not forloop.first %}display:none;{% endif %}" data-photo-index="{{ forloop.counter0 }}">
+				<img src="{{ photo }}" alt="{{ complex.name }}" class="hero-main-image" style="{% if not forloop.first %}display:none;{% endif %}" data-photo-index="{{ forloop.counter0 }}">
 				{% endfor %}
 			{% elif complex.get_main_image and complex.get_main_image.image %}
 				<img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}" class="hero-main-image">
 			{% else %}
-				<img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" class="hero-main-image">
+				<img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ complex.name }}" class="hero-main-image">
 			{% endif %}
 			
 			<!-- Информационная панель поверх изображения -->
@@ -423,7 +423,7 @@
                     <div class="compact-card-image-gallery" onclick="openAptGalleryFromCard(this)">
                         {% if apt.layout_photos %}
                             {% for photo in apt.layout_photos %}
-                            <img src="/media/{{ photo }}" alt="{{ apt.title }}" class="gallery-image" style="display: {% if forloop.first %}block{% else %}none{% endif %};">
+                            <img src="{{ photo }}" alt="{{ apt.title }}" class="gallery-image" style="display: {% if forloop.first %}block{% else %}none{% endif %};">
                             {% endfor %}
                             
                             {% if apt.layout_photos|length > 1 %}
@@ -519,8 +519,8 @@
 		<div class="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
 			{% if is_secondary and complex.photos %}
 				{% for photo in complex.photos %}
-				<div class="gallery-item" data-image="/media/{{ photo }}" onclick="openGalleryModal({{ forloop.counter0 }})" style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3; transition: transform 0.3s;">
-					<img src="/media/{{ photo }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+				<div class="gallery-item" data-image="{{ photo }}" onclick="openGalleryModal({{ forloop.counter0 }})" style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3; transition: transform 0.3s;">
+					<img src="{{ photo }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
 					<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); padding: 12px; color: white; font-size: 14px; opacity: 0; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
 						<i class="fas fa-search-plus"></i> Увеличить
 					</div>
@@ -528,21 +528,21 @@
 				{% endfor %}
 			{% elif is_mongodb and complex.photos %}
 				{% for photo in complex.photos %}
-				<div class="gallery-item" data-image="/media/{{ photo }}" onclick="openGalleryModal({{ forloop.counter0 }})" style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3; transition: transform 0.3s;">
-					<img src="/media/{{ photo }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+				<div class="gallery-item" data-image="{{ photo }}" onclick="openGalleryModal({{ forloop.counter0 }})" style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3; transition: transform 0.3s;">
+					<img src="{{ photo }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
 					<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); padding: 12px; color: white; font-size: 14px; opacity: 0; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
 						<i class="fas fa-search-plus"></i> Увеличить
 					</div>
 				</div>
 				{% empty %}
-				<div class="gallery-item main" data-image="/media/gallery/placeholders.png" style="position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3;">
-					<img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+				<div class="gallery-item main" data-image="{{ PLACEHOLDER_IMAGE_URL }}" style="position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3;">
+					<img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover;">
 				</div>
 				{% endfor %}
 			{% elif is_mongodb and complex.photos %}
 				{% for photo in complex.photos %}
-				<div class="gallery-item" data-image="/media/{{ photo }}" onclick="openGalleryModal({{ forloop.counter0 }})" style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3; transition: transform 0.3s;">
-					<img src="/media/{{ photo }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+				<div class="gallery-item" data-image="{{ photo }}" onclick="openGalleryModal({{ forloop.counter0 }})" style="position: relative; border-radius: 12px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3; transition: transform 0.3s;">
+					<img src="{{ photo }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
 					<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); padding: 12px; color: white; font-size: 14px; opacity: 0; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
 						<i class="fas fa-search-plus"></i> Увеличить
 					</div>
@@ -556,8 +556,8 @@
 				</div>
 				{% endif %}
 				{% empty %}
-				<div class="gallery-item main" data-image="/media/gallery/placeholders.png" style="position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3;">
-					<img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+				<div class="gallery-item main" data-image="{{ PLACEHOLDER_IMAGE_URL }}" style="position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3;">
+					<img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ complex.name }}" style="width: 100%; height: 100%; object-fit: cover;">
 				</div>
 				{% endfor %}
 			{% endif %}
@@ -648,7 +648,7 @@
 					{% if offer.get_main_image and offer.get_main_image.image %}
 						<img src="{{ offer.get_main_image.image.url }}" alt="{{ offer.title }}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">
 					{% else %}
-						<img src="/media/gallery/placeholders.png" alt="{{ offer.title }}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">
+						<img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ offer.title }}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">
 					{% endif %}
 					<div class="offer-media::after" style="content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.00) 40%, rgba(0,0,0,.18) 100%);"></div>
 				</div>
@@ -692,7 +692,7 @@
 					{% if property.image and property.image.image %}
 						<img src="{{ property.image.image.url }}" alt="{{ property.name }}">
 					{% else %}
-						<img src="/media/gallery/placeholders.png" alt="{{ property.name }}">
+						<img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ property.name }}">
 					{% endif %}
 					<!-- Бейдж типа недвижимости -->
 					<div class="property-type-badge">
@@ -859,7 +859,7 @@
 					{% if similar.get_main_image and similar.get_main_image.image %}
 						<img src="{{ similar.get_main_image.image.url }}" alt="{{ similar.name }}">
 					{% else %}
-						<img src="/media/gallery/placeholders.png" alt="{{ similar.name }}">
+						<img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ similar.name }}">
 					{% endif %}
 				</div>
 				<div class="similar-content">
@@ -1252,6 +1252,11 @@ let galleryActivePhotos = galleryPhotos.slice();
 
 function resolveImageUrl(pathOrUrl) {
     if (!pathOrUrl) return '';
+    // Если это уже полный URL (S3 или любой другой), возвращаем как есть
+    if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+        return pathOrUrl;
+    }
+    // Для относительных путей (если остались) добавляем /media/
     try {
         const u = new URL(pathOrUrl, window.location.origin);
         const p = u.pathname;
