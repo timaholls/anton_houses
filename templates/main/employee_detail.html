@@ -18,29 +18,7 @@
         <div class="hero-content">
             <div class="hero-left">
                 <div class="employee-photo-container">
-                    {% if employee.get_main_image %}
-                    <img src="{{ employee.get_main_image.image.url }}" class="employee-photo" alt="{{ employee.full_name }}">
-                    {% else %}
-                    <div class="employee-photo-placeholder">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <!-- Debug info -->
-                    <div style="background: #f8f9fa; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 12px;">
-                        <strong>Отладочная информация:</strong><br>
-                        ID сотрудника: {{ employee.id }}<br>
-                        Всего фото в галерее: {{ employee.get_images.count }}<br>
-                        {% if employee.get_images %}
-                            <ul style="margin: 5px 0; padding-left: 20px;">
-                            {% for img in employee.get_images %}
-                                <li>Фото {{ forloop.counter }}: {{ img.title }} (главное: {{ img.is_main }}, активно: {{ img.is_active }})</li>
-                            {% endfor %}
-                            </ul>
-                        {% else %}
-                            <p style="color: #dc3545; margin: 5px 0;">Фото не найдены в галерее!</p>
-                            <p style="margin: 5px 0;">Убедитесь, что вы добавили фото в админке в разделе "Галереи" с категорией "Сотрудники" и ID объекта {{ employee.id }}</p>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                    <img src="{% if employee.main_image %}/media/{{ employee.main_image }}{% else %}/media/gallery/placeholders.png{% endif %}" class="employee-photo" alt="{{ employee.full_name }}">
                     
                     {% if employee.is_featured %}
                     <div class="featured-badge">
@@ -81,10 +59,12 @@
                         </div>
                         {% endif %}
                         
+                        {% if employee.city %}
                         <div class="stat-item">
                             <i class="fas fa-map-marker-alt"></i>
-                            <span>{{ employee.branch.name }}</span>
+                            <span>{{ employee.city }}</span>
                         </div>
+                        {% endif %}
                     </div>
                     
                     <div class="employee-contacts">
@@ -130,13 +110,14 @@
             </div>
             {% endif %}
             
-            {% if employee.description %}
+            {% if employee.bio or employee.description %}
             <div class="info-section">
                 <div class="section-header">
                     <h2><i class="fas fa-user-tie"></i> О специалисте</h2>
                 </div>
                 <div class="section-content">
-                    {{ employee.description|safe }}
+                    {% firstof employee.bio employee.description as about_text %}
+                    {{ about_text|safe }}
                 </div>
             </div>
             {% endif %}
@@ -152,13 +133,14 @@
             </div>
             {% endif %}
             
-            {% if employee.specializations %}
+            {% if employee.specialization or employee.specializations %}
             <div class="info-section">
                 <div class="section-header">
                     <h2><i class="fas fa-tags"></i> Специализации</h2>
                 </div>
                 <div class="section-content">
-                    <p>{{ employee.specializations }}</p>
+                    {% firstof employee.specialization employee.specializations as spec_text %}
+                    <p>{{ spec_text }}</p>
                 </div>
             </div>
             {% endif %}
@@ -176,16 +158,13 @@
                     <div class="properties-grid">
                         {% for property in secondary_properties %}
                         <div class="property-card">
-                            {% if property.get_main_image and property.get_main_image.image %}
                             <div class="property-image">
-                                <img src="{{ property.get_main_image.image.url }}" alt="{{ property.name }}">
+                                <img src="{% firstof property.photo '/media/gallery/placeholders.png' %}" alt="{{ property.name }}">
                             </div>
-                            {% endif %}
                             <div class="property-info">
                                 <h4>{{ property.name }}</h4>
                                 <p class="property-location">{{ property.city }}, {{ property.district }}</p>
-                                <p class="property-price">{{ property.price }} млн ₽</p>
-                                <a href="{% url 'main:detail' property.id %}?agent_id={{ employee.id }}" class="property-link">
+                                <a href="/secondary/{{ property.id }}/" class="property-link">
                                     Подробнее <i class="fas fa-arrow-right"></i>
                                 </a>
                             </div>
@@ -201,16 +180,12 @@
                     <div class="properties-grid">
                         {% for complex in residential_complexes %}
                         <div class="property-card">
-                            {% if complex.get_main_image and complex.get_main_image.image %}
                             <div class="property-image">
-                                <img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}">
+                                <img src="{% firstof complex.photo '/media/gallery/placeholders.png' %}" alt="{{ complex.name }}">
                             </div>
-                            {% endif %}
                             <div class="property-info">
                                 <h4>{{ complex.name }}</h4>
-                                <p class="property-location">{{ complex.city }}, {{ complex.district }}</p>
-                                <p class="property-price">от {{ complex.price_from }} млн ₽</p>
-                                <a href="{% url 'main:detail' complex.id %}?agent_id={{ employee.id }}" class="property-link">
+                                <a href="{% url 'main:detail' complex.id %}" class="property-link">
                                     Подробнее <i class="fas fa-arrow-right"></i>
                                 </a>
                             </div>

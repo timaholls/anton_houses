@@ -23,8 +23,8 @@
             {% for complex in complexes %}
             <a href="{% url 'main:future_complex_detail' complex.id %}" class="future-complex-card">
                 <div class="future-complex-media">
-                    {% if complex.get_main_image and complex.get_main_image.image %}
-                        <img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}" loading="lazy" decoding="async">
+                    {% if complex.gallery_photos and complex.gallery_photos.0 %}
+                        <img src="/media/future_complexes/{{ complex.gallery_photos.0 }}" alt="{{ complex.name }}" loading="lazy" decoding="async">
                     {% else %}
                         <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" loading="lazy" decoding="async">
                     {% endif %}
@@ -40,10 +40,12 @@
                     </div>
                     <p class="future-complex-text">{{ complex.description|truncatechars:120 }}</p>
                     <div class="future-complex-details">
+                        {% if complex.price_from %}
                         <div class="future-complex-price">
                             <i class="fas fa-tag"></i>
                             <span>от {{ complex.price_from }} млн ₽</span>
                         </div>
+                        {% endif %}
                         {% if complex.area_from %}
                         <div class="future-complex-area">
                             <i class="fas fa-ruler-combined"></i>

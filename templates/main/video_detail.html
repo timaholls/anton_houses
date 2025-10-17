@@ -19,8 +19,14 @@
         <div class="video-main-content">
             <div class="video-header">
                 <div class="video-meta">
-                    <span class="complex-name">{{ residential_complex.name }}</span>
-                    <span class="video-date">{{ video.created_at|date:"j E Y" }}</span>
+                    {% if residential_complex %}
+                        <span class="complex-name">{{ residential_complex.name }}</span>
+                    {% else %}
+                        <span class="complex-name">Неизвестный ЖК</span>
+                    {% endif %}
+                    {% if video.created_at %}
+                        <span class="video-date">{{ video.created_at|date:"j E Y" }}</span>
+                    {% endif %}
                 </div>
             </div>
 
@@ -58,6 +64,7 @@
             {% endif %}
 
             <!-- Кнопка перехода к ЖК (только на десктопе) -->
+            {% if residential_complex %}
             <div class="complex-link-section desktop-only">
                 <a href="{% url 'main:detail' residential_complex.id %}" class="complex-link-btn">
                     <i class="fas fa-building"></i>
@@ -65,20 +72,28 @@
                     <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
+            {% endif %}
         </div>
 
         <!-- Правая колонка - видео из того же ЖК -->
         <div class="video-sidebar">
             <div class="sidebar-section">
-                <h3 class="sidebar-title">Видео {{ residential_complex.name }}</h3>
+                <h3 class="sidebar-title">Видео {% if residential_complex %}{{ residential_complex.name }}{% else %}ЖК{% endif %}</h3>
                 {% if same_complex_videos %}
                 <div class="sidebar-videos">
                     {% for v in same_complex_videos %}
                     <a href="{% url 'main:video_detail' v.id %}" class="sidebar-video-card {% if v.id == video.id %}active{% endif %}">
                         <div class="sidebar-video-image">
-                            <div style="display: flex; align-items: center; justify-content: center; width: 80px; height: 60px; background: #f5f5f5; color: #666; border-radius: 6px;">
-                                <i class="fas fa-play" style="font-size: 20px;"></i>
-                            </div>
+                            {% if v.thumbnail_url %}
+                                <img src="{{ v.thumbnail_url }}" alt="{{ v.title }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px;">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                            {% else %}
+                                <div style="display: flex; align-items: center; justify-content: center; width: 80px; height: 60px; background: #f5f5f5; color: #666; border-radius: 6px;">
+                                    <i class="fas fa-play" style="font-size: 20px;"></i>
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="sidebar-video-content">
                             <h4 class="sidebar-video-title">{{ v.title }}</h4>
@@ -97,6 +112,7 @@
             </div>
             
             <!-- Кнопка перехода к ЖК (только на мобильном) -->
+            {% if residential_complex %}
             <div class="complex-link-section mobile-only" style="margin-top: 1.5rem;">
                 <a href="{% url 'main:detail' residential_complex.id %}" class="complex-link-btn">
                     <i class="fas fa-building"></i>
@@ -104,6 +120,7 @@
                     <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -386,6 +403,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 6px;
 }
 
 .sidebar-video-content {

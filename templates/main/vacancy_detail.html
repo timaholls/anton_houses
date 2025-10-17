@@ -18,40 +18,52 @@
             <span class="breadcrumb-current">{{ vacancy.title }}</span>
         </div>
 
-        <div class="article-card" style="padding:0;">
-            <div class="article-content">
-                {% if vacancy.salary_from or vacancy.salary_to %}
-                <div style="margin-bottom:12px; color:#0066cc; font-weight:600;">
-                    {% if vacancy.salary_from and vacancy.salary_to %}
-                        {{ vacancy.salary_from|floatformat:0 }}–{{ vacancy.salary_to|floatformat:0 }} {{ vacancy.currency }}
-                    {% elif vacancy.salary_from %}
-                        от {{ vacancy.salary_from|floatformat:0 }} {{ vacancy.currency }}
-                    {% elif vacancy.salary_to %}
-                        до {{ vacancy.salary_to|floatformat:0 }} {{ vacancy.currency }}
-                    {% endif %}
+        <div class="property-card" style="padding:20px 24px;">
+            <div class="card-content">
+                <div class="card-header" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span class="article-category">{{ vacancy.get_employment_type_display }}</span>
+                    <span class="article-date">{{ vacancy.published_date|date:"j E Y" }}</span>
+                    <div class="card-location" style="margin-left:auto; font-weight:700;">
+                        {% if vacancy.salary_from or vacancy.salary_to %}
+                            {% if vacancy.salary_from and vacancy.salary_to %}
+                                {{ vacancy.salary_from|floatformat:0 }}–{{ vacancy.salary_to|floatformat:0 }} {{ vacancy.currency }}
+                            {% elif vacancy.salary_from %}
+                                от {{ vacancy.salary_from|floatformat:0 }} {{ vacancy.currency }}
+                            {% elif vacancy.salary_to %}
+                                до {{ vacancy.salary_to|floatformat:0 }} {{ vacancy.currency }}
+                            {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
+
+                <h2 class="card-title" style="margin-top:8px;">{{ vacancy.title }}</h2>
+                <div class="card-location" style="margin-top:8px;">
+                    <i class="fas fa-location-dot"></i>
+                    <span>{{ vacancy.city }}{% if vacancy.department %} • отдел {{ vacancy.department }}{% endif %}</span>
+                </div>
+
+                {% if vacancy.description %}
+                <h3 class="category-title" style="margin-top:20px;">Описание</h3>
+                <div class="article-excerpt" style="margin-top:8px;">{{ vacancy.description|safe }}</div>
                 {% endif %}
 
-                <h2 class="category-title" style="margin-top:8px;">Описание</h2>
-                <div class="article-excerpt" style="margin-top:8px;">{{ vacancy.description|safe }}</div>
-
                 {% if vacancy.responsibilities %}
-                <h2 class="category-title" style="margin-top:20px;">Обязанности</h2>
+                <h3 class="category-title" style="margin-top:20px;">Обязанности</h3>
                 <div class="article-excerpt" style="margin-top:8px;">{{ vacancy.responsibilities|safe }}</div>
                 {% endif %}
 
                 {% if vacancy.requirements %}
-                <h2 class="category-title" style="margin-top:20px;">Требования</h2>
+                <h3 class="category-title" style="margin-top:20px;">Требования</h3>
                 <div class="article-excerpt" style="margin-top:8px;">{{ vacancy.requirements|safe }}</div>
                 {% endif %}
 
                 {% if vacancy.benefits %}
-                <h2 class="category-title" style="margin-top:20px;">Условия</h2>
+                <h3 class="category-title" style="margin-top:20px;">Условия</h3>
                 <div class="article-excerpt" style="margin-top:8px;">{{ vacancy.benefits|safe }}</div>
                 {% endif %}
 
-                <div style="margin-top:24px; display:flex; gap:12px;">
-                    <a href="mailto:{{ vacancy.contact_email }}?subject=Отклик на вакансию: {{ vacancy.title }}" class="category-btn"><i class="fas fa-paper-plane"></i> Откликнуться</a>
+                <div style="margin-top:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <a href="#vacancy-feedback" class="category-btn"><i class="fas fa-paper-plane"></i> Откликнуться</a>
                     <a href="{% url 'main:vacancies' %}" class="nav-link">← Назад к списку</a>
                 </div>
             </div>
@@ -59,4 +71,20 @@
     </section>
 
 </div>
+
+<!-- Форма отклика на вакансию -->
+<a id="vacancy-feedback"></a>
+{% include 'includes/vacancy_feedback_form.html' %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const btn = document.querySelector('.category-btn[href="#vacancy-feedback"]');
+  if(btn){
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      const target = document.getElementById('vacancy-feedback');
+      if(target){ target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  }
+});
+</script>
 {% endblock %} 

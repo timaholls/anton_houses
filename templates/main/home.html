@@ -69,7 +69,6 @@
                                 {% else %}
                                     <img src="/media/gallery/placeholders.png" alt="{{ offers.0.title }}" loading="lazy" decoding="async">
                                 {% endif %}
-                                <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
                             </div>
                             <div class="offer-content">
                                 <div class="offer-head">
@@ -98,7 +97,6 @@
                                 {% else %}
                                     <img src="/media/gallery/placeholders.png" alt="{{ offers.1.title }}" loading="lazy" decoding="async">
                                 {% endif %}
-                                <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
                             </div>
                             <div class="offer-content">
                                 <div class="offer-head">
@@ -127,7 +125,6 @@
                                 {% else %}
                                     <img src="/media/gallery/placeholders.png" alt="{{ offers.2.title }}" loading="lazy" decoding="async">
                                 {% endif %}
-                                <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
                             </div>
                             <div class="offer-content">
                                 <div class="offer-head">
@@ -209,10 +206,10 @@
         .offer-badge-hot{position:absolute;left:6px;top:6px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:3px 6px;border-radius:999px;font-weight:800;display:inline-flex;gap:3px;align-items:center;font-size:10px;box-shadow:0 3px 8px rgba(190,175,135,.4)}
         .offer-badge-hot i{font-size:10px}
         .offer-content{display:flex;flex-direction:column;justify-content:space-between;min-height:80px}
-        .offer-head{display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+        .offer-head{display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:3px}
         .offer-chip{display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:2px 6px;border-radius:999px;font-weight:700;font-size:10px;white-space:nowrap}
         .offer-title{margin:0;font-size:14px;font-weight:800;color:#222;line-height:1.2;word-wrap:break-word;hyphens:auto}
-        .offer-limited{display:flex;align-items:center;gap:4px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:6px;padding:4px 6px;margin-top:6px;font-weight:600;font-size:10px;width:fit-content}
+        .offer-limited{display:flex;align-items:center;gap:4px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:6px;padding:4px 6px;margin-top:3px;font-weight:600;font-size:10px;width:fit-content}
         .offer-limited i{color:var(--c21-gold);font-size:10px}
         
         /* Навигационные точки */
@@ -275,7 +272,6 @@
                                 <a href="${offer.detail_url}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
                                     <div class="offer-media">
                                         <img src="${offer.image_url}" alt="${offer.title}" loading="lazy" decoding="async">
-                                        <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
                                     </div>
                                     <div class="offer-content">
                                         <div class="offer-head">
@@ -397,33 +393,57 @@
         .home-commute-time{background:#faf7ee;border:1px solid #efe7ce;color:#7b6a3e;padding:4px 8px;border-radius:999px}
         .home-card-price{margin-top:10px}
         .home-price-text{font-weight:800;color:var(--c21-gold)}
+        
+        /* Галерея изображений для карточек ЖК */
+        .home-card-image-gallery{position:relative;aspect-ratio:16/10;overflow:hidden}
+        .home-card-image-gallery .gallery-image{width:100%;height:100%;object-fit:cover;display:block;transition:opacity 0.3s ease}
+        .gallery-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s ease;z-index:10;opacity:0}
+        .home-card-image-gallery:hover .gallery-nav{opacity:1}
+        .gallery-nav:hover{background:rgba(0,0,0,0.8);transform:translateY(-50%) scale(1.1)}
+        .gallery-prev{left:10px}
+        .gallery-next{right:10px}
+        .gallery-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10}
+        .gallery-dots .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.3s ease}
+        .gallery-dots .dot.active{background:white;transform:scale(1.2)}
+        .gallery-dots .dot:hover{background:rgba(255,255,255,0.8)}
         </style>
 
         <div class="home-grid">
             {% for complex in complexes %}
-            <a class="home-property-card" data-city="{{ complex.city }}" data-district="{{ complex.district }}" href="{% url 'main:detail' complex.id %}">
-                <div class="home-card-image">
-                    {% if complex.get_main_image and complex.get_main_image.image %}
-                        <img src="{{ complex.get_main_image.image.url }}" alt="{{ complex.name }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw">
+            <div class="home-property-card"> 
+                <div class="home-card-image-gallery" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
+                    {% if complex.development.photos %}
+                        {% for photo in complex.development.photos %}
+                            <img class="gallery-image" src="/media/{{ photo }}" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw" style="{% if not forloop.first %}display: none;{% endif %}">
+                        {% endfor %}
+                        {% if complex.development.photos|length > 1 %}
+                            <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="gallery-nav gallery-next" onclick="event.stopPropagation(); changeImage(this, 1)">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <div class="gallery-dots">
+                                {% for photo in complex.development.photos %}
+                                    <span class="dot {% if forloop.first %}active{% endif %}" onclick="event.stopPropagation(); setImage(this, {{ forloop.counter0 }})"></span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     {% else %}
-                        <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}" loading="lazy" decoding="async">
+                        <img src="/media/gallery/placeholders.png" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async">
                     {% endif %}
                 </div>
                 
-                <div class="home-card-content">
+                <div class="home-card-content" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
                     <div class="home-card-header">
-                        <h3 class="home-card-title">{{ complex.name }}</h3>
-                        <div class="home-card-location">
-                            <span class="home-location-text">{{ complex.district|default:complex.city }}</span>
-                            <span class="home-commute-time">{{ complex.commute_time }}</span>
-                        </div>
+                        <h3 class="home-card-title">{{ complex.development.name|default:'ЖК' }}</h3>
                     </div>
                     
                     <div class="home-card-price">
-                        <span class="home-price-text">от {{ complex.price_from|floatformat:1 }} млн ₽</span>
+                        <span class="home-price-text">{{ complex.development.price_range|default:'Цена не указана' }}</span>
                     </div>
                 </div>
-            </a>
+            </div>
             {% empty %}
             <div class="no-complexes">
                 <p>Жилые комплексы пока не добавлены</p>
@@ -493,7 +513,7 @@
                     <div class="slider-container">
                         {% for gallery_item in company_gallery %}
                         <div class="slide {% if forloop.first %}active{% endif %}" data-slide="{{ forloop.counter0 }}">
-                            <img src="{{ gallery_item.image.url }}" alt="{{ gallery_item.title }}">
+                            <img src="/media/{{ gallery_item.image }}" alt="{{ gallery_item.title }}">
                             {% if gallery_item.description %}
                             <div class="slide-caption">
                                 <h4>{{ gallery_item.title }}</h4>
@@ -523,8 +543,8 @@
                 </div>
                 {% else %}
                 <!-- Фото основателя как fallback -->
-                {% if company_info.get_main_image and company_info.get_main_image.image %}
-<img src="{{ company_info.get_main_image.image.url }}" alt="{{ company_info.founder_name }}">
+                {% if company_info.main_image %}
+                <img src="/media/{{ company_info.main_image }}" alt="{{ company_info.founder_name }}">
                 {% else %}
                 <img src="/media/gallery/placeholders.png" alt="{{ company_info.founder_name }}">
                 {% endif %}
@@ -607,6 +627,41 @@
             
             <div class="map-wrapper">
                 <div id="home-office-map" style="width: 100%; height: 400px; border-radius: 12px; overflow: hidden;"></div>
+                <script>
+                document.addEventListener('DOMContentLoaded', function(){
+                    try{
+                        {% if head_office and head_office.latitude and head_office.longitude %}
+                        const lat = {{ head_office.latitude }};
+                        const lng = {{ head_office.longitude }};
+                        const map = L.map('home-office-map', { 
+                            attributionControl: false,
+                            zoomControl: true,
+                            scrollWheelZoom: true
+                        }).setView([lat, lng], 15);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; OpenStreetMap'
+                        }).addTo(map);
+                        const marker = L.marker([lat, lng]).addTo(map);
+                        marker.bindPopup(`
+                            <div style="text-align: center; padding: 8px;">
+                                <h4 style="margin: 0 0 8px 0; color: #333;">{{ head_office.name }}</h4>
+                                <p style="margin: 0 0 8px 0; color: #666;">{{ head_office.city }}, {{ head_office.address }}</p>
+                                {% if head_office.phone %}
+                                <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" style="color: #bcaf87; text-decoration: none; font-weight: 600;">
+                                    <i class="fas fa-phone"></i> {{ head_office.phone }}
+                                </a>
+                                {% endif %}
+                            </div>
+                        `);
+                        marker.openPopup();
+                        {% else %}
+                        console.log('No head office coordinates available');
+                        {% endif %}
+                    }catch(e){ 
+                        console.error('Map initialization error:', e);
+                    }
+                });
+                </script>
             </div>
         </div>
     </section>
@@ -903,66 +958,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
-// Инициализация карты офиса
-function initOfficeMap() {
-    const mapElement = document.getElementById('home-office-map');
-    {% if head_office and head_office.latitude and head_office.longitude %}
-    if (mapElement && typeof L !== 'undefined') {
-        try {
-            // Координаты головного офиса из базы данных
-            const officeCoords = [{{ head_office.latitude }}, {{ head_office.longitude }}];
-            
-            // Создаем карту
-            const map = L.map('home-office-map', { 
-                attributionControl: false,
-                zoomControl: true,
-                scrollWheelZoom: false
-            });
-            
-            // Добавляем слой карты
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(map);
-            
-            // Устанавливаем центр и зум
-            map.setView(officeCoords, 16);
-            
-            // Добавляем маркер офиса
-            const marker = L.marker(officeCoords).addTo(map);
-            marker.bindPopup(`
-                <div style="text-align: center; padding: 8px;">
-                    <h4 style="margin: 0 0 8px 0; color: #333;">{{ head_office.name }}</h4>
-                    <p style="margin: 0 0 8px 0; color: #666;">{{ head_office.city }}, {{ head_office.address }}</p>
-                    {% if head_office.phone %}
-                    <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}" style="color: #bcaf87; text-decoration: none; font-weight: 600;">
-                        <i class="fas fa-phone"></i> {{ head_office.phone }}
-                    </a>
-                    {% endif %}
-                </div>
-            `);
-            
-            // Открываем попап сразу
-            marker.openPopup();
-            
-            console.log('Карта офиса успешно инициализирована');
-        } catch (error) {
-            console.error('Ошибка при инициализации карты:', error);
+
+// Функции для галереи фото в карточках ЖК
+window.changeImage = function(button, direction) {
+    const gallery = button.parentElement;
+    const images = gallery.querySelectorAll('.gallery-image');
+    const dots = gallery.querySelectorAll('.dot');
+    let currentIndex = 0;
+    
+    // Находим текущий индекс
+    images.forEach((img, i) => {
+        if (img.style.display === 'block') {
+            currentIndex = i;
         }
-    } else {
-        console.log('Leaflet не загружен или элемент карты не найден');
-        // Попробуем еще раз через 500мс
-        setTimeout(initOfficeMap, 500);
-    }
-    {% else %}
-    console.log('Данные головного офиса не найдены или координаты не заполнены');
-    {% endif %}
+    });
+    
+    // Вычисляем новый индекс
+    let newIndex = currentIndex + direction;
+    if (newIndex < 0) newIndex = images.length - 1;
+    if (newIndex >= images.length) newIndex = 0;
+    
+    // Переключаем изображения
+    images[currentIndex].style.display = 'none';
+    images[newIndex].style.display = 'block';
+    
+    // Переключаем точки
+    dots[currentIndex].classList.remove('active');
+    dots[newIndex].classList.add('active');
 }
 
-// Запускаем инициализацию карты с небольшой задержкой
-document.addEventListener('DOMContentLoaded', function() {
-    // Ждем полной загрузки Leaflet
-    setTimeout(initOfficeMap, 100);
-});
+window.setImage = function(dot, index) {
+    const gallery = dot.parentElement.parentElement;
+    const images = gallery.querySelectorAll('.gallery-image');
+    const dots = gallery.querySelectorAll('.dot');
+    
+    // Скрываем все изображения
+    images.forEach(img => img.style.display = 'none');
+    // Показываем выбранное
+    images[index].style.display = 'block';
+    
+    // Обновляем точки
+    dots.forEach(d => d.classList.remove('active'));
+    dots[index].classList.add('active');
+}
 </script>
 
 <style>

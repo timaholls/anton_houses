@@ -27,18 +27,16 @@
             <a href="{% url 'main:offer_detail' o.id %}" class="offer-card">
                 <div class="offer-media">
                     {% if o.get_main_image and o.get_main_image.image %}
-                        <img src="{{ o.get_main_image.image.url }}" alt="{{ o.title }}" loading="lazy" decoding="async">
+                        <img src="{{ o.get_main_image.image.url }}" alt="{{ o.title|default:'Акция' }}" loading="lazy" decoding="async">
                     {% else %}
-                        <img src="/media/gallery/placeholders.png" alt="{{ o.title }}" loading="lazy" decoding="async">
+                        <img src="/media/gallery/placeholders.png" alt="{{ o.title|default:'Акция' }}" loading="lazy" decoding="async">
                     {% endif %}
-                    <span class="offer-badge-hot"><i class="fas fa-bolt"></i> Акция</span>
                 </div>
                 <div class="offer-content">
                     <div class="offer-head">
-                        <span class="offer-chip">{{ o.residential_complex.name }}</span>
-                        <h3 class="offer-title">{{ o.title }}</h3>
+                        <span class="offer-chip">{{ o.residential_complex.name|default:'ЖК' }}</span>
+                        <h3 class="offer-title">{{ o.title|default:'Акция' }}</h3>
                     </div>
-                    <p class="offer-text">{{ o.description|truncatechars:160 }}</p>
                     <div class="offer-limited">
                         <i class="far fa-clock"></i>
                         <span>

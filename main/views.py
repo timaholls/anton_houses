@@ -1,44 +1,146 @@
-from django.shortcuts import render, get_object_or_404
-from django.http import Http404
-from django.shortcuts import redirect
+from django.http import Http404, JsonResponse
 from django.core.paginator import Paginator
-from django.http import JsonResponse, Http404
+from django.utils.text import slugify
 from django.contrib import messages
-from .models import ResidentialComplex, Article, Tag, CompanyInfo, CatalogLanding, SecondaryProperty, Category, \
-    Employee, EmployeeReview, FutureComplex
-from .models import Vacancy
-from .models import BranchOffice
-from .models import Gallery, MortgageProgram, SpecialOffer
-from django.db import models
+from django.conf import settings
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.admin.views.decorators import staff_member_required
 from pymongo import MongoClient
 from bson import ObjectId
 import os
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-import json
+from django.shortcuts import render, redirect
 from datetime import datetime
+import re
+import json
+import requests
+
+
+def get_mongo_user(email: str):
+    """Получить пользователя из Mongo по email."""
+    try:
+        db = get_mongo_connection()
+        return db['users'].find_one({'email': email.lower()})
+    except Exception:
+        return None
+
+
+@require_http_methods(["GET", "POST"])
+def login_view(request):
+    """Простой логин через коллекцию users (email + пароль PBKDF2/argon2)."""
+    error = ''
+    if request.method == 'POST':
+        email = (request.POST.get('email') or '').strip().lower()
+        password = (request.POST.get('password') or '')
+        next_url = request.GET.get('next') or request.POST.get('next') or '/'
+        user = get_mongo_user(email)
+        if not user:
+            error = 'Неверный email или пароль'
+        else:
+            # Хеш хранится в поле password_hash (Django PBKDF2 формат или raw sha256 fallback)
+            from django.contrib.auth.hashers import check_password
+            ok = False
+            try:
+                ok = check_password(password, user.get('password_hash', ''))
+            except Exception:
+                import hashlib
+                ok = hashlib.sha256(password.encode('utf-8')).hexdigest() == user.get('password_hash', '')
+            if ok and user.get('is_active', True):
+                request.session['user_id'] = str(user.get('_id'))
+                request.session['user_email'] = user.get('email')
+                request.session['user_name'] = user.get('name', '')
+                return redirect(next_url)
+            error = 'Неверный email или пароль'
+    else:
+        next_url = request.GET.get('next') or '/'
+    return render(request, 'main/login.html', {'error': error, 'next': next_url})
+
+
+def logout_view(request):
+    request.session.flush()
+    return redirect('/login/')
+
+def get_video_thumbnail(video_url):
+    """
+    Получить URL превью для видео из YouTube или Rutube
+    """
+    if not video_url:
+        return None
+    
+    # YouTube обработка
+    if 'youtube.com/watch?v=' in video_url:
+        video_id = video_url.split('watch?v=')[-1].split('&')[0]
+        return f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg'
+    
+    elif 'youtu.be/' in video_url:
+        video_id = video_url.split('youtu.be/')[-1].split('?')[0]
+        return f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg'
+    
+    # Rutube обработка
+    elif 'rutube.ru/video/' in video_url:
+        rutube_match = re.search(r'rutube\.ru/video/([a-f0-9]+)', video_url)
+        if rutube_match:
+            video_id = rutube_match.group(1)
+            try:
+                api_url = f'https://rutube.ru/api/video/{video_id}/'
+                response = requests.get(api_url, timeout=3)
+                if response.status_code == 200:
+                    data = response.json()
+                    thumbnail_url = data.get('thumbnail_url')
+                    if thumbnail_url:
+                        return thumbnail_url
+            except:
+                pass
+            # Fallback на placeholder если API не работает
+            return f'/media/gallery/placeholders.png'
+    
+    # Если не удалось определить тип видео
+    return None
 
 
 def home(request):
     """Главная страница"""
-    # Получаем 9 популярных ЖК для главной страницы
-    complexes = ResidentialComplex.objects.filter(is_featured=True).order_by('-created_at')[:6]
+    # Получаем 9 популярных ЖК для главной страницы из unified_houses
+    try:
+        db = get_mongo_connection()
+        unified_collection = db['unified_houses']
+        
+        # Получаем все ЖК с флагом is_featured
+        featured_complexes = list(unified_collection.find({'is_featured': True}))
+        
+        if len(featured_complexes) > 9:
+            # Если больше 9, показываем 9 случайных
+            complexes = list(unified_collection.aggregate([
+                {'$match': {'is_featured': True}},
+                {'$sample': {'size': 9}}
+            ]))
+        else:
+            # Если меньше или равно 9, показываем все
+            complexes = featured_complexes
+        
+        # Добавляем поле id для совместимости с шаблонами
+        for complex in complexes:
+            complex['id'] = str(complex.get('_id'))
+    except Exception as e:
+        print(f"Ошибка получения ЖК для главной: {e}")
+        complexes = []
 
-    # Если популярных ЖК меньше 9, добавляем обычные
-    if complexes.count() < 6:
-        remaining_count = 6 - complexes.count()
-        additional_complexes = ResidentialComplex.objects.filter(is_featured=False).order_by('-created_at')[
-                               :remaining_count]
-        complexes = list(complexes) + list(additional_complexes)
-
-    # Получаем информацию о компании
-    company_info = CompanyInfo.get_active()
-    # Галерея компании
-    company_gallery = []
-    if company_info:
-        company_gallery = company_info.get_images()[:6]
-    # Статьи для главной
-    home_articles = Article.objects.filter(show_on_home=True).order_by('-published_date')[:3]
+    # Получаем информацию о компании из MongoDB
+    try:
+        company_info = db['company_info'].find_one({'is_active': True})
+        # Галерея компании - используем массив images
+        company_gallery = []
+        if company_info and company_info.get('images'):
+            company_gallery = [{'image': img, 'title': 'Фото компании', 'description': ''} for img in company_info.get('images', [])[:6]]
+    except Exception:
+        company_info = None
+        company_gallery = []
+    
+    # Статьи для главной из MongoDB
+    try:
+        home_articles = list(db['articles'].find({'show_on_home': True, 'is_active': True}).sort('published_date', -1).limit(3))
+    except:
+        home_articles = []
 
     # Акции для главной - теперь из MongoDB promotions (с падением назад на SQL)
     def build_offer_adapters(limit=9):
@@ -80,7 +182,7 @@ def home(request):
                 items.append(offer)
             return items
         except Exception:
-            return list(SpecialOffer.get_active_offers())
+            return get_special_offers_from_mongo()
 
     offers = build_offer_adapters()
 
@@ -95,7 +197,7 @@ def home(request):
 
 
 def catalog(request):
-    """Каталог ЖК"""
+    """Каталог ЖК - данные из MongoDB"""
     page = request.GET.get('page', 1)
 
     # Получаем параметры фильтрации
@@ -111,70 +213,64 @@ def catalog(request):
     has_offers = request.GET.get('has_offers', '')
     sort = request.GET.get('sort', 'price_asc')
 
-    # Базовый queryset
-    complexes = ResidentialComplex.objects.all()
+    # Собираем фильтры для MongoDB
+    filters = {}
+    if city:
+        filters['city'] = city
+    if district:
+        filters['district'] = district
 
-    # Применяем фильтры только если есть параметры поиска
+    # Получаем данные из MongoDB
+    complexes = get_residential_complexes_from_mongo(filters=filters, sort_by=sort)
+
+    # Применяем дополнительные фильтры
     filters_applied = False
     if rooms or city or district or street or area_from or area_to or price_from or price_to or delivery_date or has_offers:
         filters_applied = True
 
-        if rooms:
-            complexes = complexes.filter(rooms=rooms)
-        if city:
-            complexes = complexes.filter(city=city)
-        if district:
-            complexes = complexes.filter(district=district)
-        if street:
-            complexes = complexes.filter(street=street)
-        if area_from:
-            try:
-                complexes = complexes.filter(area_from__gte=float(area_from))
-            except ValueError:
-                pass
-        if area_to:
-            try:
-                complexes = complexes.filter(area_to__lte=float(area_to))
-            except ValueError:
-                pass
-        if price_from:
-            try:
-                complexes = complexes.filter(price_from__gte=float(price_from))
-            except ValueError:
-                pass
-        if price_to:
-            try:
-                complexes = complexes.filter(price_from__lte=float(price_to))
-            except ValueError:
-                pass
-        if delivery_date:
-            complexes = complexes.filter(delivery_date__lte=delivery_date)
-        if has_offers:
-            complexes = complexes.filter(offers__is_active=True).distinct()
-
-    # Применяем сортировку
-    if sort == 'price_asc':
-        complexes = complexes.order_by('price_from')
-    elif sort == 'price_desc':
-        complexes = complexes.order_by('-price_from')
-    elif sort == 'area_desc':
-        complexes = complexes.order_by('-area_to')
-    elif sort == 'area_asc':
-        complexes = complexes.order_by('area_from')
+        filtered_complexes = []
+        for complex_data in complexes:
+            # Фильтр по цене
+            if price_from and complex_data.get('price', {}).get('min'):
+                if float(complex_data['price']['min']) < float(price_from):
+                    continue
+            if price_to and complex_data.get('price', {}).get('min'):
+                if float(complex_data['price']['min']) > float(price_to):
+                    continue
+            
+            # Фильтр по комнатам
+            if rooms and complex_data.get('apartment_types'):
+                has_matching_rooms = False
+                for apt_type in complex_data['apartment_types'].values():
+                    if apt_type.get('rooms') == rooms:
+                        has_matching_rooms = True
+                        break
+                if not has_matching_rooms:
+                    continue
+            
+            filtered_complexes.append(complex_data)
+        
+        complexes = filtered_complexes
 
     # Пагинация по 9 элементов
     paginator = Paginator(complexes, 9)
     page_obj = paginator.get_page(page)
 
-    # Получаем уникальные города для фильтра
-    cities = ResidentialComplex.objects.values_list('city', flat=True).distinct()
+    # Получаем уникальные города для фильтра из MongoDB
+    cities = []
+    try:
+        db = get_mongo_connection()
+        collection = db['residential_complexes']
+        cities = collection.distinct('address.city')
+    except Exception:
+        cities = []
 
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
         'cities': cities,
-        'rooms_choices': ResidentialComplex.ROOMS_CHOICES,
+        'rooms_choices': [('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'filters': {
             'rooms': rooms,
             'city': city,
@@ -189,7 +285,7 @@ def catalog(request):
             'sort': sort,
         },
         'filters_applied': filters_applied,
-        'dataset_type': 'newbuild'  # По умолчанию показываем новостройки
+        'dataset_type': 'newbuild'
     }
     return render(request, 'main/catalog.html', context)
 
@@ -321,61 +417,58 @@ def catalog_api(request):
 
 
 def articles(request):
-    """Страница статей"""
+    """Страница статей - читает из MongoDB"""
+    db = get_mongo_connection()
     category = request.GET.get('category', '')
     article_type = request.GET.get('type', 'news')  # По умолчанию показываем новости
 
     # Получаем статьи по типу
-    articles_list = Article.objects.filter(article_type=article_type)
+    query = {'article_type': article_type, 'is_active': True}
 
     # Дополнительная фильтрация по категории
     if category:
-        try:
-            category_obj = Category.objects.get(slug=category)
-            articles_list = articles_list.filter(category=category_obj)
-        except Category.DoesNotExist:
-            articles_list = Article.objects.none()
+        category_obj = db['categories'].find_one({'slug': category, 'is_active': True})
+        if category_obj:
+            query['category_id'] = category_obj['_id']
+    
+    articles_list = list(db['articles'].find(query).sort('published_date', -1))
 
-    # Получаем статьи по категориям для отображения в секциях (только для текущего типа)
-    try:
-        mortgage_category = Category.objects.get(slug='mortgage')
-        mortgage_articles = Article.objects.filter(article_type=article_type, category=mortgage_category,
-                                                   is_featured=True)[:3]
-    except Category.DoesNotExist:
-        mortgage_articles = Article.objects.none()
+    # Получаем статьи по категориям для отображения в секциях
+    def get_articles_by_category_slug(slug, limit=3):
+        cat = db['categories'].find_one({'slug': slug, 'is_active': True})
+        if cat:
+            return list(db['articles'].find({
+                'article_type': article_type,
+                'category_id': cat['_id'],
+                'is_active': True
+            }).sort('published_date', -1).limit(limit))
+        return []
+    
+    # Разделы на странице. Показываем только те, у которых реально есть категория
+    # в БД и есть хотя бы одна статья.
+    mortgage_articles = get_articles_by_category_slug('mortgage', 3)
+    laws_articles = get_articles_by_category_slug('laws', 3)
+    instructions_articles = get_articles_by_category_slug('instructions', 3)
+    market_articles = get_articles_by_category_slug('market', 3)
+    tips_articles = get_articles_by_category_slug('tips', 3)
 
-    try:
-        laws_category = Category.objects.get(slug='laws')
-        laws_articles = Article.objects.filter(article_type=article_type, category=laws_category)[:3]
-    except Category.DoesNotExist:
-        laws_articles = Article.objects.none()
-
-    try:
-        instructions_category = Category.objects.get(slug='instructions')
-        instructions_articles = Article.objects.filter(article_type=article_type, category=instructions_category)[:3]
-    except Category.DoesNotExist:
-        instructions_articles = Article.objects.none()
-
-    try:
-        market_category = Category.objects.get(slug='market')
-        market_articles = Article.objects.filter(article_type=article_type, category=market_category)[:3]
-    except Category.DoesNotExist:
-        market_articles = Article.objects.none()
-
-    try:
-        tips_category = Category.objects.get(slug='tips')
-        tips_articles = Article.objects.filter(article_type=article_type, category=tips_category)[:3]
-    except Category.DoesNotExist:
-        tips_articles = Article.objects.none()
+    show_mortgage_section = len(mortgage_articles) > 0
+    show_laws_section = len(laws_articles) > 0
+    show_instructions_section = len(instructions_articles) > 0
+    show_market_section = len(market_articles) > 0
+    show_tips_section = len(tips_articles) > 0
 
     # Получаем все категории для фильтрации
-    categories = Category.objects.filter(is_active=True)
+    categories = list(db['categories'].find({'is_active': True}).sort('name', 1))
 
     # Получаем популярные теги
-    popular_tags = Tag.objects.all()[:10]
+    popular_tags = list(db['tags'].find({'is_active': True}).limit(10))
 
     # Получаем рекомендуемые статьи для блока "Похожие статьи"
-    featured_articles = Article.objects.filter(is_featured=True).order_by('-views_count')[:3]
+    featured_articles = list(db['articles'].find({
+        'is_featured': True,
+        'is_active': True
+    }).sort('views_count', -1).limit(3))
 
     context = {
         'articles': articles_list,
@@ -384,6 +477,11 @@ def articles(request):
         'instructions_articles': instructions_articles,
         'market_articles': market_articles,
         'tips_articles': tips_articles,
+        'show_mortgage_section': show_mortgage_section,
+        'show_laws_section': show_laws_section,
+        'show_instructions_section': show_instructions_section,
+        'show_market_section': show_market_section,
+        'show_tips_section': show_tips_section,
         'categories': categories,
         'current_category': category,
         'current_type': article_type,
@@ -394,34 +492,62 @@ def articles(request):
 
 
 def article_detail(request, slug):
-    """Детальная страница статьи"""
-    article = get_object_or_404(Article, slug=slug)
+    """Детальная страница статьи - читает из MongoDB"""
+    db = get_mongo_connection()
+    article = db['articles'].find_one({'slug': slug, 'is_active': True})
+    
+    if not article:
+        raise Http404("Статья не найдена")
 
     # Увеличиваем счетчик просмотров
-    article.views_count += 1
-    article.save()
+    db['articles'].update_one(
+        {'_id': article['_id']},
+        {'$inc': {'views_count': 1}}
+    )
+    article['views_count'] = article.get('views_count', 0) + 1
 
+    # Получаем категорию и автора
+    if article.get('category_id'):
+        article['category'] = db['categories'].find_one({'_id': article['category_id']})
+    
+    if article.get('author_id'):
+        article['author'] = db['authors'].find_one({'_id': article['author_id']})
     # Обновляем статистику автора
-    if article.author:
-        article.author.articles_count = article.author.article_set.count()
-        article.author.total_views = sum(article.author.article_set.values_list('views_count', flat=True))
-        article.author.total_likes = sum(article.author.article_set.values_list('likes_count', flat=True))
-        article.author.save()
+        author_articles = list(db['articles'].find({'author_id': article['author_id'], 'is_active': True}))
+        total_views = sum(a.get('views_count', 0) for a in author_articles)
+        total_likes = sum(a.get('likes_count', 0) for a in author_articles)
+        db['authors'].update_one(
+            {'_id': article['author_id']},
+            {'$set': {
+                'articles_count': len(author_articles),
+                'total_views': total_views,
+                'total_likes': total_likes
+            }}
+        )
 
-    # Получаем похожие статьи (сначала из связанных, потом по категории)
-    related_articles = article.related_articles.all()
-    if not related_articles.exists():
-        related_articles = Article.objects.filter(category=article.category).exclude(id=article.id)[:3]
-
-    # Если все еще нет похожих статей, берем последние статьи
-    if not related_articles.exists():
-        related_articles = Article.objects.exclude(id=article.id).order_by('-published_date')[:3]
+    # Получаем похожие статьи по категории
+    related_articles = []
+    if article.get('category_id'):
+        related_articles = list(db['articles'].find({
+            'category_id': article['category_id'],
+            '_id': {'$ne': article['_id']},
+            'is_active': True
+        }).sort('published_date', -1).limit(3))
+    
+    # Если нет похожих, берем последние
+    if not related_articles:
+        related_articles = list(db['articles'].find({
+            '_id': {'$ne': article['_id']},
+            'is_active': True
+        }).sort('published_date', -1).limit(3))
 
     # Получаем теги статьи
-    article_tags = article.tags.all()
+    article_tags = []
+    if article.get('tags'):
+        article_tags = list(db['tags'].find({'_id': {'$in': article['tags']}, 'is_active': True}))
 
     # Получаем популярные теги
-    popular_tags = Tag.objects.all()[:10]
+    popular_tags = list(db['tags'].find({'is_active': True}).limit(10))
 
     context = {
         'article': article,
@@ -433,9 +559,18 @@ def article_detail(request, slug):
 
 
 def tag_detail(request, slug):
-    """Страница тега"""
-    tag = get_object_or_404(Tag, slug=slug)
-    articles = tag.articles.all()
+    """Страница тега - читает из MongoDB"""
+    db = get_mongo_connection()
+    tag = db['tags'].find_one({'slug': slug, 'is_active': True})
+    
+    if not tag:
+        raise Http404("Тег не найден")
+    
+    # Получаем статьи с этим тегом
+    articles = list(db['articles'].find({
+        'tags': tag['_id'],
+        'is_active': True
+    }).sort('published_date', -1))
 
     context = {
         'tag': tag,
@@ -445,37 +580,188 @@ def tag_detail(request, slug):
 
 
 def vacancies(request):
-    """Список вакансий"""
-    vacancies_qs = Vacancy.objects.filter(is_active=True)
+    """Список вакансий (MongoDB)"""
+    try:
+        db = get_mongo_connection()
+        col = db['vacancies']
+        q = {'is_active': True}
+        docs = list(col.find(q).sort('published_date', -1))
 
-    paginator = Paginator(vacancies_qs, 10)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+        # Адаптеры к ожиданиям шаблона
+        def to_item(d):
+            class V:  # простой адаптер
+                pass
+            v = V()
+            v.id = str(d.get('_id'))
+            v.slug = d.get('slug') or (str(d['_id']) if d.get('_id') else '')
+            v.title = d.get('title', '')
+            v.department = d.get('department', '')
+            v.city = d.get('city', 'Уфа')
+            v.employment_type = d.get('employment_type', 'fulltime')
+            # display
+            employment_map = {
+                'fulltime': 'Полная занятость',
+                'parttime': 'Частичная занятость',
+                'contract': 'Контракт',
+                'intern': 'Стажировка',
+                'remote': 'Удаленная работа',
+            }
+            v.get_employment_type_display = employment_map.get(v.employment_type, v.employment_type)
+            v.salary_from = d.get('salary_from')
+            v.salary_to = d.get('salary_to')
+            v.currency = d.get('currency', 'RUB')
+            v.published_date = d.get('published_date') or d.get('created_at') or datetime.utcnow()
+            return v
 
-    context = {
+        items = [to_item(d) for d in docs]
+
+        page = int(request.GET.get('page', 1))
+        paginator = Paginator(items, 10)
+        page_obj = paginator.get_page(page)
+
+        context = {
         'vacancies': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-    }
-    return render(request, 'main/vacancies.html', context)
+        }
+        return render(request, 'main/vacancies.html', context)
+    except Exception:
+        # fallback: пусто
+        paginator = Paginator([], 10)
+        page_obj = paginator.get_page(1)
+        return render(request, 'main/vacancies.html', {'vacancies': page_obj, 'page_obj': page_obj, 'paginator': paginator})
 
 
 def vacancy_detail(request, slug):
-    """Детальная страница вакансии"""
-    vacancy = get_object_or_404(Vacancy, slug=slug, is_active=True)
-    return render(request, 'main/vacancy_detail.html', {'vacancy': vacancy})
+    """Детальная страница вакансии (MongoDB)"""
+    db = get_mongo_connection()
+    col = db['vacancies']
+    doc = col.find_one({'slug': slug}) or col.find_one({'_id': ObjectId(slug)})
+    if not doc:
+        raise Http404('Вакансия не найдена')
+
+    class V: pass
+    v = V()
+    v.id = str(doc.get('_id'))
+    v.slug = doc.get('slug') or v.id
+    v.title = doc.get('title', '')
+    v.department = doc.get('department', '')
+    v.city = doc.get('city', 'Уфа')
+    v.employment_type = doc.get('employment_type', 'fulltime')
+    employment_map = {
+        'fulltime': 'Полная занятость',
+        'parttime': 'Частичная занятость',
+        'contract': 'Контракт',
+        'intern': 'Стажировка',
+        'remote': 'Удаленная работа',
+    }
+    v.get_employment_type_display = employment_map.get(v.employment_type, v.employment_type)
+    v.salary_from = doc.get('salary_from')
+    v.salary_to = doc.get('salary_to')
+    v.currency = doc.get('currency', 'RUB')
+    v.description = doc.get('description', '')
+    v.responsibilities = doc.get('responsibilities', '')
+    v.requirements = doc.get('requirements', '')
+    v.benefits = doc.get('benefits', '')
+    v.contact_email = doc.get('contact_email', 'hr@antonhaus.ru')
+    v.published_date = doc.get('published_date') or doc.get('created_at') or datetime.utcnow()
+
+    return render(request, 'main/vacancy_detail.html', {'vacancy': v})
+
+
+@require_http_methods(["GET"]) 
+def vacancies_api_list(request):
+    """API: список вакансий из Mongo для UI."""
+    try:
+        db = get_mongo_connection()
+        col = db['vacancies']
+        items = []
+        # Для админки показываем все вакансии (с is_active)
+        # Для публичного API фильтруем только активные
+        show_all = request.GET.get('admin', 'false').lower() == 'true'
+        filter_dict = {} if show_all else {'is_active': True}
+        
+        for d in col.find(filter_dict).sort('published_date', -1):
+            items.append({
+                '_id': str(d.get('_id')),
+                'slug': d.get('slug') or (str(d.get('_id')) if d.get('_id') else None),
+                'title': d.get('title', ''),
+                'department': d.get('department', ''),
+                'city': d.get('city', 'Уфа'),
+                'employment_type': d.get('employment_type', 'fulltime'),
+                'salary_from': d.get('salary_from'),
+                'salary_to': d.get('salary_to'),
+                'currency': d.get('currency', 'RUB'),
+                'is_active': bool(d.get('is_active', True)),
+                'published_date': (d.get('published_date') or d.get('created_at') or datetime.utcnow()).isoformat(),
+            })
+        return JsonResponse({'success': True, 'data': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"]) 
+def vacancies_api_create(request):
+    """API: создать вакансию в Mongo."""
+    try:
+        data = json.loads(request.body or '{}')
+        title = (data.get('title') or '').strip()
+        if not title:
+            return JsonResponse({'success': False, 'error': 'Не указано название'}, status=400)
+
+        db = get_mongo_connection()
+        col = db['vacancies']
+        base_slug = slugify(title)
+        slug_val = base_slug
+        # ensure unique
+        i = 1
+        while col.find_one({'slug': slug_val}):
+            slug_val = f"{base_slug}-{i}"
+            i += 1
+
+        doc = {
+            'title': title,
+            'slug': slug_val,
+            'department': data.get('department') or '',
+            'city': data.get('city') or 'Уфа',
+            'employment_type': data.get('employment_type') or 'fulltime',
+            'salary_from': data.get('salary_from'),
+            'salary_to': data.get('salary_to'),
+            'currency': data.get('currency') or 'RUB',
+            'description': data.get('description') or '',
+            'responsibilities': data.get('responsibilities') or '',
+            'requirements': data.get('requirements') or '',
+            'benefits': data.get('benefits') or '',
+            'contact_email': data.get('contact_email') or 'hr@antonhaus.ru',
+            'is_active': bool(data.get('is_active', True)),
+            'created_at': datetime.utcnow(),
+            'published_date': datetime.utcnow(),
+            'updated_date': datetime.utcnow(),
+        }
+        res = col.insert_one(doc)
+        return JsonResponse({'success': True, 'id': str(res.inserted_id), 'slug': slug_val})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 def offices(request):
-    """Список офисов продаж"""
+    """Список офисов продаж - читает из MongoDB"""
+    db = get_mongo_connection()
     city = request.GET.get('city', '')
-    offices_qs = BranchOffice.objects.filter(is_active=True)
+    
+    query = {'is_active': True}
     if city:
-        offices_qs = offices_qs.filter(city__iexact=city)
-
-    paginator = Paginator(offices_qs, 12)
+        query['city'] = {'$regex': city, '$options': 'i'}
+    
+    offices_list = list(db['branch_offices'].find(query).sort('name', 1))
+    
+    # Получаем уникальные города
+    all_offices = list(db['branch_offices'].find({'is_active': True}))
+    cities = list(set(o.get('city', '') for o in all_offices if o.get('city')))
+    
+    paginator = Paginator(offices_list, 12)
     page_obj = paginator.get_page(request.GET.get('page', 1))
-
-    cities = BranchOffice.objects.values_list('city', flat=True).distinct()
 
     context = {
         'offices': page_obj,
@@ -490,9 +776,26 @@ def offices(request):
 
 
 def office_detail(request, slug):
-    """Детальная страница офиса с сотрудниками"""
-    office = get_object_or_404(BranchOffice, slug=slug, is_active=True)
-    employees = office.employees.filter(is_active=True).order_by('full_name')
+    """Детальная страница офиса с сотрудниками - читает из MongoDB"""
+    db = get_mongo_connection()
+    office = db['branch_offices'].find_one({'slug': slug, 'is_active': True})
+    
+    if not office:
+        raise Http404("Офис не найден")
+    
+    # Получаем сотрудников этого офиса
+    # Предполагается что у сотрудников есть поле office_id
+    employees = list(db['employees'].find({
+        'is_active': True
+    }).sort('full_name', 1))
+    # Подготовим данные сотрудников для шаблона
+    for emp in employees:
+        try:
+            emp['id'] = str(emp.get('_id'))
+        except Exception:
+            emp['id'] = ''
+        # Подставим slug текущего офиса, чтобы была рабочая ссылка на филиал
+        emp['branch_slug'] = office.get('slug')
 
     context = {
         'office': office,
@@ -534,6 +837,7 @@ def videos(request):
             'id': str(d.get('_id')),
             'title': d.get('title', ''),
             'video_url': d.get('url', ''),
+            'thumbnail_url': get_video_thumbnail(d.get('url', '')),
             'residential_complex_name': comp_name,
             'created_at': d.get('created_at') or datetime.utcnow()
         }))
@@ -621,15 +925,23 @@ def video_detail(request, video_id):
             else:
                 comp_name = (comp.get('avito', {}) or {}).get('development', {}) .get('name') or (comp.get('domclick', {}) or {}).get('development', {}) .get('complex_name', '')
         for sd in videos_col.find({'complex_id': d.get('complex_id'), '_id': {'$ne': d['_id']}, 'is_active': True}).limit(5):
-            same_complex_videos.append(type('V', (), {'id': str(sd.get('_id')), 'title': sd.get('title','')}))
+            video_url = sd.get('url', '')
+            thumbnail_url = get_video_thumbnail(video_url)
+            same_complex_videos.append(type('V', (), {
+                'id': str(sd.get('_id')), 
+                'title': sd.get('title',''),
+                'thumbnail_url': thumbnail_url,
+                'created_at': sd.get('created_at')
+            }))
 
     # Похожие видео (из других объектов того же города)
-    if video.category == 'residential_video':
-        complex_ids = ResidentialComplex.objects.filter(city=residential_complex.city).exclude(
-            id=video.object_id).values_list('id', flat=True)
-    else:
-        complex_ids = SecondaryProperty.objects.filter(city=residential_complex.city).exclude(
-            id=video.object_id).values_list('id', flat=True)
+    # TODO: Исправить логику для получения похожих видео
+    # if video.category == 'residential_video':
+    #     complex_ids = ResidentialComplex.objects.filter(city=residential_complex.city).exclude(
+    #         id=video.object_id).values_list('id', flat=True)
+    # else:
+    #     complex_ids = SecondaryProperty.objects.filter(city=residential_complex.city).exclude(
+    #         id=video.object_id).values_list('id', flat=True)
 
     similar_videos = []
 
@@ -637,13 +949,22 @@ def video_detail(request, video_id):
         'id': str(d.get('_id')),
         'title': d.get('title',''),
         'description': d.get('description',''),
-        'residential_complex_name': comp_name
+        'residential_complex_name': comp_name,
+        'created_at': d.get('created_at')
+    })
+
+    # Создаем объект residential_complex для шаблона
+    residential_complex_obj = None
+    if d.get('complex_id'):
+        residential_complex_obj = type('ResidentialComplex', (), {
+            'id': str(d.get('complex_id')),
+            'name': comp_name or 'Неизвестный ЖК'
     })
 
     context = {
         'video': video_obj,
         'video_embed_url': video_embed_url,
-        'residential_complex': None,
+        'residential_complex': residential_complex_obj,
         'same_complex_videos': same_complex_videos,
         'similar_videos': similar_videos,
         'object_type': 'ЖК',
@@ -653,9 +974,12 @@ def video_detail(request, video_id):
 
 # Быстрые ссылки каталога
 def catalog_completed(request):
-    """Сданные ЖК"""
+    """Сданные ЖК - данные из MongoDB"""
     page = request.GET.get('page', 1)
-    complexes = ResidentialComplex.objects.filter(status='completed')
+    
+    # Получаем данные из MongoDB
+    filters = {'status': 'completed'}
+    complexes = get_residential_complexes_from_mongo(filters=filters)
 
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
@@ -664,8 +988,8 @@ def catalog_completed(request):
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'projects': ResidentialComplex.objects.values_list('name', flat=True).distinct(),
-        'house_types': ResidentialComplex.HOUSE_TYPE_CHOICES,
+        'projects': [],  # Можно получить из MongoDB если нужно
+        'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
         'filters_applied': True,
         'page_title': 'Сданные ЖК',
@@ -675,9 +999,12 @@ def catalog_completed(request):
 
 
 def catalog_construction(request):
-    """Строящиеся ЖК"""
+    """Строящиеся ЖК - данные из MongoDB"""
     page = request.GET.get('page', 1)
-    complexes = ResidentialComplex.objects.filter(status='construction')
+    
+    # Получаем данные из MongoDB
+    filters = {'status': 'construction'}
+    complexes = get_residential_complexes_from_mongo(filters=filters)
 
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
@@ -686,8 +1013,8 @@ def catalog_construction(request):
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'projects': ResidentialComplex.objects.values_list('name', flat=True).distinct(),
-        'house_types': ResidentialComplex.HOUSE_TYPE_CHOICES,
+        'projects': [],  # Можно получить из MongoDB если нужно
+        'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
         'filters_applied': True,
         'page_title': 'Строящиеся ЖК',
@@ -697,9 +1024,12 @@ def catalog_construction(request):
 
 
 def catalog_economy(request):
-    """Эконом-класс"""
+    """Эконом-класс - данные из MongoDB"""
     page = request.GET.get('page', 1)
-    complexes = ResidentialComplex.objects.filter(house_class='economy')
+    
+    # Получаем данные из MongoDB
+    filters = {'house_class': 'economy'}
+    complexes = get_residential_complexes_from_mongo(filters=filters)
 
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
@@ -708,8 +1038,8 @@ def catalog_economy(request):
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'projects': ResidentialComplex.objects.values_list('name', flat=True).distinct(),
-        'house_types': ResidentialComplex.HOUSE_TYPE_CHOICES,
+        'projects': [],  # Можно получить из MongoDB если нужно
+        'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
         'filters_applied': True,
         'page_title': 'Эконом-класс',
@@ -719,9 +1049,12 @@ def catalog_economy(request):
 
 
 def catalog_comfort(request):
-    """Комфорт-класс"""
+    """Комфорт-класс - данные из MongoDB"""
     page = request.GET.get('page', 1)
-    complexes = ResidentialComplex.objects.filter(house_class='comfort')
+    
+    # Получаем данные из MongoDB
+    filters = {'house_class': 'comfort'}
+    complexes = get_residential_complexes_from_mongo(filters=filters)
 
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
@@ -730,8 +1063,8 @@ def catalog_comfort(request):
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'projects': ResidentialComplex.objects.values_list('name', flat=True).distinct(),
-        'house_types': ResidentialComplex.HOUSE_TYPE_CHOICES,
+        'projects': [],  # Можно получить из MongoDB если нужно
+        'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
         'filters_applied': True,
         'page_title': 'Комфорт-класс',
@@ -741,9 +1074,12 @@ def catalog_comfort(request):
 
 
 def catalog_premium(request):
-    """Премиум-класс"""
+    """Премиум-класс - данные из MongoDB"""
     page = request.GET.get('page', 1)
-    complexes = ResidentialComplex.objects.filter(house_class='premium')
+    
+    # Получаем данные из MongoDB
+    filters = {'house_class': 'premium'}
+    complexes = get_residential_complexes_from_mongo(filters=filters)
 
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
@@ -752,8 +1088,8 @@ def catalog_premium(request):
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'projects': ResidentialComplex.objects.values_list('name', flat=True).distinct(),
-        'house_types': ResidentialComplex.HOUSE_TYPE_CHOICES,
+        'projects': [],  # Можно получить из MongoDB если нужно
+        'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
         'filters_applied': True,
         'page_title': 'Премиум-класс',
@@ -763,9 +1099,12 @@ def catalog_premium(request):
 
 
 def catalog_finished(request):
-    """С отделкой"""
+    """С отделкой - данные из MongoDB"""
     page = request.GET.get('page', 1)
-    complexes = ResidentialComplex.objects.filter(finishing='finished')
+    
+    # Получаем данные из MongoDB
+    filters = {'finishing': 'finished'}
+    complexes = get_residential_complexes_from_mongo(filters=filters)
 
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
@@ -774,8 +1113,8 @@ def catalog_finished(request):
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'projects': ResidentialComplex.objects.values_list('name', flat=True).distinct(),
-        'house_types': ResidentialComplex.HOUSE_TYPE_CHOICES,
+        'projects': [],  # Можно получить из MongoDB если нужно
+        'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
         'filters_applied': True,
         'page_title': 'С отделкой',
@@ -785,9 +1124,12 @@ def catalog_finished(request):
 
 
 def catalog_unfinished(request):
-    """Без отделки"""
+    """Без отделки - данные из MongoDB"""
     page = request.GET.get('page', 1)
-    complexes = ResidentialComplex.objects.filter(finishing='unfinished')
+    
+    # Получаем данные из MongoDB
+    filters = {'finishing': 'unfinished'}
+    complexes = get_residential_complexes_from_mongo(filters=filters)
 
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
@@ -796,8 +1138,8 @@ def catalog_unfinished(request):
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'projects': ResidentialComplex.objects.values_list('name', flat=True).distinct(),
-        'house_types': ResidentialComplex.HOUSE_TYPE_CHOICES,
+        'projects': [],  # Можно получить из MongoDB если нужно
+        'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
         'filters_applied': True,
         'page_title': 'Без отделки',
@@ -809,17 +1151,18 @@ def catalog_unfinished(request):
 def detail(request, complex_id):
     """Детальная страница ЖК (MongoDB или SQL)"""
     
-    # Получаем ипотечные программы (нужны для обоих версий)
-    mortgage_programs = list(MortgageProgram.objects.filter(is_active=True))
-    if not mortgage_programs:
-        class P:
-            def __init__(self, name, rate):
-                self.name, self.rate = name, rate
-        mortgage_programs = [
-            P('Базовая', 18.0),
-            P('IT-ипотека', 6.0),
-            P('Семейная', 6.0),
-        ]
+    # Получаем ипотечные программы из MongoDB (унифицировано)
+    def get_mortgage_programs_from_mongo():
+        try:
+            db = get_mongo_connection()
+            docs = list(db['mortgage_programs'].find({'is_active': True}).sort('rate', 1))
+            class P:
+                def __init__(self, name, rate):
+                    self.name, self.rate = name, rate
+            return [P(d.get('name',''), float(d.get('rate', 0))) for d in docs]
+        except Exception:
+            return []
+    mortgage_programs = get_mortgage_programs_from_mongo()
     
     # Проверяем, является ли ID MongoDB ObjectId (24 hex символа)
     is_mongodb_id = len(str(complex_id)) == 24 and all(c in '0123456789abcdef' for c in str(complex_id).lower())
@@ -897,8 +1240,12 @@ def detail(request, complex_id):
             
             if is_new_structure:
                 # === НОВАЯ СТРУКТУРА: данные уже объединены ===
+                print(f"🔍 DEBUG: Processing NEW structure for complex {complex_id}")
+                print(f"🔍 DEBUG: apartment_types_data keys = {list(apartment_types_data.keys())}")
+                
                 for apt_type, apt_data in apartment_types_data.items():
                     apartments = apt_data.get('apartments', [])
+                    print(f"🔍 DEBUG: Processing apt_type={apt_type}, apartments count={len(apartments)}")
                     
                     if apartments:
                         apartment_types_list.append(apt_type)
@@ -906,9 +1253,14 @@ def detail(request, complex_id):
                         for apt in apartments:
                             # Получаем все фото планировки - это уже массив!
                             layout_photos = apt.get('image', [])
+                            print(f"🔍 DEBUG: apt_type={apt_type}, apt_data={apt}")
+                            print(f"🔍 DEBUG: layout_photos from apt.get('image') = {layout_photos}")
+                            print(f"🔍 DEBUG: layout_photos type = {type(layout_photos)}")
+                            
                             # Если это не массив, а строка - преобразуем в массив
                             if isinstance(layout_photos, str):
                                 layout_photos = [layout_photos] if layout_photos else []
+                                print(f"🔍 DEBUG: converted string to list: {layout_photos}")
                             
                             apartment_variants.append({
                                 'type': apt_type,
@@ -920,9 +1272,12 @@ def detail(request, complex_id):
                                 'url': apt.get('url', ''),
                                 'layout_photos': layout_photos  # Все фото для галереи
                             })
+                            print(f"🔍 DEBUG: final layout_photos = {layout_photos}")
             
             else:
                 # === СТАРАЯ СТРУКТУРА: нужно объединять данные ===
+                print(f"🔍 DEBUG: Processing OLD structure for complex {complex_id}")
+                print(f"🔍 DEBUG: This complex has OLD structure - should be updated by script!")
                 avito_apartment_types = avito_data.get('apartment_types', {})
                 domclick_apartment_types = domclick_data.get('apartment_types', {})
                 
@@ -953,6 +1308,73 @@ def detail(request, complex_id):
                         })
             
             # Формируем контекст для MongoDB версии
+            # Получаем акции для этого ЖК
+            complex_offers = []
+            try:
+                promotions_col = db['promotions']
+                offers_data = list(promotions_col.find({
+                    'complex_id': ObjectId(complex_id),
+                    'is_active': True
+                }).sort('created_at', -1))
+                
+                # Создаем адаптеры для совместимости с шаблонами
+                for offer_data in offers_data:
+                    class _Img: pass
+                    class _MainImg: pass
+                    class _RC: pass
+                    class _Offer: pass
+                    
+                    offer = _Offer()
+                    offer.id = str(offer_data.get('_id'))
+                    offer.title = offer_data.get('title', 'Акция')
+                    # Убираем описание
+                    offer.description = ''
+                    offer.expires_at = offer_data.get('expires_at')
+                    
+                    # residential_complex.name
+                    rc = _RC()
+                    rc.name = name  # Используем название ЖК из записи
+                    offer.residential_complex = rc
+                    
+                    # get_main_image.image.url - используем изображение из ЖК
+                    main = _MainImg()
+                    img = _Img()
+                    # Берем первое фото из ЖК для акции
+                    if photos:
+                        img.url = f'/media/{photos[0]}'
+                    else:
+                        img.url = '/media/gallery/placeholders.png'
+                    main.image = img
+                    offer.get_main_image = main
+                    
+                    complex_offers.append(offer)
+            except Exception as e:
+                print(f"Ошибка получения акций: {e}")
+                complex_offers = []
+            
+            # Получаем видеообзоры для этого ЖК
+            videos = []
+            try:
+                videos_col = db['residential_videos']
+                videos_data = list(videos_col.find({
+                    'complex_id': ObjectId(complex_id)
+                }).sort('created_at', -1))
+                
+                # Создаем адаптеры для совместимости с шаблонами
+                for video_data in videos_data:
+                    class _Video: pass
+                    video = _Video()
+                    video.id = str(video_data.get('_id'))
+                    video.title = video_data.get('title', '')
+                    video.video_url = video_data.get('url', '')
+                    video.created_at = video_data.get('created_at')
+                    # Добавляем превью для видео
+                    video.thumbnail_url = get_video_thumbnail(video_data.get('url', ''))
+                    videos.append(video)
+            except Exception as e:
+                print(f"Ошибка получения видео: {e}")
+                videos = []
+
             import json
             context = {
                 'complex': {
@@ -973,12 +1395,26 @@ def detail(request, complex_id):
                     'total_apartments': avito_data.get('total_apartments', 0),
                     'avito_url': avito_data.get('url', ''),
                     'domclick_url': domclick_data.get('url', ''),
+                    # Ход строительства из объединенной записи (скопирован из DomClick)
+                    'construction_progress': record.get('construction_progress', {}),
                 },
+                'complex_offers': complex_offers,
+                'videos': videos,
                 'mortgage_programs': mortgage_programs,
                 'is_mongodb': True,
                 'is_secondary': False,
             }
             
+            # Подтягиваем данные агента, если закреплен
+            agent = None
+            if record.get('agent_id'):
+                try:
+                    agent = db['employees'].find_one({'_id': record['agent_id'], 'is_active': True})
+                    if agent:
+                        agent['id'] = str(agent.get('_id'))
+                except Exception:
+                    agent = None
+            context['agent'] = agent
             return render(request, 'main/detail.html', context)
             
         except Exception as e:
@@ -987,233 +1423,273 @@ def detail(request, complex_id):
             raise Http404(f"Ошибка загрузки ЖК: {str(e)}")
     
     else:
-        # ============ SQL VERSION (старая логика) ============
-    complex = get_object_or_404(ResidentialComplex, id=complex_id)
+        # Для числовых ID возвращаем 404, так как все данные теперь в MongoDB
+        raise Http404("ЖК не найден. Используйте MongoDB ID.")
 
-    # Проверяем, пришли ли мы от агента
-    agent_id = request.GET.get('agent_id')
-    agent = None
-    agent_other_properties = []
 
-    if agent_id:
-        try:
-            agent = Employee.objects.get(id=agent_id, is_active=True)
-            # Получаем другие объекты этого агента (исключая текущий ЖК)
-            agent_residential = agent.residential_complexes.exclude(id=complex_id)[:3]
-            agent_secondary = agent.secondary_properties.all()[:3]
+def secondary_detail_mongo(request, complex_id: str):
+    """Детальная страница объекта вторичной недвижимости из MongoDB"""
+    try:
+        from bson import ObjectId
+        
+        # Подключение к MongoDB
+        db = get_mongo_connection()
+        collection = db['secondary_properties']
+        
+        # Получаем объект по ID
+        obj_id = ObjectId(complex_id)
+        doc = collection.find_one({'_id': obj_id})
+        
+        if not doc:
+            raise Http404("Объект не найден")
+        
+        # Подтягиваем агента, если закреплен
+        agent = None
+        if doc.get('agent_id'):
+            try:
+                agent = db['employees'].find_one({'_id': doc['agent_id'], 'is_active': True})
+            except Exception:
+                agent = None
 
-            # Объединяем объекты агента
-            for complex_obj in agent_residential:
-                agent_other_properties.append({
-                    'type': 'residential',
-                    'object': complex_obj,
-                    'name': complex_obj.name,
-                    'price': complex_obj.price_from,
-                    'location': f"{complex_obj.district or complex_obj.city}",
-                    'image': complex_obj.get_main_image(),
-                    'url': f"/complex/{complex_obj.id}/",
-                })
+        # Создаем адаптер для совместимости с шаблоном
+        class SecondaryAdapter:
+            def __init__(self, data):
+                self._data = data
+                self.name = data.get('name', '')
+                self.price_from = data.get('price', 0)
+                self.city = data.get('city', '')
+                self.district = data.get('district', '')
+                self.street = data.get('street', '')
+                self.commute_time = data.get('commute_time', '')
+                self.area_from = data.get('area', 0)
+                self.area_to = data.get('area', 0)
+                self.developer = 'Собственник'
+                self.total_apartments = 1  # Для совместимости с шаблоном
+                self.completion_start = ''
+                self.completion_end = ''
+                self.has_completed = True
+                self.get_house_class_display = lambda: ''
+                self.get_house_type_display = lambda: self._get_house_type_display()
+                self.get_finishing_display = lambda: self._get_finishing_display()
+                self.description = data.get('description', '')
+                self.photos = data.get('photos', [])
+                self.rooms = data.get('rooms', '')
+                self.total_floors = data.get('total_floors', '')
+                self.finishing = data.get('finishing', '')
+                
+            def _get_house_type_display(self):
+                house_type = self._data.get('house_type', '')
+                house_types = {
+                    'apartment': 'Квартира',
+                    'house': 'Дом',
+                    'cottage': 'Коттедж',
+                    'townhouse': 'Таунхаус',
+                    'commercial': 'Коммерческое помещение',
+                    'room': 'Комната',
+                    'studio': 'Студия'
+                }
+                return house_types.get(house_type, house_type)
+            
+            def _get_finishing_display(self):
+                finishing = self._data.get('finishing', '')
+                finishing_types = {
+                    'without': 'Без отделки',
+                    'rough': 'Черновая отделка',
+                    'white_box': 'Белая коробка',
+                    'full': 'Полная отделка',
+                    'designer': 'Дизайнерская отделка'
+                }
+                return finishing_types.get(finishing, finishing)
+            
+            def get_main_image(self):
+                if self.photos:
+                    class ImageAdapter:
+                        def __init__(self, photo_path):
+                            self.image = type('obj', (object,), {'url': f'/media/{photo_path}'})()
+                    return ImageAdapter(self.photos[0])
+                return None
+            
+            def get_all_images(self):
+                return [f'/media/{photo}' for photo in self.photos]
+            
+            def get_catalog_images(self):
+                # Возвращаем адаптеры для всех фото для совместимости с шаблоном
+                if not self.photos:
+                    return []
+                
+                class CatalogImageAdapter:
+                    def __init__(self, photo_path):
+                        self.image = type('obj', (object,), {'url': f'/media/{photo_path}'})()
+                
+                return [CatalogImageAdapter(photo) for photo in self.photos]
+            
+            def get_videos(self):
+                return []  # Вторичка не имеет видео
+        
+        complex_obj = SecondaryAdapter(doc)
+        
+        # Получаем похожие объекты (первые 3 из той же категории)
+        similar_filter = {}
+        if doc.get('rooms'):
+            similar_filter['rooms'] = doc['rooms']
+        if doc.get('city'):
+            similar_filter['city'] = doc['city']
+        
+        similar_cursor = collection.find(similar_filter).limit(3)
+        similar_objects = []
+        for similar_doc in similar_cursor:
+            if str(similar_doc['_id']) != complex_id:  # Исключаем текущий объект
+                similar_objects.append(SecondaryAdapter(similar_doc))
 
-            for property_obj in agent_secondary:
-                agent_other_properties.append({
-                    'type': 'secondary',
-                    'object': property_obj,
-                    'name': property_obj.name,
-                    'price': property_obj.price,
-                    'location': f"{property_obj.district or property_obj.city}",
-                    'image': property_obj.get_main_image(),
-                    'url': f"/secondary/{property_obj.id}/",
-                })
-        except Employee.DoesNotExist:
-            pass
-
-    # Получаем общие похожие ЖК (если нет других объектов агента или их мало)
-    similar_complexes = ResidentialComplex.objects.filter(
-        city=complex.city,
-        house_class=complex.house_class
-    ).exclude(id=complex.id)
-
-    # Если есть объекты агента, ограничиваем количество общих похожих
-    if agent_other_properties:
-        remaining_slots = max(0, 6 - len(agent_other_properties))
-        similar_complexes = similar_complexes[:remaining_slots]
-    else:
-        similar_complexes = similar_complexes[:3]
-
-    # Получаем акции для данного ЖК
-    from django.utils import timezone
-    complex_offers = SpecialOffer.objects.filter(
-        residential_complex=complex,
-        is_active=True
-    ).filter(
-        models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
-    ).order_by('-priority', '-created_at')
-
-    # Первое активное видеообзор этого ЖК
-    video = complex.get_main_video()
-    video_embed_url = None
-    if video and video.video_url:
-        url = video.video_url
-        if 'youtu.be/' in url:
-            vid = url.split('youtu.be/')[-1].split('?')[0]
-            video_embed_url = f'https://www.youtube.com/embed/{vid}'
-        elif 'watch?v=' in url:
-            vid = url.split('watch?v=')[-1].split('&')[0]
-            video_embed_url = f'https://www.youtube.com/embed/{vid}'
-        else:
-            video_embed_url = url
-
-    context = {
-        'complex': complex,
-        'similar_complexes': similar_complexes,
-        'complex_offers': complex_offers,
-        'video': video,
-        'video_embed_url': video_embed_url,
-        'videos': getattr(complex, 'get_videos', lambda: [])() if hasattr(complex, 'get_videos') else [],
-        'mortgage_programs': mortgage_programs,
-        'agent': agent,
-        'agent_other_properties': agent_other_properties,
-        'is_secondary': False,
-    }
-    return render(request, 'main/detail.html', context)
+        return render(request, 'main/detail.html', {
+            'complex': complex_obj,
+            'similar_complexes': similar_objects,
+        'is_secondary': True,
+        'mortgage_programs': [],
+            'videos': [],
+            'agent': agent,
+        })
+    except Exception as e:
+        raise Http404(f"Ошибка загрузки объекта: {str(e)}")
 
 
 def secondary_detail(request, pk: int):
-    obj = get_object_or_404(SecondaryProperty, pk=pk)
+    """Legacy функция - перенаправляет на MongoDB версию"""
+    raise Http404("Используйте MongoDB ID для просмотра объектов вторичной недвижимости")
 
-    # Используем существующий шаблон detail.html с минимальным контекстом-адаптером
-    class Adapter:
-        pass
 
-    complex = Adapter()
-    complex.name = obj.name
+def secondary_api_list(request):
+    """API для получения списка объектов вторичной недвижимости с фильтрацией"""
+    try:
+        # Получаем параметры фильтрации
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 12))
+        city = request.GET.get('city')
+        district = request.GET.get('district')
+        rooms = request.GET.get('rooms')
+        stype = request.GET.get('stype')  # Тип недвижимости
+        area_from = request.GET.get('area_from')
+        area_to = request.GET.get('area_to')
+        price_from = request.GET.get('price_from')
+        price_to = request.GET.get('price_to')
+        sort_by = request.GET.get('sort_by', 'created_at')
+        sort_order = request.GET.get('sort_order', 'desc')
 
-    complex.price_from = obj.price
-    complex.city = obj.city
-    complex.district = obj.district
-    complex.street = obj.street
-    complex.commute_time = obj.commute_time
-    complex.area_from = obj.area
-    complex.area_to = obj.area
-    complex.developer = 'Собственник'
-    complex.total_apartments = 1
-    complex.completion_start = ''
-    complex.completion_end = ''
-    complex.has_completed = True
-    complex.get_house_class_display = ''
-    complex.get_house_type_display = obj.get_house_type_display if hasattr(obj,
-                                                                           'get_house_type_display') else lambda: ''
-    complex.get_finishing_display = lambda: ''
+        # Подключение к MongoDB
+        db = get_mongo_connection()
+        collection = db['secondary_properties']
 
-    return render(request, 'main/detail.html', {
-        'complex': complex,
-        'similar_complexes': [],
-        'is_secondary': True,
-        'mortgage_programs': [],
-        'videos': obj.get_videos(),
-    })
+        # Строим фильтр
+        filter_dict = {}
+        if city:
+            filter_dict['city'] = {'$regex': city, '$options': 'i'}
+        if district:
+            filter_dict['district'] = {'$regex': district, '$options': 'i'}
+        if rooms:
+            filter_dict['rooms'] = int(rooms)
+        if stype:
+            filter_dict['house_type'] = stype
+
+        # Для админки показываем все объекты, для публичного API только активные
+        show_all = request.GET.get('admin', 'false').lower() == 'true'
+        if not show_all:
+            filter_dict['is_active'] = True
+
+        if area_from:
+            filter_dict['area'] = {'$gte': float(area_from)}
+        if area_to:
+            if 'area' in filter_dict:
+                filter_dict['area']['$lte'] = float(area_to)
+            else:
+                filter_dict['area'] = {'$lte': float(area_to)}
+        if price_from:
+            filter_dict['price'] = {'$gte': int(price_from)}
+        if price_to:
+            if 'price' in filter_dict:
+                filter_dict['price']['$lte'] = int(price_to)
+            else:
+                filter_dict['price'] = {'$lte': int(price_to)}
+
+        # Подсчитываем общее количество
+        total_count = collection.count_documents(filter_dict)
+
+        # Вычисляем пагинацию
+        skip = (page - 1) * per_page
+
+        # Определяем сортировку
+        sort_direction = -1 if sort_order == 'desc' else 1
+        sort_field = sort_by if sort_by in ['created_at', 'price_from', 'area_from', 'name'] else 'created_at'
+
+        # Получаем данные с пагинацией и сортировкой
+        cursor = collection.find(filter_dict).skip(skip).limit(per_page).sort(sort_field, sort_direction)
+
+        items = []
+        for doc in cursor:
+            # Формируем URL изображения
+            image_url = None
+            if doc.get('photos'):
+                photo_path = doc['photos'][0]
+                image_url = f"/media/{photo_path}"
+
+            # Формируем цену
+            price_range = None
+            if doc.get('price'):
+                price_range = f"{doc.get('price'):,.0f}".replace(',', ' ') + ' ₽'
+
+            items.append({
+                'id': str(doc['_id']),
+                'name': doc.get('name', ''),
+                'city': doc.get('city', ''),
+                'district': doc.get('district', ''),
+                'rooms': doc.get('rooms'),
+                'area_from': doc.get('area'),
+                'area_to': None,
+                'price_range': price_range,
+                'price_display': price_range,
+                'image_url': image_url,
+                'photos': doc.get('photos', []),
+                'description': doc.get('description', ''),
+                'address': doc.get('address', ''),
+                'total_floors': doc.get('total_floors'),
+                'finishing': doc.get('finishing', ''),
+                'is_active': doc.get('is_active', True),
+                'created_at': doc.get('created_at', datetime.now()),
+            })
+
+        # Вычисляем информацию о пагинации
+        total_pages = (total_count + per_page - 1) // per_page
+
+        return JsonResponse({
+            'success': True,
+            'data': items,
+            'items': items,
+            'total_count': total_count,
+            'current_page': page,
+            'total_pages': total_pages,
+            'per_page': per_page,
+            'has_next': page < total_pages,
+            'has_prev': page > 1,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 def secondary_api(request):
-    """API для вторичной недвижимости (AJAX)"""
-    page = int(request.GET.get('page', 1))
-    stype = request.GET.get('stype', '')
-    city = request.GET.get('city', '')
-    district = request.GET.get('district', '')
-    street = request.GET.get('street', '')
-    area_from = request.GET.get('area_from', '')
-    area_to = request.GET.get('area_to', '')
-    price_from = request.GET.get('price_from', '')
-    price_to = request.GET.get('price_to', '')
-
-    qs = SecondaryProperty.objects.all()
-    if stype:
-        qs = qs.filter(house_type=stype)
-    if city:
-        qs = qs.filter(city=city)
-    if district:
-        qs = qs.filter(district=district)
-    if street:
-        qs = qs.filter(street=street)
-    if area_from:
-        try:
-            qs = qs.filter(area__gte=float(area_from))
-        except ValueError:
-            pass
-    if area_to:
-        try:
-            qs = qs.filter(area__lte=float(area_to))
-        except ValueError:
-            pass
-    if price_from:
-        try:
-            qs = qs.filter(price__gte=float(price_from))
-        except ValueError:
-            pass
-    if price_to:
-        try:
-            qs = qs.filter(price__lte=float(price_to))
-        except ValueError:
-            pass
-
-    paginator = Paginator(qs, 9)
-    page_obj = paginator.get_page(page)
-
-    items = []
-    for obj in page_obj:
-        # Получаем изображения для каталога
-        catalog_images = obj.get_catalog_images()
-
-        # Подготавливаем отдельные URL для каждого изображения
-        image_url = None
-        image_2_url = None
-        image_3_url = None
-        image_4_url = None
-
-        if catalog_images:
-            # Главное изображение
-            if len(catalog_images) > 0 and catalog_images[0].image:
-                image_url = catalog_images[0].image.url
-
-            # Дополнительные изображения
-            if len(catalog_images) > 1 and catalog_images[1].image:
-                image_2_url = catalog_images[1].image.url
-            if len(catalog_images) > 2 and catalog_images[2].image:
-                image_3_url = catalog_images[2].image.url
-            if len(catalog_images) > 3 and catalog_images[3].image:
-                image_4_url = catalog_images[3].image.url
-
-        items.append({
-            'id': obj.id if obj.id else 0,
-            'name': obj.name,
-            'price_from': float(obj.price),
-            'city': obj.city,
-            'district': obj.district,
-            'street': obj.street,
-            'image_url': image_url,
-            'image_2_url': image_2_url,
-            'image_3_url': image_3_url,
-            'image_4_url': image_4_url,
-            'lat': obj.latitude,
-            'lng': obj.longitude,
-        })
-
-    return JsonResponse({
-        'items': items,
-        'current_page': page_obj.number,
-        'total_pages': paginator.num_pages,
-        'total_count': paginator.count,
-        'has_previous': page_obj.has_previous(),
-        'has_next': page_obj.has_next(),
-    })
+    """API для вторичной недвижимости (AJAX) - legacy"""
+    return secondary_api_list(request)
 
 
 def districts_api(request):
-    """API для получения районов по городу"""
+    """API для получения районов по городу - данные из MongoDB"""
     city = request.GET.get('city', '')
     if city:
-        districts = ResidentialComplex.objects.filter(city=city).values_list('district', flat=True).distinct()
-        districts = [district for district in districts if district]  # Убираем пустые значения
+        try:
+            db = get_mongo_connection()
+            collection = db['residential_complexes']
+            districts = collection.distinct('address.district', {'address.city': city})
+            districts = [district for district in districts if district]
+        except Exception:
+            districts = []
     else:
         districts = []
 
@@ -1221,12 +1697,17 @@ def districts_api(request):
 
 
 def streets_api(request):
-    """API для получения улиц по городу"""
+    """API для получения улиц по городу - данные из MongoDB"""
     city = request.GET.get('city', '')
 
     if city:
-        streets = ResidentialComplex.objects.filter(city=city).values_list('street', flat=True).distinct()
-        streets = [street for street in streets if street]  # Убираем пустые значения
+        try:
+            db = get_mongo_connection()
+            collection = db['residential_complexes']
+            streets = collection.distinct('address.street', {'address.city': city})
+            streets = [street for street in streets if street]
+        except Exception:
+            streets = []
     else:
         streets = []
 
@@ -1234,14 +1715,19 @@ def streets_api(request):
 
 
 def article_view_api(request, article_id):
-    """API для увеличения счетчика просмотров статьи"""
+    """API для увеличения счетчика просмотров статьи - MongoDB"""
     if request.method == 'POST':
         try:
-            article = Article.objects.get(id=article_id)
-            article.views_count += 1
-            article.save()
-            return JsonResponse({'success': True, 'views_count': article.views_count})
-        except Article.DoesNotExist:
+            db = get_mongo_connection()
+            result = db['articles'].update_one(
+                {'_id': ObjectId(article_id)},
+                {'$inc': {'views_count': 1}}
+            )
+            if result.matched_count > 0:
+                article = db['articles'].find_one({'_id': ObjectId(article_id)})
+                return JsonResponse({'success': True, 'views_count': article.get('views_count', 0)})
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+        except:
             return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
     return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
 
@@ -1252,13 +1738,19 @@ def privacy_policy(request):
 
 
 def catalog_landing(request, slug):
-    landing = get_object_or_404(CatalogLanding, slug=slug)
+    db = get_mongo_connection()
+    landing = db['catalog_landings'].find_one({'slug': slug, 'is_active': True})
+    
+    if not landing:
+        raise Http404("Страница не найдена")
 
     # Базовый queryset в зависимости от типа
-    if landing.kind == 'secondary':
-        queryset = SecondaryProperty.objects.all()
+    if landing['kind'] == 'secondary':
+        queryset = []
     else:
-        queryset = ResidentialComplex.objects.filter(status='construction')
+        # Для новостроек получаем данные из MongoDB
+        filters = {'status': 'construction'}
+        queryset = get_residential_complexes_from_mongo(filters=filters)
 
     # Категории
     category_map = {
@@ -1266,34 +1758,34 @@ def catalog_landing(request, slug):
         'house': 'house',
         'cottage': 'cottage',
         'townhouse': 'townhouse',
-        'commercial': None,  # коммерция отсутствует — оставляем как есть
+        'commercial': None,
         'all': None,
     }
-    house_type = category_map.get(landing.category)
+    house_type = category_map.get(landing['category'])
     if house_type:
-        if landing.kind == 'secondary':
-            queryset = queryset.filter(house_type=house_type)
+        if landing['kind'] == 'secondary':
+            pass
         else:
             queryset = queryset.filter(house_type=house_type)
 
     paginator = Paginator(queryset, 9)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
-    categories = CatalogLanding.objects.filter(kind=landing.kind).order_by('name')
+    categories = list(db['catalog_landings'].find({'kind': landing['kind'], 'is_active': True}).sort('name', 1))
 
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'cities': ResidentialComplex.objects.values_list('city', flat=True).distinct(),
-        'rooms_choices': ResidentialComplex.ROOMS_CHOICES,
+        'cities': [],  # Можно получить из MongoDB если нужно
+        'rooms_choices': [('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'filters': {},
         'filters_applied': True,
-        'page_title': landing.name,
-        'page_description': landing.meta_description or landing.name,
+        'page_title': landing.get('name', ''),
+        'page_description': landing.get('meta_description') or landing.get('name', ''),
         'landing': landing,
         'landing_categories': categories,
-        'dataset_type': 'secondary' if landing.kind == 'secondary' else 'newbuild',
+        'dataset_type': 'secondary' if landing.get('kind') == 'secondary' else 'newbuild',
     }
 
     return render(request, 'main/catalog.html', context)
@@ -1304,53 +1796,70 @@ def _catalog_fallback(request, kind: str, title: str):
     kind: 'newbuild'|'secondary'
     """
     if kind == 'secondary':
-        # Для вторички читаем из собственной таблицы
-        queryset = SecondaryProperty.objects.all()
-        stype = request.GET.get('stype', '')
-        if stype in ['apartment', 'cottage', 'townhouse', 'commercial']:
-            queryset = queryset.filter(house_type=stype)
+        queryset = []
     else:
-        queryset = ResidentialComplex.objects.filter(status='construction')
+        # Для новостроек получаем данные из MongoDB
+        filters = {'status': 'construction'}
+        queryset = get_residential_complexes_from_mongo(filters=filters)
 
     paginator = Paginator(queryset, 9)
     page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    # Получаем города из MongoDB для новостроек
+    cities = []
+    if kind == 'newbuild':
+        try:
+            db = get_mongo_connection()
+            collection = db['residential_complexes']
+            cities = collection.distinct('address.city')
+        except Exception:
+            cities = []
 
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
-        'cities': ResidentialComplex.objects.values_list('city', flat=True).distinct(),
-        'rooms_choices': ResidentialComplex.ROOMS_CHOICES,
+        'cities': cities,
+        'rooms_choices': [('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'filters': ({'stype': request.GET.get('stype', '')} if kind == 'secondary' else {}),
         'filters_applied': True,
         'page_title': title,
         'page_description': title,
         'landing': None,
-        'landing_categories': CatalogLanding.objects.filter(kind=kind).order_by('name'),
+        'landing_categories': [],  # TODO: получить из MongoDB
         'dataset_type': kind,
     }
     return render(request, 'main/catalog.html', context)
 
 
 def newbuild_index(request):
-    # Стартовая страница новостроек
-    landing = CatalogLanding.objects.filter(kind='newbuild', category='all').first()
+    # Стартовая страница новостроек - читает из MongoDB
+    db = get_mongo_connection()
+    landing = db['catalog_landings'].find_one({'kind': 'newbuild', 'category': 'all', 'is_active': True})
     if landing:
-        return catalog_landing(request, slug=landing.slug)
+        return catalog_landing(request, slug=landing['slug'])
     return _catalog_fallback(request, kind='newbuild', title='Новостройки')
 
 
 def secondary_index(request):
-    # Стартовая страница вторички
-    landing = CatalogLanding.objects.filter(kind='secondary', category='all').first()
+    # Стартовая страница вторички - читает из MongoDB
+    db = get_mongo_connection()
+    landing = db['catalog_landings'].find_one({'kind': 'secondary', 'category': 'all', 'is_active': True})
     if landing:
-        return catalog_landing(request, slug=landing.slug)
+        return catalog_landing(request, slug=landing['slug'])
     return _catalog_fallback(request, kind='secondary', title='Вторичная недвижимость')
 
 
 def team(request):
-    """Страница команды"""
-    employees = Employee.objects.filter(is_active=True).order_by('-is_featured', 'full_name')
+    """Страница команды - читает из MongoDB"""
+    db = get_mongo_connection()
+    employees = list(db['employees'].find({'is_active': True}).sort('full_name', 1))
+    # Преобразуем ObjectId в строку и кладем в поле id для шаблона
+    for emp in employees:
+        try:
+            emp['id'] = str(emp.get('_id'))
+        except Exception:
+            emp['id'] = ''
 
     context = {
         'employees': employees,
@@ -1359,22 +1868,31 @@ def team(request):
 
 
 def agent_properties(request, employee_id):
-    """Страница объектов агента"""
-    employee = get_object_or_404(Employee, id=employee_id, is_active=True)
+    """Страница объектов агента - читает из MongoDB"""
+    db = get_mongo_connection()
+    
+    try:
+        employee = db['employees'].find_one({'_id': ObjectId(employee_id), 'is_active': True})
+    except:
+        employee = db['employees'].find_one({'is_active': True})
+    
+    if not employee:
+        raise Http404("Сотрудник не найден")
 
     # Получаем параметры фильтрации и сортировки
     property_type = request.GET.get('property_type', '')
     sort_by = request.GET.get('sort_by', 'date-desc')
 
     # Получаем все объекты агента (новостройки и вторичная недвижимость)
-    residential_complexes = ResidentialComplex.objects.filter(agent=employee)
-    secondary_properties = SecondaryProperty.objects.filter(agent=employee)
+    # Для новостроек получаем из MongoDB
+    residential_complexes = []  # Пока пустой список, так как в MongoDB нет связи с агентами
+    secondary_properties = []  # Вторичка теперь в MongoDB
 
     # Фильтрация по типу недвижимости
     if property_type == 'residential':
-        secondary_properties = SecondaryProperty.objects.none()
+        secondary_properties = []
     elif property_type == 'secondary':
-        residential_complexes = ResidentialComplex.objects.none()
+        residential_complexes = []
 
     # Объединяем все объекты
     all_properties = []
@@ -1426,8 +1944,8 @@ def agent_properties(request, employee_id):
         'properties': page_obj,
         'page_obj': page_obj,
         'total_count': len(all_properties),
-        'residential_count': ResidentialComplex.objects.filter(agent=employee).count(),
-        'secondary_count': SecondaryProperty.objects.filter(agent=employee).count(),
+        'residential_count': 0,  # Пока 0, так как в MongoDB нет связи с агентами
+        'secondary_count': 0,  # Вторичка теперь в MongoDB
         'current_property_type': property_type,
         'current_sort': sort_by,
     }
@@ -1444,40 +1962,20 @@ def future_complexes(request):
     delivery_date = request.GET.get('delivery_date', '')
     sort = request.GET.get('sort', 'delivery_date_asc')
 
-    # Базовый queryset
-    complexes = FutureComplex.objects.filter(is_active=True)
-
-    # Применяем фильтры
+    # Получаем данные из MongoDB
+    filters = {}
     if city:
-        complexes = complexes.filter(city__icontains=city)
+        filters['city'] = city
     if district:
-        complexes = complexes.filter(district__icontains=district)
+        filters['district'] = district
     if price_from:
-        try:
-            complexes = complexes.filter(price_from__gte=float(price_from))
-        except ValueError:
-            pass
+        filters['price_from'] = price_from
     if price_to:
-        try:
-            complexes = complexes.filter(price_from__lte=float(price_to))
-        except ValueError:
-            pass
+        filters['price_to'] = price_to
     if delivery_date:
-        complexes = complexes.filter(delivery_date__lte=delivery_date)
-
-    # Применяем сортировку
-    if sort == 'delivery_date_asc':
-        complexes = complexes.order_by('delivery_date')
-    elif sort == 'delivery_date_desc':
-        complexes = complexes.order_by('-delivery_date')
-    elif sort == 'price_asc':
-        complexes = complexes.order_by('price_from')
-    elif sort == 'price_desc':
-        complexes = complexes.order_by('-price_from')
-    elif sort == 'name_asc':
-        complexes = complexes.order_by('name')
-    else:
-        complexes = complexes.order_by('-is_featured', 'delivery_date')
+        filters['delivery_date'] = delivery_date
+    
+    complexes = get_future_complexes_from_mongo(filters=filters, sort_by=sort)
 
     # Пагинация
     paginator = Paginator(complexes, 12)
@@ -1500,41 +1998,111 @@ def future_complexes(request):
 
 
 def future_complex_detail(request, complex_id):
-    """Детальная страница будущего ЖК"""
+    """Детальная страница будущего ЖК - данные из MongoDB"""
     try:
-        complex = FutureComplex.objects.get(id=complex_id, is_active=True)
-    except FutureComplex.DoesNotExist:
+        db = get_mongo_connection()
+        collection = db['future_complexes']
+        complex = collection.find_one({'_id': ObjectId(complex_id), 'is_active': True})
+        if not complex:
+            raise Http404("ЖК не найден")
+    except Exception:
         raise Http404("ЖК не найден")
 
-    # Получаем изображения ЖК
-    images = complex.get_images()
+    # Получаем изображения ЖК (если есть в MongoDB)
+    images = complex.get('images', [])
+
+    # Преобразуем _id в строку для использования в шаблонах
+    if '_id' in complex:
+        complex['id'] = str(complex['_id'])
+
+    # Подтягиваем закрепленного агента, если есть
+    agent = None
+    try:
+        agent_id = complex.get('agent_id')
+        if agent_id:
+            # agent_id может прийти как ObjectId или строка
+            _agent_oid = ObjectId(agent_id) if not isinstance(agent_id, ObjectId) else agent_id
+            agent_doc = db['employees'].find_one({'_id': _agent_oid, 'is_active': True})
+            if agent_doc:
+                agent = {
+                    'id': str(agent_doc.get('_id')),
+                    'full_name': agent_doc.get('full_name') or '',
+                    'position': agent_doc.get('position') or '',
+                    'photo': (agent_doc.get('photo') or ''),
+                }
+    except Exception:
+        agent = None
+
+    # Отладочная информация
+    print(f"🔍 DEBUG: complex keys: {list(complex.keys())}")
+    if 'object_details' in complex:
+        print(f"🔍 DEBUG: object_details keys: {list(complex['object_details'].keys())}")
+        if 'construction_progress' in complex['object_details']:
+            print(f"🔍 DEBUG: construction_progress: {complex['object_details']['construction_progress']}")
+    if 'construction_progress_data' in complex:
+        print(f"🔍 DEBUG: construction_progress_data: {complex['construction_progress_data']}")
 
     # Получаем другие будущие ЖК для блока "Другие проекты"
-    other_complexes = FutureComplex.objects.filter(
-        is_active=True
-    ).exclude(id=complex_id).order_by('?')[:6]
+    other_complexes = get_future_complexes_from_mongo(limit=6)
 
     context = {
         'complex': complex,
         'images': images,
         'other_complexes': other_complexes,
+        'agent': agent,
     }
     return render(request, 'main/future_complex_detail.html', context)
 
 
 def employee_detail(request, employee_id):
-    """Детальная страница сотрудника"""
-    employee = get_object_or_404(Employee, id=employee_id, is_active=True)
+    """Детальная страница сотрудника - читает из MongoDB"""
+    db = get_mongo_connection()
+    
+    try:
+        employee = db['employees'].find_one({'_id': ObjectId(employee_id), 'is_active': True})
+    except:
+        raise Http404("Сотрудник не найден")
+    
+    if not employee:
+        raise Http404("Сотрудник не найден")
 
-    # Получаем объекты недвижимости агента (по 2 новостройки и 2 вторички = 4 всего)
-    residential_complexes = employee.residential_complexes.all()[:2]
-    secondary_properties = employee.secondary_properties.all()[:2]
+    # Получаем объекты агента из MongoDB
+    residential_complexes = []
+    secondary_properties = []
+    try:
+        # Новостройки: unified_houses по agent_id
+        rc_cursor = db['unified_houses'].find({'agent_id': ObjectId(employee_id)})
+        for d in rc_cursor:
+            item = {
+                'id': str(d.get('_id')),
+                'name': (d.get('development', {}) or {}).get('name') or d.get('name',''),
+                'photo': ''
+            }
+            photos = (d.get('development', {}) or {}).get('photos') or d.get('photos') or []
+            if isinstance(photos, list) and photos:
+                item['photo'] = f"/media/{photos[0]}"
+            residential_complexes.append(item)
+    except Exception:
+        residential_complexes = []
+    try:
+        # Вторичка: secondary_properties по agent_id
+        sp_cursor = db['secondary_properties'].find({'agent_id': ObjectId(employee_id)})
+        for d in sp_cursor:
+            secondary_properties.append({
+                'id': str(d.get('_id')),
+                'name': d.get('name',''),
+                'city': d.get('city',''),
+                'district': d.get('district',''),
+                'photo': f"/media/{(d.get('photos') or [''])[0]}" if (d.get('photos') or []) else ''
+            })
+    except Exception:
+        secondary_properties = []
 
     # Считаем общее количество объектов
-    total_properties_count = employee.residential_complexes.count() + employee.secondary_properties.count()
+    total_properties_count = len(residential_complexes) + len(secondary_properties)
 
-    # Получаем опубликованные отзывы
-    reviews = employee.reviews.filter(is_approved=True, is_published=True).order_by('-created_at')[:10]
+    # Получаем опубликованные отзывы (пока пустой список, можно добавить коллекцию employee_reviews в MongoDB)
+    reviews = []
 
     # Обработка формы отзыва
     if request.method == 'POST':
@@ -1548,14 +2116,15 @@ def employee_detail(request, employee_id):
             try:
                 rating = int(rating)
                 if 1 <= rating <= 5:
-                    EmployeeReview.objects.create(
-                        employee=employee,
-                        name=name,
-                        email=email,
-                        phone=phone,
-                        rating=rating,
-                        text=text
-                    )
+                    # TODO: создать отзыв в MongoDB
+                    # EmployeeReview.objects.create(
+                    #     employee=employee,
+                    #     name=name,
+                    #     email=email,
+                    #     phone=phone,
+                    #     rating=rating,
+                    #     text=text
+                    # )
                     messages.success(request, 'Спасибо! Ваш отзыв отправлен на модерацию.')
                     return redirect('main:employee_detail', employee_id=employee.id)
             except ValueError:
@@ -1575,17 +2144,21 @@ def employee_detail(request, employee_id):
 
 def mortgage(request):
     """Страница ипотеки с калькулятором"""
-    # Получаем ипотечные программы для калькулятора
-    mortgage_programs = MortgageProgram.objects.filter(is_active=True).order_by('rate')
-
-    # Если нет программ, создаем базовую
-    if not mortgage_programs.exists():
-        mortgage_programs = [
-            type('MortgageProgram', (), {
-                'name': 'Базовая',
-                'rate': 11.4
-            })()
-        ]
+    # Получаем ипотечные программы из MongoDB
+    try:
+        db = get_mongo_connection()
+        docs = list(db['mortgage_programs'].find({'is_active': True}).sort('rate', 1))
+        class P:
+            def __init__(self, name, rate):
+                self.name, self.rate = name, rate
+        mortgage_programs = [P(d.get('name',''), float(d.get('rate', 0))) for d in docs]
+    except Exception:
+        mortgage_programs = []
+    if not mortgage_programs:
+        class P:
+            def __init__(self, name, rate):
+                self.name, self.rate = name, rate
+        mortgage_programs = [P('Базовая', 11.4)]
 
     context = {
         'mortgage_programs': mortgage_programs,
@@ -1629,7 +2202,7 @@ def all_offers(request):
             return adapters
         except Exception:
             from django.utils import timezone
-            return list(SpecialOffer.objects.filter(is_active=True).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).select_related('residential_complex').order_by('?'))
+            return get_special_offers_from_mongo()
 
     offers = build_all_offers()
 
@@ -1676,10 +2249,8 @@ def offer_detail(request, offer_id):
             others = [adapt(doc) for doc in promotions.find({'_id': {'$ne': p['_id']}, 'is_active': True}).sort('created_at', -1).limit(8)]
             return offer, others
         except Exception:
-            from django.utils import timezone
-            offer = get_object_or_404(SpecialOffer, id=int(offer_id_str), is_active=True)
-            other_offers = SpecialOffer.objects.filter(is_active=True).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exclude(id=offer.id).select_related('residential_complex').order_by('?')[:8]
-            return offer, list(other_offers)
+            # Для числовых ID возвращаем 404, так как все данные теперь в MongoDB
+            raise Exception('Offer not found - use MongoDB ID')
 
     offer, other_offers = build_offer_and_others(offer_id)
     return render(request, 'main/offer_detail.html', {'offer': offer, 'other_offers': other_offers})
@@ -1754,6 +2325,8 @@ def videos_list(request):
                         comp_name = (comp.get('avito', {}) or {}).get('development', {}) .get('name') or (comp.get('domclick', {}) or {}).get('development', {}) .get('complex_name', '')
             except Exception:
                 comp_name = ''
+            video_url = d.get('url', '')
+            thumbnail_url = get_video_thumbnail(video_url)
             items.append({
                 '_id': str(d.get('_id')),
                 'complex_id': str(d.get('complex_id')) if d.get('complex_id') else None,
@@ -1762,6 +2335,7 @@ def videos_list(request):
                 'description': d.get('description'),
                 'is_active': d.get('is_active', True),
                 'created_at': d.get('created_at').isoformat() if d.get('created_at') else None,
+                'thumbnail_url': thumbnail_url,
             })
         return JsonResponse({'success': True, 'data': items})
     except Exception as e:
@@ -1809,7 +2383,7 @@ def videos_by_complex(request, complex_id):
 
 
 @csrf_exempt
-@require_http_methods(["PATCH"]) 
+@require_http_methods(["POST"]) 
 def videos_toggle(request, video_id):
     try:
         db = get_mongo_connection()
@@ -1838,6 +2412,168 @@ def get_mongo_connection():
     return db
 
 
+def get_residential_complexes_from_mongo(filters=None, sort_by=None, limit=None, random=False):
+    """Получить ЖК из MongoDB"""
+    try:
+        db = get_mongo_connection()
+        collection = db['residential_complexes']
+        
+        # Базовый фильтр
+        mongo_filter = {'status': {'$ne': 'deleted'}}
+        
+        # Применяем дополнительные фильтры
+        if filters:
+            if filters.get('status'):
+                mongo_filter['status'] = filters['status']
+            if filters.get('house_class'):
+                mongo_filter['development.parameters.Класс жилья'] = filters['house_class']
+            if filters.get('city'):
+                mongo_filter['address.city'] = {'$regex': filters['city'], '$options': 'i'}
+            if filters.get('district'):
+                mongo_filter['address.district'] = {'$regex': filters['district'], '$options': 'i'}
+            if filters.get('finishing'):
+                mongo_filter['development.parameters.Отделка'] = filters['finishing']
+            if filters.get('is_featured') is not None:
+                mongo_filter['is_featured'] = filters['is_featured']
+        
+        # Выполняем запрос
+        if random:
+            # Для случайной выборки используем $sample
+            cursor = collection.aggregate([
+                {'$match': mongo_filter},
+                {'$sample': {'size': limit or 10}}
+            ])
+            complexes = list(cursor)
+        else:
+            # Обычная сортировка
+            sort_dict = {}
+            if sort_by:
+                if sort_by == 'price_asc':
+                    sort_dict['price.min'] = 1
+                elif sort_by == 'price_desc':
+                    sort_dict['price.min'] = -1
+                elif sort_by == 'delivery_date_asc':
+                    sort_dict['development.delivery_date'] = 1
+                elif sort_by == 'delivery_date_desc':
+                    sort_dict['development.delivery_date'] = -1
+                elif sort_by == 'name_asc':
+                    sort_dict['name'] = 1
+                else:
+                    sort_dict['name'] = 1
+            else:
+                sort_dict['name'] = 1
+            
+            cursor = collection.find(mongo_filter).sort(list(sort_dict.items()))
+            
+            if limit:
+                cursor = cursor.limit(limit)
+            
+            complexes = list(cursor)
+        
+        # Преобразуем _id в строку и добавляем как поле id для использования в шаблонах
+        for complex_item in complexes:
+            if '_id' in complex_item:
+                complex_item['id'] = str(complex_item['_id'])
+        
+        return complexes
+    except Exception as e:
+        print(f"Ошибка получения ЖК из MongoDB: {e}")
+        return []
+
+
+def get_special_offers_from_mongo(limit=None):
+    """Получить акции из MongoDB"""
+    try:
+        db = get_mongo_connection()
+        collection = db['promotions']
+        
+        # Фильтр активных акций
+        mongo_filter = {
+            'is_active': True,
+            '$or': [
+                {'expires_at': {'$exists': False}},
+                {'expires_at': None},
+                {'expires_at': {'$gt': datetime.now()}}
+            ]
+        }
+        
+        cursor = collection.find(mongo_filter).sort('created_at', -1)
+        
+        if limit:
+            cursor = cursor.limit(limit)
+        
+        return list(cursor)
+    except Exception as e:
+        print(f"Ошибка получения акций из MongoDB: {e}")
+        return []
+
+
+def get_future_complexes_from_mongo(filters=None, sort_by=None, limit=None):
+    """Получить будущие ЖК из MongoDB"""
+    try:
+        db = get_mongo_connection()
+        collection = db['future_complexes']
+        
+        # Базовый фильтр
+        mongo_filter = {'is_active': True}
+        
+        # Применяем дополнительные фильтры
+        if filters:
+            if filters.get('city'):
+                mongo_filter['city'] = {'$regex': filters['city'], '$options': 'i'}
+            if filters.get('district'):
+                mongo_filter['district'] = {'$regex': filters['district'], '$options': 'i'}
+            if filters.get('price_from'):
+                mongo_filter['price_from'] = {'$gte': float(filters['price_from'])}
+            if filters.get('price_to'):
+                mongo_filter['price_from'] = {'$lte': float(filters['price_to'])}
+            if filters.get('delivery_date'):
+                mongo_filter['delivery_date'] = {'$lte': filters['delivery_date']}
+        
+        # Сортировка
+        sort_dict = {}
+        if sort_by:
+            if sort_by == 'delivery_date_asc':
+                sort_dict['delivery_date'] = 1
+            elif sort_by == 'delivery_date_desc':
+                sort_dict['delivery_date'] = -1
+            elif sort_by == 'price_asc':
+                sort_dict['price_from'] = 1
+            elif sort_by == 'price_desc':
+                sort_dict['price_from'] = -1
+            elif sort_by == 'name_asc':
+                sort_dict['name'] = 1
+            else:
+                sort_dict['delivery_date'] = 1
+        else:
+            sort_dict['delivery_date'] = 1
+        
+        # Выполняем запрос
+        cursor = collection.find(mongo_filter).sort(list(sort_dict.items()))
+        
+        if limit:
+            cursor = cursor.limit(limit)
+        
+        # Преобразуем _id в строку и добавляем как поле id для использования в шаблонах
+        complexes = list(cursor)
+        for complex_item in complexes:
+            if '_id' in complex_item:
+                complex_item['id'] = str(complex_item['_id'])
+            
+            # Отладочная информация для фотографий
+            if complex_item.get('name'):
+                gallery_photos = complex_item.get('gallery_photos', [])
+                print(f"🔍 DEBUG: ЖК '{complex_item['name']}' - gallery_photos: {len(gallery_photos)} шт.")
+                if gallery_photos:
+                    print(f"🔍 DEBUG: Первое фото: {gallery_photos[0]}")
+        
+        print(f"🔍 DEBUG: Всего найдено {len(complexes)} будущих ЖК")
+        return complexes
+    except Exception as e:
+        print(f"Ошибка получения будущих ЖК из MongoDB: {e}")
+        return []
+
+
 def manual_matching(request):
     """Интерфейс ручного сопоставления данных из MongoDB"""
     return render(request, 'main/manual_matching.html')
@@ -1859,7 +2595,8 @@ def get_unmatched_records(request):
         matched_records = list(unified_col.find({}, {
             'domrf.name': 1, 
             'avito._id': 1, 
-            'domclick._id': 1
+            'domclick._id': 1,
+            '_source_ids': 1
         }))
         
         # Собираем ID сопоставленных записей
@@ -1867,13 +2604,28 @@ def get_unmatched_records(request):
         matched_avito_ids = set()
         matched_domclick_ids = set()
         
+        print(f"🔍 DEBUG: Найдено {len(matched_records)} сопоставленных записей")
+        
         for record in matched_records:
+            # Проверяем старую структуру
             if record.get('domrf', {}).get('name'):
                 matched_domrf_names.add(record['domrf']['name'])
             if record.get('avito', {}).get('_id'):
                 matched_avito_ids.add(ObjectId(record['avito']['_id']))
             if record.get('domclick', {}).get('_id'):
                 matched_domclick_ids.add(ObjectId(record['domclick']['_id']))
+            
+            # Проверяем новую структуру с _source_ids
+            source_ids = record.get('_source_ids', {})
+            if source_ids.get('domrf'):
+                # Для DomRF нужно получить имя из исходной записи
+                domrf_record = domrf_col.find_one({'_id': ObjectId(source_ids['domrf'])})
+                if domrf_record and domrf_record.get('objCommercNm'):
+                    matched_domrf_names.add(domrf_record['objCommercNm'])
+            if source_ids.get('avito'):
+                matched_avito_ids.add(ObjectId(source_ids['avito']))
+            if source_ids.get('domclick'):
+                matched_domclick_ids.add(ObjectId(source_ids['domclick']))
         
         # Получаем параметры пагинации и поиска
         page = int(request.GET.get('page', 1))
@@ -1881,7 +2633,7 @@ def get_unmatched_records(request):
         search = request.GET.get('search', '').strip()
         
         # Формируем фильтры для поиска
-        domrf_filter = {}
+        domrf_filter = {'is_processed': {'$ne': True}}  # Исключаем обработанные записи
         avito_filter = {}
         domclick_filter = {}
         
@@ -1892,6 +2644,9 @@ def get_unmatched_records(request):
         
         # Получаем несопоставленные записи (убираем ограничение для лучшего отображения)
         domrf_records = list(domrf_col.find(domrf_filter).limit(100))
+        print(f"🔍 DEBUG: Найдено {len(domrf_records)} записей DomRF")
+        print(f"🔍 DEBUG: Сопоставленные имена DomRF: {list(matched_domrf_names)}")
+        
         domrf_unmatched = [
             {
                 '_id': str(r['_id']),
@@ -1899,11 +2654,14 @@ def get_unmatched_records(request):
                 'url': r.get('url', ''),
                 'address': r.get('address', ''),
                 'latitude': r.get('latitude'),
-                'longitude': r.get('longitude')
+                'longitude': r.get('longitude'),
+                'objId': r.get('objId')  # Добавляем objId для формирования ссылки на дом.рф
             }
             for r in domrf_records 
             if r.get('objCommercNm') not in matched_domrf_names
         ][:per_page]
+        
+        print(f"🔍 DEBUG: Несопоставленных записей DomRF: {len(domrf_unmatched)}")
         
         avito_records = list(avito_col.find(avito_filter).limit(100))
         avito_unmatched = [
@@ -1911,7 +2669,9 @@ def get_unmatched_records(request):
                 '_id': str(r['_id']),
                 'name': r.get('development', {}).get('name', 'Без названия'),
                 'url': r.get('url', ''),
-                'address': r.get('location', {}).get('address', ''),
+                'address': r.get('development', {}).get('address', ''),
+                'development': r.get('development', {}),  # Передаем всю структуру development
+                'location': r.get('location', {})  # И location тоже для совместимости
             }
             for r in avito_records 
             if r['_id'] not in matched_avito_ids
@@ -1923,7 +2683,9 @@ def get_unmatched_records(request):
                 '_id': str(r['_id']),
                 'name': r.get('development', {}).get('complex_name', 'Без названия'),
                 'url': r.get('url', ''),
-                'address': r.get('location', {}).get('address', ''),
+                'address': r.get('development', {}).get('address', ''),
+                'development': r.get('development', {}),  # Передаем всю структуру development
+                'location': r.get('location', {})  # И location тоже для совместимости
             }
             for r in domclick_records 
             if r['_id'] not in matched_domclick_ids
@@ -1967,18 +2729,21 @@ def save_manual_match(request):
         domrf_id = data.get('domrf_id')
         avito_id = data.get('avito_id')
         domclick_id = data.get('domclick_id')
+        is_featured = data.get('is_featured', False)  # Флаг "показывать на главной"
+        agent_id = (data.get('agent_id') or '').strip()  # Закрепляем за агентом
         
-        # Проверка: должен быть хотя бы один DomRF и еще один источник
-        if not domrf_id:
+        # Координаты могут быть переданы напрямую (из модального окна)
+        provided_latitude = data.get('latitude')
+        provided_longitude = data.get('longitude')
+        
+        # Проверка: должно быть минимум 2 источника (исключаем null)
+        selected_sources = [domrf_id, avito_id, domclick_id]
+        selected_count = sum(1 for source_id in selected_sources if source_id and source_id != 'null')
+        
+        if selected_count < 2:
             return JsonResponse({
                 'success': False,
-                'error': 'DomRF обязателен для сопоставления'
-            }, status=400)
-        
-        if not avito_id and not domclick_id:
-            return JsonResponse({
-                'success': False,
-                'error': 'Необходимо выбрать хотя бы Avito или DomClick'
+                'error': 'Необходимо выбрать минимум 2 источника для сопоставления'
             }, status=400)
         
         db = get_mongo_connection()
@@ -1989,30 +2754,92 @@ def save_manual_match(request):
         domclick_col = db['domclick']
         unified_col = db['unified_houses']
         
-        domrf_record = domrf_col.find_one({'_id': ObjectId(domrf_id)})
-        if not domrf_record:
-            return JsonResponse({
-                'success': False,
-                'error': 'Запись DomRF не найдена'
-            }, status=404)
+        # Получаем DomRF запись если она выбрана
+        domrf_record = None
+        if domrf_id and domrf_id != 'null':
+            try:
+                domrf_record = domrf_col.find_one({'_id': ObjectId(domrf_id)})
+                if not domrf_record:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Запись DomRF не найдена'
+                    }, status=404)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ошибка получения DomRF записи: {str(e)}'
+                }, status=400)
         
         avito_record = None
-        if avito_id:
-            avito_record = avito_col.find_one({'_id': ObjectId(avito_id)})
+        if avito_id and avito_id != 'null':
+            try:
+                avito_record = avito_col.find_one({'_id': ObjectId(avito_id)})
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ошибка получения Avito записи: {str(e)}'
+                }, status=400)
         
         domclick_record = None
-        if domclick_id:
-            domclick_record = domclick_col.find_one({'_id': ObjectId(domclick_id)})
+        if domclick_id and domclick_id != 'null':
+            try:
+                domclick_record = domclick_col.find_one({'_id': ObjectId(domclick_id)})
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ошибка получения DomClick записи: {str(e)}'
+                }, status=400)
+        
+        # Проверяем, что хотя бы одна запись найдена
+        if not avito_record and not domclick_record:
+            return JsonResponse({
+                'success': False,
+                'error': 'Не найдены записи для объединения'
+            }, status=400)
         
         # === НОВАЯ УПРОЩЕННАЯ СТРУКТУРА ===
         
-        # 1. Координаты из DomRF (только это!)
+        # 1. Координаты (приоритет: переданные напрямую -> DomRF -> Avito -> DomClick)
+        latitude = None
+        longitude = None
+        
+        # Сначала проверяем переданные координаты (из модального окна)
+        if provided_latitude and provided_longitude:
+            latitude = float(provided_latitude)
+            longitude = float(provided_longitude)
+        elif domrf_record:
+            latitude = domrf_record.get('latitude')
+            longitude = domrf_record.get('longitude')
+        elif avito_record:
+            # Пытаемся взять координаты из Avito
+            latitude = avito_record.get('latitude')
+            longitude = avito_record.get('longitude')
+        elif domclick_record:
+            # Пытаемся взять координаты из DomClick
+            latitude = domclick_record.get('latitude')
+            longitude = domclick_record.get('longitude')
+        
+        # Если координат нет ни в одном источнике - требуем ввести вручную
+        if not latitude or not longitude:
+            return JsonResponse({
+                'success': False,
+                'error': 'Необходимо ввести координаты',
+                'error_type': 'missing_coordinates'
+            }, status=400)
+        
         unified_record = {
-            'latitude': domrf_record.get('latitude'),
-            'longitude': domrf_record.get('longitude'),
+            'latitude': latitude,
+            'longitude': longitude,
             'source': 'manual',
-            'created_by': 'manual'
+            'created_by': 'manual',
+            'is_featured': is_featured  # Флаг "показывать на главной"
         }
+        # Привязка агента
+        if agent_id:
+            try:
+                unified_record['agent_id'] = ObjectId(agent_id)
+            except Exception:
+                unified_record['agent_id'] = None
         
         # 2. Development из Avito + photos из DomClick
         if avito_record:
@@ -2026,10 +2853,15 @@ def save_manual_match(request):
                 'photos': []  # Будет заполнено из DomClick
             }
             
-            # Добавляем фото ЖК из DomClick
+            # Добавляем фото ЖК и ход строительства из DomClick
             if domclick_record:
                 domclick_dev = domclick_record.get('development', {})
                 unified_record['development']['photos'] = domclick_dev.get('photos', [])
+                # Ход строительства: берём из development.construction_progress,
+                # если нет — из корня записи DomClick
+                dc_construction = domclick_dev.get('construction_progress') or domclick_record.get('construction_progress')
+                if dc_construction:
+                    unified_record['construction_progress'] = dc_construction
         
         # 3. Объединяем apartment_types (Avito + фото из DomClick)
         unified_record['apartment_types'] = {}
@@ -2046,7 +2878,8 @@ def save_manual_match(request):
                 '1 ком.': '1',
                 '1-комн': '1',
                 '1-комн.': '1',
-                # 2-комнатные
+                # 2-комнатные (ИСПРАВЛЕНО: добавляем все варианты)
+                '2 ком.': '2',  # ← ДОБАВЛЕНО: маппинг для Avito
                 '2': '2',
                 '2-комн': '2',
                 '2-комн.': '2',
@@ -2087,6 +2920,10 @@ def save_manual_match(request):
                         avito_apartments = avito_data.get('apartments', [])
                         break
                 
+                # ИЗМЕНЕНО: Добавляем тип только если есть данные в Avito
+                if not avito_apartments:
+                    continue  # Пропускаем тип, если нет данных в Avito
+                
                 # Объединяем: количество квартир = количество квартир в DomClick
                 combined_apartments = []
                 
@@ -2099,7 +2936,7 @@ def save_manual_match(request):
                         continue
                     
                     # Берем соответствующую квартиру из Avito (циклически)
-                    avito_apt = avito_apartments[i % len(avito_apartments)] if avito_apartments else {}
+                    avito_apt = avito_apartments[i % len(avito_apartments)]
                     
                     combined_apartments.append({
                         'title': avito_apt.get('title', ''),
@@ -2110,7 +2947,7 @@ def save_manual_match(request):
                         'image': apartment_photos  # МАССИВ всех фото этой планировки!
                     })
                 
-                # Добавляем в результат только если есть квартиры с фото
+                # Добавляем в результат только если есть квартиры с фото И данными из Avito
                 if combined_apartments:
                     unified_record['apartment_types'][simplified_name] = {
                         'apartments': combined_apartments
@@ -2118,16 +2955,15 @@ def save_manual_match(request):
         
         # Сохраняем ссылки на исходные записи для отладки
         unified_record['_source_ids'] = {
-            'domrf': str(domrf_record['_id']),
+            'domrf': str(domrf_record['_id']) if domrf_record else None,
             'avito': str(avito_record['_id']) if avito_record else None,
             'domclick': str(domclick_record['_id']) if domclick_record else None
         }
         
         # Сохраняем
         result = unified_col.insert_one(unified_record)
-
-    return JsonResponse({
-        'success': True,
+        return JsonResponse({
+            'success': True,
             'message': 'Сопоставление успешно сохранено',
             'unified_id': str(result.inserted_id)
         })
@@ -2146,6 +2982,698 @@ def save_manual_match(request):
         }, status=500)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def domrf_create(request):
+    """API: Создать новую запись DomRF"""
+    try:
+        name = request.POST.get('name', '').strip()
+        address = request.POST.get('address', '').strip()
+        city = request.POST.get('city', '').strip()
+        latitude = request.POST.get('latitude', '').strip()
+        longitude = request.POST.get('longitude', '').strip()
+        developer = request.POST.get('developer', '').strip()
+        description = request.POST.get('description', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        
+        # Валидация обязательных полей
+        if not name or not address or not city or not latitude or not longitude:
+            return JsonResponse({
+                'success': False,
+                'error': 'Заполните все обязательные поля'
+            }, status=400)
+        
+        # Проверяем корректность координат
+        try:
+            lat_float = float(latitude)
+            lng_float = float(longitude)
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Некорректные координаты'
+            }, status=400)
+        
+        db = get_mongo_connection()
+        domrf_col = db['domrf']
+        
+        # Проверяем, нет ли уже записи с таким названием
+        existing = domrf_col.find_one({'objCommercNm': name})
+        if existing:
+            return JsonResponse({
+                'success': False,
+                'error': 'Запись с таким названием уже существует'
+            }, status=400)
+        
+        # Создаем новую запись DomRF
+        domrf_record = {
+            'objCommercNm': name,
+            'address': address,
+            'city': city,
+            'latitude': lat_float,
+            'longitude': lng_float,
+            'developer': developer,
+            'description': description,
+            'is_active': is_active,
+            'created_at': datetime.now(),
+            'updated_at': datetime.now(),
+            'source': 'manual_creation'
+        }
+        
+        result = domrf_col.insert_one(domrf_record)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Запись DomRF создана успешно',
+            'domrf_id': str(result.inserted_id)
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_record(request):
+    """API: Удалить запись из коллекции"""
+    try:
+        data = json.loads(request.body)
+        source = data.get('source')  # 'domrf', 'avito', 'domclick'
+        record_id = data.get('record_id')
+        
+        if not source or not record_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Не указан источник или ID записи'
+            }, status=400)
+        
+        if source not in ['domrf', 'avito', 'domclick', 'future_complexes']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Неверный источник'
+            }, status=400)
+        
+        db = get_mongo_connection()
+        collection = db[source]
+        
+        # Проверяем, что запись существует
+        try:
+            existing_record = collection.find_one({'_id': ObjectId(record_id)})
+            if not existing_record:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Запись не найдена'
+                }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Ошибка поиска записи: {str(e)}'
+            }, status=400)
+        
+        # Удаляем запись
+        try:
+            result = collection.delete_one({'_id': ObjectId(record_id)})
+            if result.deleted_count == 1:
+                # Если удаляем будущий проект, снимаем флаг is_processed с исходной записи DomRF
+                if source == 'future_complexes':
+                    future_record = existing_record
+                    if future_record and future_record.get('source_domrf_id'):
+                        domrf_collection = db['domrf']
+                        domrf_collection.update_one(
+                            {'_id': ObjectId(future_record['source_domrf_id'])},
+                            {'$unset': {'is_processed': '', 'processed_at': '', 'future_project_id': ''}}
+                        )
+                        print(f"🔍 DEBUG: Снят флаг is_processed с записи DomRF {future_record['source_domrf_id']}")
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Запись из {source} успешно удалена'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Запись не была удалена'
+                }, status=500)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Ошибка удаления записи: {str(e)}'
+            }, status=500)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_future_project(request):
+    """API: Создать запись в будущих проектах из DomRF"""
+    try:
+        data = json.loads(request.body)
+        domrf_id = data.get('domrf_id')
+        
+        if not domrf_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Не указан ID записи DomRF'
+            }, status=400)
+        
+        db = get_mongo_connection()
+        domrf_collection = db['domrf']
+        future_collection = db['future_complexes']
+        
+        # Получаем запись DomRF
+        try:
+            domrf_record = domrf_collection.find_one({'_id': ObjectId(domrf_id)})
+            if not domrf_record:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Запись DomRF не найдена'
+                }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Ошибка поиска записи DomRF: {str(e)}'
+            }, status=400)
+        
+        # Извлекаем object_details из DomRF записи
+        object_details = domrf_record.get('object_details', {})
+        
+        # Создаем запись для будущих проектов
+        now = datetime.now()
+        future_project = {
+            'name': data.get('name', domrf_record.get('objCommercNm', 'Без названия')),
+            'description': data.get('description', domrf_record.get('description', '')),
+            'city': data.get('city', 'Уфа'),
+            'district': data.get('district', domrf_record.get('district', '')),
+            'street': data.get('street', domrf_record.get('street', '')),
+            'delivery_date': datetime.strptime(data.get('delivery_date', '2026-12-31'), '%Y-%m-%d'),
+            'house_class': data.get('house_class', ''),
+            'developer': data.get('developer', domrf_record.get('developer', '')),
+            'is_active': True,
+            'is_featured': False,
+            'created_at': now,
+            'updated_at': now,
+            'images': [],
+            'construction_progress': [],
+            'object_details': domrf_record.get('object_details', {}),
+            'latitude': domrf_record.get('latitude'),
+            'longitude': domrf_record.get('longitude'),
+            'source_domrf_id': str(domrf_record['_id']),
+            # Поля из формы (приоритетно) или из DomRF
+            'energy_efficiency': data.get('energy_efficiency', domrf_record.get('energy_efficiency', '')),
+            'floors': data.get('floors', domrf_record.get('floors', '')),
+            'contractors': data.get('contractors', domrf_record.get('contractors', '')),
+            # Основные характеристики
+            'walls_material': data.get('walls_material', domrf_record.get('walls_material', '')),
+            'decoration_type': data.get('decoration_type', domrf_record.get('decoration_type', '')),
+            'free_planning': data.get('free_planning', domrf_record.get('free_planning', '')),
+            'ceiling_height': data.get('ceiling_height', domrf_record.get('ceiling_height', '')),
+            'living_area': data.get('living_area', domrf_record.get('living_area', '')),
+            # Благоустройство двора
+            'bicycle_paths': data.get('bicycle_paths', domrf_record.get('bicycle_paths', '')),
+            'children_playgrounds_count': data.get('children_playgrounds_count', 0),
+            'sports_grounds_count': data.get('sports_grounds_count', 0),
+            # Доступная среда
+            'ramp_available': data.get('ramp_available', domrf_record.get('ramp', '')),
+            'lowering_platforms_available': data.get('lowering_platforms_available', domrf_record.get('lowering_platforms', '')),
+            # Лифты и подъезды
+            'entrances_count': data.get('entrances_count', domrf_record.get('entrances_count', '')),
+            'passenger_elevators_count': data.get('passenger_elevators_count', 0),
+            'cargo_elevators_count': data.get('cargo_elevators_count', 0),
+            # Сохраняем фотографии и другие данные из DomRF
+            'gallery_photos': object_details.get('gallery_photos', domrf_record.get('gallery_photos', [])),
+            'construction_progress_data': object_details.get('construction_progress', domrf_record.get('construction_progress', {})),
+            'objPublDt': domrf_record.get('objPublDt', ''),
+            'objId': domrf_record.get('objId', ''),
+            'url': domrf_record.get('url', ''),
+            'address': domrf_record.get('address', ''),
+            'completion_date': domrf_record.get('completion_date', ''),
+            'apartments_count': domrf_record.get('apartments_count', ''),
+            'parking': domrf_record.get('parking', ''),
+            'material': domrf_record.get('material', ''),
+            'finishing': domrf_record.get('finishing', ''),
+            'heating': domrf_record.get('heating', ''),
+            'water_supply': domrf_record.get('water_supply', ''),
+            'sewerage': domrf_record.get('sewerage', ''),
+            'gas_supply': domrf_record.get('gas_supply', ''),
+            'electricity': domrf_record.get('electricity', ''),
+            'ventilation': domrf_record.get('ventilation', ''),
+            'security': domrf_record.get('security', ''),
+            'concierge': domrf_record.get('concierge', ''),
+            'intercom': domrf_record.get('intercom', ''),
+            'video_surveillance': domrf_record.get('video_surveillance', ''),
+            'access_control': domrf_record.get('access_control', ''),
+            'fire_safety': domrf_record.get('fire_safety', ''),
+            'children_playground': domrf_record.get('children_playground', ''),
+            'sports_ground': domrf_record.get('sports_ground', ''),
+            'landscaping': domrf_record.get('landscaping', ''),
+            'underground_parking': domrf_record.get('underground_parking', ''),
+            'ground_parking': domrf_record.get('ground_parking', ''),
+            'guest_parking': domrf_record.get('guest_parking', ''),
+            # Сохраняем всю структуру flats_data для статистики квартир (может быть в object_details или в корне)
+            'flats_data': domrf_record.get('object_details', {}).get('flats_data', domrf_record.get('flats_data', {}))
+        }
+        
+        # Вставляем в коллекцию будущих проектов
+        try:
+            result = future_collection.insert_one(future_project)
+            if result.inserted_id:
+                # Помечаем запись в DomRF как обработанную (не удаляем!)
+                domrf_collection.update_one(
+                    {'_id': ObjectId(domrf_id)},
+                    {'$set': {'is_processed': True, 'processed_at': now, 'future_project_id': str(result.inserted_id)}}
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Проект успешно перенесен в будущие проекты',
+                    'future_project_id': str(result.inserted_id)
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Не удалось создать запись в будущих проектах'
+                }, status=500)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Ошибка создания записи: {str(e)}'
+            }, status=500)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_future_projects(request):
+    """API: Получить список будущих проектов для manual_matching"""
+    try:
+        db = get_mongo_connection()
+        collection = db['future_complexes']
+        
+        # Получаем все активные проекты
+        projects = list(collection.find({'is_active': True}).sort('_id', -1))
+        
+        # Форматируем для отображения
+        formatted_projects = []
+        for project in projects:
+            formatted_projects.append({
+                '_id': str(project['_id']),
+                'name': project.get('name', 'Без названия'),
+                'city': project.get('city', ''),
+                'district': project.get('district', ''),
+                'delivery_date': project.get('delivery_date', ''),
+                'price_from': project.get('price_from', 0),
+                'developer': project.get('developer', ''),
+                'created_at': project.get('created_at', ''),
+                'updated_at': project.get('updated_at', '')
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': formatted_projects
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_domrf_data(request, domrf_id):
+    """API: Получить данные DomRF записи для заполнения формы"""
+    try:
+        db = get_mongo_connection()
+        collection = db['domrf']
+        
+        # Получаем запись DomRF
+        domrf_record = collection.find_one({'_id': ObjectId(domrf_id)})
+        if not domrf_record:
+            return JsonResponse({
+                'success': False,
+                'error': 'Запись DomRF не найдена'
+            }, status=404)
+        
+        # Извлекаем данные из объекта developer
+        developer_info = domrf_record.get('developer', {})
+        developer_name = ''
+        if isinstance(developer_info, dict):
+            developer_name = developer_info.get('shortName', developer_info.get('fullName', ''))
+        
+        # Извлекаем данные из object_details
+        object_details = domrf_record.get('object_details', {})
+        main_characteristics = object_details.get('main_characteristics', {})
+        yard_improvement = object_details.get('yard_improvement', {})
+        parking_space = object_details.get('parking_space', {})
+        accessible_environment = object_details.get('accessible_environment', {})
+        elevators = object_details.get('elevators', {})
+        construction_progress = object_details.get('construction_progress', {})
+        
+        # Извлекаем фотографии
+        gallery_photos = object_details.get('gallery_photos', domrf_record.get('gallery_photos', []))
+        construction_photos = []
+        if construction_progress and isinstance(construction_progress, dict):
+            # Проверяем новую структуру с этапами
+            construction_stages = construction_progress.get('construction_stages', [])
+            if construction_stages:
+                # Собираем все фотографии из всех этапов
+                for stage in construction_stages:
+                    if stage.get('photos'):
+                        construction_photos.extend(stage['photos'])
+            else:
+                # Fallback на старую структуру
+                construction_photos = construction_progress.get('photos', [])
+        
+        # Форматируем данные для формы
+        formatted_data = {
+            'name': domrf_record.get('objCommercNm', domrf_record.get('name', 'Без названия')),
+            'city': domrf_record.get('city', 'Уфа'),
+            'district': domrf_record.get('district', ''),
+            'street': domrf_record.get('street', ''),
+            'price_from': domrf_record.get('price_from', ''),
+            'price_to': domrf_record.get('price_to', ''),
+            'area_from': domrf_record.get('area_from', ''),
+            'area_to': domrf_record.get('area_to', ''),
+            'rooms': domrf_record.get('rooms', ''),
+            'house_class': domrf_record.get('house_class', main_characteristics.get('Класс недвижимости', '')),
+            'developer': developer_name,
+            'description': domrf_record.get('description', ''),
+            'latitude': domrf_record.get('latitude'),
+            'longitude': domrf_record.get('longitude'),
+            'object_details': object_details,
+            'gallery_photos': gallery_photos,
+            'construction_progress': construction_progress,
+            'construction_photos': construction_photos,
+            # Дополнительные поля из DomRF и object_details
+            'energy_efficiency': object_details.get('energy_efficiency', domrf_record.get('energy_efficiency', '')),
+            'contractors': object_details.get('contractors', domrf_record.get('contractors', '')),
+            'objPublDt': domrf_record.get('objPublDt', ''),
+            'objId': domrf_record.get('objId', ''),
+            'url': domrf_record.get('url', ''),
+            'address': domrf_record.get('address', ''),
+            'completion_date': domrf_record.get('completion_date', ''),
+            'floors': main_characteristics.get('Количество этажей', domrf_record.get('floors', '')),
+            'apartments_count': domrf_record.get('apartments_count', ''),
+            'parking': domrf_record.get('parking', ''),
+            'elevators': domrf_record.get('elevators', ''),
+            'material': main_characteristics.get('Материал стен', domrf_record.get('material', '')),
+            'finishing': main_characteristics.get('Тип отделки', domrf_record.get('finishing', '')),
+            'heating': domrf_record.get('heating', ''),
+            'water_supply': domrf_record.get('water_supply', ''),
+            'sewerage': domrf_record.get('sewerage', ''),
+            'gas_supply': domrf_record.get('gas_supply', ''),
+            'electricity': domrf_record.get('electricity', ''),
+            'ventilation': domrf_record.get('ventilation', ''),
+            'security': domrf_record.get('security', ''),
+            'concierge': domrf_record.get('concierge', ''),
+            'intercom': domrf_record.get('intercom', ''),
+            'video_surveillance': domrf_record.get('video_surveillance', ''),
+            'access_control': domrf_record.get('access_control', ''),
+            'fire_safety': domrf_record.get('fire_safety', ''),
+            'children_playground': domrf_record.get('children_playground', ''),
+            'sports_ground': domrf_record.get('sports_ground', ''),
+            'landscaping': domrf_record.get('landscaping', ''),
+            'bicycle_paths': domrf_record.get('bicycle_paths', ''),
+            'ramp': domrf_record.get('ramp', ''),
+            'lowering_platforms': domrf_record.get('lowering_platforms', ''),
+            'underground_parking': domrf_record.get('underground_parking', ''),
+            'ground_parking': domrf_record.get('ground_parking', ''),
+            'guest_parking': domrf_record.get('guest_parking', ''),
+            'cargo_elevators': domrf_record.get('cargo_elevators', ''),
+            'passenger_elevators': domrf_record.get('passenger_elevators', ''),
+            'entrances_count': domrf_record.get('entrances_count', ''),
+            'free_planning': main_characteristics.get('Свободная планировка', domrf_record.get('free_planning', '')),
+            'ceiling_height': main_characteristics.get('Высота потолков', domrf_record.get('ceiling_height', '')),
+            'living_area': main_characteristics.get('Жилая площадь', domrf_record.get('living_area', '')),
+            'walls_material': main_characteristics.get('Материал стен', domrf_record.get('walls_material', '')),
+            'decoration_type': main_characteristics.get('Тип отделки', domrf_record.get('decoration_type', '')),
+            # Данные из yard_improvement
+            'bicycle_paths_available': yard_improvement.get('Велосипедные дорожки', ''),
+            'children_playgrounds_count': yard_improvement.get('Количество детских площадок', ''),
+            'sports_grounds_count': yard_improvement.get('Количество спортивных площадок', ''),
+            # Данные из accessible_environment
+            'ramp_available': accessible_environment.get('Наличие пандуса', ''),
+            'lowering_platforms_available': accessible_environment.get('Наличие понижающих площадок', ''),
+            # Данные из elevators
+            'entrances_count_detail': elevators.get('Количество подъездов', ''),
+            'passenger_elevators_count': elevators.get('Количество пассажирских лифтов', ''),
+            'cargo_elevators_count': elevators.get('Количество грузовых лифтов', '')
+        }
+        
+        # Добавляем отладочную информацию
+        print(f"🔍 DEBUG: DomRF данные для {domrf_id}:")
+        print(f"📊 Название: {formatted_data['name']}")
+        print(f"📊 Застройщик: {formatted_data['developer']}")
+        print(f"📊 Класс дома: {formatted_data['house_class']}")
+        print(f"📊 Этажность: {formatted_data['floors']}")
+        print(f"📊 Энергоэффективность: {formatted_data['energy_efficiency']}")
+        print(f"📊 Подрядчики: {formatted_data['contractors']}")
+        print(f"📊 Фото галереи: {len(formatted_data['gallery_photos'])} шт.")
+        print(f"📊 Фото строительства: {len(formatted_data['construction_photos'])} шт.")
+        print(f"📊 Object details keys: {list(object_details.keys())}")
+        
+        return JsonResponse({
+            'success': True,
+            'data': formatted_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_photo(request):
+    """API: Удалить фотографию (файл и запись в базе)"""
+    try:
+        import os
+        from django.conf import settings
+        
+        data = json.loads(request.body)
+        photo_path = data.get('photo_path')
+        photo_type = data.get('photo_type')  # 'gallery' или 'construction'
+        
+        if not photo_path or not photo_type:
+            return JsonResponse({
+                'success': False,
+                'error': 'Не указан путь к фото или тип'
+            }, status=400)
+        
+        # Удаляем файл с диска
+        # Добавляем папку future_complexes к пути
+        full_photo_path = os.path.join('future_complexes', photo_path)
+        full_path = os.path.join(settings.MEDIA_ROOT, full_photo_path)
+        if os.path.exists(full_path):
+            try:
+                os.remove(full_path)
+                print(f"✅ Файл удален: {full_path}")
+            except Exception as e:
+                print(f"⚠️ Ошибка удаления файла {full_path}: {e}")
+        
+        # Удаляем путь из базы данных
+        db = get_mongo_connection()
+        collection = db['domrf']
+        
+        if photo_type == 'gallery':
+            # Удаляем из gallery_photos
+            collection.update_many(
+                {'gallery_photos': photo_path},
+                {'$pull': {'gallery_photos': photo_path}}
+            )
+        elif photo_type == 'construction':
+            # Удаляем из construction_progress (новая структура с этапами)
+            # Сначала пытаемся удалить из construction_stages[].photos
+            collection.update_many(
+                {'object_details.construction_progress.construction_stages.photos': photo_path},
+                {'$pull': {'object_details.construction_progress.construction_stages.$[].photos': photo_path}}
+            )
+            
+            # Также удаляем из старой структуры construction_progress.photos (fallback)
+            collection.update_many(
+                {'object_details.construction_progress.photos': photo_path},
+                {'$pull': {'object_details.construction_progress.photos': photo_path}}
+            )
+            
+            # И из корневой структуры (если есть)
+            collection.update_many(
+                {'construction_progress.photos': photo_path},
+                {'$pull': {'construction_progress.photos': photo_path}}
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Фотография удалена'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_apartment_stats(request, domrf_id):
+    """API: Получить статистику квартир по типам"""
+    try:
+        db = get_mongo_connection()
+        collection = db['domrf']
+        
+        # Получаем запись DomRF
+        domrf_record = collection.find_one({'_id': ObjectId(domrf_id)})
+        if not domrf_record:
+            return JsonResponse({
+                'success': False,
+                'error': 'Запись DomRF не найдена'
+            }, status=404)
+        
+        # Получаем flats_data (может быть в object_details или в корне)
+        object_details = domrf_record.get('object_details', {})
+        flats_data = object_details.get('flats_data', domrf_record.get('flats_data', {}))
+        
+        if not flats_data:
+            return JsonResponse({
+                'success': True,
+                'data': []
+            })
+        
+        # Подсчитываем статистику по типам квартир
+        stats = {}
+        
+        for apt_type, apartments in flats_data.items():
+            if isinstance(apartments, dict):
+                # Новая структура: {flats: [...], total_count: ...}
+                apartments_list = apartments.get('flats', [])
+                count = apartments.get('total_count', len(apartments_list))
+            elif isinstance(apartments, list):
+                # Старая структура: просто массив
+                apartments_list = apartments
+                count = len(apartments_list)
+            else:
+                continue
+                
+            areas = []
+            
+            for apt in apartments_list:
+                if isinstance(apt, dict):
+                    # Пробуем найти площадь в разных полях
+                    area_value = apt.get('totalArea') or apt.get('area') or apt.get('total_area')
+                    if area_value:
+                        try:
+                            area = float(area_value)
+                            if area > 0:
+                                areas.append(area)
+                        except (ValueError, TypeError):
+                            pass
+            
+            if count > 0:
+                min_area = min(areas) if areas else 0
+                max_area = max(areas) if areas else 0
+                
+                # Нормализуем название типа квартиры
+                # Преобразуем oneRoom -> 1, twoRoom -> 2, threeRoom -> 3, fourRoom -> 4+
+                import re
+                type_name = apt_type
+                
+                # Маппинг для английских названий
+                room_mapping = {
+                    'oneRoom': '1',
+                    'twoRoom': '2',
+                    'threeRoom': '3',
+                    'fourRoom': '4+'
+                }
+                
+                if apt_type in room_mapping:
+                    type_name = room_mapping[apt_type]
+                else:
+                    # Пытаемся извлечь число из названия
+                    type_name = apt_type.replace('Room', '').replace('_комн', '').replace('комн', '').replace('комнат', '').strip()
+                    if not type_name.isdigit():
+                        numbers = re.findall(r'\d+', apt_type)
+                        type_name = numbers[0] if numbers else apt_type
+                
+                stats[type_name] = {
+                    'type': type_name,
+                    'count': count,
+                    'min_area': round(min_area, 1) if min_area > 0 else 0,
+                    'max_area': round(max_area, 1) if max_area > 0 else 0
+                }
+        
+        # Сортируем по количеству комнат
+        sorted_stats = sorted(stats.values(), key=lambda x: int(x['type']) if x['type'].isdigit() else 999)
+        
+        # Добавляем отладочную информацию
+        print(f"🔍 DEBUG: Статистика квартир для {domrf_id}:")
+        print(f"📊 Flats data keys: {list(flats_data.keys())}")
+        print(f"📊 Найдено типов квартир: {len(sorted_stats)}")
+        for stat in sorted_stats:
+            print(f"📊 {stat['type']} комн: {stat['count']} кв., площадь {stat['min_area']}-{stat['max_area']} м²")
+        
+        return JsonResponse({
+            'success': True,
+            'data': sorted_stats
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def toggle_featured(request):
+    """API: Переключить флаг is_featured для ЖК"""
+    try:
+        data = json.loads(request.body)
+        complex_id = data.get('complex_id')
+        is_featured = data.get('is_featured')
+        
+        if not complex_id:
+            return JsonResponse({'success': False, 'error': 'Не указан complex_id'}, status=400)
+        
+        db = get_mongo_connection()
+        unified_collection = db['unified_houses']
+        residential_collection = db['residential_complexes']
+        
+        # Обновляем флаг в объединенной записи
+        unified_collection.update_one(
+            {'_id': ObjectId(complex_id)},
+            {'$set': {'is_featured': is_featured}}
+        )
+        
+        # Также обновляем в коллекции residential_complexes если есть
+        residential_collection.update_one(
+            {'_id': ObjectId(complex_id)},
+            {'$set': {'is_featured': is_featured}}
+        )
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 @require_http_methods(["GET"])
 def get_unified_records(request):
     """API: Получить уже объединенные записи"""
@@ -2158,8 +3686,8 @@ def get_unified_records(request):
         per_page = int(request.GET.get('per_page', 20))
         skip = (page - 1) * per_page
         
-        # Получаем записи
-        records = list(unified_col.find({}).skip(skip).limit(per_page))
+        # Получаем записи (сортируем по дате создания, новые сверху)
+        records = list(unified_col.find({}).sort('_id', -1).skip(skip).limit(per_page))
         total = unified_col.count_documents({})
         
         # Форматируем записи
@@ -2167,20 +3695,37 @@ def get_unified_records(request):
         for record in records:
             # Имя ЖК для новой и старой структуры
             unified_name = None
+            domrf_name = 'N/A'
+            avito_name = 'N/A'
+            domclick_name = 'N/A'
+            
             if 'development' in record and 'avito' not in record:
-                unified_name = record.get('development', {}).get('name')
-            if not unified_name:
+                # НОВАЯ СТРУКТУРА
+                unified_name = record.get('development', {}).get('name', 'N/A')
+                # Для новой структуры источники определяем по _source_ids
+                source_ids = record.get('_source_ids', {})
+                if source_ids:
+                    # Пытаемся получить названия из исходных записей (если доступны)
+                    domrf_name = 'N/A' if not source_ids.get('domrf') else 'DomRF запись'
+                    avito_name = 'N/A' if not source_ids.get('avito') else 'Avito запись'
+                    domclick_name = 'N/A' if not source_ids.get('domclick') else 'DomClick запись'
+            else:
+                # СТАРАЯ СТРУКТУРА (для обратной совместимости)
                 unified_name = (record.get('avito', {}) or {}).get('development', {}) .get('name') or \
                                (record.get('domclick', {}) or {}).get('development', {}) .get('complex_name') or \
                                (record.get('domrf', {}) or {}).get('name', 'N/A')
+                domrf_name = record.get('domrf', {}).get('name', 'N/A')
+                avito_name = record.get('avito', {}).get('development', {}).get('name', 'N/A') if record.get('avito') else 'N/A'
+                domclick_name = record.get('domclick', {}).get('development', {}).get('complex_name', 'N/A') if record.get('domclick') else 'N/A'
 
             formatted_records.append({
                 '_id': str(record['_id']),
                 'name': unified_name or 'N/A',
-                'domrf_name': record.get('domrf', {}).get('name', 'N/A'),
-                'avito_name': record.get('avito', {}).get('development', {}).get('name', 'N/A') if record.get('avito') else 'N/A',
-                'domclick_name': record.get('domclick', {}).get('development', {}).get('complex_name', 'N/A') if record.get('domclick') else 'N/A',
-                'source': record.get('source', 'unknown')
+                'domrf_name': domrf_name,
+                'avito_name': avito_name,
+                'domclick_name': domclick_name,
+                'source': record.get('source', 'unknown'),
+                'is_featured': record.get('is_featured', False)
             })
         
         return JsonResponse({
@@ -2200,6 +3745,139 @@ def get_unified_records(request):
             'error': str(e)
         }, status=500)
 
+
+@require_http_methods(["GET"]) 
+def unified_get(request, unified_id: str):
+    """API: получить одну объединенную запись для редактирования."""
+    try:
+        db = get_mongo_connection()
+        col = db['unified_houses']
+        doc = col.find_one({'_id': ObjectId(unified_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
+        doc['_id'] = str(doc['_id'])
+        return JsonResponse({'success': True, 'item': doc})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"]) 
+def unified_update(request, unified_id: str):
+    """API: обновить произвольные поля объединенной записи (безопасный апдейт)."""
+    try:
+        db = get_mongo_connection()
+        col = db['unified_houses']
+        # Поддерживаем form-data и JSON
+        payload = {}
+        if request.content_type and 'application/json' in request.content_type:
+            payload = json.loads(request.body or '{}')
+        else:
+            payload = {k: v for k, v in request.POST.items()}
+
+        # Нельзя менять _id
+        payload.pop('_id', None)
+        # Приведение типов для известных полей
+        if 'is_featured' in payload:
+            val = payload['is_featured']
+            payload['is_featured'] = True if str(val).lower() in ('1', 'true', 'on') else False
+        if 'agent_id' in payload:
+            try:
+                payload['agent_id'] = ObjectId(str(payload['agent_id'])) if payload['agent_id'] else None
+            except Exception:
+                payload['agent_id'] = None
+
+        if not payload:
+            return JsonResponse({'success': False, 'error': 'Нет полей для обновления'}, status=400)
+
+        col.update_one({'_id': ObjectId(unified_id)}, {'$set': payload})
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+# ===================== Mortgage Programs (Mongo) =====================
+@require_http_methods(["GET"])
+def mortgage_programs_list(request):
+    """API: список ипотечных программ из MongoDB."""
+    try:
+        db = get_mongo_connection()
+        col = db['mortgage_programs']
+        items = []
+        for doc in col.find({}).sort('rate', 1):
+            items.append({
+                '_id': str(doc.get('_id')),
+                'name': doc.get('name', ''),
+                'rate': float(doc.get('rate', 0)),
+                'is_active': bool(doc.get('is_active', True)),
+            })
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def mortgage_programs_create(request):
+    """API: создать ипотечную программу."""
+    try:
+        db = get_mongo_connection()
+        col = db['mortgage_programs']
+        name = request.POST.get('name', '').strip()
+        rate_raw = request.POST.get('rate', '').strip()
+        if not name or not rate_raw:
+            return JsonResponse({'success': False, 'error': 'Название и ставка обязательны'}, status=400)
+        try:
+            rate = float(rate_raw.replace(',', '.'))
+        except ValueError:
+            return JsonResponse({'success': False, 'error': 'Неверный формат ставки'}, status=400)
+        doc = {
+            'name': name,
+            'rate': rate,
+            'is_active': request.POST.get('is_active', 'true') in ['true', 'on', '1'],
+            'created_at': datetime.utcnow(),
+        }
+        res = col.insert_one(doc)
+        return JsonResponse({'success': True, 'id': str(res.inserted_id)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def mortgage_programs_update(request, program_id):
+    """API: обновить ипотечную программу."""
+    try:
+        db = get_mongo_connection()
+        col = db['mortgage_programs']
+        update = {}
+        if 'name' in request.POST:
+            update['name'] = request.POST.get('name', '').strip()
+        if 'rate' in request.POST:
+            try:
+                update['rate'] = float(request.POST.get('rate', '').strip().replace(',', '.'))
+            except ValueError:
+                pass
+        if 'is_active' in request.POST:
+            update['is_active'] = request.POST.get('is_active', 'true') in ['true', 'on', '1']
+        if not update:
+            return JsonResponse({'success': False, 'error': 'Нет данных для обновления'}, status=400)
+        col.update_one({'_id': ObjectId(program_id)}, {'$set': update})
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def mortgage_programs_delete(request, program_id):
+    """API: удалить ипотечную программу."""
+    try:
+        db = get_mongo_connection()
+        col = db['mortgage_programs']
+        col.delete_one({'_id': ObjectId(program_id)})
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @csrf_exempt
 @require_http_methods(["POST"]) 
@@ -2285,7 +3963,7 @@ def promotions_delete(request, promo_id):
 
 
 @csrf_exempt
-@require_http_methods(["PATCH"]) 
+@require_http_methods(["POST"]) 
 def promotions_toggle(request, promo_id):
     try:
         db = get_mongo_connection()
@@ -2309,7 +3987,1747 @@ def unified_delete(request, unified_id):
     try:
         db = get_mongo_connection()
         unified = db['unified_houses']
-        unified.delete_one({'_id': ObjectId(unified_id)})
+        
+        # Сначала получаем документ чтобы узнать связанные файлы
+        doc = unified.find_one({'_id': ObjectId(unified_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
+        
+        # Удаляем связанные файлы из галереи
+        gallery = db['gallery']
+        gallery_files = gallery.find({'content_type': 'residential_complex', 'object_id': str(unified_id)})
+        for gallery_file in gallery_files:
+            if gallery_file.get('image'):
+                image_path = os.path.join(settings.MEDIA_ROOT, gallery_file['image'].name)
+                if os.path.exists(image_path):
+                    try:
+                        os.remove(image_path)
+                    except OSError:
+                        pass  # Игнорируем ошибки удаления файлов
+            if gallery_file.get('video_file'):
+                video_path = os.path.join(settings.MEDIA_ROOT, gallery_file['video_file'].name)
+                if os.path.exists(video_path):
+                    try:
+                        os.remove(video_path)
+                    except OSError:
+                        pass  # Игнорируем ошибки удаления файлов
+        
+        # Удаляем записи из галереи
+        gallery.delete_many({'content_type': 'residential_complex', 'object_id': str(unified_id)})
+        
+        # Удаляем объединенную запись
+        result = unified.delete_one({'_id': ObjectId(unified_id)})
+        
+        if result.deleted_count == 0:
+            return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
+            
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ================= Secondary properties (Mongo) =================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def secondary_list(request):
+    """Список объектов вторичной недвижимости из Mongo."""
+    try:
+        db = get_mongo_connection()
+        col = db['secondary_properties']
+        docs = list(col.find({}).sort('created_at', -1))
+        items = []
+        for d in docs:
+            items.append({
+                '_id': str(d.get('_id')),
+                'name': d.get('name',''),
+                'price': d.get('price'),
+                'city': d.get('city','Уфа'),
+                'district': d.get('district',''),
+                'street': d.get('street',''),
+                'commute_time': d.get('commute_time',''),
+                'house_type': d.get('house_type','apartment'),
+                'area': d.get('area'),
+                'rooms': d.get('rooms'),
+                'description': d.get('description',''),
+                'agent_id': str(d.get('agent_id')) if d.get('agent_id') else None,
+                'photos': d.get('photos', [])
+            })
+        return JsonResponse({'success': True, 'data': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def secondary_create(request):
+    """Создать объект вторички в Mongo c загрузкой фото в media/secondary_complexes/<slug>/."""
+    try:
+        # multipart/form-data: данные + файлы
+        name = (request.POST.get('name') or '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Укажите название'}, status=400)
+
+        # simple slug-like transliteration
+        safe_slug = slugify(name) or f"secondary-{int(datetime.utcnow().timestamp())}"
+
+        city = request.POST.get('city') or 'Уфа'
+        district = request.POST.get('district') or ''
+        street = request.POST.get('street') or ''
+        commute_time = request.POST.get('commute_time') or ''
+        house_type = request.POST.get('house_type') or 'apartment'
+        area = request.POST.get('area')
+        rooms = request.POST.get('rooms')
+        price = request.POST.get('price')
+        total_floors = request.POST.get('total_floors')
+        finishing = request.POST.get('finishing') or ''
+        description = request.POST.get('description') or ''
+
+        # загрузка файлов
+        files = request.FILES.getlist('photos')
+        saved_paths = []
+        base_dir = os.path.join(settings.MEDIA_ROOT, 'secondary_complexes', safe_slug)
+        os.makedirs(base_dir, exist_ok=True)
+        for f in files:
+            filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
+            ext = os.path.splitext(f.name)[1].lower()
+            final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}{ext}"
+            abs_path = os.path.join(base_dir, final_name)
+            with open(abs_path, 'wb+') as dest:
+                for chunk in f.chunks():
+                    dest.write(chunk)
+            rel_path = os.path.join('secondary_complexes', safe_slug, final_name).replace('\\','/')
+            saved_paths.append(rel_path)
+
+        db = get_mongo_connection()
+        col = db['secondary_properties']
+        doc = {
+            'name': name,
+            'slug': safe_slug,  # Добавляем slug для удаления папки
+            'price': float(price) if price else None,
+            'city': city,
+            'district': district,
+            'street': street,
+            'commute_time': commute_time,
+            'house_type': house_type,
+            'area': float(area) if area else None,
+            'rooms': rooms,
+            'total_floors': int(total_floors) if total_floors else None,
+            'finishing': finishing,
+            'description': description,
+            'photos': saved_paths,
+            'is_active': True,  # По умолчанию активна
+            'created_at': datetime.utcnow()
+        }
+        inserted = col.insert_one(doc)
+        return JsonResponse({'success': True, 'id': str(inserted.inserted_id), 'photos': saved_paths})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# API endpoints для управления записями
+@csrf_exempt
+@require_http_methods(["POST"])
+def vacancies_api_toggle(request, vacancy_id):
+    """API: переключить статус вакансии (активна/неактивна)."""
+    try:
+        data = json.loads(request.body or '{}')
+        is_active = data.get('is_active', True)
+        
+        db = get_mongo_connection()
+        col = db['vacancies']
+        result = col.update_one(
+            {'_id': ObjectId(vacancy_id)},
+            {'$set': {'is_active': is_active, 'updated_date': datetime.utcnow()}}
+        )
+        
+        if result.matched_count == 0:
+            return JsonResponse({'success': False, 'error': 'Вакансия не найдена'}, status=404)
+            
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def vacancies_api_delete(request, vacancy_id):
+    """API: удалить вакансию."""
+    try:
+        db = get_mongo_connection()
+        col = db['vacancies']
+        result = col.delete_one({'_id': ObjectId(vacancy_id)})
+        
+        if result.deleted_count == 0:
+            return JsonResponse({'success': False, 'error': 'Вакансия не найдена'}, status=404)
+            
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def secondary_api_toggle(request, secondary_id):
+    """API: переключить статус объекта вторичной недвижимости (активен/неактивен)."""
+    try:
+        data = json.loads(request.body or '{}')
+        is_active = data.get('is_active', True)
+        
+        db = get_mongo_connection()
+        col = db['secondary_properties']
+        result = col.update_one(
+            {'_id': ObjectId(secondary_id)},
+            {'$set': {'is_active': is_active}}
+        )
+        
+        if result.matched_count == 0:
+            return JsonResponse({'success': False, 'error': 'Объект не найден'}, status=404)
+            
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"]) 
+def secondary_api_get(request, secondary_id: str):
+    """API: получить объект вторички."""
+    try:
+        db = get_mongo_connection()
+        col = db['secondary_properties']
+        doc = col.find_one({'_id': ObjectId(secondary_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Объект не найден'}, status=404)
+        doc['_id'] = str(doc['_id'])
+        return JsonResponse({'success': True, 'item': doc})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"]) 
+def secondary_api_update(request, secondary_id: str):
+    """API: обновить произвольные поля вторички; фото и сложные операции будут отдельно."""
+    try:
+        db = get_mongo_connection()
+        col = db['secondary_properties']
+        payload = {}
+        if request.content_type and 'application/json' in request.content_type:
+            payload = json.loads(request.body or '{}')
+        else:
+            payload = {k: v for k, v in request.POST.items()}
+
+        payload.pop('_id', None)
+        # Преобразование типов
+        for key in ('rooms', 'total_floors'):
+            if key in payload and str(payload[key]).strip() != '':
+                try: payload[key] = int(payload[key])
+                except Exception: payload.pop(key, None)
+        for key in ('area', 'area_from', 'area_to'):
+            if key in payload and str(payload[key]).strip() != '':
+                try: payload[key] = float(payload[key])
+                except Exception: payload.pop(key, None)
+        for key in ('price', 'price_from', 'price_to'):
+            if key in payload and str(payload[key]).strip() != '':
+                try: payload[key] = int(payload[key])
+                except Exception: payload.pop(key, None)
+        if 'is_active' in payload:
+            payload['is_active'] = True if str(payload['is_active']).lower() in ('1','true','on') else False
+
+        if not payload:
+            return JsonResponse({'success': False, 'error': 'Нет полей для обновления'}, status=400)
+
+        col.update_one({'_id': ObjectId(secondary_id)}, {'$set': payload})
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def secondary_api_delete(request, secondary_id):
+    """API: удалить объект вторичной недвижимости и все его фотографии."""
+    try:
+        db = get_mongo_connection()
+        col = db['secondary_properties']
+        
+        # Сначала получаем документ чтобы узнать пути к файлам
+        doc = col.find_one({'_id': ObjectId(secondary_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Объект не найден'}, status=404)
+        
+        # Удаляем файлы фотографий
+        photos = doc.get('photos', [])
+        for photo_path in photos:
+            if photo_path:
+                full_path = os.path.join(settings.MEDIA_ROOT, photo_path)
+                if os.path.exists(full_path):
+                    try:
+                        os.remove(full_path)
+                    except OSError:
+                        pass  # Игнорируем ошибки удаления файлов
+        
+        # Удаляем папку объекта если она пустая
+        try:
+            # Используем slug или генерируем из названия
+            object_slug = doc.get('slug') or slugify(doc.get('name', ''))
+            object_dir = os.path.join(settings.MEDIA_ROOT, 'secondary_complexes', object_slug)
+            if os.path.exists(object_dir) and not os.listdir(object_dir):
+                os.rmdir(object_dir)
+        except OSError:
+            pass  # Игнорируем ошибки удаления папки
+        
+        # Удаляем документ из базы
+        result = col.delete_one({'_id': ObjectId(secondary_id)})
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def videos_api_delete(request, video_id):
+    """API: удалить видеообзор."""
+    try:
+        db = get_mongo_connection()
+        col = db['residential_videos']
+        result = col.delete_one({'_id': ObjectId(video_id)})
+        
+        if result.deleted_count == 0:
+            return JsonResponse({'success': False, 'error': 'Видеообзор не найден'}, status=404)
+            
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ============================================
+# API для управления контентом (Tags, Authors, Categories, Articles, CatalogLandings)
+# ============================================
+
+# ========== TAGS API ==========
+@require_http_methods(["GET"])
+def tags_api_list(request):
+    """API: получить список тегов."""
+    try:
+        db = get_mongo_connection()
+        col = db['tags']
+        
+        # Если admin=true, показываем все, иначе только активные
+        is_admin = request.GET.get('admin') == 'true'
+        query = {} if is_admin else {'is_active': True}
+        
+        tags = list(col.find(query).sort('name', 1))
+        
+        items = []
+        for tag in tags:
+            items.append({
+                '_id': str(tag['_id']),
+                'name': tag.get('name', ''),
+                'slug': tag.get('slug', ''),
+                'h1_title': tag.get('h1_title', ''),
+                'meta_title': tag.get('meta_title', ''),
+                'meta_description': tag.get('meta_description', ''),
+                'is_active': tag.get('is_active', True),
+            })
+        
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def tags_api_create(request):
+    """API: создать тег."""
+    try:
+        db = get_mongo_connection()
+        col = db['tags']
+        
+        name = request.POST.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Название обязательно'}, status=400)
+        
+        slug = request.POST.get('slug', '').strip()
+        if not slug:
+            slug = slugify(name, allow_unicode=True)
+        
+        # Проверка уникальности slug
+        if col.find_one({'slug': slug}):
+            return JsonResponse({'success': False, 'error': 'Тег с таким slug уже существует'}, status=400)
+        
+        tag_data = {
+            'name': name,
+            'slug': slug,
+            'h1_title': request.POST.get('h1_title', '').strip(),
+            'meta_title': request.POST.get('meta_title', '').strip(),
+            'meta_description': request.POST.get('meta_description', '').strip(),
+            'is_active': True,
+            'created_at': datetime.now(),
+        }
+        
+        result = col.insert_one(tag_data)
+        
+        return JsonResponse({
+            'success': True,
+            'id': str(result.inserted_id),
+            'message': 'Тег успешно создан'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def tags_api_toggle(request, tag_id):
+    """API: переключить активность тега."""
+    try:
+        db = get_mongo_connection()
+        col = db['tags']
+        
+        # Получаем текущий статус
+        tag = col.find_one({'_id': ObjectId(tag_id)})
+        if not tag:
+            return JsonResponse({'success': False, 'error': 'Тег не найден'}, status=404)
+        
+        current_status = tag.get('is_active', True)
+        new_status = not current_status
+        
+        result = col.update_one(
+            {'_id': ObjectId(tag_id)},
+            {'$set': {'is_active': new_status}}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Тег {"активирован" if new_status else "деактивирован"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def tags_api_delete(request, tag_id):
+    """API: удалить тег."""
+    try:
+        db = get_mongo_connection()
+        col = db['tags']
+        
+        result = col.delete_one({'_id': ObjectId(tag_id)})
+        
+        if result.deleted_count == 0:
+            return JsonResponse({'success': False, 'error': 'Тег не найден'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'Тег удален'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== CATEGORIES API ==========
+@require_http_methods(["GET"])
+def categories_api_list(request):
+    """API: получить список категорий."""
+    try:
+        db = get_mongo_connection()
+        col = db['categories']
+        
+        is_admin = request.GET.get('admin') == 'true'
+        query = {} if is_admin else {'is_active': True}
+        
+        categories = list(col.find(query).sort('name', 1))
+        
+        items = []
+        for cat in categories:
+            items.append({
+                '_id': str(cat['_id']),
+                'name': cat.get('name', ''),
+                'slug': cat.get('slug', ''),
+                'description': cat.get('description', ''),
+                'is_active': cat.get('is_active', True),
+                'created_at': cat.get('created_at', ''),
+            })
+        
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def categories_api_create(request):
+    """API: создать категорию."""
+    try:
+        db = get_mongo_connection()
+        col = db['categories']
+        
+        name = request.POST.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Название обязательно'}, status=400)
+        
+        slug = request.POST.get('slug', '').strip()
+        if not slug:
+            slug = slugify(name, allow_unicode=True)
+        
+        if col.find_one({'slug': slug}):
+            return JsonResponse({'success': False, 'error': 'Категория с таким slug уже существует'}, status=400)
+        
+        category_data = {
+            'name': name,
+            'slug': slug,
+            'description': request.POST.get('description', '').strip(),
+            'is_active': True,
+            'created_at': datetime.now(),
+        }
+        
+        result = col.insert_one(category_data)
+        
+        return JsonResponse({
+            'success': True,
+            'id': str(result.inserted_id),
+            'message': 'Категория успешно создана'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def categories_api_toggle(request, category_id):
+    """API: переключить активность категории."""
+    try:
+        db = get_mongo_connection()
+        col = db['categories']
+        
+        # Получаем текущий статус
+        category = col.find_one({'_id': ObjectId(category_id)})
+        if not category:
+            return JsonResponse({'success': False, 'error': 'Категория не найдена'}, status=404)
+        
+        current_status = category.get('is_active', True)
+        new_status = not current_status
+        
+        result = col.update_one(
+            {'_id': ObjectId(category_id)},
+            {'$set': {'is_active': new_status}}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Категория {"активирована" if new_status else "деактивирована"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def categories_api_delete(request, category_id):
+    """API: удалить категорию."""
+    try:
+        db = get_mongo_connection()
+        col = db['categories']
+        
+        result = col.delete_one({'_id': ObjectId(category_id)})
+        
+        if result.deleted_count == 0:
+            return JsonResponse({'success': False, 'error': 'Категория не найдена'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'Категория удалена'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== AUTHORS API ==========
+@require_http_methods(["GET"])
+def authors_api_list(request):
+    """API: получить список авторов."""
+    try:
+        db = get_mongo_connection()
+        col = db['authors']
+        
+        is_admin = request.GET.get('admin') == 'true'
+        query = {} if is_admin else {'is_active': True}
+        
+        authors = list(col.find(query).sort('name', 1))
+        
+        items = []
+        for author in authors:
+            items.append({
+                '_id': str(author['_id']),
+                'name': author.get('name', ''),
+                'position': author.get('position', ''),
+                'description': author.get('description', ''),
+                'articles_count': author.get('articles_count', 0),
+                'total_views': author.get('total_views', 0),
+                'total_likes': author.get('total_likes', 0),
+                'is_active': author.get('is_active', True),
+            })
+        
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def authors_api_create(request):
+    """API: создать автора."""
+    try:
+        db = get_mongo_connection()
+        col = db['authors']
+        
+        name = request.POST.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Имя автора обязательно'}, status=400)
+        
+        author_data = {
+            'name': name,
+            'position': request.POST.get('position', '').strip(),
+            'description': request.POST.get('description', '').strip(),
+            'articles_count': 0,
+            'total_views': 0,
+            'total_likes': 0,
+            'is_active': True,
+            'created_at': datetime.now(),
+        }
+        
+        result = col.insert_one(author_data)
+        
+        return JsonResponse({
+            'success': True,
+            'id': str(result.inserted_id),
+            'message': 'Автор успешно создан'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def authors_api_toggle(request, author_id):
+    """API: переключить активность автора."""
+    try:
+        db = get_mongo_connection()
+        col = db['authors']
+        
+        # Получаем текущий статус
+        author = col.find_one({'_id': ObjectId(author_id)})
+        if not author:
+            return JsonResponse({'success': False, 'error': 'Автор не найден'}, status=404)
+        
+        current_status = author.get('is_active', True)
+        new_status = not current_status
+        
+        result = col.update_one(
+            {'_id': ObjectId(author_id)},
+            {'$set': {'is_active': new_status}}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Автор {"активирован" if new_status else "деактивирован"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def authors_api_delete(request, author_id):
+    """API: удалить автора."""
+    try:
+        db = get_mongo_connection()
+        col = db['authors']
+        
+        result = col.delete_one({'_id': ObjectId(author_id)})
+        
+        if result.deleted_count == 0:
+            return JsonResponse({'success': False, 'error': 'Автор не найден'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'Автор удален'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== ARTICLES API ==========
+@require_http_methods(["GET"])
+def articles_api_list(request):
+    """API: получить список статей."""
+    try:
+        db = get_mongo_connection()
+        col = db['articles']
+        categories_col = db['categories']
+        authors_col = db['authors']
+        
+        is_admin = request.GET.get('admin') == 'true'
+        query = {} if is_admin else {'is_active': True}
+        
+        articles = list(col.find(query).sort('published_date', -1))
+        
+        items = []
+        for article in articles:
+            # Получаем имена категории и автора
+            category_name = ''
+            if article.get('category_id'):
+                cat = categories_col.find_one({'_id': ObjectId(article['category_id'])})
+                category_name = cat['name'] if cat else ''
+            
+            author_name = ''
+            if article.get('author_id'):
+                author = authors_col.find_one({'_id': ObjectId(article['author_id'])})
+                author_name = author['name'] if author else ''
+            
+            items.append({
+                '_id': str(article['_id']),
+                'title': article.get('title', ''),
+                'slug': article.get('slug', ''),
+                'article_type': article.get('article_type', 'news'),
+                'category_id': str(article.get('category_id', '')),
+                'category_name': category_name,
+                'author_id': str(article.get('author_id', '')),
+                'author_name': author_name,
+                'excerpt': article.get('excerpt', ''),
+                'published_date': article.get('published_date', ''),
+                'is_active': article.get('is_active', True),
+                'show_on_home': article.get('show_on_home', False),
+                'is_featured': article.get('is_featured', False),
+                'views_count': article.get('views_count', 0),
+                'likes_count': article.get('likes_count', 0),
+            })
+        
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def articles_api_create(request):
+    """API: создать статью с загрузкой фото."""
+    try:
+        db = get_mongo_connection()
+        col = db['articles']
+        
+        title = request.POST.get('title', '').strip()
+        if not title:
+            return JsonResponse({'success': False, 'error': 'Заголовок обязателен'}, status=400)
+        
+        category_id = request.POST.get('category_id', '').strip()
+        if not category_id:
+            return JsonResponse({'success': False, 'error': 'Категория обязательна'}, status=400)
+        
+        slug = request.POST.get('slug', '').strip()
+        if not slug:
+            slug = slugify(title, allow_unicode=True)
+        
+        # Проверка уникальности slug
+        if col.find_one({'slug': slug}):
+            return JsonResponse({'success': False, 'error': 'Статья с таким slug уже существует'}, status=400)
+        
+        # Создаем папку для статьи
+        article_folder = os.path.join(settings.MEDIA_ROOT, 'articles', slug)
+        os.makedirs(article_folder, exist_ok=True)
+        
+        # Загрузка главного изображения
+        main_image_path = ''
+        if 'main_image' in request.FILES:
+            main_image = request.FILES['main_image']
+            main_image_filename = f"main_{main_image.name}"
+            main_image_full_path = os.path.join(article_folder, main_image_filename)
+            with open(main_image_full_path, 'wb+') as destination:
+                for chunk in main_image.chunks():
+                    destination.write(chunk)
+            main_image_path = f'articles/{slug}/{main_image_filename}'
+        
+        # Загрузка дополнительных изображений
+        images_paths = []
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            for idx, img in enumerate(images):
+                img_filename = f"{idx+1}_{img.name}"
+                img_full_path = os.path.join(article_folder, img_filename)
+                with open(img_full_path, 'wb+') as destination:
+                    for chunk in img.chunks():
+                        destination.write(chunk)
+                images_paths.append(f'articles/{slug}/{img_filename}')
+        
+        # Обработка тегов (множественный выбор)
+        tags = request.POST.getlist('tags')
+        tag_ids = [ObjectId(tag_id) for tag_id in tags if tag_id]
+        
+        article_data = {
+            'title': title,
+            'slug': slug,
+            'article_type': request.POST.get('article_type', 'news'),
+            'category_id': ObjectId(category_id),
+            'author_id': ObjectId(request.POST.get('author_id')) if request.POST.get('author_id') else None,
+            'content': request.POST.get('content', '').strip(),
+            'excerpt': request.POST.get('excerpt', '').strip(),
+            'main_image': main_image_path,
+            'images': images_paths,
+            'tags': tag_ids,
+            'show_on_home': request.POST.get('show_on_home') == 'on',
+            'is_featured': request.POST.get('is_featured') == 'on',
+            'is_active': True,
+            'views_count': 0,
+            'likes_count': 0,
+            'comments_count': 0,
+            'published_date': datetime.now(),
+            'updated_date': datetime.now(),
+        }
+        
+        result = col.insert_one(article_data)
+        
+        return JsonResponse({
+            'success': True,
+            'id': str(result.inserted_id),
+            'message': 'Статья успешно создана'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def articles_api_toggle(request, article_id):
+    """API: переключить активность статьи."""
+    try:
+        db = get_mongo_connection()
+        col = db['articles']
+        
+        # Получаем текущий статус
+        article = col.find_one({'_id': ObjectId(article_id)})
+        if not article:
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+        
+        current_status = article.get('is_active', True)
+        new_status = not current_status
+        
+        result = col.update_one(
+            {'_id': ObjectId(article_id)},
+            {'$set': {'is_active': new_status}}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Статья {"активирована" if new_status else "деактивирована"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def articles_api_delete(request, article_id):
+    """API: удалить статью и её изображения."""
+    try:
+        db = get_mongo_connection()
+        col = db['articles']
+        
+        # Получаем статью перед удалением
+        article = col.find_one({'_id': ObjectId(article_id)})
+        if not article:
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+        
+        # Удаляем папку с изображениями
+        if article.get('slug'):
+            article_folder = os.path.join(settings.MEDIA_ROOT, 'articles', article['slug'])
+            if os.path.exists(article_folder):
+                import shutil
+                shutil.rmtree(article_folder)
+        
+        # Удаляем запись из БД
+        col.delete_one({'_id': ObjectId(article_id)})
+        
+        return JsonResponse({'success': True, 'message': 'Статья удалена'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== CATALOG LANDINGS API ==========
+@require_http_methods(["GET"])
+def catalog_landings_api_list(request):
+    """API: получить список SEO страниц каталога."""
+    try:
+        db = get_mongo_connection()
+        col = db['catalog_landings']
+        
+        is_admin = request.GET.get('admin') == 'true'
+        query = {} if is_admin else {'is_active': True}
+        
+        landings = list(col.find(query).sort('name', 1))
+        
+        # Словарь для перевода категорий
+        category_names = {
+            'all': 'Все объекты',
+            'apartment': 'Квартиры',
+            'house': 'Дома',
+            'cottage': 'Коттеджи',
+            'townhouse': 'Таунхаусы',
+            'commercial': 'Коммерческие помещения',
+        }
+        
+        items = []
+        for landing in landings:
+            items.append({
+                '_id': str(landing['_id']),
+                'name': landing.get('name', ''),
+                'slug': landing.get('slug', ''),
+                'kind': landing.get('kind', 'newbuild'),
+                'category': landing.get('category', 'all'),
+                'category_display': category_names.get(landing.get('category', 'all'), landing.get('category', 'all')),
+                'meta_title': landing.get('meta_title', ''),
+                'meta_description': landing.get('meta_description', ''),
+                'meta_keywords': landing.get('meta_keywords', ''),
+                'is_active': landing.get('is_active', True),
+            })
+        
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def catalog_landings_api_create(request):
+    """API: создать SEO страницу каталога."""
+    try:
+        db = get_mongo_connection()
+        col = db['catalog_landings']
+        
+        name = request.POST.get('name', '').strip()
+        slug = request.POST.get('slug', '').strip()
+        
+        if not name or not slug:
+            return JsonResponse({'success': False, 'error': 'Название и slug обязательны'}, status=400)
+        
+        # Проверка уникальности slug
+        if col.find_one({'slug': slug}):
+            return JsonResponse({'success': False, 'error': 'Страница с таким slug уже существует'}, status=400)
+        
+        landing_data = {
+            'name': name,
+            'slug': slug,
+            'kind': request.POST.get('kind', 'newbuild'),
+            'category': request.POST.get('category', 'all'),
+            'meta_title': request.POST.get('meta_title', '').strip(),
+            'meta_description': request.POST.get('meta_description', '').strip(),
+            'meta_keywords': request.POST.get('meta_keywords', '').strip(),
+            'is_active': True,
+            'created_at': datetime.now(),
+        }
+        
+        result = col.insert_one(landing_data)
+        
+        return JsonResponse({
+            'success': True,
+            'id': str(result.inserted_id),
+            'message': 'SEO страница успешно создана'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def catalog_landings_api_toggle(request, landing_id):
+    """API: переключить активность SEO страницы."""
+    try:
+        db = get_mongo_connection()
+        col = db['catalog_landings']
+        
+        # Получаем текущий статус
+        landing = col.find_one({'_id': ObjectId(landing_id)})
+        if not landing:
+            return JsonResponse({'success': False, 'error': 'SEO страница не найдена'}, status=404)
+        
+        current_status = landing.get('is_active', True)
+        new_status = not current_status
+        
+        col.update_one(
+            {'_id': ObjectId(landing_id)},
+            {'$set': {'is_active': new_status}}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'SEO страница {"активирована" if new_status else "деактивирована"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def catalog_landings_api_delete(request, landing_id):
+    """API: удалить SEO страницу."""
+    try:
+        db = get_mongo_connection()
+        col = db['catalog_landings']
+        
+        result = col.delete_one({'_id': ObjectId(landing_id)})
+        
+        if result.deleted_count == 0:
+            return JsonResponse({'success': False, 'error': 'SEO страница не найдена'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'SEO страница удалена'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== VIEW для страницы управления контентом ==========
+def content_management(request):
+    """Страница управления контентом (Tags, Authors, Categories, Articles, CatalogLandings)."""
+    return render(request, 'main/content_management.html')
+
+
+# ============================================
+# API для управления компанией и персоналом (CompanyInfo, BranchOffice, Employee)
+# ============================================
+
+# ========== COMPANY INFO API ==========
+@require_http_methods(["GET"])
+def company_info_api_list(request):
+    """API: получить список информации о компании."""
+    try:
+        db = get_mongo_connection()
+        col = db['company_info']
+        
+        is_admin = request.GET.get('admin') == 'true'
+        query = {} if is_admin else {'is_active': True}
+        
+        companies = list(col.find(query).sort('created_at', -1))
+        
+        items = []
+        for company in companies:
+            items.append({
+                '_id': str(company['_id']),
+                'founder_name': company.get('founder_name', ''),
+                'founder_position': company.get('founder_position', ''),
+                'company_name': company.get('company_name', ''),
+                'quote': company.get('quote', ''),
+                'description': company.get('description', ''),
+                'main_image': company.get('main_image', ''),
+                'images': company.get('images', []),
+                'is_active': company.get('is_active', True),
+            })
+        
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def company_info_api_create(request):
+    """API: создать информацию о компании с загрузкой фото."""
+    try:
+        db = get_mongo_connection()
+        col = db['company_info']
+        
+        founder_name = request.POST.get('founder_name', '').strip()
+        company_name = request.POST.get('company_name', '').strip()
+        
+        if not founder_name or not company_name:
+            return JsonResponse({'success': False, 'error': 'Имя основателя и название компании обязательны'}, status=400)
+        
+        # Создаем папку для компании
+        slug = slugify(company_name, allow_unicode=True)
+        company_folder = os.path.join(settings.MEDIA_ROOT, 'company', slug)
+        os.makedirs(company_folder, exist_ok=True)
+        
+        # Загрузка главного изображения
+        main_image_path = ''
+        if 'main_image' in request.FILES:
+            main_image = request.FILES['main_image']
+            main_image_filename = f"main_{main_image.name}"
+            main_image_full_path = os.path.join(company_folder, main_image_filename)
+            with open(main_image_full_path, 'wb+') as destination:
+                for chunk in main_image.chunks():
+                    destination.write(chunk)
+            main_image_path = f'company/{slug}/{main_image_filename}'
+        
+        # Загрузка дополнительных изображений
+        images_paths = []
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            for idx, img in enumerate(images):
+                img_filename = f"{idx+1}_{img.name}"
+                img_full_path = os.path.join(company_folder, img_filename)
+                with open(img_full_path, 'wb+') as destination:
+                    for chunk in img.chunks():
+                        destination.write(chunk)
+                images_paths.append(f'company/{slug}/{img_filename}')
+        
+        company_data = {
+            'founder_name': founder_name,
+            'founder_position': request.POST.get('founder_position', 'Основатель компании').strip(),
+            'company_name': company_name,
+            'quote': request.POST.get('quote', '').strip(),
+            'description': request.POST.get('description', '').strip(),
+            'main_image': main_image_path,
+            'images': images_paths,
+            'is_active': True,
+            'created_at': datetime.now(),
+        }
+        
+        result = col.insert_one(company_data)
+        
+        return JsonResponse({
+            'success': True,
+            'id': str(result.inserted_id),
+            'message': 'Информация о компании успешно создана'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def company_info_api_toggle(request, company_id):
+    """API: переключить активность информации о компании."""
+    try:
+        db = get_mongo_connection()
+        col = db['company_info']
+        
+        # Получаем текущий статус
+        company = col.find_one({'_id': ObjectId(company_id)})
+        if not company:
+            return JsonResponse({'success': False, 'error': 'Информация не найдена'}, status=404)
+        
+        current_status = company.get('is_active', True)
+        new_status = not current_status
+        
+        result = col.update_one(
+            {'_id': ObjectId(company_id)},
+            {'$set': {'is_active': new_status}}
+        )
+        
+        if result.matched_count == 0:
+            return JsonResponse({'success': False, 'error': 'Информация не найдена'}, status=404)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Информация {"активирована" if new_status else "деактивирована"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def company_info_api_detail(request, company_id):
+    """API: получить данные компании по id."""
+    try:
+        db = get_mongo_connection()
+        col = db['company_info']
+        company = col.find_one({'_id': ObjectId(company_id)})
+        if not company:
+            return JsonResponse({'success': False, 'error': 'Информация не найдена'}, status=404)
+        company['_id'] = str(company['_id'])
+        return JsonResponse({'success': True, 'item': company})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def company_info_api_update(request, company_id):
+    """API: обновить информацию о компании."""
+    try:
+        db = get_mongo_connection()
+        col = db['company_info']
+        
+        company = col.find_one({'_id': ObjectId(company_id)})
+        if not company:
+            return JsonResponse({'success': False, 'error': 'Информация не найдена'}, status=404)
+        
+        update = {
+            'founder_name': request.POST.get('founder_name', '').strip(),
+            'founder_position': request.POST.get('founder_position', '').strip(),
+            'company_name': request.POST.get('company_name', '').strip(),
+            'quote': request.POST.get('quote', '').strip(),
+            'description': request.POST.get('description', '').strip(),
+            'is_active': request.POST.get('is_active') == 'on',
+        }
+        
+        # Загрузка главного изображения
+        if 'main_image' in request.FILES:
+            main_image = request.FILES['main_image']
+            slug = slugify(update['company_name'] or company['company_name'], allow_unicode=True)
+            company_folder = os.path.join(settings.MEDIA_ROOT, 'company', slug)
+            os.makedirs(company_folder, exist_ok=True)
+            
+            main_image_filename = f"main_{main_image.name}"
+            main_image_full_path = os.path.join(company_folder, main_image_filename)
+            with open(main_image_full_path, 'wb+') as destination:
+                for chunk in main_image.chunks():
+                    destination.write(chunk)
+            update['main_image'] = f'company/{slug}/{main_image_filename}'
+        
+        # Загрузка дополнительных изображений
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            if images:
+                slug = slugify(update['company_name'] or company['company_name'], allow_unicode=True)
+                company_folder = os.path.join(settings.MEDIA_ROOT, 'company', slug)
+                os.makedirs(company_folder, exist_ok=True)
+                
+                images_paths = []
+                for idx, img in enumerate(images):
+                    img_filename = f"{idx+1}_{img.name}"
+                    img_full_path = os.path.join(company_folder, img_filename)
+                    with open(img_full_path, 'wb+') as destination:
+                        for chunk in img.chunks():
+                            destination.write(chunk)
+                    images_paths.append(f'company/{slug}/{img_filename}')
+                update['images'] = images_paths
+        
+        result = col.update_one(
+            {'_id': ObjectId(company_id)},
+            {'$set': update}
+        )
+        
+        if result.matched_count == 0:
+            return JsonResponse({'success': False, 'error': 'Информация не найдена'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'Информация обновлена'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def company_info_api_delete(request, company_id):
+    """API: удалить информацию о компании и её изображения."""
+    try:
+        db = get_mongo_connection()
+        col = db['company_info']
+        
+        company = col.find_one({'_id': ObjectId(company_id)})
+        if not company:
+            return JsonResponse({'success': False, 'error': 'Информация не найдена'}, status=404)
+        
+        # Удаляем папку с изображениями
+        if company.get('company_name'):
+            slug = slugify(company['company_name'], allow_unicode=True)
+            company_folder = os.path.join(settings.MEDIA_ROOT, 'company', slug)
+            if os.path.exists(company_folder):
+                import shutil
+                shutil.rmtree(company_folder)
+        
+        col.delete_one({'_id': ObjectId(company_id)})
+        
+        return JsonResponse({'success': True, 'message': 'Информация удалена'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== BRANCH OFFICE API ==========
+@require_http_methods(["GET"])
+def branch_office_api_list(request):
+    """API: получить список офисов продаж."""
+    try:
+        db = get_mongo_connection()
+        col = db['branch_offices']
+        
+        is_admin = request.GET.get('admin') == 'true'
+        query = {} if is_admin else {'is_active': True}
+        
+        offices = list(col.find(query).sort('name', 1))
+        
+        items = []
+        for office in offices:
+            items.append({
+                '_id': str(office['_id']),
+                'name': office.get('name', ''),
+                'slug': office.get('slug', ''),
+                'address': office.get('address', ''),
+                'phone': office.get('phone', ''),
+                'email': office.get('email', ''),
+                'schedule': office.get('schedule', ''),
+                'is_head_office': office.get('is_head_office', False),
+                'main_image': office.get('main_image', ''),
+                'images': office.get('images', []),
+                'is_active': office.get('is_active', True),
+            })
+        
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def branch_office_api_create(request):
+    """API: создать офис продаж с загрузкой фото."""
+    try:
+        db = get_mongo_connection()
+        col = db['branch_offices']
+        
+        name = request.POST.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Название офиса обязательно'}, status=400)
+        
+        slug = request.POST.get('slug', '').strip()
+        if not slug:
+            slug = slugify(name, allow_unicode=True)
+        
+        # Проверка уникальности slug
+        if col.find_one({'slug': slug}):
+            return JsonResponse({'success': False, 'error': 'Офис с таким slug уже существует'}, status=400)
+        
+        # Создаем папку для офиса
+        office_folder = os.path.join(settings.MEDIA_ROOT, 'offices', slug)
+        os.makedirs(office_folder, exist_ok=True)
+        
+        # Загрузка главного изображения
+        main_image_path = ''
+        if 'main_image' in request.FILES:
+            main_image = request.FILES['main_image']
+            main_image_filename = f"main_{main_image.name}"
+            main_image_full_path = os.path.join(office_folder, main_image_filename)
+            with open(main_image_full_path, 'wb+') as destination:
+                for chunk in main_image.chunks():
+                    destination.write(chunk)
+            main_image_path = f'offices/{slug}/{main_image_filename}'
+        
+        # Загрузка дополнительных изображений
+        images_paths = []
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            for idx, img in enumerate(images):
+                img_filename = f"{idx+1}_{img.name}"
+                img_full_path = os.path.join(office_folder, img_filename)
+                with open(img_full_path, 'wb+') as destination:
+                    for chunk in img.chunks():
+                        destination.write(chunk)
+                images_paths.append(f'offices/{slug}/{img_filename}')
+        
+        # Парсим координаты, если переданы
+        lat_raw = request.POST.get('latitude', '').strip()
+        lng_raw = request.POST.get('longitude', '').strip()
+        latitude = None
+        longitude = None
+        try:
+            if lat_raw:
+                latitude = float(lat_raw.replace(',', '.'))
+            if lng_raw:
+                longitude = float(lng_raw.replace(',', '.'))
+        except ValueError:
+            latitude = None
+            longitude = None
+
+        office_data = {
+            'name': name,
+            'slug': slug,
+            'address': request.POST.get('address', '').strip(),
+            'city': request.POST.get('city', '').strip(),
+            'phone': request.POST.get('phone', '').strip(),
+            'email': request.POST.get('email', '').strip(),
+            'schedule': request.POST.get('schedule', '').strip(),
+            'is_head_office': request.POST.get('is_head_office') == 'on',
+            'main_image': main_image_path,
+            'images': images_paths,
+            'latitude': latitude,
+            'longitude': longitude,
+            'is_active': True,
+            'created_at': datetime.now(),
+        }
+        
+        result = col.insert_one(office_data)
+        
+        return JsonResponse({
+            'success': True,
+            'id': str(result.inserted_id),
+            'message': 'Офис продаж успешно создан'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def branch_office_api_detail(request, office_id):
+    """API: получить данные офиса по id."""
+    try:
+        db = get_mongo_connection()
+        col = db['branch_offices']
+        office = col.find_one({'_id': ObjectId(office_id)})
+        if not office:
+            return JsonResponse({'success': False, 'error': 'Офис не найден'}, status=404)
+        office['_id'] = str(office['_id'])
+        return JsonResponse({'success': True, 'item': office})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def branch_office_api_update(request, office_id):
+    """API: обновить офис (включая координаты)."""
+    try:
+        db = get_mongo_connection()
+        col = db['branch_offices']
+
+        update = {
+            'name': request.POST.get('name', '').strip(),
+            'slug': request.POST.get('slug', '').strip(),
+            'city': request.POST.get('city', '').strip(),
+            'address': request.POST.get('address', '').strip(),
+            'phone': request.POST.get('phone', '').strip(),
+            'email': request.POST.get('email', '').strip(),
+            'schedule': request.POST.get('schedule', '').strip(),
+            'is_head_office': request.POST.get('is_head_office') == 'on',
+        }
+
+        lat_raw = request.POST.get('latitude', '').strip()
+        lng_raw = request.POST.get('longitude', '').strip()
+        try:
+            if lat_raw:
+                update['latitude'] = float(lat_raw.replace(',', '.'))
+            if lng_raw:
+                update['longitude'] = float(lng_raw.replace(',', '.'))
+        except ValueError:
+            pass
+
+        # Обновление изображений (опционально)
+        slug = update['slug'] or 'office'
+        office_folder = os.path.join(settings.MEDIA_ROOT, 'offices', slug)
+        os.makedirs(office_folder, exist_ok=True)
+
+        if 'main_image' in request.FILES:
+            main_image = request.FILES['main_image']
+            main_image_filename = f"main_{main_image.name}"
+            main_image_full_path = os.path.join(office_folder, main_image_filename)
+            with open(main_image_full_path, 'wb+') as destination:
+                for chunk in main_image.chunks():
+                    destination.write(chunk)
+            update['main_image'] = f'offices/{slug}/{main_image_filename}'
+
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            images_paths = []
+            for idx, img in enumerate(images):
+                img_filename = f"{idx+1}_{img.name}"
+                img_full_path = os.path.join(office_folder, img_filename)
+                with open(img_full_path, 'wb+') as destination:
+                    for chunk in img.chunks():
+                        destination.write(chunk)
+                images_paths.append(f'offices/{slug}/{img_filename}')
+            update['images'] = images_paths
+
+        col.update_one({'_id': ObjectId(office_id)}, {'$set': update})
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def branch_office_api_toggle(request, office_id):
+    """API: переключить активность офиса."""
+    try:
+        db = get_mongo_connection()
+        col = db['branch_offices']
+        
+        # Получаем текущий статус
+        office = col.find_one({'_id': ObjectId(office_id)})
+        if not office:
+            return JsonResponse({'success': False, 'error': 'Офис не найден'}, status=404)
+        
+        current_status = office.get('is_active', True)
+        new_status = not current_status
+        
+        col.update_one(
+            {'_id': ObjectId(office_id)},
+            {'$set': {'is_active': new_status}}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Офис {"активирован" if new_status else "деактивирован"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def branch_office_api_delete(request, office_id):
+    """API: удалить офис и его изображения."""
+    try:
+        db = get_mongo_connection()
+        col = db['branch_offices']
+        
+        office = col.find_one({'_id': ObjectId(office_id)})
+        if not office:
+            return JsonResponse({'success': False, 'error': 'Офис не найден'}, status=404)
+        
+        # Удаляем папку с изображениями
+        if office.get('slug'):
+            office_folder = os.path.join(settings.MEDIA_ROOT, 'offices', office['slug'])
+            if os.path.exists(office_folder):
+                import shutil
+                shutil.rmtree(office_folder)
+        
+        col.delete_one({'_id': ObjectId(office_id)})
+        
+        return JsonResponse({'success': True, 'message': 'Офис удален'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== EMPLOYEE API ==========
+@require_http_methods(["GET"])
+def employee_api_list(request):
+    """API: получить список сотрудников."""
+    try:
+        db = get_mongo_connection()
+        col = db['employees']
+        
+        is_admin = request.GET.get('admin') == 'true'
+        query = {} if is_admin else {'is_active': True}
+        
+        employees = list(col.find(query).sort('full_name', 1))
+        
+        items = []
+        for employee in employees:
+            items.append({
+                '_id': str(employee['_id']),
+                'full_name': employee.get('full_name', ''),
+                'slug': employee.get('slug', ''),
+                'position': employee.get('position', ''),
+                'phone': employee.get('phone', ''),
+                'email': employee.get('email', ''),
+                'experience_years': employee.get('experience_years', 0),
+                'specialization': employee.get('specialization', ''),
+                'bio': employee.get('bio', ''),
+                'achievements': employee.get('achievements', ''),
+                'main_image': employee.get('main_image', ''),
+                'images': employee.get('images', []),
+                'videos': employee.get('videos', []),
+                'is_active': employee.get('is_active', True),
+            })
+        
+        return JsonResponse({'success': True, 'items': items})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def employee_api_create(request):
+    """API: создать сотрудника с загрузкой фото."""
+    try:
+        db = get_mongo_connection()
+        col = db['employees']
+        
+        full_name = request.POST.get('full_name', '').strip()
+        if not full_name:
+            return JsonResponse({'success': False, 'error': 'ФИО сотрудника обязательно'}, status=400)
+        
+        slug = request.POST.get('slug', '').strip()
+        if not slug:
+            slug = slugify(full_name, allow_unicode=True)
+        
+        # Проверка уникальности slug
+        if col.find_one({'slug': slug}):
+            return JsonResponse({'success': False, 'error': 'Сотрудник с таким slug уже существует'}, status=400)
+        
+        # Создаем папку для сотрудника
+        employee_folder = os.path.join(settings.MEDIA_ROOT, 'employees', slug)
+        os.makedirs(employee_folder, exist_ok=True)
+        
+        # Загрузка главного изображения
+        main_image_path = ''
+        if 'main_image' in request.FILES:
+            main_image = request.FILES['main_image']
+            main_image_filename = f"main_{main_image.name}"
+            main_image_full_path = os.path.join(employee_folder, main_image_filename)
+            with open(main_image_full_path, 'wb+') as destination:
+                for chunk in main_image.chunks():
+                    destination.write(chunk)
+            main_image_path = f'employees/{slug}/{main_image_filename}'
+        
+        # Загрузка дополнительных изображений
+        images_paths = []
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            for idx, img in enumerate(images):
+                img_filename = f"{idx+1}_{img.name}"
+                img_full_path = os.path.join(employee_folder, img_filename)
+                with open(img_full_path, 'wb+') as destination:
+                    for chunk in img.chunks():
+                        destination.write(chunk)
+                images_paths.append(f'employees/{slug}/{img_filename}')
+        
+        # Обработка видео (массив URL)
+        videos_data = []
+        video_urls = request.POST.get('video_urls', '').strip()
+        if video_urls:
+            for url in video_urls.split('\n'):
+                url = url.strip()
+                if url:
+                    videos_data.append({
+                        'url': url,
+                        'thumbnail': get_video_thumbnail(url)
+                    })
+        
+        employee_data = {
+            'full_name': full_name,
+            'slug': slug,
+            'position': request.POST.get('position', '').strip(),
+            'phone': request.POST.get('phone', '').strip(),
+            'email': request.POST.get('email', '').strip(),
+            'experience_years': int(request.POST.get('experience_years', 0) or 0),
+            'specialization': request.POST.get('specialization', '').strip(),
+            'bio': request.POST.get('bio', '').strip(),
+            'achievements': request.POST.get('achievements', '').strip(),
+            'main_image': main_image_path,
+            'images': images_paths,
+            'videos': videos_data,
+            'is_active': True,
+            'created_at': datetime.now(),
+        }
+        
+        result = col.insert_one(employee_data)
+        
+        return JsonResponse({
+            'success': True,
+            'id': str(result.inserted_id),
+            'message': 'Сотрудник успешно создан'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def employee_api_toggle(request, employee_id):
+    """API: переключить активность сотрудника."""
+    try:
+        db = get_mongo_connection()
+        col = db['employees']
+        
+        # Получаем текущий статус
+        employee = col.find_one({'_id': ObjectId(employee_id)})
+        if not employee:
+            return JsonResponse({'success': False, 'error': 'Сотрудник не найден'}, status=404)
+        
+        current_status = employee.get('is_active', True)
+        new_status = not current_status
+        
+        col.update_one(
+            {'_id': ObjectId(employee_id)},
+            {'$set': {'is_active': new_status}}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Сотрудник {"активирован" if new_status else "деактивирован"}'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def employee_api_detail(request, employee_id):
+    """API: получить данные сотрудника по id."""
+    try:
+        db = get_mongo_connection()
+        col = db['employees']
+        employee = col.find_one({'_id': ObjectId(employee_id)})
+        if not employee:
+            return JsonResponse({'success': False, 'error': 'Сотрудник не найден'}, status=404)
+        employee['_id'] = str(employee['_id'])
+        return JsonResponse({'success': True, 'item': employee})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def employee_api_update(request, employee_id):
+    """API: обновить данные сотрудника."""
+    try:
+        db = get_mongo_connection()
+        col = db['employees']
+        
+        employee = col.find_one({'_id': ObjectId(employee_id)})
+        if not employee:
+            return JsonResponse({'success': False, 'error': 'Сотрудник не найден'}, status=404)
+        
+        full_name = request.POST.get('full_name', '').strip()
+        if not full_name:
+            return JsonResponse({'success': False, 'error': 'ФИО обязательно'}, status=400)
+        
+        slug = slugify(full_name, allow_unicode=True)
+        
+        update = {
+            'full_name': full_name,
+            'position': request.POST.get('position', '').strip(),
+            'phone': request.POST.get('phone', '').strip(),
+            'email': request.POST.get('email', '').strip(),
+            'experience_years': int(request.POST.get('experience_years', 0) or 0),
+            'specialization': request.POST.get('specialization', '').strip(),
+            'bio': request.POST.get('bio', '').strip(),
+            'achievements': [a.strip() for a in request.POST.get('achievements', '').split(',') if a.strip()],
+            'is_active': request.POST.get('is_active') == 'on',
+            'slug': slug,
+        }
+        
+        # Загрузка фото сотрудника
+        if 'photo' in request.FILES:
+            photo = request.FILES['photo']
+            employee_folder = os.path.join(settings.MEDIA_ROOT, 'employees', slug)
+            os.makedirs(employee_folder, exist_ok=True)
+            
+            photo_filename = f"photo_{photo.name}"
+            photo_full_path = os.path.join(employee_folder, photo_filename)
+            with open(photo_full_path, 'wb+') as destination:
+                for chunk in photo.chunks():
+                    destination.write(chunk)
+            update['photo'] = f'employees/{slug}/{photo_filename}'
+        
+        result = col.update_one(
+            {'_id': ObjectId(employee_id)},
+            {'$set': update}
+        )
+        
+        if result.matched_count == 0:
+            return JsonResponse({'success': False, 'error': 'Сотрудник не найден'}, status=404)
+        
+        return JsonResponse({'success': True, 'message': 'Сотрудник обновлен'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def employee_api_delete(request, employee_id):
+    """API: удалить сотрудника и его изображения."""
+    try:
+        db = get_mongo_connection()
+        col = db['employees']
+        
+        employee = col.find_one({'_id': ObjectId(employee_id)})
+        if not employee:
+            return JsonResponse({'success': False, 'error': 'Сотрудник не найден'}, status=404)
+        
+        # Удаляем папку с изображениями
+        if employee.get('slug'):
+            employee_folder = os.path.join(settings.MEDIA_ROOT, 'employees', employee['slug'])
+            if os.path.exists(employee_folder):
+                import shutil
+                shutil.rmtree(employee_folder)
+        
+        col.delete_one({'_id': ObjectId(employee_id)})
+        
+        return JsonResponse({'success': True, 'message': 'Сотрудник удален'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ========== VIEW для страницы управления компанией ==========
+def company_management(request):
+    """Страница управления компанией и персоналом."""
+    return render(request, 'main/company_management.html')

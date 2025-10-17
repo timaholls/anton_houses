@@ -22,11 +22,7 @@
         {% for employee in employees %}
         <div class="property-card employee-card">
             <div class="card-image" style="height:200px;">
-                {% if employee.get_main_image %}
-                    <img src="{{ employee.get_main_image.image.url }}" alt="{{ employee.full_name }}">
-                {% else %}
-                    <img src="/media/gallery/placeholders.png" alt="{{ employee.full_name }}">
-                {% endif %}
+                <img src="{% if employee.main_image %}/media/{{ employee.main_image }}{% else %}/media/gallery/placeholders.png{% endif %}" alt="{{ employee.full_name }}">
             </div>
             <div class="card-content">
                 <div class="card-header">
@@ -42,17 +38,21 @@
                     <span>Опыт работы: {{ employee.experience_years }} лет</span>
                 </div>
                 {% endif %}
+                {% if employee.city %}
                 <div class="card-location" style="margin-top:6px;">
                     <i class="fas fa-map-marker-alt"></i>
-                    <span>{{ employee.branch.name }}</span>
+                    <span>{{ employee.city }}</span>
                 </div>
+                {% endif %}
                 <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
                     <a href="{% url 'main:employee_detail' employee.id %}" class="btn btn-primary btn-small" style="width:100%; text-align:center; justify-content:center;">
                         Подробнее об агенте
                     </a>
-                    <a href="{% url 'main:office_detail' employee.branch.slug %}" class="btn btn-secondary btn-small" style="width:100%; text-align:center; justify-content:center;">
+                    {% if employee.branch_slug %}
+                    <a href="{% url 'main:office_detail' employee.branch_slug %}" class="btn btn-secondary btn-small" style="width:100%; text-align:center; justify-content:center;">
                         Посмотреть филиал
                     </a>
+                    {% endif %}
                     <a href="{% url 'main:agent_properties' employee.id %}" class="btn btn-outline btn-small" style="width:100%; text-align:center; justify-content:center;">
                         Объекты агента
                     </a>

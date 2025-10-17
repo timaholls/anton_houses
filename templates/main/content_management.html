@@ -1,0 +1,1186 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление контентом и SEO</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .section-title i {
+            color: #667eea;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-toggle {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-toggle.inactive {
+            background: #6b7280;
+        }
+        
+        .btn-toggle:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .items-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .item-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .item-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .item-info {
+            flex: 1;
+        }
+        
+        .item-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+        
+        .item-meta {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+        
+        .badge-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-inactive {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748b;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .toast.active {
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .toast-success {
+            border-left: 4px solid #10b981;
+        }
+        
+        .toast-error {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-cog"></i> Управление контентом и SEO</h1>
+        <p>Управление статьями, тегами, категориями, авторами и SEO-страницами</p>
+    </div>
+
+    <div class="container">
+        <!-- Теги -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-tags"></i> Теги</h2>
+                <button class="btn btn-primary" onclick="openCreateTagModal()">
+                    <i class="fas fa-plus"></i> Добавить тег
+                </button>
+            </div>
+            <div id="tags-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Категории -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-folder"></i> Категории</h2>
+                <button class="btn btn-primary" onclick="openCreateCategoryModal()">
+                    <i class="fas fa-plus"></i> Добавить категорию
+                </button>
+            </div>
+            <div id="categories-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Авторы -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-user-edit"></i> Авторы</h2>
+                <button class="btn btn-primary" onclick="openCreateAuthorModal()">
+                    <i class="fas fa-plus"></i> Добавить автора
+                </button>
+            </div>
+            <div id="authors-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статьи -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-newspaper"></i> Статьи</h2>
+                <button class="btn btn-primary" onclick="openCreateArticleModal()">
+                    <i class="fas fa-plus"></i> Создать статью
+                </button>
+            </div>
+            <div id="articles-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEO Страницы каталога -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-sitemap"></i> SEO Страницы каталога</h2>
+                <button class="btn btn-primary" onclick="openCreateCatalogLandingModal()">
+                    <i class="fas fa-plus"></i> Создать страницу
+                </button>
+            </div>
+            <div id="catalog-landings-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальные окна будут добавлены через JavaScript -->
+    <div id="modal-container"></div>
+    
+    <!-- Toast уведомления -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // Утилиты
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.className = `toast toast-${type} active`;
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+            setTimeout(() => toast.classList.remove('active'), 3000);
+        }
+
+        function createModal(title, content) {
+            return `
+                <div class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 class="modal-title">${title}</h3>
+                            <button class="close-modal" onclick="closeModal()">×</button>
+                        </div>
+                        ${content}
+                    </div>
+                </div>
+            `;
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').innerHTML = '';
+        }
+
+        // Загрузка данных при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTags();
+            loadCategories();
+            loadAuthors();
+            loadArticles();
+            loadCatalogLandings();
+        });
+
+        // ========== ТЕГИ ==========
+        async function loadTags() {
+            try {
+                const response = await fetch('/api/tags/?admin=true');
+                const data = await response.json();
+                const list = document.getElementById('tags-list');
+                
+                if (data.items && data.items.length > 0) {
+                    list.innerHTML = data.items.map(tag => `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <div class="item-title">
+                                    ${tag.name}
+                                    <span class="badge ${tag.is_active ? 'badge-active' : 'badge-inactive'}">
+                                        ${tag.is_active ? 'Активен' : 'Неактивен'}
+                                    </span>
+                                </div>
+                                <div class="item-meta">Slug: ${tag.slug || '—'}</div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-sm btn-toggle ${tag.is_active ? '' : 'inactive'}" 
+                                        onclick="toggleTag('${tag._id}', ${tag.is_active})">
+                                    <i class="fas fa-${tag.is_active ? 'eye-slash' : 'eye'}"></i>
+                                    ${tag.is_active ? 'Деактивировать' : 'Активировать'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTag('${tag._id}', '${tag.name}')">
+                                    <i class="fas fa-trash"></i> Удалить
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-tags"></i><p>Теги отсутствуют</p></div>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки тегов:', error);
+                showToast('Ошибка загрузки тегов', 'error');
+            }
+        }
+
+        function openCreateTagModal() {
+            const modalContent = `
+                <form id="tag-form" onsubmit="createTag(event)">
+                    <div class="form-group">
+                        <label class="form-label">Название тега *</label>
+                        <input type="text" class="form-input" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug (заполнится автоматически)</label>
+                        <input type="text" class="form-input" name="slug">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">H1 заголовок</label>
+                        <input type="text" class="form-input" name="h1_title">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Meta Title</label>
+                        <input type="text" class="form-input" name="meta_title">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Meta Description</label>
+                        <textarea class="form-textarea" name="meta_description"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Создать тег
+                    </button>
+                </form>
+            `;
+            document.getElementById('modal-container').innerHTML = createModal('Создать тег', modalContent);
+        }
+
+        async function createTag(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const response = await fetch('/api/tags/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Тег успешно создан', 'success');
+                    closeModal();
+                    loadTags();
+                } else {
+                    showToast(data.error || 'Ошибка создания тега', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showToast('Ошибка создания тега', 'error');
+            }
+        }
+
+        async function toggleTag(id, currentStatus) {
+            try {
+                const response = await fetch(`/api/tags/${id}/toggle/`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({is_active: !currentStatus})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadTags();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка изменения статуса', 'error');
+            }
+        }
+
+        async function deleteTag(id, name) {
+            if (!confirm(`Удалить тег "${name}"?`)) return;
+            
+            try {
+                const response = await fetch(`/api/tags/${id}/`, {method: 'DELETE'});
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Тег удален', 'success');
+                    loadTags();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка удаления тега', 'error');
+            }
+        }
+
+        // ========== КАТЕГОРИИ ==========
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories/?admin=true');
+                const data = await response.json();
+                const list = document.getElementById('categories-list');
+                
+                if (data.items && data.items.length > 0) {
+                    list.innerHTML = data.items.map(cat => `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <div class="item-title">
+                                    ${cat.name}
+                                    <span class="badge ${cat.is_active ? 'badge-active' : 'badge-inactive'}">
+                                        ${cat.is_active ? 'Активна' : 'Неактивна'}
+                                    </span>
+                                </div>
+                                <div class="item-meta">${cat.description || 'Без описания'} • Slug: ${cat.slug}</div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-sm btn-toggle ${cat.is_active ? '' : 'inactive'}" 
+                                        onclick="toggleCategory('${cat._id}', ${cat.is_active})">
+                                    <i class="fas fa-${cat.is_active ? 'eye-slash' : 'eye'}"></i>
+                                    ${cat.is_active ? 'Деактивировать' : 'Активировать'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat._id}', '${cat.name}')">
+                                    <i class="fas fa-trash"></i> Удалить
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-folder"></i><p>Категории отсутствуют</p></div>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки категорий:', error);
+                showToast('Ошибка загрузки категорий', 'error');
+            }
+        }
+
+        function openCreateCategoryModal() {
+            const modalContent = `
+                <form id="category-form" onsubmit="createCategory(event)">
+                    <div class="form-group">
+                        <label class="form-label">Название категории *</label>
+                        <input type="text" class="form-input" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug (заполнится автоматически)</label>
+                        <input type="text" class="form-input" name="slug">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-textarea" name="description"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Создать категорию
+                    </button>
+                </form>
+            `;
+            document.getElementById('modal-container').innerHTML = createModal('Создать категорию', modalContent);
+        }
+
+        async function createCategory(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const response = await fetch('/api/categories/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Категория успешно создана', 'success');
+                    closeModal();
+                    loadCategories();
+                } else {
+                    showToast(data.error || 'Ошибка создания категории', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка создания категории', 'error');
+            }
+        }
+
+        async function toggleCategory(id, currentStatus) {
+            try {
+                const response = await fetch(`/api/categories/${id}/toggle/`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({is_active: !currentStatus})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadCategories();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка изменения статуса', 'error');
+            }
+        }
+
+        async function deleteCategory(id, name) {
+            if (!confirm(`Удалить категорию "${name}"?`)) return;
+            
+            try {
+                const response = await fetch(`/api/categories/${id}/`, {method: 'DELETE'});
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Категория удалена', 'success');
+                    loadCategories();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка удаления категории', 'error');
+            }
+        }
+
+        // ========== АВТОРЫ ==========
+        async function loadAuthors() {
+            try {
+                const response = await fetch('/api/authors/?admin=true');
+                const data = await response.json();
+                const list = document.getElementById('authors-list');
+                
+                if (data.items && data.items.length > 0) {
+                    list.innerHTML = data.items.map(author => `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <div class="item-title">
+                                    ${author.name}
+                                    <span class="badge ${author.is_active ? 'badge-active' : 'badge-inactive'}">
+                                        ${author.is_active ? 'Активен' : 'Неактивен'}
+                                    </span>
+                                </div>
+                                <div class="item-meta">
+                                    ${author.position || 'Без должности'} • 
+                                    Статей: ${author.articles_count || 0}
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-sm btn-toggle ${author.is_active ? '' : 'inactive'}" 
+                                        onclick="toggleAuthor('${author._id}', ${author.is_active})">
+                                    <i class="fas fa-${author.is_active ? 'eye-slash' : 'eye'}"></i>
+                                    ${author.is_active ? 'Деактивировать' : 'Активировать'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteAuthor('${author._id}', '${author.name}')">
+                                    <i class="fas fa-trash"></i> Удалить
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-user-edit"></i><p>Авторы отсутствуют</p></div>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки авторов:', error);
+                showToast('Ошибка загрузки авторов', 'error');
+            }
+        }
+
+        function openCreateAuthorModal() {
+            const modalContent = `
+                <form id="author-form" onsubmit="createAuthor(event)">
+                    <div class="form-group">
+                        <label class="form-label">Имя автора *</label>
+                        <input type="text" class="form-input" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Должность</label>
+                        <input type="text" class="form-input" name="position">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-textarea" name="description"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Создать автора
+                    </button>
+                </form>
+            `;
+            document.getElementById('modal-container').innerHTML = createModal('Создать автора', modalContent);
+        }
+
+        async function createAuthor(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const response = await fetch('/api/authors/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Автор успешно создан', 'success');
+                    closeModal();
+                    loadAuthors();
+                } else {
+                    showToast(data.error || 'Ошибка создания автора', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка создания автора', 'error');
+            }
+        }
+
+        async function toggleAuthor(id, currentStatus) {
+            try {
+                const response = await fetch(`/api/authors/${id}/toggle/`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({is_active: !currentStatus})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadAuthors();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка изменения статуса', 'error');
+            }
+        }
+
+        async function deleteAuthor(id, name) {
+            if (!confirm(`Удалить автора "${name}"?`)) return;
+            
+            try {
+                const response = await fetch(`/api/authors/${id}/`, {method: 'DELETE'});
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Автор удален', 'success');
+                    loadAuthors();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка удаления автора', 'error');
+            }
+        }
+
+        // ========== СТАТЬИ ==========
+        async function loadArticles() {
+            try {
+                const response = await fetch('/api/articles/?admin=true');
+                const data = await response.json();
+                const list = document.getElementById('articles-list');
+                
+                if (data.items && data.items.length > 0) {
+                    list.innerHTML = data.items.map(article => `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <div class="item-title">
+                                    ${article.title}
+                                    <span class="badge ${article.is_active ? 'badge-active' : 'badge-inactive'}">
+                                        ${article.is_active ? 'Активна' : 'Неактивна'}
+                                    </span>
+                                </div>
+                                <div class="item-meta">
+                                    Категория: ${article.category_name || '—'} • 
+                                    Автор: ${article.author_name || '—'} • 
+                                    ${article.published_date || '—'}
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-sm btn-toggle ${article.is_active ? '' : 'inactive'}" 
+                                        onclick="toggleArticle('${article._id}', ${article.is_active})">
+                                    <i class="fas fa-${article.is_active ? 'eye-slash' : 'eye'}"></i>
+                                    ${article.is_active ? 'Деактивировать' : 'Активировать'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteArticle('${article._id}', '${article.title}')">
+                                    <i class="fas fa-trash"></i> Удалить
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-newspaper"></i><p>Статьи отсутствуют</p></div>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки статей:', error);
+                showToast('Ошибка загрузки статей', 'error');
+            }
+        }
+
+        async function openCreateArticleModal() {
+            // Загружаем категории, авторов и теги для селектов
+            const [categoriesRes, authorsRes, tagsRes] = await Promise.all([
+                fetch('/api/categories/?admin=true'),
+                fetch('/api/authors/?admin=true'),
+                fetch('/api/tags/?admin=true')
+            ]);
+            
+            const categories = await categoriesRes.json();
+            const authors = await authorsRes.json();
+            const tags = await tagsRes.json();
+            
+            const modalContent = `
+                <form id="article-form" onsubmit="createArticle(event)" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label class="form-label">Заголовок *</label>
+                        <input type="text" class="form-input" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Тип статьи</label>
+                        <select class="form-select" name="article_type">
+                            <option value="news">Новости</option>
+                            <option value="company">Новости компании</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Категория *</label>
+                        <select class="form-select" name="category_id" required>
+                            <option value="">Выберите категорию</option>
+                            ${categories.items ? categories.items.filter(c => c.is_active).map(c => 
+                                `<option value="${c._id}">${c.name}</option>`
+                            ).join('') : ''}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Автор</label>
+                        <select class="form-select" name="author_id">
+                            <option value="">Без автора</option>
+                            ${authors.items ? authors.items.filter(a => a.is_active).map(a => 
+                                `<option value="${a._id}">${a.name}</option>`
+                            ).join('') : ''}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Теги (удерживайте Ctrl для множественного выбора)</label>
+                        <select class="form-select" name="tags" multiple style="height: 120px;">
+                            ${tags.items ? tags.items.filter(t => t.is_active).map(t => 
+                                `<option value="${t._id}">${t.name}</option>`
+                            ).join('') : ''}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Краткое описание *</label>
+                        <textarea class="form-textarea" name="excerpt" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Содержание *</label>
+                        <textarea class="form-textarea" name="content" required style="min-height: 200px;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Главное изображение</label>
+                        <input type="file" class="form-input" name="main_image" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Дополнительные изображения (можно выбрать несколько)</label>
+                        <input type="file" class="form-input" name="images" accept="image/*" multiple>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="show_on_home">
+                            Показывать на главной странице
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="is_featured">
+                            Рекомендуемая статья
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Создать статью
+                    </button>
+                </form>
+            `;
+            document.getElementById('modal-container').innerHTML = createModal('Создать статью', modalContent);
+        }
+
+        async function createArticle(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const response = await fetch('/api/articles/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Статья успешно создана', 'success');
+                    closeModal();
+                    loadArticles();
+                } else {
+                    showToast(data.error || 'Ошибка создания статьи', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка создания статьи', 'error');
+            }
+        }
+
+        async function toggleArticle(id, currentStatus) {
+            try {
+                const response = await fetch(`/api/articles/${id}/toggle/`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({is_active: !currentStatus})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadArticles();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка изменения статуса', 'error');
+            }
+        }
+
+        async function deleteArticle(id, title) {
+            if (!confirm(`Удалить статью "${title}"?`)) return;
+            
+            try {
+                const response = await fetch(`/api/articles/${id}/`, {method: 'DELETE'});
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Статья удалена', 'success');
+                    loadArticles();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка удаления статьи', 'error');
+            }
+        }
+
+        // ========== SEO СТРАНИЦЫ КАТАЛОГА ==========
+        async function loadCatalogLandings() {
+            try {
+                const response = await fetch('/api/catalog-landings/?admin=true');
+                const data = await response.json();
+                const list = document.getElementById('catalog-landings-list');
+                
+                if (data.items && data.items.length > 0) {
+                    list.innerHTML = data.items.map(landing => `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <div class="item-title">
+                                    ${landing.name}
+                                    <span class="badge ${landing.is_active ? 'badge-active' : 'badge-inactive'}">
+                                        ${landing.is_active ? 'Активна' : 'Неактивна'}
+                                    </span>
+                                </div>
+                                <div class="item-meta">
+                                    Тип: ${landing.kind === 'newbuild' ? 'Новостройки' : 'Вторичка'} • 
+                                    Категория: ${landing.category_display || landing.category} • 
+                                    Slug: ${landing.slug}
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-sm btn-toggle ${landing.is_active ? '' : 'inactive'}" 
+                                        onclick="toggleCatalogLanding('${landing._id}', ${landing.is_active})">
+                                    <i class="fas fa-${landing.is_active ? 'eye-slash' : 'eye'}"></i>
+                                    ${landing.is_active ? 'Деактивировать' : 'Активировать'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteCatalogLanding('${landing._id}', '${landing.name}')">
+                                    <i class="fas fa-trash"></i> Удалить
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-sitemap"></i><p>SEO страницы отсутствуют</p></div>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки SEO страниц:', error);
+                showToast('Ошибка загрузки SEO страниц', 'error');
+            }
+        }
+
+        function openCreateCatalogLandingModal() {
+            const modalContent = `
+                <form id="catalog-landing-form" onsubmit="createCatalogLanding(event)">
+                    <div class="form-group">
+                        <label class="form-label">Название страницы *</label>
+                        <input type="text" class="form-input" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug *</label>
+                        <input type="text" class="form-input" name="slug" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Тип страницы *</label>
+                        <select class="form-select" name="kind" required>
+                            <option value="newbuild">Новостройки</option>
+                            <option value="secondary">Вторичная недвижимость</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Категория *</label>
+                        <select class="form-select" name="category" required>
+                            <option value="all">Все объекты</option>
+                            <option value="apartment">Квартиры</option>
+                            <option value="house">Дома</option>
+                            <option value="cottage">Коттеджи</option>
+                            <option value="townhouse">Таунхаусы</option>
+                            <option value="commercial">Коммерческие помещения</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Meta Title</label>
+                        <input type="text" class="form-input" name="meta_title">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Meta Description</label>
+                        <textarea class="form-textarea" name="meta_description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Meta Keywords</label>
+                        <input type="text" class="form-input" name="meta_keywords">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Создать страницу
+                    </button>
+                </form>
+            `;
+            document.getElementById('modal-container').innerHTML = createModal('Создать SEO страницу', modalContent);
+        }
+
+        async function createCatalogLanding(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const response = await fetch('/api/catalog-landings/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('SEO страница успешно создана', 'success');
+                    closeModal();
+                    loadCatalogLandings();
+                } else {
+                    showToast(data.error || 'Ошибка создания страницы', 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка создания страницы', 'error');
+            }
+        }
+
+        async function toggleCatalogLanding(id, currentStatus) {
+            try {
+                const response = await fetch(`/api/catalog-landings/${id}/toggle/`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({is_active: !currentStatus})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadCatalogLandings();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка изменения статуса', 'error');
+            }
+        }
+
+        async function deleteCatalogLanding(id, name) {
+            if (!confirm(`Удалить SEO страницу "${name}"?`)) return;
+            
+            try {
+                const response = await fetch(`/api/catalog-landings/${id}/`, {method: 'DELETE'});
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('SEO страница удалена', 'success');
+                    loadCatalogLandings();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Ошибка удаления страницы', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+

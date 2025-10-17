@@ -1,0 +1,74 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление компанией и персоналом</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/content-management.css' %}">
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-building"></i> Управление компанией и персоналом</h1>
+        <p>Управление информацией о компании, офисами продаж и сотрудниками</p>
+    </div>
+
+    <div class="container">
+        <!-- Информация о компании -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-info-circle"></i> Информация о компании</h2>
+                <button class="btn btn-primary" onclick="openCreateCompanyInfoModal()">
+                    <i class="fas fa-plus"></i> Добавить информацию
+                </button>
+            </div>
+            <div id="company-info-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Офисы продаж -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-store"></i> Офисы продаж</h2>
+                <button class="btn btn-primary" onclick="openCreateBranchOfficeModal()">
+                    <i class="fas fa-plus"></i> Добавить офис
+                </button>
+            </div>
+            <div id="offices-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Сотрудники -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-users"></i> Сотрудники</h2>
+                <button class="btn btn-primary" onclick="openCreateEmployeeModal()">
+                    <i class="fas fa-plus"></i> Добавить сотрудника
+                </button>
+            </div>
+            <div id="employees-list" class="items-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-container"></div>
+    <div id="toast" class="toast"></div>
+
+    {% csrf_token %}
+    <script src="{% static 'js/company-management.js' %}"></script>
+</body>
+</html>
+

@@ -476,14 +476,38 @@ window.renderItems = function(data){
       grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
     } else {
       grid.innerHTML = data.items.map(item => {
-        const imageUrl = item.image_url || '/media/gallery/placeholders.png';
+        // Формируем массив фото
+        let photos = [];
+        if (item.photos && item.photos.length > 0) {
+          photos = item.photos.map(photo => `/media/${photo}`);
+        } else {
+          photos = [item.image_url || '/media/gallery/placeholders.png'];
+        }
+        
+        // Генерируем HTML для галереи
+        const galleryHtml = photos.map((photo, i) => 
+          `<img src="${photo}" alt="${item.name}" class="gallery-image ${i === 0 ? 'active' : ''}" style="display: ${i === 0 ? 'block' : 'none'};">`
+        ).join('');
+        
         const cardClasses = `property-card-compact`;
         return `
-        <div class="${cardClasses}" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
-          <div class="compact-card-image">
-            <img src="${imageUrl}" alt="${item.name}">
+        <div class="${cardClasses}" data-complex-id="${item.id}">
+          <div class="compact-card-image-gallery" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
+            ${galleryHtml}
+            ${photos.length > 1 ? `
+              <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <button class="gallery-nav gallery-next" onclick="event.stopPropagation(); changeImage(this, 1)">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+              <div class="gallery-dots">
+                ${photos.map((_, i) => `<span class="dot ${i === 0 ? 'active' : ''}" onclick="event.stopPropagation(); setImage(this, ${i})"></span>`).join('')}
+              </div>
+            ` : ''}
           </div>
-          <div class="compact-card-content">
+          
+          <div class="compact-card-content" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
             <div class="compact-card-header">
               <h3 class="compact-card-title">${item.name}</h3>
               <div class="compact-card-location">
@@ -493,7 +517,7 @@ window.renderItems = function(data){
               <div class="compact-card-details">
                 <div class="compact-detail-item">
                   <i class="fas fa-expand-arrows-alt"></i>
-                  <span>${item.area_from || '—'}${item.area_to ? ' - ' + item.area_to : ''} м²</span>
+                  <span>${item.area_from || '—'} м²</span>
                 </div>
                 ${item.rooms ? `<div class="compact-detail-item"><i class="fas fa-bed"></i><span>${item.rooms}-комн.</span></div>` : ''}
               </div>
@@ -535,7 +559,7 @@ window.applyFilters = function() {
     
     // Определяем правильный API URL в зависимости от типа данных
     const isSecondary = '{{ dataset_type }}' === 'secondary';
-    const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+    const apiUrl = isSecondary ? '/api/secondary/list/' : '/api/catalog/';
     
     // Загружаем данные через API с фильтрами
     fetch(`${apiUrl}?${params.toString()}`)
@@ -593,7 +617,7 @@ window.loadPage = function(page) {
     
     // Определяем правильный API URL в зависимости от типа данных
     const isSecondary = '{{ dataset_type }}' === 'secondary';
-    const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+    const apiUrl = isSecondary ? '/api/secondary/list/' : '/api/catalog/';
     
     // Загружаем данные через API
     fetch(`${apiUrl}?${params.toString()}`)
@@ -1621,5 +1645,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// Функции для галереи изображений
+window.changeImage = function(button, direction) {
+    const gallery = button.parentElement;
+    const images = gallery.querySelectorAll('.gallery-image');
+    const dots = gallery.querySelectorAll('.dot');
+    let currentIndex = 0;
+    
+    // Находим текущий индекс
+    images.forEach((img, i) => {
+        if (img.style.display === 'block') {
+            currentIndex = i;
+        }
+    });
+    
+    // Вычисляем новый индекс
+    let newIndex = currentIndex + direction;
+    if (newIndex < 0) newIndex = images.length - 1;
+    if (newIndex >= images.length) newIndex = 0;
+    
+    // Переключаем изображения
+    images[currentIndex].style.display = 'none';
+    images[newIndex].style.display = 'block';
+    
+    // Переключаем точки
+    dots[currentIndex].classList.remove('active');
+    dots[newIndex].classList.add('active');
+}
+
+window.setImage = function(dot, index) {
+    const gallery = dot.parentElement.parentElement;
+    const images = gallery.querySelectorAll('.gallery-image');
+    const dots = gallery.querySelectorAll('.dot');
+    
+    // Скрываем все изображения
+    images.forEach(img => img.style.display = 'none');
+    // Показываем выбранное
+    images[index].style.display = 'block';
+    
+    // Обновляем точки
+    dots.forEach(d => d.classList.remove('active'));
+    dots[index].classList.add('active');
+}
 </script>
 {% endblock %} 

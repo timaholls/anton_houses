@@ -18,6 +18,7 @@
         </div>
 
         <!-- Секция "Ипотека" -->
+        {% if show_mortgage_section %}
         <div class="articles-category-section">
             <div class="category-header">
                 <h2 class="category-title">Ипотека</h2>
@@ -67,8 +68,10 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
 
         <!-- Секция "Законы" -->
+        {% if show_laws_section %}
         <div class="articles-category-section">
             <div class="category-header">
                 <h2 class="category-title">Законы</h2>
@@ -118,8 +121,10 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
 
         <!-- Секция "Инструкции" -->
+        {% if show_instructions_section %}
         <div class="articles-category-section">
             <div class="category-header">
                 <h2 class="category-title">Инструкции</h2>
@@ -169,8 +174,10 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
 
         <!-- Секция "Рынок недвижимости" -->
+        {% if show_market_section %}
         <div class="articles-category-section">
             <div class="category-header">
                 <h2 class="category-title">Рынок недвижимости</h2>
@@ -220,8 +227,10 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
 
         <!-- Секция "Советы" -->
+        {% if show_tips_section %}
         <div class="articles-category-section">
             <div class="category-header">
                 <h2 class="category-title">Советы</h2>
@@ -271,6 +280,7 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
     </section>
     
     <!-- Блок "Похожие статьи" -->

@@ -30,18 +30,16 @@
         </div>
 
         <!-- Галерея изображений -->
-        {% if images %}
+        {% if complex.gallery_photos %}
         <div class="complex-gallery">
             <div class="gallery-main">
-                {% with first_image=images.first %}
-                <img src="{{ first_image.image.url }}" alt="{{ complex.name }}" id="main-image" loading="lazy">
-                {% endwith %}
+                <img src="/media/future_complexes/{{ complex.gallery_photos.0 }}" alt="{{ complex.name }}" id="main-image" loading="lazy" onclick="openImageFullSize(this.src)" style="cursor: pointer;">
             </div>
-            {% if images.count > 1 %}
+            {% if complex.gallery_photos|length > 1 %}
             <div class="gallery-thumbnails">
-                {% for image in images %}
-                <div class="thumbnail-item" onclick="changeMainImage('{{ image.image.url }}')">
-                    <img src="{{ image.image.url }}" alt="{{ image.title }}" loading="lazy">
+                {% for photo in complex.gallery_photos %}
+                <div class="thumbnail-item" onclick="changeMainImage('/media/future_complexes/{{ photo }}')">
+                    <img src="/media/future_complexes/{{ photo }}" alt="{{ complex.name }}" loading="lazy">
                 </div>
                 {% endfor %}
             </div>
@@ -121,6 +119,56 @@
                         </div>
                         {% endif %}
                         
+                        {% if complex.contractors %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-industry"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Подрядчики</span>
+                                <span class="characteristic-value">{{ complex.contractors }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.energy_efficiency %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-leaf"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Класс энергоэффективности</span>
+                                <span class="characteristic-value">{{ complex.energy_efficiency }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.floors %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-layer-group"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Этажность</span>
+                                <span class="characteristic-value">{{ complex.floors }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.apartments_count %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-home"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Количество квартир</span>
+                                <span class="characteristic-value">{{ complex.apartments_count }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.ceiling_height %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-arrows-alt-v"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Высота потолков</span>
+                                <span class="characteristic-value">{{ complex.ceiling_height }} м</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
                         <div class="characteristic-item">
                             <i class="fas fa-calendar-alt"></i>
                             <div class="characteristic-content">
@@ -132,16 +180,265 @@
                 </div>
             </div>
 
-            <!-- Контактная информация -->
+            <!-- Блок агента -->
             <div class="complex-contact">
                 <div class="contact-card">
-                    <h3>Получить консультацию</h3>
-                    <p>Оставьте заявку, и наш специалист свяжется с вами для консультации по данному проекту</p>
-                    <a href="#feedback-title" class="contact-btn anchor-feedback-btn">
-                        <i class="fas fa-phone"></i>
-                        Оставить заявку
-                    </a>
+                    {% if agent %}
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                            {% if agent.photo %}
+                                <img src="/media/{{ agent.photo }}" alt="{{ agent.full_name }}" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:1px solid #e9ecef;">
+                            {% else %}
+                                <div style="width:56px; height:56px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#64748b; border:1px solid #e9ecef;">
+                                    <i class="fas fa-user" style="font-size:20px;"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div style="font-weight:700; color:var(--c21-dark);">{{ agent.full_name }}</div>
+                                <div style="font-size:12px; color:#64748b;">Ответственный агент</div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <h3 style="margin-bottom:8px;">Ответственный агент</h3>
+                        <p style="margin-bottom:0; color:#64748b;">Будет назначен</p>
+                    {% endif %}
+
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
+                        <a href="#feedback-title" class="contact-btn anchor-feedback-btn">
+                            <i class="fas fa-phone"></i>
+                            Оставить заявку
+                        </a>
+                        {% if agent %}
+                        <a href="{% url 'main:employee_detail' agent.id %}" class="contact-btn" style="background:#f1f5f9; color:#1f2937; box-shadow:none;">
+                            <i class="fas fa-id-badge"></i>
+                            Подробнее об агенте
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Детальные характеристики -->
+        <div class="detailed-characteristics-section">
+            <h2 class="section-title">Детальные характеристики</h2>
+            
+            <!-- Основные характеристики -->
+            {% if complex.object_details.main_characteristics %}
+            <div class="characteristics-category">
+                <h3 class="category-title">Основные характеристики</h3>
+                <div class="characteristics-grid-detailed">
+                    {% for key, value in complex.object_details.main_characteristics.items %}
+                        {% if value and value != "" %}
+                        <div class="characteristic-detail-item">
+                            <div class="characteristic-detail-label">{{ key }}</div>
+                            <div class="characteristic-detail-value">{{ value }}</div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Благоустройство двора -->
+            {% if complex.object_details.yard_improvement %}
+            <div class="characteristics-category">
+                <h3 class="category-title">Благоустройство двора</h3>
+                <div class="characteristics-grid-detailed">
+                    {% for key, value in complex.object_details.yard_improvement.items %}
+                        {% if value and value != "" %}
+                        <div class="characteristic-detail-item">
+                            <div class="characteristic-detail-label">{{ key }}</div>
+                            <div class="characteristic-detail-value">{{ value }}</div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Доступная среда -->
+            {% if complex.object_details.accessible_environment %}
+            <div class="characteristics-category">
+                <h3 class="category-title">Доступная среда</h3>
+                <div class="characteristics-grid-detailed">
+                    {% for key, value in complex.object_details.accessible_environment.items %}
+                        {% if value and value != "" %}
+                        <div class="characteristic-detail-item">
+                            <div class="characteristic-detail-label">{{ key }}</div>
+                            <div class="characteristic-detail-value">{{ value }}</div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Лифты -->
+            {% if complex.object_details.elevators %}
+            <div class="characteristics-category">
+                <h3 class="category-title">Лифты</h3>
+                <div class="characteristics-grid-detailed">
+                    {% for key, value in complex.object_details.elevators.items %}
+                        {% if value and value != "" %}
+                        <div class="characteristic-detail-item">
+                            <div class="characteristic-detail-label">{{ key }}</div>
+                            <div class="characteristic-detail-value">{{ value }}</div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Парковочные места -->
+            {% if complex.object_details.parking_space %}
+            <div class="characteristics-category">
+                <h3 class="category-title">Парковочные места</h3>
+                <div class="characteristics-grid-detailed">
+                    {% for key, value in complex.object_details.parking_space.items %}
+                        {% if value and value != "" %}
+                        <div class="characteristic-detail-item">
+                            <div class="characteristic-detail-label">{{ key }}</div>
+                            <div class="characteristic-detail-value">{{ value }}</div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Статистика квартир -->
+            {% if complex.flats_data %}
+            <div class="characteristics-category">
+                <h3 class="category-title">Статистика квартир</h3>
+                <div class="apartment-stats-container">
+                    {% for apt_type, apt_data in complex.flats_data.items %}
+                        {% if apt_data.flats %}
+                            {% with total_count=apt_data.total_count|default:apt_data.flats|length %}
+                            <div class="apartment-type-stat">
+                                <div class="apartment-type-info">
+                                    {% if apt_type == 'oneRoom' %}
+                                        <div class="apartment-type-name">1-комнатные</div>
+                                    {% elif apt_type == 'twoRoom' %}
+                                        <div class="apartment-type-name">2-комнатные</div>
+                                    {% elif apt_type == 'threeRoom' %}
+                                        <div class="apartment-type-name">3-комнатные</div>
+                                    {% elif apt_type == 'fourRoom' %}
+                                        <div class="apartment-type-name">4+-комнатные</div>
+                                    {% else %}
+                                        <div class="apartment-type-name">{{ apt_type }}</div>
+                                    {% endif %}
+                                    <div class="apartment-type-count">{{ total_count }} {% if total_count == 1 %}квартира{% elif total_count > 1 and total_count < 5 %}квартиры{% else %}квартир{% endif %}</div>
+                                    <div class="apartment-type-details">
+                                        {% with areas=apt_data.flats|slice:":10" %}
+                                            {% for flat in areas %}
+                                                {% if flat.totalArea %}
+                                                    {% if forloop.first %}{{ flat.totalArea }}{% elif forloop.last %}{{ flat.totalArea }}{% endif %}
+                                                    {% if not forloop.first and not forloop.last %}...{% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Ход строительства -->
+        <div class="construction-progress-section">
+            <h2 class="section-title">Ход строительства</h2>
+            <div class="construction-progress-grid" id="constructionProgressGrid">
+                {% if complex.construction_progress_data %}
+                    {% if complex.construction_progress_data.construction_stages %}
+                        <!-- Отображение этапов строительства -->
+                        {% for stage in complex.construction_progress_data.construction_stages %}
+                        <div class="construction-stage-card">
+                            <div class="stage-header">
+                                <div class="stage-number">Этап {{ stage.stage_number }}</div>
+                                <div class="stage-date">{{ stage.date }}</div>
+                            </div>
+                            {% if stage.photos %}
+                            <div class="stage-photos">
+                                {% for photo in stage.photos %}
+                                <div class="stage-photo-item">
+                                    <img src="/media/future_complexes/{{ photo }}" alt="Этап {{ stage.stage_number }}" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="stage-no-photos">
+                                <i class="fas fa-image"></i>
+                                <span>Фотографии для этого этапа отсутствуют</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% elif complex.construction_progress_data.photos %}
+                        <!-- Если нет этапов, но есть фотографии -->
+                        <div class="construction-photos-grid">
+                            {% for photo in complex.construction_progress_data.photos %}
+                            <div class="construction-photo-item">
+                                <img src="/media/future_complexes/{{ photo }}" alt="Ход строительства" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-construction">
+                            <i class="fas fa-hammer"></i>
+                            <p>Информация о ходе строительства пока не добавлена</p>
+                        </div>
+                    {% endif %}
+                {% elif complex.object_details.construction_progress %}
+                    {% if complex.object_details.construction_progress.construction_stages %}
+                        <!-- Отображение этапов строительства -->
+                        {% for stage in complex.object_details.construction_progress.construction_stages %}
+                        <div class="construction-stage-card">
+                            <div class="stage-header">
+                                <div class="stage-number">Этап {{ stage.stage_number }}</div>
+                                <div class="stage-date">{{ stage.date }}</div>
+                            </div>
+                            {% if stage.photos %}
+                            <div class="stage-photos">
+                                {% for photo in stage.photos %}
+                                <div class="stage-photo-item">
+                                    <img src="/media/future_complexes/{{ photo }}" alt="Этап {{ stage.stage_number }}" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="stage-no-photos">
+                                <i class="fas fa-image"></i>
+                                <span>Фотографии для этого этапа отсутствуют</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% elif complex.object_details.construction_progress.photos %}
+                        <!-- Если нет этапов, но есть фотографии -->
+                        <div class="construction-photos-grid">
+                            {% for photo in complex.object_details.construction_progress.photos %}
+                            <div class="construction-photo-item">
+                                <img src="/media/future_complexes/{{ photo }}" alt="Ход строительства" loading="lazy" onerror="this.src='/media/gallery/placeholders.png'">
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-construction">
+                            <i class="fas fa-hammer"></i>
+                            <p>Информация о ходе строительства пока не добавлена</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-construction">
+                        <i class="fas fa-hammer"></i>
+                        <p>Информация о ходе строительства пока не добавлена</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
@@ -153,8 +450,8 @@
                 {% for other_complex in other_complexes %}
                 <div class="other-project-card">
                     <div class="other-project-media">
-                        {% if other_complex.get_main_image and other_complex.get_main_image.image %}
-                            <img src="{{ other_complex.get_main_image.image.url }}" alt="{{ other_complex.name }}" loading="lazy">
+                        {% if other_complex.gallery_photos and other_complex.gallery_photos.0 %}
+                            <img src="/media/future_complexes/{{ other_complex.gallery_photos.0 }}" alt="{{ other_complex.name }}" loading="lazy">
                         {% else %}
                             <img src="/media/gallery/placeholders.png" alt="{{ other_complex.name }}" loading="lazy">
                         {% endif %}
@@ -169,9 +466,11 @@
                             <i class="fas fa-map-marker-alt"></i>
                             <span>{{ other_complex.district|default:other_complex.city }}</span>
                         </div>
+                        {% if other_complex.price_from %}
                         <div class="other-project-price">
                             <span>от {{ other_complex.price_from }} млн ₽</span>
                         </div>
+                        {% endif %}
                         <a href="{% url 'main:future_complex_detail' other_complex.id %}" class="other-project-link">
                             Подробнее
                             <i class="fas fa-arrow-right"></i>
@@ -278,8 +577,9 @@
 
 .gallery-main img {
     width: 100%;
-    height: 500px;
-    object-fit: cover;
+    height: auto;
+    max-height: 600px;
+    object-fit: contain;
     display: block;
 }
 
@@ -310,6 +610,11 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.thumbnail-item img:hover {
+    transform: scale(1.1);
 }
 
 /* Информация о ЖК */
@@ -437,6 +742,355 @@
     background: var(--c21-gold-dark);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(190,175,135,.4);
+}
+
+/* Детальные характеристики */
+.detailed-characteristics-section {
+    margin: 60px 0;
+}
+
+/* Категории характеристик */
+.characteristics-category {
+    margin-bottom: 32px;
+}
+
+.characteristics-category:last-child {
+    margin-bottom: 0;
+}
+
+.category-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--c21-gold);
+}
+
+.characteristics-grid-detailed {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 32px;
+}
+
+.characteristic-detail-item {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.characteristic-detail-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+
+.characteristic-detail-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.characteristic-detail-value {
+    font-size: 16px;
+    color: var(--c21-dark);
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+/* Статистика квартир */
+.apartment-stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.apartment-type-stat {
+    padding: 16px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.apartment-type-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+
+.apartment-type-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.apartment-type-name {
+    font-weight: 700;
+    color: var(--c21-dark);
+    font-size: 16px;
+}
+
+.apartment-type-count {
+    font-size: 14px;
+    color: #5a6c7d;
+    font-weight: 600;
+}
+
+.apartment-type-details {
+    font-size: 13px;
+    color: #95a5a6;
+}
+
+/* Ход строительства */
+.construction-progress-section {
+    margin: 60px 0;
+}
+
+.construction-progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+}
+
+.progress-card {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.progress-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,.12);
+}
+
+.progress-media {
+    position: relative;
+    height: 250px;
+    overflow: hidden;
+}
+
+.progress-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.progress-card:hover .progress-media img {
+    transform: scale(1.05);
+}
+
+.progress-photos-count {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.progress-content {
+    padding: 24px;
+}
+
+.progress-date {
+    background: #10b981;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+    margin-bottom: 12px;
+    text-transform: capitalize;
+}
+
+.progress-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 12px 0;
+    line-height: 1.3;
+}
+
+.progress-description {
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.progress-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+}
+
+.download-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.download-btn:hover {
+    background: #2563eb;
+}
+
+.last-update {
+    font-size: 12px;
+    color: #666;
+}
+
+.empty-construction {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.empty-construction i {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    color: #ccc;
+}
+
+.empty-construction p {
+    font-size: 16px;
+    margin: 0;
+}
+
+/* Фотографии хода строительства */
+.construction-photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.construction-photo-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16/10;
+    background: #f8f9fa;
+}
+
+.construction-photo-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.construction-photo-item:hover img {
+    transform: scale(1.05);
+}
+
+/* Карточки этапов строительства */
+.construction-stage-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.05);
+    transition: all 0.3s ease;
+}
+
+.construction-stage-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+
+.stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--c21-gold);
+}
+
+.stage-number {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--c21-dark);
+}
+
+.stage-date {
+    font-size: 14px;
+    color: #666;
+    font-weight: 600;
+    background: #f8f9fa;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+.stage-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.stage-photo-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 16/10;
+    background: #f8f9fa;
+}
+
+.stage-photo-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.stage-photo-item:hover img {
+    transform: scale(1.05);
+}
+
+.stage-no-photos {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #95a5a6;
+    font-size: 14px;
+    gap: 8px;
+}
+
+.stage-no-photos i {
+    font-size: 24px;
+    color: #ddd;
 }
 
 /* Другие проекты */
@@ -578,7 +1232,7 @@
     }
     
     .gallery-main img {
-        height: 300px;
+        max-height: 400px;
     }
     
     .complex-main-info {
@@ -601,7 +1255,7 @@
     }
     
     .gallery-main img {
-        height: 250px;
+        max-height: 300px;
     }
     
     .complex-main-info {
@@ -621,7 +1275,62 @@
 
 <script>
 function changeMainImage(imageUrl) {
-    document.getElementById('main-image').src = imageUrl;
+    const mainImage = document.getElementById('main-image');
+    mainImage.src = imageUrl;
+    mainImage.onclick = () => openImageFullSize(imageUrl);
+}
+
+function downloadProgressPhotos(progressId) {
+    // Здесь можно реализовать логику скачивания фотографий
+    // Например, создать ZIP архив или открыть галерею
+    console.log('Скачивание фотографий для прогресса:', progressId);
+    alert('Функция скачивания фотографий будет реализована в следующих версиях');
+}
+
+// Функция для открытия изображения в полном размере
+function openImageFullSize(imageSrc) {
+    // Создаем модальное окно для просмотра изображения
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    `;
+    
+    const img = document.createElement('img');
+    img.src = imageSrc;
+    img.style.cssText = `
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    `;
+    
+    modal.appendChild(img);
+    document.body.appendChild(modal);
+    
+    // Закрытие по клику
+    modal.addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    // Закрытие по Escape
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            document.body.removeChild(modal);
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
 }
 </script>
 {% endblock %}

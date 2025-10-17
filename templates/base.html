@@ -82,12 +82,14 @@
             <div class="header-right">
                 <div class="contact-info">
                     {% if head_office %}
-                        {% if head_office.phone %}
+                        {% if head_office and head_office.phone %}
                             <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}"
                                class="phone-number">{{ head_office.phone }}</a>
                         {% endif %}
+                        {% if head_office %}
                         <a href="{% url 'main:home' %}#office-map"
-                           class="address address-link">{{ head_office.city }}, {{ head_office.address }}</a>
+                           class="address address-link">{{ head_office.city }}{% if head_office.address %}, {{ head_office.address }}{% endif %}</a>
+                        {% endif %}
                     {% else %}
                         <a href="tel:+73472019478" class="phone-number">+7 347 201-94-78</a>
                     {% endif %}
@@ -201,7 +203,7 @@
 </div>
 
 <!-- Форма обратной связи -->
-{% if not request.resolver_match.url_name == 'vacancies' %}
+{% if request.resolver_match.url_name != 'vacancies' and request.resolver_match.url_name != 'vacancy_detail' %}
     <div class="feedback-wrapper">
         {% include 'includes/feedback_form.html' %}
     </div>
@@ -277,21 +279,33 @@
             <div class="footer-section">
                 <h3 class="footer-title">Контакты</h3>
                 <div class="footer-contacts">
-                    {% with phone=head_office.phone email=head_office.email %}
+                    {% if head_office %}
                         <div class="contact-item">
                             <i class="fas fa-phone"></i>
-                            <a href="tel:{{ phone|cut:' '|cut:'-'|cut:'('|cut:')' }}">{{ phone }}</a>
+                            <a href="tel:{{ head_office.phone|cut:' '|cut:'-'|cut:'('|cut:')' }}">{{ head_office.phone }}</a>
                         </div>
                         <div class="contact-item">
                             <i class="fas fa-envelope"></i>
-                            <a href="mailto:{{ email }}">{{ email }}</a>
+                            <a href="mailto:{{ head_office.email }}">{{ head_office.email }}</a>
                         </div>
                         <div class="contact-item">
                             <i class="fas fa-clock"></i>
-                            <span>{% if head_office and head_office.schedule %}{{ head_office.schedule }}{% else %}
-                                Пн-Пт: 9:00-18:00{% endif %}</span>
+                            <span>{% if head_office.schedule %}{{ head_office.schedule }}{% else %}Пн-Пт: 9:00-18:00{% endif %}</span>
                         </div>
-                    {% endwith %}
+                    {% else %}
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <a href="tel:+73472019478">+7 347 201-94-78</a>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-envelope"></i>
+                            <a href="mailto:info@antonhaus.ru">info@antonhaus.ru</a>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Пн-Пт: 9:00-18:00</span>
+                        </div>
+                    {% endif %}
                 </div>
 
                 <!-- 2ГИС -->
