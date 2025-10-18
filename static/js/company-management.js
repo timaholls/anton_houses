@@ -31,12 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ========== ИНФОРМАЦИЯ О КОМПАНИИ ==========
 async function loadCompanyInfo() {
-    try {
-        console.log('Загрузка информации о компании...');
+    try:
         const response = await fetch('/api/company-info/?admin=true');
-        console.log('Ответ получен:', response.status);
         const data = await response.json();
-        console.log('Данные:', data);
         const list = document.getElementById('company-info-list');
         
         if (data.success && data.items && data.items.length > 0) {

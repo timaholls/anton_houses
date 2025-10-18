@@ -90,7 +90,7 @@ class S3Service:
         try:
             self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
         except Exception as e:
-            print(f"Ошибка при удалении {key}: {e}")
+            pass
 
     def delete_prefix(self, prefix: str) -> None:
         """Удаляет все объекты с указанным префиксом."""
@@ -105,7 +105,7 @@ class S3Service:
                         Delete={'Objects': objects}
                     )
         except Exception as e:
-            print(f"Ошибка при удалении префикса {prefix}: {e}")
+            pass
 
     def exists(self, key: str) -> bool:
         """Проверяет существование объекта в S3."""
@@ -125,7 +125,6 @@ class S3Service:
                 return [obj['Key'] for obj in response['Contents']]
             return []
         except Exception as e:
-            print(f"Ошибка при получении списка объектов {prefix}: {e}")
             return []
 
     def extract_key_from_url(self, url: str) -> str:

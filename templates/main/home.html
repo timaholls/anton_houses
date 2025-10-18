@@ -235,11 +235,7 @@
                     console.error('Offers data element not found');
                     return;
                 }
-                const offersData = JSON.parse(offersDataElement.textContent);
-                console.log('[offers] data loaded', offersData.length);
-                if (!offersData || offersData.length === 0) {
-                    console.log('No offers data available');
-                    return;
+                const offersData = JSON.parse(offersDataElement.textContent);if (!offersData || offersData.length === 0) {return;
                 }
                 const dotsContainer = document.querySelector('.carousel-dots');
                 let carouselDots = document.querySelectorAll('.carousel-dot');
@@ -250,17 +246,13 @@
                 ];
                 let currentPage = 0;
                 const offersPerPage = 3;
-                const totalPages = Math.ceil(offersData.length / offersPerPage);
-                console.log('[offers] init', { totalOffers: offersData.length, totalPages, offersPerPage });
-                if (dotsContainer) {
+                const totalPages = Math.ceil(offersData.length / offersPerPage);if (dotsContainer) {
                     let dotsMarkup = '';
                     for (let i = 0; i < totalPages; i += 1) {
                         dotsMarkup += `<button type="button" class="carousel-dot${i === 0 ? ' active' : ''}" data-page="${i}"></button>`;
                     }
                     dotsContainer.innerHTML = dotsMarkup;
-                    carouselDots = dotsContainer.querySelectorAll('.carousel-dot');
-                    console.log('[offers] dots rendered', carouselDots.length);
-                }
+                    carouselDots = dotsContainer.querySelectorAll('.carousel-dot');}
                 function updateOfferCards(page) {
                     const startIndex = page * offersPerPage;
                     offerCards.forEach((card, index) => {
@@ -307,9 +299,7 @@
                             event.preventDefault();
                             const indexAttr = target.getAttribute('data-page');
                             const index = indexAttr ? parseInt(indexAttr, 10) : Array.prototype.indexOf.call(dotsContainer.querySelectorAll('.carousel-dot'), target);
-                            if (!Number.isNaN(index)) {
-                                console.log('[offers] dot click', { index });
-                                currentPage = index;
+                            if (!Number.isNaN(index)) {currentPage = index;
                                 updateOfferCards(currentPage);
                                 updateActiveDot(currentPage);
                             }
@@ -467,7 +457,7 @@
 
         <div class="home-grid">
             {% for a in home_articles %}
-            <a class="home-property-card" href="{% if a.slug %}{% url 'main:article_detail' a.slug %}{% else %}#{% endif %}" onclick="console.log('Article link clicked:', '{{ a.slug }}'); return true;">
+            <a class="home-property-card" href="{% if a.slug %}{% url 'main:article_detail' a.slug %}{% else %}#{% endif %}" onclick="return true;">
                 <div class="home-card-image">
                     {% if a.main_image %}
                         <img src="{{ a.main_image }}" alt="{{ a.title }}">
@@ -653,9 +643,7 @@
                             </div>
                         `);
                         marker.openPopup();
-                        {% else %}
-                        console.log('No head office coordinates available');
-                        {% endif %}
+                        {% else %}{% endif %}
                     }catch(e){ 
                         console.error('Map initialization error:', e);
                     }

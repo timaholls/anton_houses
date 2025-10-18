@@ -87,15 +87,6 @@ def future_complex_detail(request, complex_id):
     except Exception:
         agent = None
 
-    # Отладочная информация
-    print(f"🔍 DEBUG: complex keys: {list(complex.keys())}")
-    if 'object_details' in complex:
-        print(f"🔍 DEBUG: object_details keys: {list(complex['object_details'].keys())}")
-        if 'construction_progress' in complex['object_details']:
-            print(f"🔍 DEBUG: construction_progress: {complex['object_details']['construction_progress']}")
-    if 'construction_progress_data' in complex:
-        print(f"🔍 DEBUG: construction_progress_data: {complex['construction_progress_data']}")
-
     # Получаем другие будущие ЖК для блока "Другие проекты"
     other_complexes = get_future_complexes_from_mongo(limit=6)
 

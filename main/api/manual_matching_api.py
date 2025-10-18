@@ -38,8 +38,6 @@ def get_unmatched_records(request):
         matched_avito_ids = set()
         matched_domclick_ids = set()
         
-        print(f"🔍 DEBUG: Найдено {len(matched_records)} сопоставленных записей")
-        
         for record in matched_records:
             # Проверяем старую структуру
             if record.get('domrf', {}).get('name'):
@@ -78,8 +76,6 @@ def get_unmatched_records(request):
         
         # Получаем несопоставленные записи (убираем ограничение для лучшего отображения)
         domrf_records = list(domrf_col.find(domrf_filter).limit(100))
-        print(f"🔍 DEBUG: Найдено {len(domrf_records)} записей DomRF")
-        print(f"🔍 DEBUG: Сопоставленные имена DomRF: {list(matched_domrf_names)}")
         
         domrf_unmatched = [
             {
@@ -94,8 +90,6 @@ def get_unmatched_records(request):
             for r in domrf_records 
             if r.get('objCommercNm') not in matched_domrf_names
         ][:per_page]
-        
-        print(f"🔍 DEBUG: Несопоставленных записей DomRF: {len(domrf_unmatched)}")
         
         avito_records = list(avito_col.find(avito_filter).limit(100))
         avito_unmatched = [
@@ -541,7 +535,6 @@ def delete_record(request):
                             {'_id': ObjectId(future_record['source_domrf_id'])},
                             {'$unset': {'is_processed': '', 'processed_at': '', 'future_project_id': ''}}
                         )
-                        print(f"🔍 DEBUG: Снят флаг is_processed с записи DomRF {future_record['source_domrf_id']}")
                 
                 return JsonResponse({
                     'success': True,
@@ -869,18 +862,6 @@ def get_domrf_data(request, domrf_id):
             'cargo_elevators_count': elevators.get('Количество грузовых лифтов', '')
         }
         
-        # Добавляем отладочную информацию
-        print(f"🔍 DEBUG: DomRF данные для {domrf_id}:")
-        print(f"📊 Название: {formatted_data['name']}")
-        print(f"📊 Застройщик: {formatted_data['developer']}")
-        print(f"📊 Класс дома: {formatted_data['house_class']}")
-        print(f"📊 Этажность: {formatted_data['floors']}")
-        print(f"📊 Энергоэффективность: {formatted_data['energy_efficiency']}")
-        print(f"📊 Подрядчики: {formatted_data['contractors']}")
-        print(f"📊 Фото галереи: {len(formatted_data['gallery_photos'])} шт.")
-        print(f"📊 Фото строительства: {len(formatted_data['construction_photos'])} шт.")
-        print(f"📊 Object details keys: {list(object_details.keys())}")
-        
         return JsonResponse({
             'success': True,
             'data': formatted_data
@@ -916,9 +897,8 @@ def delete_photo(request):
             s3_key = s3_client.extract_key_from_url(photo_path)
             if s3_key:
                 s3_client.delete_object(s3_key)
-                print(f"✅ Файл удален из S3: {s3_key}")
         except Exception as e:
-            print(f"⚠️ Ошибка удаления файла из S3: {e}")
+            pass
         
         # Удаляем путь из базы данных
         db = get_mongo_connection()
@@ -1052,13 +1032,6 @@ def get_apartment_stats(request, domrf_id):
         
         # Сортируем по количеству комнат
         sorted_stats = sorted(stats.values(), key=lambda x: int(x['type']) if x['type'].isdigit() else 999)
-        
-        # Добавляем отладочную информацию
-        print(f"🔍 DEBUG: Статистика квартир для {domrf_id}:")
-        print(f"📊 Flats data keys: {list(flats_data.keys())}")
-        print(f"📊 Найдено типов квартир: {len(sorted_stats)}")
-        for stat in sorted_stats:
-            print(f"📊 {stat['type']} комн: {stat['count']} кв., площадь {stat['min_area']}-{stat['max_area']} м²")
         
         return JsonResponse({
             'success': True,

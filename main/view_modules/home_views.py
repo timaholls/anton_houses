@@ -30,7 +30,6 @@ def home(request):
         for complex in complexes:
             complex['id'] = str(complex.get('_id'))
     except Exception as e:
-        print(f"Ошибка получения ЖК для главной: {e}")
         complexes = []
 
     # Получаем информацию о компании из MongoDB

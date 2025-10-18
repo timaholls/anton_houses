@@ -195,12 +195,9 @@ def detail(request, complex_id):
             
             if is_new_structure:
                 # === НОВАЯ СТРУКТУРА: данные уже объединены ===
-                print(f"🔍 DEBUG: Processing NEW structure for complex {complex_id}")
-                print(f"🔍 DEBUG: apartment_types_data keys = {list(apartment_types_data.keys())}")
                 
                 for apt_type, apt_data in apartment_types_data.items():
                     apartments = apt_data.get('apartments', [])
-                    print(f"🔍 DEBUG: Processing apt_type={apt_type}, apartments count={len(apartments)}")
                     
                     if apartments:
                         apartment_types_list.append(apt_type)
@@ -208,14 +205,10 @@ def detail(request, complex_id):
                         for apt in apartments:
                             # Получаем все фото планировки - это уже массив!
                             layout_photos = apt.get('image', [])
-                            print(f"🔍 DEBUG: apt_type={apt_type}, apt_data={apt}")
-                            print(f"🔍 DEBUG: layout_photos from apt.get('image') = {layout_photos}")
-                            print(f"🔍 DEBUG: layout_photos type = {type(layout_photos)}")
                             
                             # Если это не массив, а строка - преобразуем в массив
                             if isinstance(layout_photos, str):
                                 layout_photos = [layout_photos] if layout_photos else []
-                                print(f"🔍 DEBUG: converted string to list: {layout_photos}")
                             
                             apartment_variants.append({
                                 'type': apt_type,
@@ -227,12 +220,9 @@ def detail(request, complex_id):
                                 'url': apt.get('url', ''),
                                 'layout_photos': layout_photos  # Все фото для галереи
                             })
-                            print(f"🔍 DEBUG: final layout_photos = {layout_photos}")
             
             else:
                 # === СТАРАЯ СТРУКТУРА: нужно объединять данные ===
-                print(f"🔍 DEBUG: Processing OLD structure for complex {complex_id}")
-                print(f"🔍 DEBUG: This complex has OLD structure - should be updated by script!")
                 avito_apartment_types = avito_data.get('apartment_types', {})
                 domclick_apartment_types = domclick_data.get('apartment_types', {})
                 
@@ -304,7 +294,6 @@ def detail(request, complex_id):
                     
                     complex_offers.append(offer)
             except Exception as e:
-                print(f"Ошибка получения акций: {e}")
                 complex_offers = []
             
             # Получаем видеообзоры для этого ЖК
@@ -327,7 +316,6 @@ def detail(request, complex_id):
                     video.thumbnail_url = get_video_thumbnail(video_data.get('url', ''))
                     videos.append(video)
             except Exception as e:
-                print(f"Ошибка получения видео: {e}")
                 videos = []
 
             context = {

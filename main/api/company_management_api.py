@@ -941,7 +941,7 @@ def employee_api_delete(request, employee_id):
             try:
                 s3_client.delete_prefix(s3_prefix)
             except Exception as e:
-                print(f"Ошибка удаления изображений из S3: {e}")
+                pass
         
         col.delete_one({'_id': ObjectId(employee_id)})
         

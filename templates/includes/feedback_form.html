@@ -186,9 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Имитация отправки
-            setTimeout(() => {
-                console.log('Данные формы:', { name, phone: '+7 ' + phone, privacy });
-                showNotification('Спасибо! Мы свяжемся с вами в ближайшее время.', 'success');
+            setTimeout(() => {showNotification('Спасибо! Мы свяжемся с вами в ближайшее время.', 'success');
                 feedbackForm.reset();
                 
                 // Сброс стилей инпутов

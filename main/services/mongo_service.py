@@ -87,7 +87,6 @@ def get_residential_complexes_from_mongo(filters=None, sort_by=None, limit=None,
         
         return complexes
     except Exception as e:
-        print(f"Ошибка получения ЖК из MongoDB: {e}")
         return []
 
 
@@ -114,7 +113,6 @@ def get_special_offers_from_mongo(limit=None):
         
         return list(cursor)
     except Exception as e:
-        print(f"Ошибка получения акций из MongoDB: {e}")
         return []
 
 
@@ -169,17 +167,8 @@ def get_future_complexes_from_mongo(filters=None, sort_by=None, limit=None):
         for complex_item in complexes:
             if '_id' in complex_item:
                 complex_item['id'] = str(complex_item['_id'])
-            
-            # Отладочная информация для фотографий
-            if complex_item.get('name'):
-                gallery_photos = complex_item.get('gallery_photos', [])
-                print(f"🔍 DEBUG: ЖК '{complex_item['name']}' - gallery_photos: {len(gallery_photos)} шт.")
-                if gallery_photos:
-                    print(f"🔍 DEBUG: Первое фото: {gallery_photos[0]}")
         
-        print(f"🔍 DEBUG: Всего найдено {len(complexes)} будущих ЖК")
         return complexes
     except Exception as e:
-        print(f"Ошибка получения будущих ЖК из MongoDB: {e}")
         return []
 

@@ -1468,35 +1468,18 @@
             const container = document.getElementById(`${source}List`);
             
             // Логирование для DomRF записей
-            if (source === 'domrf') {
-                console.log('🏠 DomRF записи получены:', items);
-                if (items && items.length > 0) {
-                    console.log('📊 Общее количество DomRF записей:', items.length);
-                    
-                    // Анализируем названия
+            if (source === 'domrf') {if (items && items.length > 0) {// Анализируем названия
                     const names = items.map(item => item.name);
                     const unnamedCount = names.filter(name => !name || name.trim() === '' || name === 'Без названия').length;
-                    const namedCount = items.length - unnamedCount;
-                    
-                    console.log('📝 DomRF записи с названиями:', namedCount);
-                    console.log('❓ DomRF записи без названий:', unnamedCount);
-                    
-                    if (unnamedCount > 0) {
-                        console.log('⚠️ DomRF записи "Без названия":');
-                        items.forEach((item, index) => {
-                            if (!item.name || item.name.trim() === '' || item.name === 'Без названия') {
-                                console.log(`   [${index}] ID: ${item._id}, name: "${item.name}", address: "${item.address || 'Нет адреса'}", objId: "${item.objId || 'Нет objId'}", url: "${item.url || 'Нет URL'}"`);
-                            }
+                    const namedCount = items.length - unnamedCount;if (unnamedCount > 0) {items.forEach((item, index) => {
+                            if (!item.name || item.name.trim() === '' || item.name === 'Без названия') {}
                         });
                     }
                     
                     // Показываем примеры записей с objId
                     const withObjId = items.filter(item => item.objId);
-                    if (withObjId.length > 0) {
-                        console.log('🔗 DomRF записи с objId (могут открываться на дом.рф):');
-                        withObjId.slice(0, 3).forEach((item, index) => {
-                            console.log(`   [${index}] name: "${item.name}", objId: ${item.objId}, URL: https://наш.дом.рф/сервисы/каталог-новостроек/объект/${item.objId}`);
-                        });
+                    if (withObjId.length > 0) {:');
+                        withObjId.slice(0, 3).forEach((item, index) => {});
                     }
                 }
             }
@@ -1571,14 +1554,8 @@
             
             const confirmMessage = `Вы уверены, что хотите удалить запись "${displayName}" из ${sourceName}?\n\nЭто действие нельзя отменить!`;
             
-            if (!confirm(confirmMessage)) {
-                console.log('❌ Удаление отменено пользователем');
-                return;
-            }
-            
-            console.log(`🗑️ Удаляем запись ${recordId} из ${sourceName}: "${displayName}"`);
-            
-            try {
+            if (!confirm(confirmMessage)) {return;
+            }try {
                 const response = await fetch('/api/manual-matching/delete/', {
                     method: 'DELETE',
                     headers: {
@@ -1593,9 +1570,7 @@
                 
                 const result = await response.json();
                 
-                if (result.success) {
-                    console.log('✅ Запись успешно удалена');
-                    showToast(result.message, 'success');
+                if (result.success) {showToast(result.message, 'success');
                     
                     // Перезагружаем данные
                     await loadData();
@@ -1721,32 +1696,16 @@
                     // Очищаем выбор
                     clearSelection();
                 } else {
-                    // Если DomRF не найден или отсутствуют координаты, предлагаем создать/дополнить его
-                    console.log('🔴 Ошибка при сохранении:', result);
-                    
-                    if (result.error === 'Запись DomRF не найдена' || result.error_type === 'missing_coordinates') {
-                        console.log('🔶 Необходимо открыть форму для ввода координат');
-                        
-                        const avitoData = appState.selected.avito ? appState.data.avito.find(item => item._id === appState.selected.avito) : null;
-                        const domclickData = appState.selected.domclick ? appState.data.domclick.find(item => item._id === appState.selected.domclick) : null;
-                        
-                        console.log('📊 Данные для формы:', { avitoData, domclickData });
-                        
-                        const isMissingCoordinates = result.error_type === 'missing_coordinates';
+                    // Если DomRF не найден или отсутствуют координаты, предлагаем создать/дополнить егоif (result.error === 'Запись DomRF не найдена' || result.error_type === 'missing_coordinates') {const avitoData = appState.selected.avito ? appState.data.avito.find(item => item._id === appState.selected.avito) : null;
+                        const domclickData = appState.selected.domclick ? appState.data.domclick.find(item => item._id === appState.selected.domclick) : null;const isMissingCoordinates = result.error_type === 'missing_coordinates';
                         
                         if (isMissingCoordinates) {
-                            showToast('⚠️ Необходимо ввести координаты для объединения записей', 'warning');
-                            console.log('⚠️ Причина: отсутствуют координаты');
-                        } else {
-                            console.log('⚠️ Причина: DomRF не найдена');
-                        }
+                            showToast('⚠️ Необходимо ввести координаты для объединения записей', 'warning');} else {}
                         
                         // Сохраняем выбранного агента для использования в модальном окне
                         appState.selectedAgentId = agentId;
                         openDomrfModal(avitoData, domclickData, isMissingCoordinates);
-                    } else {
-                        console.log('❌ Неизвестная ошибка:', result.error);
-                        showToast('Ошибка: ' + result.error, 'error');
+                    } else {showToast('Ошибка: ' + result.error, 'error');
                     }
                 }
             } catch (error) {
@@ -1759,10 +1718,7 @@
         }
 
         // Функции для работы с модальным окном DomRF
-        function openDomrfModal(avitoData = null, domclickData = null, missingCoordinates = false) {
-            console.log('🔵 Открываем модальное окно DomRF', { avitoData, domclickData, missingCoordinates });
-            
-            const modal = document.getElementById('createDomrfModal');
+        function openDomrfModal(avitoData = null, domclickData = null, missingCoordinates = false) {const modal = document.getElementById('createDomrfModal');
             if (!modal) {
                 console.error('❌ Модальное окно createDomrfModal не найдено!');
                 showToast('Ошибка: модальное окно не найдено', 'error');
@@ -1774,21 +1730,14 @@
             
             // Меняем заголовок в зависимости от контекста
             if (missingCoordinates) {
-                modalTitle.textContent = 'Дополните данные для объединения';
-                console.log('📝 Режим: дополнение координат');
-            } else {
-                modalTitle.textContent = 'Создать запись DomRF';
-                console.log('📝 Режим: создание новой записи');
-            }
+                modalTitle.textContent = 'Дополните данные для объединения';} else {
+                modalTitle.textContent = 'Создать запись DomRF';}
             
             // Очищаем форму
             form.reset();
             
             // Если есть данные из Avito или DomClick, заполняем поля
-            if (avitoData) {
-                console.log('📥 Заполняем данные из Avito:', avitoData);
-                
-                // Извлекаем данные из структуры Avito
+            if (avitoData) {// Извлекаем данные из структуры Avito
                 const avitoName = avitoData.development?.name || avitoData.name || '';
                 let avitoAddress = avitoData.development?.address || avitoData.location?.address || avitoData.address || '';
                 
@@ -1797,22 +1746,11 @@
                 
                 document.getElementById('domrfName').value = avitoName;
                 document.getElementById('domrfAddress').value = avitoAddress;
-                document.getElementById('domrfCity').value = 'Уфа'; // По умолчанию Уфа
-                
-                console.log('📋 Данные Avito:', { name: avitoName, address: avitoAddress });
-                
-                // Если есть координаты, заполняем их
+                document.getElementById('domrfCity').value = 'Уфа'; // По умолчанию Уфа// Если есть координаты, заполняем их
                 if (avitoData.latitude && avitoData.longitude) {
                     document.getElementById('domrfLatitude').value = avitoData.latitude;
-                    document.getElementById('domrfLongitude').value = avitoData.longitude;
-                    console.log('✓ Координаты из Avito заполнены:', avitoData.latitude, avitoData.longitude);
-                } else {
-                    console.log('⚠️ Координаты в Avito отсутствуют');
-                }
-            } else if (domclickData) {
-                console.log('📥 Заполняем данные из DomClick:', domclickData);
-                
-                // Извлекаем данные из структуры DomClick
+                    document.getElementById('domrfLongitude').value = avitoData.longitude;} else {}
+            } else if (domclickData) {// Извлекаем данные из структуры DomClick
                 const domclickName = domclickData.development?.complex_name || domclickData.name || '';
                 let domclickAddress = domclickData.development?.address || domclickData.location?.address || domclickData.address || '';
                 
@@ -1821,21 +1759,11 @@
                 
                 document.getElementById('domrfName').value = domclickName;
                 document.getElementById('domrfAddress').value = domclickAddress;
-                document.getElementById('domrfCity').value = 'Уфа'; // По умолчанию Уфа
-                
-                console.log('📋 Данные DomClick:', { name: domclickName, address: domclickAddress });
-                
-                // Если есть координаты, заполняем их
+                document.getElementById('domrfCity').value = 'Уфа'; // По умолчанию Уфа// Если есть координаты, заполняем их
                 if (domclickData.latitude && domclickData.longitude) {
                     document.getElementById('domrfLatitude').value = domclickData.latitude;
-                    document.getElementById('domrfLongitude').value = domclickData.longitude;
-                    console.log('✓ Координаты из DomClick заполнены:', domclickData.latitude, domclickData.longitude);
-                } else {
-                    console.log('⚠️ Координаты в DomClick отсутствуют');
-                }
-            } else {
-                console.log('⚠️ Нет данных для предзаполнения формы');
-            }
+                    document.getElementById('domrfLongitude').value = domclickData.longitude;} else {}
+            } else {}
             
             // Автоматически определяем координаты, если адрес заполнен, а координаты нет
             setTimeout(() => {
@@ -1843,16 +1771,12 @@
                 const latField = document.getElementById('domrfLatitude');
                 const lngField = document.getElementById('domrfLongitude');
                 
-                if (addressField.value && (!latField.value || !lngField.value)) {
-                    console.log('🔄 Автоматически определяем координаты для адреса:', addressField.value);
-                    getCoordinatesFromAddress();
+                if (addressField.value && (!latField.value || !lngField.value)) {getCoordinatesFromAddress();
                 }
             }, 100);
             
             // Показываем модальное окно
-            modal.style.display = 'block';
-            console.log('✅ Модальное окно отображено');
-        }
+            modal.style.display = 'block';}
 
         function closeDomrfModal() {
             const modal = document.getElementById('createDomrfModal');
@@ -1873,28 +1797,17 @@
             if (!address) {
                 showToast('Введите адрес для определения координат', 'error');
                 return;
-            }
-            
-            console.log('🔍 Геокодирование адреса:', address, 'город:', city);
-            
-            // Формируем полный адрес с городом и регионом
+            }// Формируем полный адрес с городом и регионом
             const fullAddress = city ? `${address}, ${city}, Республика Башкортостан, Россия` : `${address}, Уфа, Республика Башкортостан, Россия`;
             
             try {
                 showToast('Определяем координаты...', 'info');
                 
                 const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&accept-language=ru&limit=1&countrycodes=ru`);
-                const data = await response.json();
-                
-                console.log('🌐 Ответ геокодирования:', data);
-                
-                if (data && data.length > 0) {
+                const data = await response.json();if (data && data.length > 0) {
                     const location = data[0];
                     latField.value = parseFloat(location.lat).toFixed(6);
-                    lngField.value = parseFloat(location.lon).toFixed(6);
-                    
-                    console.log('✅ Координаты получены:', location.lat, location.lon);
-                    showToast('✓ Координаты успешно определены', 'success');
+                    lngField.value = parseFloat(location.lon).toFixed(6);showToast('✓ Координаты успешно определены', 'success');
                     
                     // Подсвечиваем поля с координатами
                     latField.style.backgroundColor = '#d4edda';
@@ -1903,9 +1816,7 @@
                         latField.style.backgroundColor = '';
                         lngField.style.backgroundColor = '';
                     }, 2000);
-                } else {
-                    console.log('❌ Координаты не найдены');
-                    showToast('Не удалось найти координаты. Попробуйте уточнить адрес или ввести координаты вручную', 'error');
+                } else {showToast('Не удалось найти координаты. Попробуйте уточнить адрес или ввести координаты вручную', 'error');
                 }
             } catch (error) {
                 console.error('❌ Ошибка геокодирования:', error);
@@ -1968,16 +1879,9 @@
                 
                 const result = await response.json();
                 
-                if (result.success) {
-                    console.log('✅ Объединение успешно сохранено!');
-                    showToast('✓ Сопоставление успешно сохранено!', 'success');
+                if (result.success) {showToast('✓ Сопоставление успешно сохранено!', 'success');
                     
-                    // Перезагружаем данные
-                    console.log('🔄 Перезагружаем исходные данные...');
-                    await loadData();
-                    
-                    console.log('🔄 Перезагружаем объединенные записи...');
-                    await loadUnifiedRecords();
+                    // Перезагружаем данныеawait loadData();await loadUnifiedRecords();
                     
                     // Очищаем выбор
                     clearSelection();
@@ -2027,15 +1931,9 @@
         }
 
         // Загрузка объединенных записей
-        async function loadUnifiedRecords(page = 1) {
-            console.log('🔄 Загружаем объединенные записи, страница:', page);
-            try {
+        async function loadUnifiedRecords(page = 1) {try {
                 const response = await fetch(`/api/manual-matching/unified/?page=${page}&per_page=20`);
-                const result = await response.json();
-                
-                console.log('📊 Ответ API объединенных записей:', result);
-                
-                if (result.success) {
+                const result = await response.json();if (result.success) {
                     // Обновляем состояние пагинации
                     appState.pagination.currentPage = result.pagination.page;
                     appState.pagination.totalPages = result.pagination.pages;
@@ -2045,10 +1943,7 @@
                     document.getElementById('statUnified').textContent = result.pagination.total;
                     
                     // Обновляем элементы управления пагинацией
-                    updatePaginationControls();
-                    
-                    console.log('✅ Рендерим таблицу с', result.data.length, 'записями');
-                    renderUnifiedTable(result.data);
+                    updatePaginationControls();renderUnifiedTable(result.data);
                 } else {
                     console.error('❌ Ошибка API:', result.error);
                     showToast('Ошибка загрузки объединенных записей: ' + result.error, 'error');
@@ -2060,18 +1955,14 @@
         }
 
         // Рендер таблицы объединенных записей
-        function renderUnifiedTable(records) {
-            console.log('🎨 Рендерим таблицу объединенных записей:', records);
-            const tbody = document.getElementById('unifiedTableBody');
+        function renderUnifiedTable(records) {const tbody = document.getElementById('unifiedTableBody');
             
             if (!tbody) {
                 console.error('❌ Элемент unifiedTableBody не найден!');
                 return;
             }
             
-            if (!records || records.length === 0) {
-                console.log('📭 Нет записей для отображения, показываем пустое состояние');
-                tbody.innerHTML = `
+            if (!records || records.length === 0) {tbody.innerHTML = `
                     <tr>
                         <td colspan="3" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                             <p>Пока нет объединенных записей</p>
@@ -2080,11 +1971,7 @@
                     </tr>
                 `;
                 return;
-            }
-            
-            console.log('✅ Отображаем', records.length, 'записей в таблице');
-            
-            tbody.innerHTML = records.map(record => `
+            }tbody.innerHTML = records.map(record => `
                 <tr>
                     <td>${escapeHtml(record.name)}</td>
                     <td>
@@ -2907,14 +2794,11 @@
         }
 
         // Модальное окно для будущих проектов
-        async function openFutureProjectModal(domrfId, domrfName) {
-            console.log(`🏗️ Открываем модальное окно для переноса в будущие проекты: ${domrfName} (${domrfId})`);
+        async function openFutureProjectModal(domrfId, domrfName) {`);
             
             // Проверяем, есть ли уже открытое модальное окно
             const existingModal = document.getElementById('futureProjectModal');
-            if (existingModal) {
-                console.log('⚠️ Удаляем существующее модальное окно');
-                existingModal.remove();
+            if (existingModal) {existingModal.remove();
             }
             
             // Получаем данные DomRF записи для заполнения полей
@@ -2923,9 +2807,7 @@
                 const response = await fetch(`/api/manual-matching/domrf-data/${domrfId}/`);
                 const result = await response.json();
                 if (result.success) {
-                    domrfData = result.data;
-                    console.log('📊 Данные DomRF получены:', domrfData);
-                }
+                    domrfData = result.data;}
             } catch (error) {
                 console.warn('⚠️ Не удалось получить данные DomRF:', error);
             }
@@ -3161,10 +3043,7 @@
             // Показываем модальное окно
             const modal = document.getElementById('futureProjectModal');
             if (modal) {
-                modal.style.display = 'block';
-                console.log('✅ Модальное окно добавлено в DOM и показано');
-                
-                // Добавляем обработчик клика вне модального окна
+                modal.style.display = 'block';// Добавляем обработчик клика вне модального окна
                 modal.addEventListener('click', function(e) {
                     if (e.target === modal) {
                         closeFutureProjectModal();
@@ -3187,9 +3066,7 @@
                 if (dateInput) {
                     const nextYear = new Date();
                     nextYear.setFullYear(nextYear.getFullYear() + 1);
-                    dateInput.value = nextYear.toISOString().split('T')[0];
-                    console.log('✅ Дата установлена:', dateInput.value);
-                } else {
+                    dateInput.value = nextYear.toISOString().split('T')[0];} else {
                     console.error('❌ Поле projectDeliveryDate не найдено');
                 }
                 
@@ -3204,15 +3081,9 @@
             }, 100);
         }
 
-        function closeFutureProjectModal() {
-            console.log('🔒 Закрываем модальное окно будущих проектов');
-            const modal = document.getElementById('futureProjectModal');
+        function closeFutureProjectModal() {const modal = document.getElementById('futureProjectModal');
             if (modal) {
-                modal.remove();
-                console.log('✅ Модальное окно удалено из DOM');
-            } else {
-                console.log('⚠️ Модальное окно не найдено для удаления');
-            }
+                modal.remove();} else {}
         }
 
         // Обработка загрузки изображений
@@ -3363,10 +3234,7 @@
             }
         }
 
-        async function saveFutureProject(domrfId) {
-            console.log(`💾 Сохраняем будущий проект для DomRF: ${domrfId}`);
-            
-            // Собираем данные из формы
+        async function saveFutureProject(domrfId) {// Собираем данные из формы
             const formData = {
                 domrf_id: domrfId,
                 name: document.getElementById('projectName').value,
@@ -3417,9 +3285,7 @@
                 
                 const result = await response.json();
                 
-                if (result.success) {
-                    console.log('✅ Будущий проект успешно создан:', result.future_project_id);
-                    showToast(result.message, 'success');
+                if (result.success) {showToast(result.message, 'success');
                     closeFutureProjectModal();
                     
                     // Перезагружаем данные
@@ -3437,14 +3303,10 @@
 
         // Загрузка будущих проектов
         async function loadFutureProjects() {
-            try {
-                console.log('🏗️ Загружаем будущие проекты...');
-                const response = await fetch('/api/manual-matching/future-projects/');
+            try {const response = await fetch('/api/manual-matching/future-projects/');
                 const result = await response.json();
                 
-                if (result.success) {
-                    console.log('✅ Будущие проекты загружены:', result.data.length);
-                    renderFutureProjects(result.data);
+                if (result.success) {renderFutureProjects(result.data);
                 } else {
                     console.error('❌ Ошибка загрузки будущих проектов:', result.error);
                     document.getElementById('futureProjectsGrid').innerHTML = `
@@ -3516,14 +3378,8 @@
         async function deleteFutureProject(projectId, projectName) {
             const confirmMessage = `Вы уверены, что хотите удалить будущий проект "${projectName}"?\n\nЭто действие нельзя отменить!`;
             
-            if (!confirm(confirmMessage)) {
-                console.log('❌ Удаление будущего проекта отменено пользователем');
-                return;
-            }
-            
-            console.log(`🗑️ Удаляем будущий проект ${projectId}: "${projectName}"`);
-            
-            try {
+            if (!confirm(confirmMessage)) {return;
+            }try {
                 const response = await fetch('/api/manual-matching/delete/', {
                     method: 'DELETE',
                     headers: {
@@ -3538,9 +3394,7 @@
                 
                 const result = await response.json();
                 
-                if (result.success) {
-                    console.log('✅ Будущий проект успешно удален');
-                    showToast(result.message, 'success');
+                if (result.success) {showToast(result.message, 'success');
                     await loadFutureProjects(); // Перезагружаем список
                 } else {
                     console.error('❌ Ошибка удаления будущего проекта:', result.error);

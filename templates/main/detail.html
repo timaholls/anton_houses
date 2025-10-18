@@ -1167,9 +1167,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	const actionItems = document.querySelectorAll('.action-item');
 	actionItems.forEach(item => {
 		item.addEventListener('click', function() {
-			const actionText = this.querySelector('span').textContent;
-			console.log('Clicked:', actionText);
-		});
+			const actionText = this.querySelector('span').textContent;});
 	});
 	
 	// Функциональность избранного
@@ -1339,9 +1337,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Функциональность похожих ЖК
 	const similarCards = document.querySelectorAll('.similar-card');
 	similarCards.forEach(card => {
-		card.addEventListener('click', function() {
-			console.log('Clicked similar complex');
-		});
+		card.addEventListener('click', function() {});
 	});
 
 
@@ -1457,10 +1453,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			`);
 			
 			// Открываем попап сразу
-			marker.openPopup();
-			
-			console.log('Карта ЖК успешно инициализирована');
-		} catch (error) {
+			marker.openPopup();} catch (error) {
 			console.error('Ошибка при инициализации карты ЖК:', error);
 		}
 	}

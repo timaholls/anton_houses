@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loginBtn) {
         loginBtn.addEventListener('click', function() {
             // Здесь можно добавить логику для открытия модального окна входа
-            console.log('Кнопка входа нажата');
         });
     }
 
@@ -62,7 +61,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработка изменения размера окна
     window.addEventListener('resize', function() {
         // Здесь можно добавить логику для адаптивного поведения
-        console.log('Размер окна изменен');
     });
 
     // Добавление активного состояния для текущей страницы
@@ -103,7 +101,6 @@ document.addEventListener('DOMContentLoaded', function() {
         quickActionBtns.forEach(btn => {
             btn.addEventListener('click', function() {
                 const action = this.getAttribute('data-action');
-                console.log('Нажата кнопка:', action);
                 // Здесь будет функционал для каждой кнопки
             });
         });

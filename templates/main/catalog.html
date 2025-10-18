@@ -480,10 +480,7 @@ window.renderItems = function(data){
       grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
     } else {
       grid.innerHTML = data.items.map(item => {
-        // Отладочная информация (можно убрать в продакшене)
-        console.log('Rendering item:', item.name, 'photos:', item.photos, 'image_url:', item.image_url);
-        
-        // Формируем массив фото
+        // Отладочная информация (можно убрать в продакшене)// Формируем массив фото
         let photos = [];
         if (item.photos && item.photos.length > 0) {
           photos = item.photos.map(photo => {
