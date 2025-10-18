@@ -1468,18 +1468,27 @@
             const container = document.getElementById(`${source}List`);
             
             // Логирование для DomRF записей
-            if (source === 'domrf') {if (items && items.length > 0) {// Анализируем названия
+            if (source === 'domrf') {
+                if (items && items.length > 0) {
+                    // Анализируем названия
                     const names = items.map(item => item.name);
                     const unnamedCount = names.filter(name => !name || name.trim() === '' || name === 'Без названия').length;
-                    const namedCount = items.length - unnamedCount;if (unnamedCount > 0) {items.forEach((item, index) => {
-                            if (!item.name || item.name.trim() === '' || item.name === 'Без названия') {}
+                    const namedCount = items.length - unnamedCount;
+                    
+                    if (unnamedCount > 0) {
+                        items.forEach((item, index) => {
+                            if (!item.name || item.name.trim() === '' || item.name === 'Без названия') {
+                                // Обработка записей без названия
+                            }
                         });
                     }
                     
                     // Показываем примеры записей с objId
                     const withObjId = items.filter(item => item.objId);
-                    if (withObjId.length > 0) {:');
-                        withObjId.slice(0, 3).forEach((item, index) => {});
+                    if (withObjId.length > 0) {
+                        withObjId.slice(0, 3).forEach((item, index) => {
+                            // Обработка записей с objId
+                        });
                     }
                 }
             }
@@ -1696,16 +1705,23 @@
                     // Очищаем выбор
                     clearSelection();
                 } else {
-                    // Если DomRF не найден или отсутствуют координаты, предлагаем создать/дополнить егоif (result.error === 'Запись DomRF не найдена' || result.error_type === 'missing_coordinates') {const avitoData = appState.selected.avito ? appState.data.avito.find(item => item._id === appState.selected.avito) : null;
-                        const domclickData = appState.selected.domclick ? appState.data.domclick.find(item => item._id === appState.selected.domclick) : null;const isMissingCoordinates = result.error_type === 'missing_coordinates';
+                    // Если DomRF не найден или отсутствуют координаты, предлагаем создать/дополнить его
+                    if (result.error === 'Запись DomRF не найдена' || result.error_type === 'missing_coordinates') {
+                        const avitoData = appState.selected.avito ? appState.data.avito.find(item => item._id === appState.selected.avito) : null;
+                        const domclickData = appState.selected.domclick ? appState.data.domclick.find(item => item._id === appState.selected.domclick) : null;
+                        const isMissingCoordinates = result.error_type === 'missing_coordinates';
                         
                         if (isMissingCoordinates) {
-                            showToast('⚠️ Необходимо ввести координаты для объединения записей', 'warning');} else {}
+                            showToast('⚠️ Необходимо ввести координаты для объединения записей', 'warning');
+                        } else {
+                            // Координаты уже есть
+                        }
                         
                         // Сохраняем выбранного агента для использования в модальном окне
                         appState.selectedAgentId = agentId;
                         openDomrfModal(avitoData, domclickData, isMissingCoordinates);
-                    } else {showToast('Ошибка: ' + result.error, 'error');
+                    } else {
+                        showToast('Ошибка: ' + result.error, 'error');
                     }
                 }
             } catch (error) {
@@ -1730,8 +1746,10 @@
             
             // Меняем заголовок в зависимости от контекста
             if (missingCoordinates) {
-                modalTitle.textContent = 'Дополните данные для объединения';} else {
-                modalTitle.textContent = 'Создать запись DomRF';}
+                modalTitle.textContent = 'Дополните данные для объединения';
+            } else {
+                modalTitle.textContent = 'Создать запись DomRF';
+            }
             
             // Очищаем форму
             form.reset();
@@ -1749,7 +1767,10 @@
                 document.getElementById('domrfCity').value = 'Уфа'; // По умолчанию Уфа// Если есть координаты, заполняем их
                 if (avitoData.latitude && avitoData.longitude) {
                     document.getElementById('domrfLatitude').value = avitoData.latitude;
-                    document.getElementById('domrfLongitude').value = avitoData.longitude;} else {}
+                    document.getElementById('domrfLongitude').value = avitoData.longitude;
+                } else {
+                    // Координаты из Avito отсутствуют
+                }
             } else if (domclickData) {// Извлекаем данные из структуры DomClick
                 const domclickName = domclickData.development?.complex_name || domclickData.name || '';
                 let domclickAddress = domclickData.development?.address || domclickData.location?.address || domclickData.address || '';
@@ -1762,8 +1783,13 @@
                 document.getElementById('domrfCity').value = 'Уфа'; // По умолчанию Уфа// Если есть координаты, заполняем их
                 if (domclickData.latitude && domclickData.longitude) {
                     document.getElementById('domrfLatitude').value = domclickData.latitude;
-                    document.getElementById('domrfLongitude').value = domclickData.longitude;} else {}
-            } else {}
+                    document.getElementById('domrfLongitude').value = domclickData.longitude;
+                } else {
+                    // Координаты из DomClick отсутствуют
+                }
+            } else {
+                // Нет данных для предзаполнения
+            }
             
             // Автоматически определяем координаты, если адрес заполнен, а координаты нет
             setTimeout(() => {
@@ -1804,10 +1830,12 @@
                 showToast('Определяем координаты...', 'info');
                 
                 const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&accept-language=ru&limit=1&countrycodes=ru`);
-                const data = await response.json();if (data && data.length > 0) {
+                const data = await response.json();
+                if (data && data.length > 0) {
                     const location = data[0];
                     latField.value = parseFloat(location.lat).toFixed(6);
-                    lngField.value = parseFloat(location.lon).toFixed(6);showToast('✓ Координаты успешно определены', 'success');
+                    lngField.value = parseFloat(location.lon).toFixed(6);
+                    showToast('✓ Координаты успешно определены', 'success');
                     
                     // Подсвечиваем поля с координатами
                     latField.style.backgroundColor = '#d4edda';
@@ -1816,7 +1844,8 @@
                         latField.style.backgroundColor = '';
                         lngField.style.backgroundColor = '';
                     }, 2000);
-                } else {showToast('Не удалось найти координаты. Попробуйте уточнить адрес или ввести координаты вручную', 'error');
+                } else {
+                    showToast('Не удалось найти координаты. Попробуйте уточнить адрес или ввести координаты вручную', 'error');
                 }
             } catch (error) {
                 console.error('❌ Ошибка геокодирования:', error);
@@ -1905,7 +1934,7 @@
                     if(j.success && j.items){
                         options = j.items.map(e=>`<option value="${e._id}">${e.full_name} — ${e.position||''}</option>`).join('');
                     }
-                }catch(e){}
+                } catch(e) {}
                 const modal = document.createElement('div');
                 modal.style.position='fixed';modal.style.top='0';modal.style.left='0';modal.style.right='0';modal.style.bottom='0';modal.style.background='rgba(0,0,0,0.6)';modal.style.zIndex='9999';modal.style.display='flex';modal.style.alignItems='center';modal.style.justifyContent='center';
                 modal.innerHTML=`
@@ -1931,9 +1960,11 @@
         }
 
         // Загрузка объединенных записей
-        async function loadUnifiedRecords(page = 1) {try {
+        async function loadUnifiedRecords(page = 1) {
+            try {
                 const response = await fetch(`/api/manual-matching/unified/?page=${page}&per_page=20`);
-                const result = await response.json();if (result.success) {
+                const result = await response.json();
+                if (result.success) {
                     // Обновляем состояние пагинации
                     appState.pagination.currentPage = result.pagination.page;
                     appState.pagination.totalPages = result.pagination.pages;
@@ -2201,7 +2232,7 @@
                         </tbody>
                     </table>
                 `;
-            }catch(e){
+            } catch(e) {
                 document.getElementById('promotionsList').innerHTML = `<div class='empty-state'>Ошибка загрузки</div>`
             }
         }
@@ -2253,7 +2284,7 @@
                         </tbody>
                     </table>
                 `;
-            }catch(e){
+            } catch(e) {
                 document.getElementById('videosList').innerHTML = `<div class='empty-state'>Ошибка загрузки</div>`
             }
         }
@@ -2407,7 +2438,7 @@
                     </div>
                 `).join('');
                 document.getElementById('vacanciesList').innerHTML = rows || `<div class='empty-state'>Вакансий пока нет</div>`;
-            }catch(e){ document.getElementById('vacanciesList').innerHTML = `<div class='empty-state'>Ошибка сети</div>`; }
+            } catch(e) { document.getElementById('vacanciesList').innerHTML = `<div class='empty-state'>Ошибка сети</div>`; }
         }
 
         // -------- Secondary properties --------
@@ -2525,7 +2556,7 @@
                         </div>
                     </div>
                 `).join('');
-            }catch(e){ document.getElementById('secondaryList').innerHTML = `<div class='empty-state'>Ошибка сети</div>`; }
+            } catch(e) { document.getElementById('secondaryList').innerHTML = `<div class='empty-state'>Ошибка сети</div>`; }
         }
 
         // Экранирование HTML
@@ -2724,7 +2755,7 @@
                             `).join('')}
                         </tbody>
                     </table>`;
-            }catch(e){ document.getElementById('mortgageList').innerHTML = `<div class='empty-state'>Ошибка сети</div>`; }
+            } catch(e) { document.getElementById('mortgageList').innerHTML = `<div class='empty-state'>Ошибка сети</div>`; }
         }
 
         function openCreateMortgageModal(){
@@ -2780,7 +2811,10 @@
             const name = document.getElementById('mpr-e-name').value.trim();
             const rate = document.getElementById('mpr-e-rate').value.trim();
             const is_active = document.getElementById('mpr-e-active').checked;
-            const fd = new FormData(); if(name) fd.append('name', name); if(rate) fd.append('rate', rate); fd.append('is_active', is_active? 'on':'');
+            const fd = new FormData();
+            if(name) fd.append('name', name);
+            if(rate) fd.append('rate', rate);
+            fd.append('is_active', is_active? 'on':'');
             fetch(`/api/mortgage-programs/${id}/update/`, { method:'POST', body: fd })
                 .then(r=>r.json()).then(res=>{ if(res.success){ showToast('Изменения сохранены'); document.querySelector('div[style*="box-shadow"]').parentElement.remove(); loadMortgagePrograms(); } else { showToast(res.error||'Ошибка','error'); }})
                 .catch(()=>showToast('Ошибка сети','error'));
@@ -2794,11 +2828,12 @@
         }
 
         // Модальное окно для будущих проектов
-        async function openFutureProjectModal(domrfId, domrfName) {`);
+        async function openFutureProjectModal(domrfId, domrfName) {
             
             // Проверяем, есть ли уже открытое модальное окно
             const existingModal = document.getElementById('futureProjectModal');
-            if (existingModal) {existingModal.remove();
+            if (existingModal) {
+                existingModal.remove();
             }
             
             // Получаем данные DomRF записи для заполнения полей
@@ -3066,7 +3101,8 @@
                 if (dateInput) {
                     const nextYear = new Date();
                     nextYear.setFullYear(nextYear.getFullYear() + 1);
-                    dateInput.value = nextYear.toISOString().split('T')[0];} else {
+                    dateInput.value = nextYear.toISOString().split('T')[0];
+                } else {
                     console.error('❌ Поле projectDeliveryDate не найдено');
                 }
                 
@@ -3081,9 +3117,13 @@
             }, 100);
         }
 
-        function closeFutureProjectModal() {const modal = document.getElementById('futureProjectModal');
+        function closeFutureProjectModal() {
+            const modal = document.getElementById('futureProjectModal');
             if (modal) {
-                modal.remove();} else {}
+                modal.remove();
+            } else {
+                console.warn('⚠️ Модальное окно не найдено для удаления');
+            }
         }
 
         // Обработка загрузки изображений
