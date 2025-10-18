@@ -328,13 +328,17 @@
             {% for complex in complexes %}
             <div class="property-card-compact" onclick="window.location.href='{% if dataset_type == 'secondary' %}{% url 'main:secondary_detail' complex.id %}{% else %}{% url 'main:detail' complex.id %}{% endif %}'" style="cursor: pointer;">
                 <div class="compact-card-image">
-                    {% with catalog_images=complex.get_catalog_images %}
-                        {% if catalog_images.0.image %}
-                            <img src="{{ catalog_images.0.image.url }}" alt="{{ complex.name }}">
-                        {% else %}
-                            <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
-                        {% endif %}
-                    {% endwith %}
+                    {% if complex.development.photos %}
+                        {% with first_photo=complex.development.photos.0 %}
+                            {% if first_photo|slice:":4" == "http" %}
+                                <img src="{{ first_photo }}" alt="{{ complex.name }}">
+                            {% else %}
+                                <img src="/media/{{ first_photo }}" alt="{{ complex.name }}">
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        <img src="/media/gallery/placeholders.png" alt="{{ complex.name }}">
+                    {% endif %}
                 </div>
                 
                 <div class="compact-card-content">
@@ -674,7 +678,14 @@ window.updateCatalog = function(data) {
         // Создаем массив фото из photos или используем старые поля
         let photos = [];
         if (complex.photos && complex.photos.length > 0) {
-            photos = complex.photos.map(photo => `/media/${photo}`);
+            photos = complex.photos.map(photo => {
+                // Если фото уже содержит полный URL, используем как есть
+                if (photo.startsWith('http')) {
+                    return photo;
+                }
+                // Иначе добавляем префикс /media/
+                return `/media/${photo}`;
+            });
         } else {
             const img1 = complex.image_url || '/media/gallery/placeholders.png';
             const img2 = complex.image_2_url;
