@@ -43,6 +43,68 @@ from .view_modules.offer_views import all_offers, offer_detail
 from .view_modules.future_complex_views import future_complexes, future_complex_detail
 from .view_modules.management_views import content_management, company_management, manual_matching
 
+# API imports
+from .api.manual_matching_api import (
+    get_unmatched_records,
+    save_manual_match,
+    get_unified_records,
+    unified_delete,
+    unified_get,
+    unified_update,
+    toggle_featured,
+    domrf_create,
+    delete_record,
+    get_future_projects,
+    create_future_project,
+    get_domrf_data,
+    delete_photo,
+    get_apartment_stats,
+)
+from .api.content_management_api import (
+    # Tags API
+    tags_api_list, tags_api_create, tags_api_get, tags_api_update, tags_api_toggle, tags_api_delete,
+    # Categories API  
+    categories_api_list, categories_api_create, categories_api_get, categories_api_update, categories_api_toggle, categories_api_delete,
+    # Authors API
+    authors_api_list, authors_api_create, authors_api_toggle, authors_api_delete,
+    # Articles API
+    articles_api_list, articles_api_create, articles_api_get, articles_api_update, articles_api_toggle, articles_api_delete,
+    # Catalog Landings API
+    catalog_landings_api_list, catalog_landings_api_create, catalog_landings_api_get, catalog_landings_api_update, 
+    catalog_landings_api_toggle, catalog_landings_api_delete,
+)
+from .api.company_management_api import (
+    # Employee Reviews API
+    employee_reviews_api, employee_review_toggle, employee_review_update, employee_review_delete,
+    # Company Info API
+    company_info_api_list, company_info_api_create, company_info_api_detail, company_info_api_update, 
+    company_info_api_toggle, company_info_api_delete,
+    # Branch Office API
+    branch_office_api_list, branch_office_api_create, branch_office_api_detail, branch_office_api_update, 
+    branch_office_api_toggle, branch_office_api_delete,
+    # Employee API
+    employee_api_list, employee_api_create, employee_api_detail, employee_api_update, 
+    employee_api_toggle, employee_api_delete,
+)
+
+# Дополнительные API модули
+from .api.vacancies_api import (
+    vacancies_api_list, vacancies_api_create, vacancies_api_toggle, vacancies_api_delete,
+)
+from .api.videos_api import (
+    videos_objects_api, videos_create, videos_list, videos_by_complex, videos_toggle, videos_api_delete,
+)
+from .api.mortgage_api import (
+    mortgage_programs_list, mortgage_programs_create, mortgage_programs_update, mortgage_programs_delete,
+)
+from .api.promotions_api import (
+    promotions_create, promotions_list, promotions_delete, promotions_toggle,
+)
+from .api.secondary_api import (
+    secondary_list, secondary_create, secondary_api_toggle, secondary_api_get, 
+    secondary_api_update, secondary_api_delete,
+)
+
 # Явно экспортируем все функции для использования в urls.py
 __all__ = [
     # Auth
@@ -102,6 +164,47 @@ __all__ = [
     'districts_api', 
     'streets_api', 
     'article_view_api',
+    # Manual matching API
+    'get_unmatched_records',
+    'save_manual_match',
+    'get_unified_records',
+    'unified_delete',
+    'unified_get',
+    'unified_update',
+    'toggle_featured',
+    'domrf_create',
+    'delete_record',
+    'get_future_projects',
+    'create_future_project',
+    'get_domrf_data',
+    'delete_photo',
+    'get_apartment_stats',
+    # Content management API
+    'tags_api_list', 'tags_api_create', 'tags_api_get', 'tags_api_update', 'tags_api_toggle', 'tags_api_delete',
+    'categories_api_list', 'categories_api_create', 'categories_api_get', 'categories_api_update', 'categories_api_toggle', 'categories_api_delete',
+    'authors_api_list', 'authors_api_create', 'authors_api_toggle', 'authors_api_delete',
+    'articles_api_list', 'articles_api_create', 'articles_api_get', 'articles_api_update', 'articles_api_toggle', 'articles_api_delete',
+    'catalog_landings_api_list', 'catalog_landings_api_create', 'catalog_landings_api_get', 'catalog_landings_api_update', 
+    'catalog_landings_api_toggle', 'catalog_landings_api_delete',
+    # Company management API
+    'employee_reviews_api', 'employee_review_toggle', 'employee_review_update', 'employee_review_delete',
+    'company_info_api_list', 'company_info_api_create', 'company_info_api_detail', 'company_info_api_update', 
+    'company_info_api_toggle', 'company_info_api_delete',
+    'branch_office_api_list', 'branch_office_api_create', 'branch_office_api_detail', 'branch_office_api_update', 
+    'branch_office_api_toggle', 'branch_office_api_delete',
+    'employee_api_list', 'employee_api_create', 'employee_api_detail', 'employee_api_update', 
+    'employee_api_toggle', 'employee_api_delete',
+    # Vacancies API
+    'vacancies_api_list', 'vacancies_api_create', 'vacancies_api_toggle', 'vacancies_api_delete',
+    # Videos API
+    'videos_objects_api', 'videos_create', 'videos_list', 'videos_by_complex', 'videos_toggle', 'videos_api_delete',
+    # Mortgage API
+    'mortgage_programs_list', 'mortgage_programs_create', 'mortgage_programs_update', 'mortgage_programs_delete',
+    # Promotions API
+    'promotions_create', 'promotions_list', 'promotions_delete', 'promotions_toggle',
+    # Secondary API
+    'secondary_list', 'secondary_create', 'secondary_api_toggle', 'secondary_api_get', 
+    'secondary_api_update', 'secondary_api_delete',
 ]
 
 # Дополнительные импорты для API
