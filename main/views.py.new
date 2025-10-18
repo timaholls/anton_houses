@@ -1,0 +1,626 @@
+"""
+Главный файл views с импортами из модулей для обратной совместимости.
+Все функции теперь организованы в соответствующие модули.
+"""
+
+# Импорты из модулей для обратной совместимости с urls.py
+from main.services.auth_service import login_view, logout_view
+from main.utils import extract_price_from_range, get_video_thumbnail
+from main.services.mongo_service import (
+    get_mongo_connection,
+    get_mongo_user,
+    get_residential_complexes_from_mongo,
+    get_special_offers_from_mongo,
+    get_future_complexes_from_mongo,
+)
+
+# Views
+from main.views.home_views import home, privacy_policy
+from main.views.catalog_views import (
+    catalog,
+    detail,
+    secondary_detail_mongo,
+    secondary_detail,
+    catalog_completed,
+    catalog_construction,
+    catalog_economy,
+    catalog_comfort,
+    catalog_premium,
+    catalog_finished,
+    catalog_unfinished,
+    catalog_landing,
+    _catalog_fallback,
+    newbuild_index,
+    secondary_index,
+)
+from main.views.article_views import articles, article_detail, tag_detail
+from main.views.vacancy_views import vacancies, vacancy_detail
+from main.views.office_views import offices, office_detail
+from main.views.video_views import videos, video_detail
+from main.views.employee_views import team, agent_properties, employee_detail
+from main.views.mortgage_views import mortgage
+from main.views.offer_views import all_offers, offer_detail
+from main.views.future_complex_views import future_complexes, future_complex_detail
+from main.views.management_views import content_management, company_management, manual_matching
+
+# Импорты API и других функций из старого файла
+# ПРИМЕЧАНИЕ: Эти функции еще не были перенесены в отдельные API модули
+# Временно импортируем их напрямую (нужно будет создать API модули)
+
+from django.http import JsonResponse, Http404
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.text import slugify
+from bson import ObjectId
+from datetime import datetime
+import json
+
+
+# ===== API ФУНКЦИИ (ТРЕБУЮТ СОЗДАНИЯ ОТДЕЛЬНЫХ МОДУЛЕЙ) =====
+
+@require_http_methods(["GET"])
+def catalog_api(request):
+    """API для каталога ЖК из MongoDB unified_houses"""
+    page = int(request.GET.get('page', 1))
+    per_page = 9
+    search = request.GET.get('search', '').strip()
+    
+    try:
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        
+        # Формируем фильтр (поддержка обеих структур)
+        filter_query = {}
+        if search:
+            filter_query['$or'] = [
+                # Старая структура
+                {'domrf.name': {'$regex': search, '$options': 'i'}},
+                {'avito.development.name': {'$regex': search, '$options': 'i'}},
+                {'domclick.development.complex_name': {'$regex': search, '$options': 'i'}},
+                # Новая структура
+                {'development.name': {'$regex': search, '$options': 'i'}}
+            ]
+        
+        # Получаем общее количество
+        total_count = unified_col.count_documents(filter_query)
+        
+        # Пагинация
+        skip = (page - 1) * per_page
+        records = list(unified_col.find(filter_query).skip(skip).limit(per_page))
+        
+        # Форматируем данные для каталога
+        complexes_data = []
+        from main.s3_service import PLACEHOLDER_IMAGE_URL
+        
+        for record in records:
+            # Определяем структуру записи
+            is_new_structure = 'development' in record and 'avito' not in record
+            
+            if is_new_structure:
+                # === НОВАЯ УПРОЩЕННАЯ СТРУКТУРА ===
+                development = record.get('development', {})
+                
+                name = development.get('name', 'Без названия')
+                address_full = development.get('address', '')
+                address = address_full.split('/')[0].strip() if address_full else ''
+                price_range = development.get('price_range', 'Цена не указана')
+                photos = development.get('photos', [])
+                latitude = record.get('latitude')
+                longitude = record.get('longitude')
+                parameters = development.get('parameters', {})
+                
+            else:
+                # === СТАРАЯ СТРУКТУРА ===
+                avito_dev = record.get('avito', {}).get('development', {}) if record.get('avito') else {}
+                domclick_dev = record.get('domclick', {}).get('development', {}) if record.get('domclick') else {}
+                domrf_data = record.get('domrf', {})
+                
+                # Название (приоритет: avito -> domclick -> domrf)
+                name = avito_dev.get('name') or domclick_dev.get('complex_name') or domrf_data.get('name', 'Без названия')
+                
+                # Адрес из avito - обрезаем до первого слеша
+                address_full = avito_dev.get('address', '')
+                address = address_full.split('/')[0].strip() if address_full else ''
+                
+                # Цена из avito
+                price_range = avito_dev.get('price_range', 'Цена не указана')
+                
+                # Фото из domclick - берем ВСЕ фото
+                photos = domclick_dev.get('photos', [])
+                
+                # Координаты из domrf
+                latitude = domrf_data.get('latitude')
+                longitude = domrf_data.get('longitude')
+                
+                # Параметры из avito
+                parameters = avito_dev.get('parameters', {})
+
+            complexes_data.append({
+                'id': str(record['_id']),
+                'name': name,
+                'address': address,
+                'price_range': price_range,
+                'price_display': price_range,
+                'photos': photos,  # Все фото для галереи
+                'image_url': photos[0] if photos else None,
+                'image_2_url': photos[1] if len(photos) > 1 else None,
+                'image_3_url': photos[2] if len(photos) > 2 else None,
+                'image_4_url': photos[3] if len(photos) > 3 else None,
+                'lat': latitude,
+                'lng': longitude,
+                'latitude': latitude,
+                'longitude': longitude,
+                'parameters': parameters,
+                'completion_date': parameters.get('Срок сдачи', ''),
+                'housing_class': parameters.get('Класс жилья', ''),
+                'housing_type': parameters.get('Тип жилья', ''),
+                'avito_url': record.get('avito', {}).get('url', '') if record.get('avito') else '',
+                'domclick_url': record.get('domclick', {}).get('url', '') if record.get('domclick') else '',
+                'total_apartments': record.get('avito', {}).get('total_apartments', 0) if record.get('avito') else 0,
+                'location': address,
+                'city': 'Уфа',  # можно парсить из address
+            })
+        
+        total_pages = (total_count + per_page - 1) // per_page
+
+        return JsonResponse({
+            'complexes': complexes_data,
+            'has_previous': page > 1,
+            'has_next': page < total_pages,
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_count': total_count
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        # Возвращаем пустой результат при ошибке
+        return JsonResponse({
+            'complexes': [],
+            'has_previous': False,
+            'has_next': False,
+            'current_page': 1,
+            'total_pages': 0,
+            'total_count': 0,
+            'error': str(e)
+        })
+
+
+def secondary_api(request):
+    """API для вторичной недвижимости (AJAX) - legacy"""
+    return secondary_api_list(request)
+
+
+def secondary_api_list(request):
+    """API для получения списка объектов вторичной недвижимости с фильтрацией"""
+    try:
+        # Получаем параметры фильтрации
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 12))
+        city = request.GET.get('city')
+        district = request.GET.get('district')
+        rooms = request.GET.get('rooms')
+        stype = request.GET.get('stype')  # Тип недвижимости
+        area_from = request.GET.get('area_from')
+        area_to = request.GET.get('area_to')
+        price_from = request.GET.get('price_from')
+        price_to = request.GET.get('price_to')
+        sort_by = request.GET.get('sort_by', 'created_at')
+        sort_order = request.GET.get('sort_order', 'desc')
+
+        # Подключение к MongoDB
+        db = get_mongo_connection()
+        collection = db['secondary_properties']
+
+        # Строим фильтр
+        filter_dict = {}
+        if city:
+            filter_dict['city'] = {'$regex': city, '$options': 'i'}
+        if district:
+            filter_dict['district'] = {'$regex': district, '$options': 'i'}
+        if rooms:
+            filter_dict['rooms'] = int(rooms)
+        if stype:
+            filter_dict['house_type'] = stype
+
+        # Для админки показываем все объекты, для публичного API только активные
+        show_all = request.GET.get('admin', 'false').lower() == 'true'
+        if not show_all:
+            filter_dict['is_active'] = True
+
+        if area_from:
+            filter_dict['area'] = {'$gte': float(area_from)}
+        if area_to:
+            if 'area' in filter_dict:
+                filter_dict['area']['$lte'] = float(area_to)
+            else:
+                filter_dict['area'] = {'$lte': float(area_to)}
+        if price_from:
+            filter_dict['price'] = {'$gte': int(price_from)}
+        if price_to:
+            if 'price' in filter_dict:
+                filter_dict['price']['$lte'] = int(price_to)
+            else:
+                filter_dict['price'] = {'$lte': int(price_to)}
+
+        # Подсчитываем общее количество
+        total_count = collection.count_documents(filter_dict)
+
+        # Вычисляем пагинацию
+        skip = (page - 1) * per_page
+
+        # Определяем сортировку
+        sort_direction = -1 if sort_order == 'desc' else 1
+        sort_field = sort_by if sort_by in ['created_at', 'price_from', 'area_from', 'name'] else 'created_at'
+
+        # Получаем данные с пагинацией и сортировкой
+        cursor = collection.find(filter_dict).skip(skip).limit(per_page).sort(sort_field, sort_direction)
+
+        items = []
+        for doc in cursor:
+            # Формируем URL изображения
+            image_url = None
+            if doc.get('photos'):
+                photo_path = doc['photos'][0]
+                image_url = photo_path
+
+            # Формируем цену
+            price_range = None
+            if doc.get('price'):
+                price_range = f"{doc.get('price'):,.0f}".replace(',', ' ') + ' ₽'
+
+            items.append({
+                'id': str(doc['_id']),
+                'name': doc.get('name', ''),
+                'city': doc.get('city', ''),
+                'district': doc.get('district', ''),
+                'rooms': doc.get('rooms'),
+                'area_from': doc.get('area'),
+                'area_to': None,
+                'price_range': price_range,
+                'price_display': price_range,
+                'image_url': image_url,
+                'photos': doc.get('photos', []),
+                'description': doc.get('description', ''),
+                'address': doc.get('address', ''),
+                'total_floors': doc.get('total_floors'),
+                'finishing': doc.get('finishing', ''),
+                'is_active': doc.get('is_active', True),
+                'created_at': doc.get('created_at', datetime.now()),
+            })
+
+        # Вычисляем информацию о пагинации
+        total_pages = (total_count + per_page - 1) // per_page
+
+        return JsonResponse({
+            'success': True,
+            'data': items,
+            'items': items,
+            'total_count': total_count,
+            'current_page': page,
+            'total_pages': total_pages,
+            'per_page': per_page,
+            'has_next': page < total_pages,
+            'has_prev': page > 1,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def districts_api(request):
+    """API для получения районов по городу - данные из MongoDB"""
+    city = request.GET.get('city', '')
+    if city:
+        try:
+            db = get_mongo_connection()
+            collection = db['residential_complexes']
+            districts = collection.distinct('address.district', {'address.city': city})
+            districts = [district for district in districts if district]
+        except Exception:
+            districts = []
+    else:
+        districts = []
+
+    return JsonResponse({'districts': list(districts)})
+
+
+def streets_api(request):
+    """API для получения улиц по городу - данные из MongoDB"""
+    city = request.GET.get('city', '')
+
+    if city:
+        try:
+            db = get_mongo_connection()
+            collection = db['residential_complexes']
+            streets = collection.distinct('address.street', {'address.city': city})
+            streets = [street for street in streets if street]
+        except Exception:
+            streets = []
+    else:
+        streets = []
+
+    return JsonResponse({'streets': list(streets)})
+
+
+def article_view_api(request, article_id):
+    """API для увеличения счетчика просмотров статьи - MongoDB"""
+    if request.method == 'POST':
+        try:
+            db = get_mongo_connection()
+            result = db['articles'].update_one(
+                {'_id': ObjectId(article_id)},
+                {'$inc': {'views_count': 1}}
+            )
+            if result.matched_count > 0:
+                article = db['articles'].find_one({'_id': ObjectId(article_id)})
+                return JsonResponse({'success': True, 'views_count': article.get('views_count', 0)})
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+        except:
+            return JsonResponse({'success': False, 'error': 'Статья не найдена'}, status=404)
+    return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
+
+
+# Примечание: Остальные API функции требуют создания отдельных модулей.
+# Они будут созданы в следующих файлах в папке main/api/
+# На данный момент импортированы основные view функции для работы приложения.
+
+# Placeholder функции для API, которые еще не созданы
+def vacancies_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/vacancies_api.py")
+
+def vacancies_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/vacancies_api.py")
+
+def vacancies_api_toggle(request, vacancy_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/vacancies_api.py")
+
+def vacancies_api_delete(request, vacancy_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/vacancies_api.py")
+
+def videos_objects_api(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/videos_api.py")
+
+def videos_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/videos_api.py")
+
+def videos_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/videos_api.py")
+
+def videos_by_complex(request, complex_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/videos_api.py")
+
+def videos_toggle(request, video_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/videos_api.py")
+
+def videos_api_delete(request, video_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/videos_api.py")
+
+def get_unmatched_records(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def save_manual_match(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def get_unified_records(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def unified_delete(request, unified_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def toggle_featured(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def domrf_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def unified_get(request, unified_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def unified_update(request, unified_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def mortgage_programs_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/mortgage_api.py")
+
+def mortgage_programs_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/mortgage_api.py")
+
+def mortgage_programs_update(request, program_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/mortgage_api.py")
+
+def mortgage_programs_delete(request, program_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/mortgage_api.py")
+
+def promotions_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/promotions_api.py")
+
+def promotions_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/promotions_api.py")
+
+def promotions_delete(request, promo_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/promotions_api.py")
+
+def promotions_toggle(request, promo_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/promotions_api.py")
+
+def secondary_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/secondary_api.py")
+
+def secondary_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/secondary_api.py")
+
+def secondary_api_toggle(request, secondary_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/secondary_api.py")
+
+def secondary_api_get(request, secondary_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/secondary_api.py")
+
+def secondary_api_update(request, secondary_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/secondary_api.py")
+
+def secondary_api_delete(request, secondary_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/secondary_api.py")
+
+def tags_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/tags_api.py")
+
+def tags_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/tags_api.py")
+
+def tags_api_get(request, tag_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/tags_api.py")
+
+def tags_api_update(request, tag_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/tags_api.py")
+
+def tags_api_toggle(request, tag_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/tags_api.py")
+
+def tags_api_delete(request, tag_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/tags_api.py")
+
+def categories_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/categories_api.py")
+
+def categories_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/categories_api.py")
+
+def categories_api_get(request, category_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/categories_api.py")
+
+def categories_api_update(request, category_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/categories_api.py")
+
+def categories_api_toggle(request, category_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/categories_api.py")
+
+def categories_api_delete(request, category_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/categories_api.py")
+
+def authors_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/authors_api.py")
+
+def authors_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/authors_api.py")
+
+def authors_api_toggle(request, author_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/authors_api.py")
+
+def authors_api_delete(request, author_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/authors_api.py")
+
+def articles_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/articles_api.py")
+
+def articles_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/articles_api.py")
+
+def articles_api_get(request, article_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/articles_api.py")
+
+def articles_api_update(request, article_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/articles_api.py")
+
+def articles_api_toggle(request, article_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/articles_api.py")
+
+def articles_api_delete(request, article_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/articles_api.py")
+
+def catalog_landings_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/catalog_api.py")
+
+def catalog_landings_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/catalog_api.py")
+
+def catalog_landings_api_toggle(request, landing_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/catalog_api.py")
+
+def catalog_landings_api_delete(request, landing_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/catalog_api.py")
+
+def company_info_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/company_info_api.py")
+
+def company_info_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/company_info_api.py")
+
+def company_info_api_detail(request, company_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/company_info_api.py")
+
+def company_info_api_update(request, company_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/company_info_api.py")
+
+def company_info_api_toggle(request, company_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/company_info_api.py")
+
+def company_info_api_delete(request, company_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/company_info_api.py")
+
+def branch_office_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/branch_office_api.py")
+
+def branch_office_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/branch_office_api.py")
+
+def branch_office_api_detail(request, office_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/branch_office_api.py")
+
+def branch_office_api_update(request, office_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/branch_office_api.py")
+
+def branch_office_api_toggle(request, office_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/branch_office_api.py")
+
+def branch_office_api_delete(request, office_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/branch_office_api.py")
+
+def employee_api_list(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_api_create(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_api_detail(request, employee_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_api_update(request, employee_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_api_toggle(request, employee_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_api_delete(request, employee_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_reviews_api(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_review_toggle(request, review_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_review_update(request, review_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def employee_review_delete(request, review_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/employee_api.py")
+
+def delete_record(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def get_future_projects(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def create_future_project(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def get_domrf_data(request, domrf_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def delete_photo(request):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+
+def get_apartment_stats(request, domrf_id):
+    raise NotImplementedError("Функция будет перенесена в main/api/manual_matching_api.py")
+

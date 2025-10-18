@@ -1,195 +1,254 @@
 from django.urls import path
-from . import views
+
+# Импортируем все существующие функции из views.py
+from .views import (
+    # Auth
+    login_view, logout_view,
+    # Home
+    home, privacy_policy,
+    # Catalog
+    catalog, detail, secondary_detail_mongo, secondary_detail,
+    catalog_completed, catalog_construction, catalog_economy, catalog_comfort,
+    catalog_premium, catalog_finished, catalog_unfinished, catalog_landing,
+    newbuild_index, secondary_index,
+    # Articles
+    articles, article_detail, tag_detail,
+    # Vacancies
+    vacancies, vacancy_detail,
+    # Offices
+    offices, office_detail,
+    # Videos
+    videos, video_detail,
+    # Employees
+    team, agent_properties, employee_detail,
+    # Mortgage
+    mortgage,
+    # Offers
+    all_offers, offer_detail,
+    # Future complexes
+    future_complexes, future_complex_detail,
+    # Management
+    content_management, company_management, manual_matching,
+    # API (реально существующие в views.py)
+    catalog_api, secondary_api, secondary_api_list,
+    districts_api, streets_api, article_view_api,
+)
 
 app_name = 'main'
 
 urlpatterns = [
+    # ========== ОСНОВНЫЕ СТРАНИЦЫ ==========
+    
     # Auth
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('', views.home, name='home'),
-    path('catalog/', views.catalog, name='catalog'),
-    path('catalog/api/', views.catalog_api, name='catalog_api'),
-    path('api/catalog/', views.catalog_api, name='catalog_api_alt'),
-    path('api/secondary/', views.secondary_api, name='secondary_api'),
-    path('api/secondary/list/', views.secondary_api_list, name='secondary_api_list'),
-    path('articles/', views.articles, name='articles'),
-    path('articles/<str:slug>/', views.article_detail, name='article_detail'),
-    path('api/articles/<int:article_id>/view/', views.article_view_api, name='article_view_api'),
-    path('tag/<str:slug>/', views.tag_detail, name='tag_detail'),
-    path('complex/<str:complex_id>/', views.detail, name='detail'),
-    path('api/districts/', views.districts_api, name='districts_api'),
-    path('api/streets/', views.streets_api, name='streets_api'),
+    path('login/', login_view, name='login'),
+    path('logout/', logout_view, name='logout'),
+    
+    # Home
+    path('', home, name='home'),
+    path('privacy/', privacy_policy, name='privacy'),
+    
+    # ========== КАТАЛОГ ==========
+    
+    path('catalog/', catalog, name='catalog'),
+    path('complex/<str:complex_id>/', detail, name='detail'),
     
     # Быстрые ссылки каталога
-    path('catalog/completed/', views.catalog_completed, name='catalog_completed'),
-    path('catalog/construction/', views.catalog_construction, name='catalog_construction'),
-    path('catalog/economy/', views.catalog_economy, name='catalog_economy'),
-    path('catalog/comfort/', views.catalog_comfort, name='catalog_comfort'),
-    path('catalog/premium/', views.catalog_premium, name='catalog_premium'),
-    path('catalog/finished/', views.catalog_finished, name='catalog_finished'),
-    path('catalog/unfinished/', views.catalog_unfinished, name='catalog_unfinished'),
-
-    # Политика конфиденциальности
-    path('privacy/', views.privacy_policy, name='privacy'),
+    path('catalog/completed/', catalog_completed, name='catalog_completed'),
+    path('catalog/construction/', catalog_construction, name='catalog_construction'),
+    path('catalog/economy/', catalog_economy, name='catalog_economy'),
+    path('catalog/comfort/', catalog_comfort, name='catalog_comfort'),
+    path('catalog/premium/', catalog_premium, name='catalog_premium'),
+    path('catalog/finished/', catalog_finished, name='catalog_finished'),
+    path('catalog/unfinished/', catalog_unfinished, name='catalog_unfinished'),
 
     # Лэндинги каталога с SEO
-    path('catalog/l/<str:slug>/', views.catalog_landing, name='catalog_landing'),
-    path('newbuilds/', views.newbuild_index, name='newbuild_index'),
-    path('secondary/', views.secondary_index, name='secondary_index'),
-    path('secondary/<int:pk>/', views.secondary_detail, name='secondary_detail'),
-    path('secondary/<str:complex_id>/', views.secondary_detail_mongo, name='secondary_detail_mongo'),
+    path('catalog/l/<str:slug>/', catalog_landing, name='catalog_landing'),
+    path('newbuilds/', newbuild_index, name='newbuild_index'),
+    
+    # Вторичная недвижимость
+    path('secondary/', secondary_index, name='secondary_index'),
+    path('secondary/<int:pk>/', secondary_detail, name='secondary_detail'),
+    path('secondary/<str:complex_id>/', secondary_detail_mongo, name='secondary_detail_mongo'),
+    
+    # ========== КОНТЕНТ ==========
+    
+    # Статьи
+    path('articles/', articles, name='articles'),
+    path('articles/<str:slug>/', article_detail, name='article_detail'),
+    path('tag/<str:slug>/', tag_detail, name='tag_detail'),
 
     # Вакансии
-    path('vacancies/', views.vacancies, name='vacancies'),
-    path('vacancies/<str:slug>/', views.vacancy_detail, name='vacancy_detail'),
+    path('vacancies/', vacancies, name='vacancies'),
+    path('vacancies/<str:slug>/', vacancy_detail, name='vacancy_detail'),
 
     # Офисы продаж
-    path('offices/', views.offices, name='offices'),
-    path('offices/<str:slug>/', views.office_detail, name='office_detail'),
+    path('offices/', offices, name='offices'),
+    path('offices/<str:slug>/', office_detail, name='office_detail'),
 
     # Видеообзоры
-    path('videos/', views.videos, name='videos'),
-    path('videos/<str:video_id>/', views.video_detail, name='video_detail'),
-    # Вакансии (Mongo)
-    path('api/vacancies/', views.vacancies_api_list, name='vacancies_api_list'),
-    path('api/vacancies/create/', views.vacancies_api_create, name='vacancies_api_create'),
-    path('api/videos/objects/', views.videos_objects_api, name='videos_objects_api'),
-    # Videos API (Mongo)
-    path('api/videos/', views.videos_create, name='videos_create'),
-    path('api/videos/list/', views.videos_list, name='videos_list'),
-    path('api/videos/by-complex/<str:complex_id>/', views.videos_by_complex, name='videos_by_complex'),
-    path('api/videos/<str:video_id>/toggle/', views.videos_toggle, name='videos_toggle'),
-
+    path('videos/', videos, name='videos'),
+    path('videos/<str:video_id>/', video_detail, name='video_detail'),
     
     # Ипотека
-    path('mortgage/', views.mortgage, name='mortgage'),
+    path('mortgage/', mortgage, name='mortgage'),
     
     # Акции
-    path('offers/', views.all_offers, name='all_offers'),
-    path('offers/<str:offer_id>/', views.offer_detail, name='offer_detail'),
-    path('team/', views.team, name='team'),
-    path('team/<str:employee_id>/', views.employee_detail, name='employee_detail'),
-    path('team/<str:employee_id>/properties/', views.agent_properties, name='agent_properties'),
-    path('future-complexes/', views.future_complexes, name='future_complexes'),
-    path('future-complexes/<str:complex_id>/', views.future_complex_detail, name='future_complex_detail'),
+    path('offers/', all_offers, name='all_offers'),
+    path('offers/<str:offer_id>/', offer_detail, name='offer_detail'),
     
-    # Ручное сопоставление MongoDB
-    path('manual-matching/', views.manual_matching, name='manual_matching'),
-    path('api/manual-matching/unmatched/', views.get_unmatched_records, name='get_unmatched_records'),
-    path('api/manual-matching/save/', views.save_manual_match, name='save_manual_match'),
-    path('api/manual-matching/unified/', views.get_unified_records, name='get_unified_records'),
-    path('api/manual-matching/unified/<str:unified_id>/', views.unified_delete, name='unified_delete'),
-    path('api/manual-matching/toggle-featured/', views.toggle_featured, name='toggle_featured'),
-    path('api/domrf/create/', views.domrf_create, name='domrf_create'),
-    # Unified edit/get
-    path('api/manual-matching/unified/<str:unified_id>/get/', views.unified_get, name='unified_get'),
-    path('api/manual-matching/unified/<str:unified_id>/update/', views.unified_update, name='unified_update'),
-    # Mortgage programs API (Mongo)
-    path('api/mortgage-programs/', views.mortgage_programs_list, name='mortgage_programs_list'),
-    path('api/mortgage-programs/create/', views.mortgage_programs_create, name='mortgage_programs_create'),
-    path('api/mortgage-programs/<str:program_id>/update/', views.mortgage_programs_update, name='mortgage_programs_update'),
-    path('api/mortgage-programs/<str:program_id>/', views.mortgage_programs_delete, name='mortgage_programs_delete'),
-    # Promotions API
-    path('api/promotions/', views.promotions_create, name='promotions_create'),
-    path('api/promotions/list/', views.promotions_list, name='promotions_list'),
-    path('api/promotions/<str:promo_id>/', views.promotions_delete, name='promotions_delete'),
-    path('api/promotions/<str:promo_id>/toggle/', views.promotions_toggle, name='promotions_toggle'),
-    # Secondary properties (Mongo)
-    path('api/secondary/list/', views.secondary_list, name='secondary_list'),
-    path('api/secondary/create/', views.secondary_create, name='secondary_create'),
-    path('api/secondary/<str:secondary_id>/toggle/', views.secondary_api_toggle, name='secondary_api_toggle'),
-    path('api/secondary/<str:secondary_id>/', views.secondary_api_delete, name='secondary_api_delete'),
-    # Secondary get/update
-    path('api/secondary/<str:secondary_id>/get/', views.secondary_api_get, name='secondary_api_get'),
-    path('api/secondary/<str:secondary_id>/update/', views.secondary_api_update, name='secondary_api_update'),
-    # Vacancies API
-    path('api/vacancies/<str:vacancy_id>/toggle/', views.vacancies_api_toggle, name='vacancies_api_toggle'),
-    path('api/vacancies/<str:vacancy_id>/', views.vacancies_api_delete, name='vacancies_api_delete'),
-    # Videos API
-    path('api/videos/<str:video_id>/', views.videos_api_delete, name='videos_api_delete'),
+    # Команда
+    path('team/', team, name='team'),
+    path('team/<str:employee_id>/', employee_detail, name='employee_detail'),
+    path('team/<str:employee_id>/properties/', agent_properties, name='agent_properties'),
     
-    # ========== Content Management (Tags, Authors, Categories, Articles, CatalogLandings) ==========
-    path('content-management/', views.content_management, name='content_management'),
+    # Будущие комплексы
+    path('future-complexes/', future_complexes, name='future_complexes'),
+    path('future-complexes/<str:complex_id>/', future_complex_detail, name='future_complex_detail'),
     
-    # Tags API
-    path('api/tags/', views.tags_api_list, name='tags_api_list'),
-    path('api/tags/create/', views.tags_api_create, name='tags_api_create'),
-    path('api/tags/<str:tag_id>/', views.tags_api_get, name='tags_api_get'),
-    path('api/tags/<str:tag_id>/update/', views.tags_api_update, name='tags_api_update'),
-    path('api/tags/<str:tag_id>/toggle/', views.tags_api_toggle, name='tags_api_toggle'),
-    path('api/tags/<str:tag_id>/delete/', views.tags_api_delete, name='tags_api_delete'),
+    # ========== УПРАВЛЕНИЕ ==========
     
-    # Categories API
-    path('api/categories/', views.categories_api_list, name='categories_api_list'),
-    path('api/categories/create/', views.categories_api_create, name='categories_api_create'),
-    path('api/categories/<str:category_id>/', views.categories_api_get, name='categories_api_get'),
-    path('api/categories/<str:category_id>/update/', views.categories_api_update, name='categories_api_update'),
-    path('api/categories/<str:category_id>/toggle/', views.categories_api_toggle, name='categories_api_toggle'),
-    path('api/categories/<str:category_id>/delete/', views.categories_api_delete, name='categories_api_delete'),
+    path('content-management/', content_management, name='content_management'),
+    path('company-management/', company_management, name='company_management'),
+    path('manual-matching/', manual_matching, name='manual_matching'),
     
-    # Authors API
-    path('api/authors/', views.authors_api_list, name='authors_api_list'),
-    path('api/authors/create/', views.authors_api_create, name='authors_api_create'),
-    path('api/authors/<str:author_id>/toggle/', views.authors_api_toggle, name='authors_api_toggle'),
-    path('api/authors/<str:author_id>/', views.authors_api_delete, name='authors_api_delete'),
+    # ========== API (РАБОЧИЕ ЭНДПОИНТЫ) ==========
     
-    # Articles API (MongoDB)
-    path('api/articles/', views.articles_api_list, name='articles_api_list_mongo'),
-    path('api/articles/create/', views.articles_api_create, name='articles_api_create'),
-    path('api/articles/<str:article_id>/', views.articles_api_get, name='articles_api_get'),
-    path('api/articles/<str:article_id>/update/', views.articles_api_update, name='articles_api_update'),
-    path('api/articles/<str:article_id>/toggle/', views.articles_api_toggle, name='articles_api_toggle'),
-    path('api/articles/<str:article_id>/delete/', views.articles_api_delete, name='articles_api_delete'),
+    # Catalog API
+    path('catalog/api/', catalog_api, name='catalog_api'),
+    path('api/catalog/', catalog_api, name='catalog_api_alt'),
     
-    # Catalog Landings API
-    path('api/catalog-landings/', views.catalog_landings_api_list, name='catalog_landings_api_list'),
-    path('api/catalog-landings/create/', views.catalog_landings_api_create, name='catalog_landings_api_create'),
-    path('api/catalog-landings/<str:landing_id>/toggle/', views.catalog_landings_api_toggle, name='catalog_landings_api_toggle'),
-    path('api/catalog-landings/<str:landing_id>/', views.catalog_landings_api_delete, name='catalog_landings_api_delete'),
+    # Secondary API
+    path('api/secondary/', secondary_api, name='secondary_api'),
+    path('api/secondary/list/', secondary_api_list, name='secondary_api_list'),
     
-    # ========== Company Management (CompanyInfo, BranchOffice, Employee) ==========
-    path('company-management/', views.company_management, name='company_management'),
+    # Districts & Streets API
+    path('api/districts/', districts_api, name='districts_api'),
+    path('api/streets/', streets_api, name='streets_api'),
     
-    # Company Info API
-    path('api/company-info/', views.company_info_api_list, name='company_info_api_list'),
-    path('api/company-info/create/', views.company_info_api_create, name='company_info_api_create'),
-    path('api/company-info/<str:company_id>/get/', views.company_info_api_detail, name='company_info_api_detail'),
-    path('api/company-info/<str:company_id>/update/', views.company_info_api_update, name='company_info_api_update'),
-    path('api/company-info/<str:company_id>/toggle/', views.company_info_api_toggle, name='company_info_api_toggle'),
-    path('api/company-info/<str:company_id>/', views.company_info_api_delete, name='company_info_api_delete'),
+    # Articles API
+    path('api/articles/<int:article_id>/view/', article_view_api, name='article_view_api'),
     
-    # Branch Office API
-    path('api/branch-offices/', views.branch_office_api_list, name='branch_office_api_list'),
-    path('api/branch-offices/create/', views.branch_office_api_create, name='branch_office_api_create'),
-    # ВАЖНО: уникальные пути, чтобы не конфликтовать с DELETE тем же паттерном
-    path('api/branch-offices/<str:office_id>/get/', views.branch_office_api_detail, name='branch_office_api_detail'),
-    path('api/branch-offices/<str:office_id>/update/', views.branch_office_api_update, name='branch_office_api_update'),
-    path('api/branch-offices/<str:office_id>/toggle/', views.branch_office_api_toggle, name='branch_office_api_toggle'),
-    path('api/branch-offices/<str:office_id>/', views.branch_office_api_delete, name='branch_office_api_delete'),
+    # ========== API (ТРЕБУЮТ РЕАЛИЗАЦИИ) ==========
+    # Эти эндпоинты закомментированы, так как соответствующие функции
+    # еще не перенесены в модульную структуру.
+    # Раскомментируйте их после реализации соответствующих API функций.
     
-    # Employee API
-    path('api/employees/', views.employee_api_list, name='employee_api_list'),
-    path('api/employees/create/', views.employee_api_create, name='employee_api_create'),
-    path('api/employees/<str:employee_id>/get/', views.employee_api_detail, name='employee_api_detail'),
-    path('api/employees/<str:employee_id>/update/', views.employee_api_update, name='employee_api_update'),
-    path('api/employees/<str:employee_id>/toggle/', views.employee_api_toggle, name='employee_api_toggle'),
-    path('api/employees/<str:employee_id>/', views.employee_api_delete, name='employee_api_delete'),
+    # # Vacancies API
+    # path('api/vacancies/', vacancies_api_list, name='vacancies_api_list'),
+    # path('api/vacancies/create/', vacancies_api_create, name='vacancies_api_create'),
+    # path('api/vacancies/<str:vacancy_id>/toggle/', vacancies_api_toggle, name='vacancies_api_toggle'),
+    # path('api/vacancies/<str:vacancy_id>/', vacancies_api_delete, name='vacancies_api_delete'),
     
-    # Employee Reviews API
-    path('api/employee-reviews/', views.employee_reviews_api, name='employee_reviews_api'),
-    path('api/employee-reviews/<str:review_id>/toggle/', views.employee_review_toggle, name='employee_review_toggle'),
-    path('api/employee-reviews/<str:review_id>/update/', views.employee_review_update, name='employee_review_update'),
-    path('api/employee-reviews/<str:review_id>/delete/', views.employee_review_delete, name='employee_review_delete'),
+    # # Videos API
+    # path('api/videos/', videos_create, name='videos_create'),
+    # path('api/videos/list/', videos_list, name='videos_list'),
+    # path('api/videos/objects/', videos_objects_api, name='videos_objects_api'),
+    # path('api/videos/by-complex/<str:complex_id>/', videos_by_complex, name='videos_by_complex'),
+    # path('api/videos/<str:video_id>/toggle/', videos_toggle, name='videos_toggle'),
+    # path('api/videos/<str:video_id>/', videos_api_delete, name='videos_api_delete'),
     
-    # Manual Matching API
-    path('api/manual-matching/records/', views.get_unmatched_records, name='get_unmatched_records'),
-    path('api/manual-matching/save/', views.save_manual_match, name='save_manual_match'),
-    path('api/manual-matching/unified/', views.get_unified_records, name='get_unified_records'),
-    path('api/manual-matching/delete/', views.delete_record, name='delete_record'),
-    path('api/manual-matching/future-projects/', views.get_future_projects, name='get_future_projects'),
-    path('api/manual-matching/create-future-project/', views.create_future_project, name='create_future_project'),
-    path('api/manual-matching/domrf-data/<str:domrf_id>/', views.get_domrf_data, name='get_domrf_data'),
-    path('api/manual-matching/delete-photo/', views.delete_photo, name='delete_photo'),
-    path('api/manual-matching/apartment-stats/<str:domrf_id>/', views.get_apartment_stats, name='get_apartment_stats'),
-] 
+    # # Manual Matching API
+    # path('api/manual-matching/unmatched/', get_unmatched_records, name='get_unmatched_records'),
+    # path('api/manual-matching/save/', save_manual_match, name='save_manual_match'),
+    # path('api/manual-matching/unified/', get_unified_records, name='get_unified_records'),
+    # path('api/manual-matching/unified/<str:unified_id>/', unified_delete, name='unified_delete'),
+    # path('api/manual-matching/unified/<str:unified_id>/get/', unified_get, name='unified_get'),
+    # path('api/manual-matching/unified/<str:unified_id>/update/', unified_update, name='unified_update'),
+    # path('api/manual-matching/toggle-featured/', toggle_featured, name='toggle_featured'),
+    # path('api/manual-matching/records/', get_unmatched_records, name='get_unmatched_records'),
+    # path('api/manual-matching/delete/', delete_record, name='delete_record'),
+    # path('api/manual-matching/future-projects/', get_future_projects, name='get_future_projects'),
+    # path('api/manual-matching/create-future-project/', create_future_project, name='create_future_project'),
+    # path('api/manual-matching/domrf-data/<str:domrf_id>/', get_domrf_data, name='get_domrf_data'),
+    # path('api/manual-matching/delete-photo/', delete_photo, name='delete_photo'),
+    # path('api/manual-matching/apartment-stats/<str:domrf_id>/', get_apartment_stats, name='get_apartment_stats'),
+    
+    # # Mortgage Programs API
+    # path('api/mortgage-programs/', mortgage_programs_list, name='mortgage_programs_list'),
+    # path('api/mortgage-programs/create/', mortgage_programs_create, name='mortgage_programs_create'),
+    # path('api/mortgage-programs/<str:program_id>/update/', mortgage_programs_update, name='mortgage_programs_update'),
+    # path('api/mortgage-programs/<str:program_id>/', mortgage_programs_delete, name='mortgage_programs_delete'),
+    
+    # # Promotions API
+    # path('api/promotions/', promotions_create, name='promotions_create'),
+    # path('api/promotions/list/', promotions_list, name='promotions_list'),
+    # path('api/promotions/<str:promo_id>/', promotions_delete, name='promotions_delete'),
+    # path('api/promotions/<str:promo_id>/toggle/', promotions_toggle, name='promotions_toggle'),
+    
+    # # Secondary Properties API (Extended)
+    # path('api/secondary/list/', secondary_list, name='secondary_list'),
+    # path('api/secondary/create/', secondary_create, name='secondary_create'),
+    # path('api/secondary/<str:secondary_id>/toggle/', secondary_api_toggle, name='secondary_api_toggle'),
+    # path('api/secondary/<str:secondary_id>/', secondary_api_delete, name='secondary_api_delete'),
+    # path('api/secondary/<str:secondary_id>/get/', secondary_api_get, name='secondary_api_get'),
+    # path('api/secondary/<str:secondary_id>/update/', secondary_api_update, name='secondary_api_update'),
+    
+    # # Tags API
+    # path('api/tags/', tags_api_list, name='tags_api_list'),
+    # path('api/tags/create/', tags_api_create, name='tags_api_create'),
+    # path('api/tags/<str:tag_id>/', tags_api_get, name='tags_api_get'),
+    # path('api/tags/<str:tag_id>/update/', tags_api_update, name='tags_api_update'),
+    # path('api/tags/<str:tag_id>/toggle/', tags_api_toggle, name='tags_api_toggle'),
+    # path('api/tags/<str:tag_id>/delete/', tags_api_delete, name='tags_api_delete'),
+    
+    # # Categories API
+    # path('api/categories/', categories_api_list, name='categories_api_list'),
+    # path('api/categories/create/', categories_api_create, name='categories_api_create'),
+    # path('api/categories/<str:category_id>/', categories_api_get, name='categories_api_get'),
+    # path('api/categories/<str:category_id>/update/', categories_api_update, name='categories_api_update'),
+    # path('api/categories/<str:category_id>/toggle/', categories_api_toggle, name='categories_api_toggle'),
+    # path('api/categories/<str:category_id>/delete/', categories_api_delete, name='categories_api_delete'),
+    
+    # # Authors API
+    # path('api/authors/', authors_api_list, name='authors_api_list'),
+    # path('api/authors/create/', authors_api_create, name='authors_api_create'),
+    # path('api/authors/<str:author_id>/toggle/', authors_api_toggle, name='authors_api_toggle'),
+    # path('api/authors/<str:author_id>/', authors_api_delete, name='authors_api_delete'),
+    
+    # # Articles API (Extended)
+    # path('api/articles/', articles_api_list, name='articles_api_list_mongo'),
+    # path('api/articles/create/', articles_api_create, name='articles_api_create'),
+    # path('api/articles/<str:article_id>/', articles_api_get, name='articles_api_get'),
+    # path('api/articles/<str:article_id>/update/', articles_api_update, name='articles_api_update'),
+    # path('api/articles/<str:article_id>/toggle/', articles_api_toggle, name='articles_api_toggle'),
+    # path('api/articles/<str:article_id>/delete/', articles_api_delete, name='articles_api_delete'),
+    
+    # # Catalog Landings API
+    # path('api/catalog-landings/', catalog_landings_api_list, name='catalog_landings_api_list'),
+    # path('api/catalog-landings/create/', catalog_landings_api_create, name='catalog_landings_api_create'),
+    # path('api/catalog-landings/<str:landing_id>/toggle/', catalog_landings_api_toggle, name='catalog_landings_api_toggle'),
+    # path('api/catalog-landings/<str:landing_id>/', catalog_landings_api_delete, name='catalog_landings_api_delete'),
+    
+    # # Company Info API
+    # path('api/company-info/', company_info_api_list, name='company_info_api_list'),
+    # path('api/company-info/create/', company_info_api_create, name='company_info_api_create'),
+    # path('api/company-info/<str:company_id>/get/', company_info_api_detail, name='company_info_api_detail'),
+    # path('api/company-info/<str:company_id>/update/', company_info_api_update, name='company_info_api_update'),
+    # path('api/company-info/<str:company_id>/toggle/', company_info_api_toggle, name='company_info_api_toggle'),
+    # path('api/company-info/<str:company_id>/', company_info_api_delete, name='company_info_api_delete'),
+    
+    # # Branch Office API
+    # path('api/branch-offices/', branch_office_api_list, name='branch_office_api_list'),
+    # path('api/branch-offices/create/', branch_office_api_create, name='branch_office_api_create'),
+    # path('api/branch-offices/<str:office_id>/get/', branch_office_api_detail, name='branch_office_api_detail'),
+    # path('api/branch-offices/<str:office_id>/update/', branch_office_api_update, name='branch_office_api_update'),
+    # path('api/branch-offices/<str:office_id>/toggle/', branch_office_api_toggle, name='branch_office_api_toggle'),
+    # path('api/branch-offices/<str:office_id>/', branch_office_api_delete, name='branch_office_api_delete'),
+    
+    # # Employee API
+    # path('api/employees/', employee_api_list, name='employee_api_list'),
+    # path('api/employees/create/', employee_api_create, name='employee_api_create'),
+    # path('api/employees/<str:employee_id>/get/', employee_api_detail, name='employee_api_detail'),
+    # path('api/employees/<str:employee_id>/update/', employee_api_update, name='employee_api_update'),
+    # path('api/employees/<str:employee_id>/toggle/', employee_api_toggle, name='employee_api_toggle'),
+    # path('api/employees/<str:employee_id>/', employee_api_delete, name='employee_api_delete'),
+    
+    # # Employee Reviews API
+    # path('api/employee-reviews/', employee_reviews_api, name='employee_reviews_api'),
+    # path('api/employee-reviews/<str:review_id>/toggle/', employee_review_toggle, name='employee_review_toggle'),
+    # path('api/employee-reviews/<str:review_id>/update/', employee_review_update, name='employee_review_update'),
+    # path('api/employee-reviews/<str:review_id>/delete/', employee_review_delete, name='employee_review_delete'),
+    
+    # # DomRF API
+    # path('api/domrf/create/', domrf_create, name='domrf_create'),
+]
