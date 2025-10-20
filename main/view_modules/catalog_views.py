@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.http import Http404, JsonResponse
 from django.core.paginator import Paginator
 from bson import ObjectId
-from ..services.mongo_service import get_mongo_connection, get_residential_complexes_from_mongo
+from ..services.mongo_service import get_mongo_connection, get_residential_complexes_from_mongo, get_unified_houses_from_mongo
 from ..utils import get_video_thumbnail
 from ..s3_service import PLACEHOLDER_IMAGE_URL
 
@@ -32,9 +32,11 @@ def catalog(request):
         filters['city'] = city
     if district:
         filters['district'] = district
+    if street:
+        filters['street'] = street
 
-    # Получаем данные из MongoDB
-    complexes = get_residential_complexes_from_mongo(filters=filters, sort_by=sort)
+    # Получаем данные из MongoDB (используем unified_houses)
+    complexes = get_unified_houses_from_mongo(filters=filters, sort_by=sort)
 
     # Применяем дополнительные фильтры
     filters_applied = False
@@ -69,21 +71,45 @@ def catalog(request):
     paginator = Paginator(complexes, 9)
     page_obj = paginator.get_page(page)
 
-    # Получаем уникальные города для фильтра из MongoDB
+    # Получаем уникальные города, районы и улицы для фильтра из MongoDB
     cities = []
+    districts = []
+    streets = []
     try:
         db = get_mongo_connection()
-        collection = db['residential_complexes']
-        cities = collection.distinct('address.city')
-    except Exception:
+        unified_col = db['unified_houses']
+        
+        # Получаем уникальные города
+        cities = unified_col.distinct('city', {'city': {'$ne': None, '$ne': ''}})
+        cities = [city for city in cities if city]  # Убираем пустые значения
+        
+        # Получаем уникальные районы
+        districts = unified_col.distinct('district', {'district': {'$ne': None, '$ne': ''}})
+        districts = [district for district in districts if district]
+        
+        # Получаем уникальные улицы
+        streets = unified_col.distinct('street', {'street': {'$ne': None, '$ne': ''}})
+        streets = [street for street in streets if street]
+        
+        # Сортируем списки
+        cities = sorted(cities)
+        districts = sorted(districts)
+        streets = sorted(streets)
+        
+    except Exception as e:
+        print(f"Ошибка получения списков локаций: {e}")
         cities = []
+        districts = []
+        streets = []
 
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
         'cities': cities,
-        'rooms_choices': [('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
+        'districts': districts,
+        'streets': streets,
+        'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'filters': {
             'rooms': rooms,
             'city': city,
@@ -717,7 +743,7 @@ def catalog_landing(request, slug):
         'page_obj': page_obj,
         'paginator': paginator,
         'cities': [],  # Можно получить из MongoDB если нужно
-        'rooms_choices': [('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
+        'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'filters': {},
         'filters_applied': True,
         'page_title': landing.get('name', ''),
@@ -744,22 +770,46 @@ def _catalog_fallback(request, kind: str, title: str):
     paginator = Paginator(queryset, 9)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
-    # Получаем города из MongoDB для новостроек
+    # Получаем города, районы и улицы из MongoDB для новостроек
     cities = []
+    districts = []
+    streets = []
     if kind == 'newbuild':
         try:
             db = get_mongo_connection()
-            collection = db['residential_complexes']
-            cities = collection.distinct('address.city')
-        except Exception:
+            unified_col = db['unified_houses']
+            
+            # Получаем уникальные города
+            cities = unified_col.distinct('city', {'city': {'$ne': None, '$ne': ''}})
+            cities = [city for city in cities if city]
+            
+            # Получаем уникальные районы
+            districts = unified_col.distinct('district', {'district': {'$ne': None, '$ne': ''}})
+            districts = [district for district in districts if district]
+            
+            # Получаем уникальные улицы
+            streets = unified_col.distinct('street', {'street': {'$ne': None, '$ne': ''}})
+            streets = [street for street in streets if street]
+            
+            # Сортируем списки
+            cities = sorted(cities)
+            districts = sorted(districts)
+            streets = sorted(streets)
+            
+        except Exception as e:
+            print(f"Ошибка получения списков локаций: {e}")
             cities = []
+            districts = []
+            streets = []
 
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
         'cities': cities,
-        'rooms_choices': [('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
+        'districts': districts,
+        'streets': streets,
+        'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'filters': ({'stype': request.GET.get('stype', '')} if kind == 'secondary' else {}),
         'filters_applied': True,
         'page_title': title,

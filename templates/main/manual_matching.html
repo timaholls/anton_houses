@@ -1950,12 +1950,215 @@
                         </div>
                         <div style="padding:16px 20px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #475569;">
                             <button class="btn" style="background:#475569; color:#fff;" id="agent-cancel">Отмена</button>
-                            <button class="btn btn-success" id="agent-ok">Сохранить</button>
+                            <button class="btn btn-success" id="agent-ok">Далее</button>
                         </div>
                     </div>`;
                 document.body.appendChild(modal);
                 modal.querySelector('#agent-cancel').onclick = ()=>{ modal.remove(); resolve(null); };
-                modal.querySelector('#agent-ok').onclick = ()=>{ const val = modal.querySelector('#agent-select').value||''; modal.remove(); resolve(val); };
+                modal.querySelector('#agent-ok').onclick = async ()=>{ 
+                    const val = modal.querySelector('#agent-select').value||''; 
+                    modal.remove(); 
+                    // Открываем модальное окно с данными и фильтрацией
+                    const confirmed = await showDataPreviewModal(val);
+                    if (confirmed) {
+                        resolve(val);
+                    } else {
+                        resolve(null);
+                    }
+                };
+            });
+        }
+
+        // Модальное окно предпросмотра данных с фильтрацией
+        async function showDataPreviewModal(agentId) {
+            return new Promise((resolve) => {
+                // Получаем данные из выбранных источников
+                const domrfData = appState.selected.domrf ? appState.data.domrf.find(item => item._id === appState.selected.domrf) : null;
+                const avitoData = appState.selected.avito ? appState.data.avito.find(item => item._id === appState.selected.avito) : null;
+                const domclickData = appState.selected.domclick ? appState.data.domclick.find(item => item._id === appState.selected.domclick) : null;
+
+                // Создаем модальное окно
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.right = '0';
+                modal.style.bottom = '0';
+                modal.style.background = 'rgba(0,0,0,0.7)';
+                modal.style.zIndex = '10000';
+                modal.style.display = 'flex';
+                modal.style.alignItems = 'center';
+                modal.style.justifyContent = 'center';
+                modal.style.padding = '20px';
+                modal.style.overflow = 'auto';
+
+                modal.innerHTML = `
+                    <div style="background:#1e293b; color:#fff; width:90%; max-width:1200px; border-radius:12px; border:1px solid #475569; box-shadow:0 20px 50px rgba(0,0,0,.4); max-height:90vh; display:flex; flex-direction:column;">
+                        <div style="padding:16px 20px; border-bottom:1px solid #475569; font-weight:700; font-size:18px;">
+                            📊 Предпросмотр данных для объединения
+                        </div>
+                        
+                        <!-- Фильтры -->
+                        <div style="padding:16px 20px; border-bottom:1px solid #475569; background:#0f172a;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                                <div>
+                                    <label style="display:block; margin-bottom:6px; font-size:14px; color:#94a3b8;">🏙️ Город</label>
+                                    <input type="text" id="filter-city" placeholder="Введите город..." 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:6px; font-size:14px; color:#94a3b8;">🗺️ Район</label>
+                                    <input type="text" id="filter-district" placeholder="Введите район..." 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:6px; font-size:14px; color:#94a3b8;">📍 Улица</label>
+                                    <input type="text" id="filter-street" placeholder="Введите улицу..." 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </div>
+                            </div>
+                            <button id="clear-filters-btn" class="btn" style="margin-top:12px; background:#475569; color:#fff; font-size:13px; padding:8px 16px;">
+                                🔄 Сбросить фильтры
+                            </button>
+                        </div>
+                        
+                        <!-- Данные из источников -->
+                        <div id="data-content" style="padding:20px; overflow-y:auto; flex:1;">
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(350px, 1fr)); gap:20px;">
+                                ${domrfData ? `
+                                <div class="source-card" style="background:#334155; padding:16px; border-radius:8px; border:1px solid #475569;">
+                                    <h3 style="margin-bottom:12px; color:#10b981; font-size:16px;">🏠 DomRF</h3>
+                                    <div style="font-size:14px; line-height:1.6;">
+                                        <p><strong>Название:</strong> ${escapeHtml(domrfData.name || 'Не указано')}</p>
+                                        <p><strong>Адрес:</strong> ${escapeHtml(domrfData.address || 'Не указано')}</p>
+                                        ${domrfData.latitude ? `<p><strong>Координаты:</strong> ${domrfData.latitude}, ${domrfData.longitude}</p>` : ''}
+                                        ${domrfData.url ? `<p><a href="${domrfData.url}" target="_blank" style="color:#60a5fa;">Открыть на дом.рф →</a></p>` : ''}
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                ${avitoData ? `
+                                <div class="source-card" style="background:#334155; padding:16px; border-radius:8px; border:1px solid #475569;">
+                                    <h3 style="margin-bottom:12px; color:#f59e0b; font-size:16px;">🏪 Avito</h3>
+                                    <div style="font-size:14px; line-height:1.6;">
+                                        <p><strong>Название:</strong> ${escapeHtml(avitoData.name || 'Не указано')}</p>
+                                        <p><strong>Адрес:</strong> ${escapeHtml(avitoData.address || 'Не указано')}</p>
+                                        ${avitoData.development?.price_range ? `<p><strong>Цена:</strong> ${avitoData.development.price_range}</p>` : ''}
+                                        ${avitoData.url ? `<p><a href="${avitoData.url}" target="_blank" style="color:#60a5fa;">Открыть на Avito →</a></p>` : ''}
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                ${domclickData ? `
+                                <div class="source-card" style="background:#334155; padding:16px; border-radius:8px; border:1px solid #475569;">
+                                    <h3 style="margin-bottom:12px; color:#06b6d4; font-size:16px;">🏢 DomClick</h3>
+                                    <div style="font-size:14px; line-height:1.6;">
+                                        <p><strong>Название:</strong> ${escapeHtml(domclickData.name || 'Не указано')}</p>
+                                        <p><strong>Адрес:</strong> ${escapeHtml(domclickData.address || 'Не указано')}</p>
+                                        ${domclickData.url ? `<p><a href="${domclickData.url}" target="_blank" style="color:#60a5fa;">Открыть на ДомКлик →</a></p>` : ''}
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div id="filter-results" style="margin-top:20px; padding:16px; background:#0f172a; border-radius:8px; border:1px solid #475569;">
+                                <p style="color:#94a3b8; text-align:center;">Введите фильтры для поиска данных</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Кнопки действий -->
+                        <div style="padding:16px 20px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #475569;">
+                            <button class="btn" style="background:#475569; color:#fff;" id="preview-cancel">Отмена</button>
+                            <button class="btn btn-success" id="preview-confirm">✓ Подтвердить и сохранить</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                // Обработчики фильтрации
+                const filterCity = modal.querySelector('#filter-city');
+                const filterDistrict = modal.querySelector('#filter-district');
+                const filterStreet = modal.querySelector('#filter-street');
+                const filterResults = modal.querySelector('#filter-results');
+
+                function applyFilters() {
+                    const city = filterCity.value.toLowerCase().trim();
+                    const district = filterDistrict.value.toLowerCase().trim();
+                    const street = filterStreet.value.toLowerCase().trim();
+
+                    if (!city && !district && !street) {
+                        filterResults.innerHTML = '<p style="color:#94a3b8; text-align:center;">Введите фильтры для поиска данных</p>';
+                        return;
+                    }
+
+                    // Фильтруем данные
+                    const results = [];
+
+                    if (domrfData) {
+                        const address = (domrfData.address || '').toLowerCase();
+                        if ((!city || address.includes(city)) && 
+                            (!district || address.includes(district)) && 
+                            (!street || address.includes(street))) {
+                            results.push({source: 'DomRF', data: domrfData});
+                        }
+                    }
+
+                    if (avitoData) {
+                        const address = (avitoData.address || '').toLowerCase();
+                        if ((!city || address.includes(city)) && 
+                            (!district || address.includes(district)) && 
+                            (!street || address.includes(street))) {
+                            results.push({source: 'Avito', data: avitoData});
+                        }
+                    }
+
+                    if (domclickData) {
+                        const address = (domclickData.address || '').toLowerCase();
+                        if ((!city || address.includes(city)) && 
+                            (!district || address.includes(district)) && 
+                            (!street || address.includes(street))) {
+                            results.push({source: 'DomClick', data: domclickData});
+                        }
+                    }
+
+                    // Отображаем результаты
+                    if (results.length > 0) {
+                        filterResults.innerHTML = `
+                            <h4 style="margin-bottom:12px; color:#10b981;">✓ Найдено совпадений: ${results.length}</h4>
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                ${results.map(r => `
+                                    <div style="padding:12px; background:#334155; border-radius:6px; border:1px solid #475569;">
+                                        <strong style="color:#60a5fa;">${r.source}:</strong> ${escapeHtml(r.data.name || 'Без названия')} — ${escapeHtml(r.data.address || 'Без адреса')}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    } else {
+                        filterResults.innerHTML = '<p style="color:#ef4444; text-align:center;">❌ Нет данных, соответствующих фильтрам</p>';
+                    }
+                }
+
+                filterCity.addEventListener('input', applyFilters);
+                filterDistrict.addEventListener('input', applyFilters);
+                filterStreet.addEventListener('input', applyFilters);
+
+                modal.querySelector('#clear-filters-btn').onclick = () => {
+                    filterCity.value = '';
+                    filterDistrict.value = '';
+                    filterStreet.value = '';
+                    applyFilters();
+                };
+
+                modal.querySelector('#preview-cancel').onclick = () => {
+                    modal.remove();
+                    resolve(false);
+                };
+
+                modal.querySelector('#preview-confirm').onclick = () => {
+                    modal.remove();
+                    resolve(true);
+                };
             });
         }
 
@@ -2066,42 +2269,560 @@
             fetch(`/api/manual-matching/unified/${id}/get/`).then(r=>r.json()).then(res=>{
                 if(!res.success){ showToast(res.error||'Ошибка загрузки','error'); return; }
                 const item = res.item || {};
+                
+                // Логирование для отладки
+                console.log('=== Unified Record Data ===');
+                console.log('Full item:', item);
+                console.log('construction_progress:', item.construction_progress);
+                console.log('Type:', typeof item.construction_progress);
+                console.log('Is Array:', Array.isArray(item.construction_progress));
+                if (item.construction_progress && typeof item.construction_progress === 'object') {
+                    console.log('Keys:', Object.keys(item.construction_progress));
+                    console.log('construction_stages:', item.construction_progress.construction_stages);
+                    console.log('photos:', item.construction_progress.photos);
+                }
+                console.log('===========================');
+                
+                // Создаем модальное окно
                 const modal = document.createElement('div');
-                modal.style.position='fixed';modal.style.top='0';modal.style.left='0';modal.style.right='0';modal.style.bottom='0';modal.style.background='rgba(0,0,0,0.6)';modal.style.zIndex='9999';modal.style.display='flex';modal.style.alignItems='center';modal.style.justifyContent='center';
+                modal.style.position='fixed';
+                modal.style.top='0';
+                modal.style.left='0';
+                modal.style.right='0';
+                modal.style.bottom='0';
+                modal.style.background='rgba(0,0,0,0.7)';
+                modal.style.zIndex='10000';
+                modal.style.display='flex';
+                modal.style.alignItems='center';
+                modal.style.justifyContent='center';
+                modal.style.padding='20px';
+                modal.style.overflow='auto';
+                
+                // Подготовка данных для отображения
+                const apartmentTypes = item.apartment_types || {};
+                const developmentPhotos = item.development?.photos || [];
+                
+                // Ход строительства может быть в разных форматах:
+                // 1. Массив этапов напрямую: item.construction_progress = [...]
+                // 2. Объект с полем construction_stages: item.construction_progress = {construction_stages: [...]}
+                // 3. Объект с полем photos: item.construction_progress = {photos: [...]}
+                let constructionProgress = [];
+                if (item.construction_progress) {
+                    if (Array.isArray(item.construction_progress)) {
+                        // Если это уже массив
+                        constructionProgress = item.construction_progress;
+                    } else if (item.construction_progress.construction_stages && Array.isArray(item.construction_progress.construction_stages)) {
+                        // Если это объект с полем construction_stages
+                        constructionProgress = item.construction_progress.construction_stages;
+                    } else if (item.construction_progress.photos && Array.isArray(item.construction_progress.photos)) {
+                        // Если это объект только с полем photos (без этапов) - создаем один этап
+                        constructionProgress = [{
+                            stage: 'Ход строительства',
+                            photos: item.construction_progress.photos
+                        }];
+                    }
+                }
+                
+                console.log('Construction Progress Data:', {
+                    raw: item.construction_progress,
+                    parsed: constructionProgress,
+                    length: constructionProgress.length
+                });
+                
+                // Генерация HTML для квартир с галереей
+                let apartmentsHtml = '';
+                Object.keys(apartmentTypes).forEach(roomType => {
+                    const apartments = apartmentTypes[roomType]?.apartments || [];
+                    if (apartments.length > 0) {
+                        apartmentsHtml += `
+                            <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569; margin-bottom:16px;">
+                                <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">
+                                    ${roomType === 'Студия' ? '🏠 Студия' : `🏠 ${roomType}-комнатные`}
+                                    <span style="color:#94a3b8; font-size:14px; font-weight:normal;">(${apartments.length} вариантов)</span>
+                                </h4>
+                                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:12px;">
+                                    ${apartments.map((apt, idx) => {
+                                        const images = Array.isArray(apt.image) ? apt.image : (apt.image ? [apt.image] : []);
+                                        return `
+                                            <div class="apartment-card" style="background:#334155; padding:12px; border-radius:8px; border:1px solid #475569;">
+                                                <div style="font-size:13px; color:#cbd5e1; margin-bottom:8px;">
+                                                    <strong>${escapeHtml(apt.title || 'Квартира')}</strong>
+                                                </div>
+                                                ${apt.price ? `<div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">💰 ${escapeHtml(apt.price)}</div>` : ''}
+                                                ${apt.pricePerSquare ? `<div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">📏 ${escapeHtml(apt.pricePerSquare)}</div>` : ''}
+                                                ${apt.completionDate ? `<div style="font-size:12px; color:#94a3b8; margin-bottom:8px;">📅 ${escapeHtml(apt.completionDate)}</div>` : ''}
+                                                ${images.length > 0 ? `
+                                                    <div style="margin-top:8px;">
+                                                        <div style="font-size:12px; color:#94a3b8; margin-bottom:6px;">🖼️ Планировки (${images.length}):</div>
+                                                        <div style="display:flex; flex-direction:column; gap:6px;">
+                                                            ${images.map((img, imgIdx) => `
+                                                                <div style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                                    <img src="${img}" alt="Планировка" 
+                                                                        style="width:100%; height:120px; object-fit:cover; display:block;"
+                                                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                    <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                                        Изображение недоступно
+                                                                    </div>
+                                                                    <button onclick="deleteApartmentPhoto('${id}', '${roomType}', ${idx}, ${imgIdx}, '${img}')" 
+                                                                        style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                                        title="Удалить фото">
+                                                                        ✕
+                                                                    </button>
+                                                                </div>
+                                                            `).join('')}
+                                                        </div>
+                                                    </div>
+                                                ` : '<div style="font-size:11px; color:#6b7280; font-style:italic; margin-top:8px;">Нет фотографий</div>'}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                // Генерация HTML для фото ЖК
+                let developmentPhotosHtml = '';
+                if (developmentPhotos.length > 0) {
+                    developmentPhotosHtml = `
+                        <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569; margin-bottom:16px;">
+                            <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">
+                                📸 Фото ЖК (${developmentPhotos.length})
+                            </h4>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+                                ${developmentPhotos.map((photo, idx) => `
+                                    <div style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                        <img src="${photo}" alt="Фото ЖК" 
+                                            style="width:100%; height:140px; object-fit:cover; display:block;"
+                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                            Изображение недоступно
+                                        </div>
+                                        <button onclick="deleteDevelopmentPhoto('${id}', ${idx}, '${photo}')" 
+                                            style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                            title="Удалить фото">
+                                            ✕
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Генерация HTML для хода строительства
+                let constructionProgressHtml = '';
+                if (constructionProgress && Array.isArray(constructionProgress) && constructionProgress.length > 0) {
+                    constructionProgressHtml = `
+                        <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569; margin-bottom:16px;">
+                            <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">
+                                🏗️ Ход строительства (${constructionProgress.length} этапов)
+                            </h4>
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                ${constructionProgress.map((stage, stageIdx) => {
+                                    const photos = stage.photos || [];
+                                    return `
+                                        <div style="background:#334155; padding:12px; border-radius:8px; border:1px solid #475569;">
+                                            <div style="font-size:14px; color:#cbd5e1; margin-bottom:8px; font-weight:600;">
+                                                ${escapeHtml(stage.stage || `Этап ${stageIdx + 1}`)}
+                                            </div>
+                                            ${stage.date ? `<div style="font-size:12px; color:#94a3b8; margin-bottom:8px;">📅 ${escapeHtml(stage.date)}</div>` : ''}
+                                            ${photos.length > 0 ? `
+                                                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; margin-top:8px;">
+                                                    ${photos.map((photo, photoIdx) => `
+                                                        <div style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                            <img src="${photo}" alt="Ход строительства" 
+                                                                style="width:100%; height:120px; object-fit:cover; display:block;"
+                                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                            <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                                Изображение недоступно
+                                                            </div>
+                                                            <button onclick="deleteConstructionPhoto('${id}', ${stageIdx}, ${photoIdx}, '${photo}')" 
+                                                                style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                                title="Удалить фото">
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            ` : '<div style="font-size:11px; color:#6b7280; font-style:italic;">Нет фотографий</div>'}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Генерация HTML для характеристик (редактируемые)
+                const params = item.development?.parameters || {};
+                const priceRange = item.development?.price_range || '';
+                let characteristicsHtml = `
+                    <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569;">
+                        <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">📊 Характеристики ЖК (редактируемые)</h4>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:12px;">
+                            <label style="display:flex; flex-direction:column; background:#334155; padding:12px; border-radius:6px; border:1px solid #475569;">
+                                <span style="font-size:12px; color:#94a3b8; margin-bottom:6px;">💰 Диапазон цен</span>
+                                <input type="text" class="char-field" data-field="price_range" value="${escapeHtml(priceRange)}" 
+                                    placeholder="Например: от 3 млн ₽"
+                                    style="background:#1e293b; border:1px solid #475569; border-radius:6px; padding:8px; color:#fff; font-size:14px;">
+                            </label>
+                            ${Object.keys(params).map(key => `
+                                <label style="display:flex; flex-direction:column; background:#334155; padding:12px; border-radius:6px; border:1px solid #475569;">
+                                    <span style="font-size:12px; color:#94a3b8; margin-bottom:6px;">${escapeHtml(key)}</span>
+                                    <input type="text" class="char-field" data-field="param_${escapeHtml(key)}" value="${escapeHtml(String(params[key]))}" 
+                                        style="background:#1e293b; border:1px solid #475569; border-radius:6px; padding:8px; color:#fff; font-size:14px;">
+                                </label>
+                            `).join('')}
+                        </div>
+                        <button onclick="addNewCharacteristic()" class="btn" style="margin-top:12px; background:#475569; color:#fff; padding:8px 16px; font-size:13px;">
+                            ➕ Добавить характеристику
+                        </button>
+                        <div id="new-characteristics-container" style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:12px;"></div>
+                    </div>
+                `;
+
                 modal.innerHTML = `
-                    <div style="background:#1e293b; color:#fff; width:720px; border-radius:12px; border:1px solid #475569; box-shadow:0 20px 50px rgba(0,0,0,.4);">
-                        <div style="padding:16px 20px; border-bottom:1px solid #475569; font-weight:700;">Редактировать запись</div>
-                        <div style="padding:16px 20px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                            <label style="grid-column:1 / -1">Название ЖК<input id="ue-name" type="text" value="${escapeHtml(item.development?.name || item.name || '')}" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"></label>
-                            <label>На главной<select id="ue-featured" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"><option value="true" ${item.is_featured? 'selected':''}>Да</option><option value="false" ${!item.is_featured? 'selected':''}>Нет</option></select></label>
-                            <label>Агент<select id="ue-agent" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"></select></label>
-                            <label style="grid-column:1 / -1">Адрес<input id="ue-address" type="text" value="${escapeHtml(item.development?.address || item.address || '')}" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"></label>
+                    <div style="background:#1e293b; color:#fff; width:95%; max-width:1400px; border-radius:12px; border:1px solid #475569; box-shadow:0 20px 50px rgba(0,0,0,.4); max-height:90vh; display:flex; flex-direction:column;">
+                        <div style="padding:20px 24px; border-bottom:1px solid #475569; font-weight:700; font-size:20px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>✏️ Редактирование записи</span>
+                            <button onclick="this.closest('[style*=position]').remove()" style="background:transparent; border:none; color:#94a3b8; font-size:28px; cursor:pointer; padding:0; line-height:1;">&times;</button>
                         </div>
-                        <div style="padding:16px 20px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #475569;">
-                            <button class="btn" style="background:#475569; color:#fff;" id="ue-cancel">Отмена</button>
-                            <button class="btn btn-success" id="ue-save">Сохранить</button>
+                        
+                        <!-- Основная информация (всегда видна) -->
+                        <div style="padding:16px 24px; border-bottom:1px solid #475569; background:#0f172a;">
+                            <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">📝 Основная информация</h4>
+                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                                <label style="grid-column:1 / -1; display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Название ЖК</span>
+                                    <input id="ue-name" type="text" value="${escapeHtml(item.development?.name || item.name || '')}" 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </label>
+                                <label style="display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">🏙️ Город</span>
+                                    <input id="ue-city" type="text" value="${escapeHtml(item.city || 'Уфа')}" 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </label>
+                                <label style="display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">🗺️ Район</span>
+                                    <input id="ue-district" type="text" value="${escapeHtml(item.district || '')}" 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </label>
+                                <label style="display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">📍 Улица</span>
+                                    <input id="ue-street" type="text" value="${escapeHtml(item.street || '')}" 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </label>
+                                <label style="display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Показывать на главной</span>
+                                    <select id="ue-featured" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                        <option value="true" ${item.is_featured? 'selected':''}>Да</option>
+                                        <option value="false" ${!item.is_featured? 'selected':''}>Нет</option>
+                                    </select>
+                                </label>
+                                <label style="display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Агент</span>
+                                    <select id="ue-agent" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                        <option value="">Загрузка...</option>
+                                    </select>
+                                </label>
+                                <label style="display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Координаты (широта)</span>
+                                    <input id="ue-latitude" type="number" step="any" value="${item.latitude || ''}" 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </label>
+                                <label style="display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Координаты (долгота)</span>
+                                    <input id="ue-longitude" type="number" step="any" value="${item.longitude || ''}" 
+                                        style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                </label>
+                            </div>
                         </div>
-                    </div>`;
+                        
+                        <!-- Вкладки -->
+                        <div style="display:flex; border-bottom:1px solid #475569; background:#0f172a; padding:0 24px;">
+                            <button class="edit-tab" data-tab="characteristics" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
+                                📊 Характеристики
+                            </button>
+                            <button class="edit-tab active" data-tab="apartments" style="padding:12px 20px; border:none; background:transparent; color:#10b981; cursor:pointer; border-bottom:2px solid #10b981; font-size:14px; font-weight:500; transition:all 0.3s;">
+                                🏠 Квартиры
+                            </button>
+                            <button class="edit-tab" data-tab="photos" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
+                                📸 Фото ЖК
+                            </button>
+                            <button class="edit-tab" data-tab="construction" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
+                                🏗️ Ход строительства
+                            </button>
+                        </div>
+                        
+                        <div style="overflow-y:auto; flex:1; padding:20px 24px;">
+                            <!-- Вкладка: Характеристики -->
+                            <div class="edit-tab-content" data-tab-content="characteristics" style="display:none;">
+                                ${characteristicsHtml}
+                            </div>
+                            
+                            <!-- Вкладка: Квартиры -->
+                            <div class="edit-tab-content" data-tab-content="apartments" style="display:block;">
+                                ${apartmentsHtml || '<div style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет данных о квартирах</div>'}
+                            </div>
+                            
+                            <!-- Вкладка: Фото ЖК -->
+                            <div class="edit-tab-content" data-tab-content="photos" style="display:none;">
+                                ${developmentPhotosHtml || '<div style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет фото ЖК</div>'}
+                            </div>
+                            
+                            <!-- Вкладка: Ход строительства -->
+                            <div class="edit-tab-content" data-tab-content="construction" style="display:none;">
+                                ${constructionProgressHtml || '<div style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет данных о ходе строительства</div>'}
+                            </div>
+                        </div>
+                        
+                        <div style="padding:16px 24px; display:flex; gap:12px; justify-content:flex-end; border-top:1px solid #475569; background:#0f172a;">
+                            <button class="btn" style="background:#475569; color:#fff; padding:12px 24px;" id="ue-cancel">Отмена</button>
+                            <button class="btn btn-success" style="padding:12px 24px;" id="ue-save">💾 Сохранить изменения</button>
+                        </div>
+                    </div>
+                `;
+                
                 document.body.appendChild(modal);
+                
+                // Обработка переключения вкладок
+                const tabs = modal.querySelectorAll('.edit-tab');
+                const tabContents = modal.querySelectorAll('.edit-tab-content');
+                
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const targetTab = tab.dataset.tab;
+                        
+                        // Деактивируем все вкладки
+                        tabs.forEach(t => {
+                            t.style.color = '#94a3b8';
+                            t.style.borderBottomColor = 'transparent';
+                            t.classList.remove('active');
+                        });
+                        
+                        // Активируем выбранную вкладку
+                        tab.style.color = '#10b981';
+                        tab.style.borderBottomColor = '#10b981';
+                        tab.classList.add('active');
+                        
+                        // Показываем соответствующий контент
+                        tabContents.forEach(content => {
+                            if (content.dataset.tabContent === targetTab) {
+                                content.style.display = 'block';
+                            } else {
+                                content.style.display = 'none';
+                            }
+                        });
+                    });
+                });
+                
                 // загрузим список сотрудников в селект
                 fetch('/api/employees/?admin=true').then(r=>r.json()).then(e=>{
                     const sel = modal.querySelector('#ue-agent');
                     sel.innerHTML = `<option value="">— Без агента —</option>` + (e.items||[]).map(p=>`<option value="${p._id}" ${item.agent_id && (p._id===item.agent_id || p._id===String(item.agent_id))? 'selected':''}>${escapeHtml(p.full_name)} — ${escapeHtml(p.position||'')}</option>`).join('');
                 });
+                
                 modal.querySelector('#ue-cancel').onclick = ()=> modal.remove();
                 modal.querySelector('#ue-save').onclick = ()=>{
-                    const payload = new FormData();
-                    payload.append('is_featured', modal.querySelector('#ue-featured').value);
-                    payload.append('agent_id', modal.querySelector('#ue-agent').value);
-                    const name = modal.querySelector('#ue-name').value.trim();
-                    if(name && item.development){ payload.append('development.name', name); } else if(name){ payload.append('name', name); }
-                    const address = modal.querySelector('#ue-address').value.trim();
-                    if(address && item.development){ payload.append('development.address', address); } else if(address){ payload.append('address', address); }
-                    fetch(`/api/manual-matching/unified/${id}/update/`, { method:'POST', body: payload })
-                      .then(r=>r.json()).then(res=>{ if(res.success){ showToast('Сохранено'); modal.remove(); loadUnifiedRecords(); } else { showToast(res.error||'Ошибка', 'error'); }})
-                      .catch(()=>showToast('Ошибка сети','error'));
+                    // Собираем все данные
+                    const data = {
+                        is_featured: modal.querySelector('#ue-featured').value === 'true',
+                        agent_id: modal.querySelector('#ue-agent').value,
+                        // Основные поля
+                        name: modal.querySelector('#ue-name').value.trim(),
+                        city: modal.querySelector('#ue-city').value.trim(),
+                        district: modal.querySelector('#ue-district').value.trim(),
+                        street: modal.querySelector('#ue-street').value.trim(),
+                        latitude: parseFloat(modal.querySelector('#ue-latitude').value) || null,
+                        longitude: parseFloat(modal.querySelector('#ue-longitude').value) || null,
+                    };
+                    
+                    // Если есть development структура, обновляем её тоже
+                    if (item.development) {
+                        data['development.name'] = data.name;
+                        // Собираем адрес из частей
+                        const addressParts = [data.city, data.district, data.street].filter(p => p);
+                        data['development.address'] = addressParts.join(', ');
+                        
+                        // Собираем характеристики
+                        const priceRange = modal.querySelector('[data-field="price_range"]')?.value || '';
+                        if (priceRange) {
+                            data['development.price_range'] = priceRange;
+                        }
+                        
+                        // Собираем остальные параметры
+                        const charFields = modal.querySelectorAll('.char-field[data-field^="param_"]');
+                        charFields.forEach(field => {
+                            const fieldName = field.dataset.field.replace('param_', '');
+                            const fieldValue = field.value.trim();
+                            if (fieldValue) {
+                                data[`development.parameters.${fieldName}`] = fieldValue;
+                            }
+                        });
+                        
+                        // Собираем новые добавленные характеристики
+                        const newCharContainers = modal.querySelectorAll('#new-characteristics-container > div');
+                        newCharContainers.forEach(container => {
+                            const nameInput = container.querySelector('.new-char-name');
+                            const valueInput = container.querySelector('.new-char-value');
+                            if (nameInput && valueInput) {
+                                const charName = nameInput.value.trim();
+                                const charValue = valueInput.value.trim();
+                                if (charName && charValue) {
+                                    data[`development.parameters.${charName}`] = charValue;
+                                }
+                            }
+                        });
+                    }
+                    
+                    console.log('Saving data:', data);
+                    
+                    fetch(`/api/manual-matching/unified/${id}/update/`, { 
+                        method:'POST', 
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    })
+                      .then(r=>r.json()).then(res=>{ 
+                          if(res.success){ 
+                              showToast('✓ Изменения сохранены успешно!', 'success'); 
+                              modal.remove(); 
+                              loadUnifiedRecords(); 
+                          } else { 
+                              showToast(res.error||'Ошибка сохранения', 'error'); 
+                          }
+                      })
+                      .catch(err=>{
+                          console.error('Save error:', err);
+                          showToast('Ошибка сети','error');
+                      });
                 };
+            }).catch(err => {
+                console.error('Error loading unified record:', err);
+                showToast('Ошибка загрузки данных: ' + err.message, 'error');
             });
+        }
+        
+        // Функция удаления фото квартиры
+        window.deleteApartmentPhoto = function(unifiedId, roomType, aptIdx, photoIdx, photoUrl) {
+            if(!confirm('Удалить это фото планировки?')) return;
+            
+            fetch('/api/manual-matching/delete-apartment-photo/', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    unified_id: unifiedId,
+                    room_type: roomType,
+                    apt_idx: parseInt(aptIdx),
+                    photo_idx: parseInt(photoIdx),
+                    photo_url: photoUrl
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Фото удалено успешно', 'success');
+                    // Перезагружаем данные
+                    openEditUnified(unifiedId);
+                } else {
+                    showToast('Ошибка удаления: ' + (data.error || 'Неизвестная ошибка'), 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Ошибка удаления: ' + error.message, 'error');
+            });
+        }
+        
+        // Функция удаления фото ЖК
+        window.deleteDevelopmentPhoto = function(unifiedId, photoIdx, photoUrl) {
+            if(!confirm('Удалить это фото ЖК?')) return;
+            
+            fetch('/api/manual-matching/delete-development-photo/', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    unified_id: unifiedId,
+                    photo_idx: parseInt(photoIdx),
+                    photo_url: photoUrl
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Фото удалено успешно', 'success');
+                    // Перезагружаем данные
+                    openEditUnified(unifiedId);
+                } else {
+                    showToast('Ошибка удаления: ' + (data.error || 'Неизвестная ошибка'), 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Ошибка удаления: ' + error.message, 'error');
+            });
+        }
+        
+        // Функция удаления фото хода строительства
+        window.deleteConstructionPhoto = function(unifiedId, stageIdx, photoIdx, photoUrl) {
+            if(!confirm('Удалить это фото хода строительства?')) return;
+            
+            fetch('/api/manual-matching/delete-construction-photo/', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    unified_id: unifiedId,
+                    stage_idx: parseInt(stageIdx),
+                    photo_idx: parseInt(photoIdx),
+                    photo_url: photoUrl
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Фото удалено успешно', 'success');
+                    // Перезагружаем данные
+                    openEditUnified(unifiedId);
+                } else {
+                    showToast('Ошибка удаления: ' + (data.error || 'Неизвестная ошибка'), 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Ошибка удаления: ' + error.message, 'error');
+            });
+        }
+        
+        // Функция добавления новой характеристики
+        window.addNewCharacteristic = function() {
+            const container = document.getElementById('new-characteristics-container');
+            const charId = 'new_char_' + Date.now();
+            const newCharHtml = `
+                <div id="${charId}" style="display:flex; flex-direction:column; background:#334155; padding:12px; border-radius:6px; border:1px solid #475569; position:relative;">
+                    <button onclick="document.getElementById('${charId}').remove()" 
+                        style="position:absolute; top:8px; right:8px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer;">
+                        ✕
+                    </button>
+                    <label style="margin-bottom:8px;">
+                        <span style="font-size:12px; color:#94a3b8; display:block; margin-bottom:4px;">Название характеристики</span>
+                        <input type="text" class="new-char-name" placeholder="Например: Парковка"
+                            style="width:100%; background:#1e293b; border:1px solid #475569; border-radius:6px; padding:8px; color:#fff; font-size:14px;">
+                    </label>
+                    <label>
+                        <span style="font-size:12px; color:#94a3b8; display:block; margin-bottom:4px;">Значение</span>
+                        <input type="text" class="new-char-value" placeholder="Например: Подземная"
+                            style="width:100%; background:#1e293b; border:1px solid #475569; border-radius:6px; padding:8px; color:#fff; font-size:14px;">
+                    </label>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', newCharHtml);
         }
 
         // Модал создания акции (простейшая версия)

@@ -260,14 +260,30 @@ def save_manual_match(request):
             'longitude': longitude,
             'source': 'manual',
             'created_by': 'manual',
-            'is_featured': is_featured  # Флаг "показывать на главной"
+            'is_featured': is_featured,  # Флаг "показывать на главной"
+            # Добавляем поля для адреса
+            'city': 'Уфа',  # По умолчанию
+            'district': '',
+            'street': ''
         }
+        
         # Привязка агента
         if agent_id:
             try:
                 unified_record['agent_id'] = ObjectId(agent_id)
             except Exception:
                 unified_record['agent_id'] = None
+        
+        # Пытаемся извлечь город/район/улицу из адреса Avito или DomClick
+        address = ''
+        if avito_record:
+            address = avito_record.get('development', {}).get('address', '')
+        elif domclick_record:
+            address = domclick_record.get('development', {}).get('address', '')
+        
+        # Простое извлечение города (можно улучшить)
+        if 'Уфа' in address or 'уфа' in address.lower():
+            unified_record['city'] = 'Уфа'
         
         # 2. Development из Avito + photos из DomClick
         if avito_record:
@@ -1151,6 +1167,18 @@ def get_unified_records(request):
         }, status=500)
 
 
+def convert_objectid_to_str(obj):
+    """Рекурсивно конвертирует все ObjectId в строки для JSON сериализации"""
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {key: convert_objectid_to_str(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_objectid_to_str(item) for item in obj]
+    else:
+        return obj
+
+
 @require_http_methods(["GET"]) 
 def unified_get(request, unified_id: str):
     """API: получить одну объединенную запись для редактирования."""
@@ -1160,7 +1188,8 @@ def unified_get(request, unified_id: str):
         doc = col.find_one({'_id': ObjectId(unified_id)})
         if not doc:
             return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
-        doc['_id'] = str(doc['_id'])
+        # Конвертируем все ObjectId в строки
+        doc = convert_objectid_to_str(doc)
         return JsonResponse({'success': True, 'item': doc})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -1182,23 +1211,83 @@ def unified_update(request, unified_id: str):
 
         # Нельзя менять _id
         payload.pop('_id', None)
+        
         # Приведение типов для известных полей
         if 'is_featured' in payload:
             val = payload['is_featured']
             payload['is_featured'] = True if str(val).lower() in ('1', 'true', 'on') else False
+        
         if 'agent_id' in payload:
             try:
                 payload['agent_id'] = ObjectId(str(payload['agent_id'])) if payload['agent_id'] else None
             except Exception:
                 payload['agent_id'] = None
-
-        if not payload:
+        
+        # Обработка координат
+        if 'latitude' in payload:
+            try:
+                payload['latitude'] = float(payload['latitude']) if payload['latitude'] else None
+            except (ValueError, TypeError):
+                payload['latitude'] = None
+                
+        if 'longitude' in payload:
+            try:
+                payload['longitude'] = float(payload['longitude']) if payload['longitude'] else None
+            except (ValueError, TypeError):
+                payload['longitude'] = None
+        
+        # Обработка вложенных полей (development.name, development.parameters.X и т.д.)
+        update_operations = {}
+        for key, value in payload.items():
+            if '.' in key:
+                # Это вложенное поле
+                update_operations[key] = value
+            else:
+                # Это простое поле
+                update_operations[key] = value
+        
+        if not update_operations:
             return JsonResponse({'success': False, 'error': 'Нет полей для обновления'}, status=400)
 
-        col.update_one({'_id': ObjectId(unified_id)}, {'$set': payload})
+        col.update_one({'_id': ObjectId(unified_id)}, {'$set': update_operations})
         return JsonResponse({'success': True})
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def get_location_options(request):
+    """API: Получить списки городов, районов и улиц для фильтров каталога"""
+    try:
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        
+        # Получаем уникальные города
+        cities = unified_col.distinct('city', {'city': {'$ne': None, '$ne': ''}})
+        cities = [city for city in cities if city]  # Убираем пустые значения
+        
+        # Получаем уникальные районы
+        districts = unified_col.distinct('district', {'district': {'$ne': None, '$ne': ''}})
+        districts = [district for district in districts if district]
+        
+        # Получаем уникальные улицы
+        streets = unified_col.distinct('street', {'street': {'$ne': None, '$ne': ''}})
+        streets = [street for street in streets if street]
+        
+        return JsonResponse({
+            'success': True,
+            'cities': sorted(cities),
+            'districts': sorted(districts),
+            'streets': sorted(streets)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 # ===================== Mortgage Programs (Mongo) =====================
 @require_http_methods(["GET"])
@@ -1427,6 +1516,190 @@ def unified_delete(request, unified_id):
             return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
             
         return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ===================== Photo Deletion APIs =====================
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_apartment_photo(request):
+    """API: Удалить фото квартиры из unified_houses"""
+    try:
+        data = json.loads(request.body)
+        unified_id = data.get('unified_id')
+        room_type = data.get('room_type')
+        apt_idx = data.get('apt_idx')
+        photo_idx = data.get('photo_idx')
+        photo_url = data.get('photo_url')
+        
+        if not all([unified_id, room_type, apt_idx is not None, photo_idx is not None, photo_url]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Не все параметры указаны'
+            }, status=400)
+        
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        
+        # Получаем документ
+        doc = unified_col.find_one({'_id': ObjectId(unified_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
+        
+        # Удаляем файл из S3
+        try:
+            s3_key = s3_client.extract_key_from_url(photo_url)
+            if s3_key:
+                s3_client.delete_object(s3_key)
+        except Exception as e:
+            pass  # Игнорируем ошибки удаления файла
+        
+        # Удаляем фото из базы данных
+        apartment_types = doc.get('apartment_types', {})
+        if room_type in apartment_types:
+            apartments = apartment_types[room_type].get('apartments', [])
+            if apt_idx < len(apartments):
+                apartment = apartments[apt_idx]
+                photos = apartment.get('image', [])
+                if photo_idx < len(photos) and photos[photo_idx] == photo_url:
+                    # Удаляем фото из массива
+                    photos.pop(photo_idx)
+                    apartment['image'] = photos
+                    
+                    # Обновляем документ в базе
+                    unified_col.update_one(
+                        {'_id': ObjectId(unified_id)},
+                        {'$set': {f'apartment_types.{room_type}.apartments.{apt_idx}': apartment}}
+                    )
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_development_photo(request):
+    """API: Удалить фото ЖК из unified_houses"""
+    try:
+        data = json.loads(request.body)
+        unified_id = data.get('unified_id')
+        photo_idx = data.get('photo_idx')
+        photo_url = data.get('photo_url')
+        
+        if not all([unified_id, photo_idx is not None, photo_url]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Не все параметры указаны'
+            }, status=400)
+        
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        
+        # Получаем документ
+        doc = unified_col.find_one({'_id': ObjectId(unified_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
+        
+        # Удаляем файл из S3
+        try:
+            s3_key = s3_client.extract_key_from_url(photo_url)
+            if s3_key:
+                s3_client.delete_object(s3_key)
+        except Exception as e:
+            pass  # Игнорируем ошибки удаления файла
+        
+        # Удаляем фото из development.photos
+        development = doc.get('development', {})
+        photos = development.get('photos', [])
+        if photo_idx < len(photos) and photos[photo_idx] == photo_url:
+            # Удаляем фото из массива
+            photos.pop(photo_idx)
+            
+            # Обновляем документ в базе
+            unified_col.update_one(
+                {'_id': ObjectId(unified_id)},
+                {'$set': {'development.photos': photos}}
+            )
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_construction_photo(request):
+    """API: Удалить фото хода строительства из unified_houses"""
+    try:
+        data = json.loads(request.body)
+        unified_id = data.get('unified_id')
+        stage_idx = data.get('stage_idx')
+        photo_idx = data.get('photo_idx')
+        photo_url = data.get('photo_url')
+        
+        if not all([unified_id, stage_idx is not None, photo_idx is not None, photo_url]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Не все параметры указаны'
+            }, status=400)
+        
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        
+        # Получаем документ
+        doc = unified_col.find_one({'_id': ObjectId(unified_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
+        
+        # Удаляем файл из S3
+        try:
+            s3_key = s3_client.extract_key_from_url(photo_url)
+            if s3_key:
+                s3_client.delete_object(s3_key)
+        except Exception as e:
+            pass  # Игнорируем ошибки удаления файла
+        
+        # Удаляем фото из construction_progress
+        construction_progress = doc.get('construction_progress', [])
+        
+        # Проверяем разные структуры данных
+        if isinstance(construction_progress, list):
+            # Старая структура: массив объектов с photos
+            if stage_idx < len(construction_progress):
+                stage = construction_progress[stage_idx]
+                photos = stage.get('photos', [])
+                if photo_idx < len(photos) and photos[photo_idx] == photo_url:
+                    photos.pop(photo_idx)
+                    stage['photos'] = photos
+                    
+                    # Обновляем документ в базе
+                    unified_col.update_one(
+                        {'_id': ObjectId(unified_id)},
+                        {'$set': {f'construction_progress.{stage_idx}': stage}}
+                    )
+        else:
+            # Новая структура: объект с construction_stages
+            construction_stages = construction_progress.get('construction_stages', [])
+            if stage_idx < len(construction_stages):
+                stage = construction_stages[stage_idx]
+                photos = stage.get('photos', [])
+                if photo_idx < len(photos) and photos[photo_idx] == photo_url:
+                    photos.pop(photo_idx)
+                    stage['photos'] = photos
+                    
+                    # Обновляем документ в базе
+                    unified_col.update_one(
+                        {'_id': ObjectId(unified_id)},
+                        {'$set': {f'construction_progress.construction_stages.{stage_idx}': stage}}
+                    )
+        
+        return JsonResponse({'success': True})
+        
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

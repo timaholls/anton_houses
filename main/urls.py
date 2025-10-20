@@ -37,6 +37,7 @@ from .views import (
     unified_delete, unified_get, unified_update, toggle_featured,
     domrf_create, delete_record, get_future_projects, create_future_project,
     get_domrf_data, delete_photo, get_apartment_stats,
+    delete_apartment_photo, delete_development_photo, delete_construction_photo,
     # Content Management API
     tags_api_list, tags_api_create, tags_api_get, tags_api_update, tags_api_toggle, tags_api_delete,
     categories_api_list, categories_api_create, categories_api_get, categories_api_update, categories_api_toggle, categories_api_delete,
@@ -64,6 +65,9 @@ from .views import (
     secondary_list, secondary_create, secondary_api_toggle, secondary_api_get, 
     secondary_api_update, secondary_api_delete,
 )
+
+# Импортируем функцию из manual_matching_api
+from .api.manual_matching_api import get_location_options
 
 app_name = 'main'
 
@@ -157,7 +161,11 @@ urlpatterns = [
     path('api/manual-matching/create-future-project/', create_future_project, name='create_future_project'),
     path('api/manual-matching/domrf-data/<str:domrf_id>/', get_domrf_data, name='get_domrf_data'),
     path('api/manual-matching/delete-photo/', delete_photo, name='delete_photo'),
+    path('api/manual-matching/delete-apartment-photo/', delete_apartment_photo, name='delete_apartment_photo'),
+    path('api/manual-matching/delete-development-photo/', delete_development_photo, name='delete_development_photo'),
+    path('api/manual-matching/delete-construction-photo/', delete_construction_photo, name='delete_construction_photo'),
     path('api/manual-matching/apartment-stats/<str:domrf_id>/', get_apartment_stats, name='get_apartment_stats'),
+    path('api/manual-matching/location-options/', get_location_options, name='get_location_options'),
     path('api/domrf/create/', domrf_create, name='domrf_create'),
     
     # ========== API (РАБОЧИЕ ЭНДПОИНТЫ) ==========

@@ -5900,6 +5900,28 @@ a:hover { color: var(--c21-gold); }
     align-items: end;
 }
 
+/* Исправление проблемы с длинными названиями улиц */
+.filter-select {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0; /* Позволяет элементу сжиматься */
+}
+
+.filter-select option {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filters-row-grid .filter-group {
+    min-width: 0; /* Позволяет grid элементам сжиматься */
+    max-width: 100%;
+    overflow: hidden;
+}
+
 /* Чипы-кнопки для категорий вторички */
 .button-filter.chips {
     gap: 10px;

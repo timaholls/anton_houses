@@ -220,81 +220,327 @@ import json
 
 @require_http_methods(["GET"])
 def catalog_api(request):
-    """API для каталога ЖК из MongoDB unified_houses"""
-    page = int(request.GET.get('page', 1))
-    per_page = 9
-    search = request.GET.get('search', '').strip()
-
+    """API для каталога ЖК из MongoDB unified_houses с полной поддержкой фильтрации"""
     try:
+        # Получаем параметры фильтрации
+        page = int(request.GET.get('page', 1))
+        per_page = 9
+        
+        # Фильтры местоположения
+        city = request.GET.get('city', '').strip()
+        district = request.GET.get('district', '').strip()
+        street = request.GET.get('street', '').strip()
+        
+        # Фильтры недвижимости
+        rooms = request.GET.get('rooms', '').strip()
+        area_from = request.GET.get('area_from', '').strip()
+        area_to = request.GET.get('area_to', '').strip()
+        price_from = request.GET.get('price_from', '').strip()
+        price_to = request.GET.get('price_to', '').strip()
+        has_offers = request.GET.get('has_offers', '').strip()
+        
+        # Сортировка
+        sort = request.GET.get('sort', 'price_asc')
+        
+        # Поиск
+        search = request.GET.get('search', '').strip()
+
         db = get_mongo_connection()
         unified_col = db['unified_houses']
 
-        # Формируем фильтр (поддержка обеих структур)
+        # Формируем фильтр - ищем записи с любой структурой (старая или новая)
         filter_query = {}
+        
+        # Фильтр по местоположению
+        if city:
+            filter_query['city'] = city
+        if district:
+            filter_query['district'] = district
+        if street:
+            filter_query['street'] = street
+            
+        # Поиск по названию
         if search:
-            filter_query['$or'] = [
-                # Старая структура
-                {'domrf.name': {'$regex': search, '$options': 'i'}},
-                {'avito.development.name': {'$regex': search, '$options': 'i'}},
-                {'domclick.development.complex_name': {'$regex': search, '$options': 'i'}},
+            filter_query['development.name'] = {'$regex': search, '$options': 'i'}
+
+        # Получаем все записи для фильтрации на стороне приложения
+        # (так как MongoDB не может эффективно фильтровать по сложным полям)
+        all_records = list(unified_col.find(filter_query))
+        
+        # Фильтруем данные на стороне приложения
+        filtered_records = []
+        
+        for record in all_records:
+            # Проверяем фильтры, которые требуют парсинга данных
+            
+            # Фильтр по комнатам
+            if rooms:
+                apartment_types = {}
+                if 'development' in record and 'avito' not in record:
+                    # Новая структура
+                    apartment_types = record.get('apartment_types', {})
+                else:
+                    # Старая структура
+                    apartment_types = record.get('avito', {}).get('apartment_types', {})
+                
+                has_matching_rooms = False
+                for apt_type, apt_data in apartment_types.items():
+                    if apt_type == rooms:
+                        has_matching_rooms = True
+                        break
+                if not has_matching_rooms:
+                    continue
+            
+            # Фильтр по цене
+            price_range = ''
+            if 'development' in record and 'avito' not in record:
                 # Новая структура
-                {'development.name': {'$regex': search, '$options': 'i'}}
-            ]
-
-        # Получаем общее количество
-        total_count = unified_col.count_documents(filter_query)
-
+                price_range = record.get('development', {}).get('price_range', '')
+            else:
+                # Старая структура
+                price_range = record.get('avito', {}).get('development', {}).get('price_range', '')
+            
+            if price_range and (price_from or price_to):
+                # Парсим цену из строки типа "От 6,29 до 14,97 млн ₽"
+                import re
+                price_match = re.search(r'от\s+([\d,]+)\s+до\s+([\d,]+)\s+млн', price_range.lower())
+                if price_match:
+                    min_price = float(price_match.group(1).replace(',', '.'))  # млн руб
+                    max_price = float(price_match.group(2).replace(',', '.'))  # млн руб
+                    
+                    if price_from:
+                        try:
+                            price_from_val = float(price_from.replace(',', '.'))
+                            # Если минимальная цена ЖК меньше фильтра, пропускаем
+                            # (это означает, что в ЖК есть квартиры дешевле фильтра)
+                            if min_price < price_from_val:
+                                continue
+                        except ValueError:
+                            pass
+                    
+                    if price_to:
+                        try:
+                            price_to_val = float(price_to.replace(',', '.'))
+                            if min_price > price_to_val:
+                                continue
+                            # Также проверяем, что максимальная цена не превышает фильтр
+                            if max_price > price_to_val:
+                                continue
+                        except ValueError:
+                            pass
+                else:
+                    # Если не удалось распарсить цену, пропускаем фильтрацию по цене
+                    pass
+            
+            # Фильтр по площади (проверяем в apartment_types)
+            if area_from or area_to:
+                apartment_types = {}
+                if 'development' in record and 'avito' not in record:
+                    # Новая структура
+                    apartment_types = record.get('apartment_types', {})
+                else:
+                    # Старая структура
+                    apartment_types = record.get('avito', {}).get('apartment_types', {})
+                
+                has_matching_area = False
+                for apt_type, apt_data in apartment_types.items():
+                    apartments = apt_data.get('apartments', [])
+                    for apt in apartments:
+                        # Ищем площадь в разных полях
+                        area = apt.get('area') or apt.get('square') or apt.get('totalArea')
+                        
+                        # Если площадь не найдена в отдельных полях, пытаемся извлечь из title
+                        if not area:
+                            title = apt.get('title', '')
+                            import re
+                            # Ищем паттерн типа "58,9 м²" в title
+                            area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
+                            if area_match:
+                                area = area_match.group(1).replace(',', '.')
+                        
+                        if area:
+                            try:
+                                area_val = float(str(area))
+                                if area_from:
+                                    try:
+                                        area_from_val = float(area_from)
+                                        if area_val < area_from_val:
+                                            continue
+                                    except ValueError:
+                                        pass
+                                if area_to:
+                                    try:
+                                        area_to_val = float(area_to)
+                                        if area_val > area_to_val:
+                                            continue
+                                    except ValueError:
+                                        pass
+                                has_matching_area = True
+                                break
+                            except (ValueError, TypeError):
+                                pass
+                    if has_matching_area:
+                        break
+                if not has_matching_area and (area_from or area_to):
+                    continue
+            
+            filtered_records.append(record)
+        
+        # Сортировка
+        if sort == 'price_asc':
+            # Сортировка по возрастанию цены
+            def get_min_price(record):
+                price_range = ''
+                if 'development' in record and 'avito' not in record:
+                    price_range = record.get('development', {}).get('price_range', '')
+                else:
+                    price_range = record.get('avito', {}).get('development', {}).get('price_range', '')
+                
+                import re
+                price_match = re.search(r'от\s+([\d,]+)\s+млн', price_range.lower())
+                if price_match:
+                    return float(price_match.group(1).replace(',', '.'))
+                return float('inf')
+            filtered_records.sort(key=get_min_price)
+        elif sort == 'price_desc':
+            # Сортировка по убыванию цены
+            def get_max_price(record):
+                price_range = ''
+                if 'development' in record and 'avito' not in record:
+                    price_range = record.get('development', {}).get('price_range', '')
+                else:
+                    price_range = record.get('avito', {}).get('development', {}).get('price_range', '')
+                
+                import re
+                price_match = re.search(r'до\s+([\d,]+)\s+млн', price_range.lower())
+                if price_match:
+                    return float(price_match.group(1).replace(',', '.'))
+                return 0
+            filtered_records.sort(key=get_max_price, reverse=True)
+        elif sort == 'area_desc':
+            # Сортировка по убыванию площади
+            def get_max_area(record):
+                max_area = 0
+                apartment_types = {}
+                if 'development' in record and 'avito' not in record:
+                    apartment_types = record.get('apartment_types', {})
+                else:
+                    apartment_types = record.get('avito', {}).get('apartment_types', {})
+                
+                for apt_type, apt_data in apartment_types.items():
+                    apartments = apt_data.get('apartments', [])
+                    for apt in apartments:
+                        area = apt.get('area') or apt.get('square') or apt.get('totalArea')
+                        
+                        # Если площадь не найдена в отдельных полях, пытаемся извлечь из title
+                        if not area:
+                            title = apt.get('title', '')
+                            import re
+                            # Ищем паттерн типа "58,9 м²" в title
+                            area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
+                            if area_match:
+                                area = area_match.group(1).replace(',', '.')
+                        
+                        if area:
+                            try:
+                                area_val = float(str(area))
+                                max_area = max(max_area, area_val)
+                            except (ValueError, TypeError):
+                                pass
+                return max_area
+            filtered_records.sort(key=get_max_area, reverse=True)
+        elif sort == 'area_asc':
+            # Сортировка по возрастанию площади
+            def get_min_area(record):
+                min_area = float('inf')
+                apartment_types = {}
+                if 'development' in record and 'avito' not in record:
+                    apartment_types = record.get('apartment_types', {})
+                else:
+                    apartment_types = record.get('avito', {}).get('apartment_types', {})
+                
+                for apt_type, apt_data in apartment_types.items():
+                    apartments = apt_data.get('apartments', [])
+                    for apt in apartments:
+                        area = apt.get('area') or apt.get('square') or apt.get('totalArea')
+                        
+                        # Если площадь не найдена в отдельных полях, пытаемся извлечь из title
+                        if not area:
+                            title = apt.get('title', '')
+                            import re
+                            # Ищем паттерн типа "58,9 м²" в title
+                            area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
+                            if area_match:
+                                area = area_match.group(1).replace(',', '.')
+                        
+                        if area:
+                            try:
+                                area_val = float(str(area))
+                                min_area = min(min_area, area_val)
+                            except (ValueError, TypeError):
+                                pass
+                return min_area if min_area != float('inf') else 0
+            filtered_records.sort(key=get_min_area)
+        
         # Пагинация
-        skip = (page - 1) * per_page
-        records = list(unified_col.find(filter_query).skip(skip).limit(per_page))
+        total_count = len(filtered_records)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_records = filtered_records[start_idx:end_idx]
 
         # Форматируем данные для каталога
         complexes_data = []
-        from .s3_service import PLACEHOLDER_IMAGE_URL
-
-        for record in records:
+        
+        for record in paginated_records:
             # Определяем структуру записи
             is_new_structure = 'development' in record and 'avito' not in record
-
+            
             if is_new_structure:
                 # === НОВАЯ УПРОЩЕННАЯ СТРУКТУРА ===
                 development = record.get('development', {})
-
+                apartment_types = record.get('apartment_types', {})
+                
                 name = development.get('name', 'Без названия')
-                address_full = development.get('address', '')
-                address = address_full.split('/')[0].strip() if address_full else ''
+                address = development.get('address', '')
                 price_range = development.get('price_range', 'Цена не указана')
                 photos = development.get('photos', [])
                 latitude = record.get('latitude')
                 longitude = record.get('longitude')
                 parameters = development.get('parameters', {})
-
             else:
                 # === СТАРАЯ СТРУКТУРА ===
                 avito_dev = record.get('avito', {}).get('development', {}) if record.get('avito') else {}
                 domclick_dev = record.get('domclick', {}).get('development', {}) if record.get('domclick') else {}
                 domrf_data = record.get('domrf', {})
-
+                
                 # Название (приоритет: avito -> domclick -> domrf)
-                name = avito_dev.get('name') or domclick_dev.get('complex_name') or domrf_data.get('name',
-                                                                                                   'Без названия')
-
+                name = avito_dev.get('name') or domclick_dev.get('complex_name') or domrf_data.get('name', 'Без названия')
+                
                 # Адрес из avito - обрезаем до первого слеша
                 address_full = avito_dev.get('address', '')
                 address = address_full.split('/')[0].strip() if address_full else ''
-
+                
                 # Цена из avito
                 price_range = avito_dev.get('price_range', 'Цена не указана')
-
+                
                 # Фото из domclick - берем ВСЕ фото
                 photos = domclick_dev.get('photos', [])
-
+                
                 # Координаты из domrf
                 latitude = domrf_data.get('latitude')
                 longitude = domrf_data.get('longitude')
-
+                
                 # Параметры из avito
                 parameters = avito_dev.get('parameters', {})
+                
+                # Типы квартир из avito
+                apartment_types = record.get('avito', {}).get('apartment_types', {})
+            
+            # Подсчитываем общее количество квартир
+            total_apartments = 0
+            for apt_type, apt_data in apartment_types.items():
+                apartments = apt_data.get('apartments', [])
+                total_apartments += len(apartments)
 
             complexes_data.append({
                 'id': str(record['_id']),
@@ -315,11 +561,11 @@ def catalog_api(request):
                 'completion_date': parameters.get('Срок сдачи', ''),
                 'housing_class': parameters.get('Класс жилья', ''),
                 'housing_type': parameters.get('Тип жилья', ''),
-                'avito_url': record.get('avito', {}).get('url', '') if record.get('avito') else '',
-                'domclick_url': record.get('domclick', {}).get('url', '') if record.get('domclick') else '',
-                'total_apartments': record.get('avito', {}).get('total_apartments', 0) if record.get('avito') else 0,
+                'total_apartments': total_apartments,
                 'location': address,
-                'city': 'Уфа',
+                'city': record.get('city', 'Уфа'),
+                'district': record.get('district', ''),
+                'street': record.get('street', ''),
             })
 
         total_pages = (total_count + per_page - 1) // per_page

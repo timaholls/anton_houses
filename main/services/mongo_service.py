@@ -22,6 +22,125 @@ def get_mongo_user(email: str):
         return None
 
 
+def get_unified_houses_from_mongo(filters=None, sort_by=None, limit=None, random=False):
+    """Получить ЖК из unified_houses коллекции MongoDB"""
+    try:
+        db = get_mongo_connection()
+        collection = db['unified_houses']
+        
+        # Базовый фильтр - только записи с данными development
+        mongo_filter = {'development': {'$exists': True, '$ne': None}}
+        
+        # Применяем дополнительные фильтры
+        if filters:
+            if filters.get('status'):
+                mongo_filter['status'] = filters['status']
+            if filters.get('house_class'):
+                mongo_filter['development.parameters.Класс жилья'] = filters['house_class']
+            if filters.get('city'):
+                mongo_filter['city'] = filters['city']
+            if filters.get('district'):
+                mongo_filter['district'] = filters['district']
+            if filters.get('street'):
+                mongo_filter['street'] = filters['street']
+            if filters.get('finishing'):
+                mongo_filter['development.parameters.Отделка'] = filters['finishing']
+            if filters.get('is_featured') is not None:
+                mongo_filter['is_featured'] = filters['is_featured']
+        
+        # Выполняем запрос
+        if random:
+            # Для случайной выборки используем $sample
+            cursor = collection.aggregate([
+                {'$match': mongo_filter},
+                {'$sample': {'size': limit or 10}}
+            ])
+        else:
+            # Обычный запрос с сортировкой
+            sort_options = {}
+            if sort_by == 'price_asc':
+                sort_options['development.price_range'] = 1
+            elif sort_by == 'price_desc':
+                sort_options['development.price_range'] = -1
+            elif sort_by == 'name_asc':
+                sort_options['development.name'] = 1
+            elif sort_by == 'name_desc':
+                sort_options['development.name'] = -1
+            else:
+                sort_options['_id'] = -1  # По умолчанию - новые первыми
+            
+            cursor = collection.find(mongo_filter).sort(list(sort_options.items()))
+            
+            if limit:
+                cursor = cursor.limit(limit)
+        
+        # Преобразуем результаты в адаптеры для совместимости с шаблонами
+        complexes = []
+        for doc in cursor:
+            class UnifiedComplexAdapter:
+                def __init__(self, data):
+                    self._data = data
+                    self.id = str(data.get('_id'))
+                    
+                    # Основные данные
+                    development = data.get('development', {})
+                    self.name = development.get('name', 'Без названия')
+                    self.address = development.get('address', '')
+                    
+                    # Новые поля адреса
+                    self.city = data.get('city', 'Уфа')
+                    self.district = data.get('district', '')
+                    self.street = data.get('street', '')
+                    
+                    # Ценовая информация
+                    price_range = development.get('price_range', '')
+                    self.price_range = price_range
+                    self.price = {'min': 0, 'max': 0}  # Для совместимости
+                    
+                    # Фото
+                    self.photos = development.get('photos', [])
+                    
+                    # Параметры
+                    self.parameters = development.get('parameters', {})
+                    
+                    # Типы квартир
+                    self.apartment_types = data.get('apartment_types', {})
+                    
+                    # Координаты
+                    self.latitude = data.get('latitude')
+                    self.longitude = data.get('longitude')
+                    
+                    # Дополнительные поля
+                    self.is_featured = data.get('is_featured', False)
+                    self.total_apartments = len(self.apartment_types)
+                    
+                def get_main_image(self):
+                    if self.photos:
+                        class ImageAdapter:
+                            def __init__(self, photo_path):
+                                self.image = type('obj', (object,), {'url': photo_path})()
+                        return ImageAdapter(self.photos[0])
+                    return None
+                
+                def get_catalog_images(self):
+                    if not self.photos:
+                        return []
+                    
+                    class CatalogImageAdapter:
+                        def __init__(self, photo_path):
+                            self.image = type('obj', (object,), {'url': photo_path})()
+                    
+                    return [CatalogImageAdapter(photo) for photo in self.photos[:3]]  # Первые 3 фото
+            
+            complexes.append(UnifiedComplexAdapter(doc))
+        
+        return complexes
+        
+    except Exception as e:
+        print(f"Ошибка получения данных из unified_houses: {e}")
+        return []
+
+
 def get_residential_complexes_from_mongo(filters=None, sort_by=None, limit=None, random=False):
     """Получить ЖК из MongoDB"""
     try:
