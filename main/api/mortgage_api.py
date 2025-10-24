@@ -62,9 +62,13 @@ def mortgage_programs_create(request):
 def mortgage_programs_update(request, program_id):
     """API: обновить ипотечную программу."""
     try:
+        print(f"🔄 Обновление программы: {program_id}")
+        print(f"📝 POST данные: {dict(request.POST)}")
+        
         db = get_mongo_connection()
         col = db['mortgage_programs']
         update = {}
+        
         if 'name' in request.POST:
             update['name'] = request.POST.get('name', '').strip()
         if 'rate' in request.POST:
@@ -74,11 +78,38 @@ def mortgage_programs_update(request, program_id):
                 pass
         if 'is_active' in request.POST:
             update['is_active'] = request.POST.get('is_active', 'true') in ['true', 'on', '1']
+        if 'is_individual' in request.POST:
+            update['is_individual'] = request.POST.get('is_individual', 'false') in ['true', 'on', '1']
+        
+        # Обновление связанных ЖК
+        if 'complexes' in request.POST:
+            complexes = request.POST.getlist('complexes')
+            is_individual = update.get('is_individual', 
+                col.find_one({'_id': ObjectId(program_id)}).get('is_individual', False))
+            
+            complex_ids = []
+            if is_individual and complexes:
+                unified_col = db['unified_houses']
+                for complex_id in complexes:
+                    try:
+                        if unified_col.find_one({'_id': ObjectId(complex_id)}):
+                            complex_ids.append(ObjectId(complex_id))
+                    except Exception:
+                        continue
+            
+            update['complexes'] = complex_ids
+        
+        print(f"📋 Обновления: {update}")
+        
         if not update:
             return JsonResponse({'success': False, 'error': 'Нет данных для обновления'}, status=400)
-        col.update_one({'_id': ObjectId(program_id)}, {'$set': update})
+        
+        result = col.update_one({'_id': ObjectId(program_id)}, {'$set': update})
+        print(f"✅ Результат обновления: {result.modified_count} документов изменено")
+        
         return JsonResponse({'success': True})
     except Exception as e:
+        print(f"❌ Ошибка обновления: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 

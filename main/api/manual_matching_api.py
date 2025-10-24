@@ -1296,13 +1296,39 @@ def mortgage_programs_list(request):
     try:
         db = get_mongo_connection()
         col = db['mortgage_programs']
+        unified_col = db['unified_houses']
         items = []
         for doc in col.find({}).sort('rate', 1):
+            # Получаем информацию о связанных ЖК
+            complexes = []
+            if doc.get('complexes'):
+                for complex_id in doc.get('complexes', []):
+                    try:
+                        complex_doc = unified_col.find_one({'_id': ObjectId(complex_id)})
+                        if complex_doc:
+                            # Получаем название ЖК из новой или старой структуры
+                            complex_name = None
+                            if 'development' in complex_doc and 'avito' not in complex_doc:
+                                complex_name = complex_doc.get('development', {}).get('name', '')
+                            else:
+                                complex_name = (complex_doc.get('avito', {}) or {}).get('development', {}).get('name') or \
+                                             (complex_doc.get('domclick', {}) or {}).get('development', {}).get('complex_name', '')
+                            
+                            if complex_name:
+                                complexes.append({
+                                    '_id': str(complex_id),
+                                    'name': complex_name
+                                })
+                    except Exception:
+                        continue
+            
             items.append({
                 '_id': str(doc.get('_id')),
                 'name': doc.get('name', ''),
                 'rate': float(doc.get('rate', 0)),
                 'is_active': bool(doc.get('is_active', True)),
+                'is_individual': bool(doc.get('is_individual', False)),
+                'complexes': complexes
             })
         return JsonResponse({'success': True, 'items': items})
     except Exception as e:
@@ -1318,16 +1344,33 @@ def mortgage_programs_create(request):
         col = db['mortgage_programs']
         name = request.POST.get('name', '').strip()
         rate_raw = request.POST.get('rate', '').strip()
+        is_individual = request.POST.get('is_individual', 'false') in ['true', 'on', '1']
+        complexes = request.POST.getlist('complexes')  # Список ID ЖК
+        
         if not name or not rate_raw:
             return JsonResponse({'success': False, 'error': 'Название и ставка обязательны'}, status=400)
         try:
             rate = float(rate_raw.replace(',', '.'))
         except ValueError:
             return JsonResponse({'success': False, 'error': 'Неверный формат ставки'}, status=400)
+        
+        # Валидация ЖК для индивидуальных программ
+        complex_ids = []
+        if is_individual and complexes:
+            unified_col = db['unified_houses']
+            for complex_id in complexes:
+                try:
+                    if unified_col.find_one({'_id': ObjectId(complex_id)}):
+                        complex_ids.append(ObjectId(complex_id))
+                except Exception:
+                    continue
+        
         doc = {
             'name': name,
             'rate': rate,
             'is_active': request.POST.get('is_active', 'true') in ['true', 'on', '1'],
+            'is_individual': is_individual,
+            'complexes': complex_ids,
             'created_at': datetime.utcnow(),
         }
         res = col.insert_one(doc)
@@ -1336,40 +1379,84 @@ def mortgage_programs_create(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def mortgage_programs_update(request, program_id):
-    """API: обновить ипотечную программу."""
+
+
+@require_http_methods(["GET"])
+def get_complexes_for_mortgage(request):
+    """API: получить список ЖК для выбора в ипотечных программах."""
     try:
         db = get_mongo_connection()
-        col = db['mortgage_programs']
-        update = {}
-        if 'name' in request.POST:
-            update['name'] = request.POST.get('name', '').strip()
-        if 'rate' in request.POST:
-            try:
-                update['rate'] = float(request.POST.get('rate', '').strip().replace(',', '.'))
-            except ValueError:
-                pass
-        if 'is_active' in request.POST:
-            update['is_active'] = request.POST.get('is_active', 'true') in ['true', 'on', '1']
-        if not update:
-            return JsonResponse({'success': False, 'error': 'Нет данных для обновления'}, status=400)
-        col.update_one({'_id': ObjectId(program_id)}, {'$set': update})
-        return JsonResponse({'success': True})
+        unified_col = db['unified_houses']
+        
+        # Получаем все ЖК
+        complexes = []
+        for doc in unified_col.find({}).sort('_id', -1):
+            # Получаем название ЖК из новой или старой структуры
+            complex_name = None
+            if 'development' in doc and 'avito' not in doc:
+                complex_name = doc.get('development', {}).get('name', '')
+            else:
+                complex_name = (doc.get('avito', {}) or {}).get('development', {}).get('name') or \
+                             (doc.get('domclick', {}) or {}).get('development', {}).get('complex_name', '')
+            
+            if complex_name:
+                complexes.append({
+                    '_id': str(doc.get('_id')),
+                    'name': complex_name
+                })
+        
+        return JsonResponse({'success': True, 'complexes': complexes})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["DELETE"])
-def mortgage_programs_delete(request, program_id):
-    """API: удалить ипотечную программу."""
+@require_http_methods(["GET"])
+def get_mortgage_program(request, program_id):
+    """API: получить данные ипотечной программы для редактирования."""
     try:
         db = get_mongo_connection()
         col = db['mortgage_programs']
-        col.delete_one({'_id': ObjectId(program_id)})
-        return JsonResponse({'success': True})
+        
+        # Получаем программу
+        program = col.find_one({'_id': ObjectId(program_id)})
+        if not program:
+            return JsonResponse({'success': False, 'error': 'Программа не найдена'}, status=404)
+        
+        # Получаем информацию о связанных ЖК
+        complexes = []
+        if program.get('complexes'):
+            unified_col = db['unified_houses']
+            for complex_id in program.get('complexes', []):
+                try:
+                    complex_doc = unified_col.find_one({'_id': ObjectId(complex_id)})
+                    if complex_doc:
+                        # Получаем название ЖК из новой или старой структуры
+                        complex_name = None
+                        if 'development' in complex_doc and 'avito' not in complex_doc:
+                            complex_name = complex_doc.get('development', {}).get('name', '')
+                        else:
+                            complex_name = (complex_doc.get('avito', {}) or {}).get('development', {}).get('name') or \
+                                         (complex_doc.get('domclick', {}) or {}).get('development', {}).get('complex_name', '')
+                        
+                        if complex_name:
+                            complexes.append({
+                                '_id': str(complex_id),
+                                'name': complex_name
+                            })
+                except Exception:
+                    continue
+        
+        return JsonResponse({
+            'success': True,
+            'program': {
+                '_id': str(program.get('_id')),
+                'name': program.get('name', ''),
+                'rate': float(program.get('rate', 0)),
+                'is_active': bool(program.get('is_active', True)),
+                'is_individual': bool(program.get('is_individual', False)),
+                'complexes': complexes
+            }
+        })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

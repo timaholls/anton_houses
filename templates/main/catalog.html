@@ -293,6 +293,19 @@
                         <input type="hidden" name="has_offers" id="has_offers-hidden" value="{{ filters.has_offers|default:'' }}">
                     </div>
                     {% endif %}
+                    
+                    <!-- Фильтр по ипотечным программам -->
+                    <div class="filter-group">
+                        <label for="mortgage_program">Ипотечная программа</label>
+                        <select name="mortgage_program" id="mortgage_program" class="filter-select">
+                            <option value="">Любая</option>
+                            {% for program in mortgage_programs %}
+                                <option value="{{ program.id }}" {% if filters.mortgage_program == program.id %}selected{% endif %}>
+                                    {{ program.name }}{% if program.is_individual %} (индивидуальная){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
                 <div class="filters-actions">

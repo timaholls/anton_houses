@@ -28,7 +28,7 @@
                     <div class="select-box" style="position:relative;">
                         <select id="mp-program" class="mortgage-select" style="height:44px; padding-right:36px;">
                             {% for p in mortgage_programs %}
-                            <option value="{{ p.rate }}">{{ p.name }}</option>
+                            <option value="{{ p.rate }}" data-individual="{{ p.is_individual }}" data-complexes="{{ p.complexes|join:',' }}">{{ p.name }}{% if p.is_individual %} (индивидуальная){% endif %}</option>
                             {% endfor %}
                         </select>
                         <i class="fas fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#b8af95;"></i>
@@ -76,6 +76,10 @@
                 <div style="color:#888; font-size:12px; margin-top:8px;">* Расчёт примерный. Уточняйте актуальную информацию у нашего специалиста, оставив заявку</div>
             </div>
         </div>
+        
+        <!-- Контейнер для отображения ЖК при выборе индивидуальной программы -->
+        <div id="complexes-container" style="display:none; margin-top:20px;"></div>
+        
         <style>
         .mortgage-section{margin:32px 0;font-weight:500; background:#fff;border:1px solid #eee;border-radius:16px;padding:0;box-shadow:0 6px 20px rgba(0,0,0,.06)}
         .mortgage-grid{display:grid;gap:0}
@@ -599,6 +603,90 @@
     if (priceInput){ priceInput.value = fmt(Number(price.value)); }
     if (downAmtInput){ const p0 = Number(price.value); downAmtInput.value = fmt(p0 * (Number(down.value)/100)); downAmtInput.max = String(p0); }
     calc();
+    
+    // Обработка выбора индивидуальной программы
+    const programSelect = document.getElementById('mp-program');
+    const complexesContainer = document.getElementById('complexes-container');
+    
+    if (programSelect && complexesContainer) {
+        programSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const isIndividual = selectedOption.dataset.individual === 'True';
+            const complexes = selectedOption.dataset.complexes;
+            
+            if (isIndividual && complexes) {
+                // Показываем ЖК для индивидуальной программы
+                showComplexesForProgram(complexes);
+            } else {
+                // Скрываем контейнер с ЖК
+                complexesContainer.style.display = 'none';
+            }
+        });
+    }
+    
+    function showComplexesForProgram(complexesString) {
+        if (!complexesString) return;
+        
+        const complexIds = complexesString.split(',').filter(id => id.trim());
+        if (complexIds.length === 0) return;
+        
+        // Загружаем данные ЖК через AJAX
+        fetch('/api/mortgage-programs/complexes/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const selectedComplexes = data.complexes.filter(complex => 
+                        complexIds.includes(complex._id)
+                    );
+                    
+                    if (selectedComplexes.length > 0) {
+                        let html = '<div class="complexes-section" style="margin-top:30px;">';
+                        html += '<h3 style="margin-bottom:20px; color:#333; font-size:24px; font-weight:500;">Доступно в ЖК:</h3>';
+                        html += '<div class="catalog-grid" style="margin-top:20px;">';
+                        
+                        selectedComplexes.forEach(complex => {
+                            html += `
+                                <div class="property-card-compact" onclick="window.location.href='/complex/${complex._id}/'" style="cursor: pointer;">
+                                    <div class="compact-card-image">
+                                        <img src="/media/uploads/back_home.jpg" alt="${complex.name}">
+                                    </div>
+                                    
+                                    <div class="compact-card-content">
+                                        <div class="compact-card-header">
+                                            <h3 class="compact-card-title">${complex.name}</h3>
+                                            <div class="compact-card-location">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                                <span>ул. Летчика Кобелева/Валерия Лесунова</span>
+                                            </div>
+                                            <div class="compact-card-details">
+                                                <div class="compact-detail-item">
+                                                    <i class="fas fa-calendar"></i>
+                                                    <span>4 кв. 2017 - 2 кв. 2027</span>
+                                                </div>
+                                                <div class="compact-detail-item">
+                                                    <i class="fas fa-home"></i>
+                                                    <span>174 квартир</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="compact-card-price">
+                                            <div class="compact-price-text">От 2,8 до 12,68 млн ₽</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div></div>';
+                        complexesContainer.innerHTML = html;
+                        complexesContainer.style.display = 'block';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки ЖК:', error);
+            });
+    }
 })();
 
 

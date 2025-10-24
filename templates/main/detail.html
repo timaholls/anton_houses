@@ -999,7 +999,7 @@
 						<div class="select-wrapper">
 							<select id="mp-program" class="form-select">
 								{% for p in mortgage_programs %}
-								<option value="{{ p.rate }}">{{ p.name }}</option>
+								<option value="{{ p.rate }}">{{ p.name }}{% if p.is_individual %} (индивидуальная){% endif %}</option>
 								{% endfor %}
 							</select>
 							<i class="fas fa-chevron-down select-icon"></i>

@@ -102,6 +102,17 @@ def catalog(request):
         districts = []
         streets = []
 
+    # Получаем ипотечные программы для фильтра
+    try:
+        db = get_mongo_connection()
+        mortgage_docs = list(db['mortgage_programs'].find({'is_active': True}).sort('rate', 1))
+        class MortgageProgram:
+            def __init__(self, id, name, is_individual=False):
+                self.id, self.name, self.is_individual = id, name, is_individual
+        mortgage_programs = [MortgageProgram(str(d.get('_id')), d.get('name',''), d.get('is_individual', False)) for d in mortgage_docs]
+    except Exception:
+        mortgage_programs = []
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -110,6 +121,7 @@ def catalog(request):
         'districts': districts,
         'streets': streets,
         'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
+        'mortgage_programs': mortgage_programs,
         'filters': {
             'rooms': rooms,
             'city': city,
@@ -133,17 +145,32 @@ def detail(request, complex_id):
     """Детальная страница ЖК (MongoDB или SQL)"""
     
     # Получаем ипотечные программы из MongoDB (унифицировано)
-    def get_mortgage_programs_from_mongo():
+    def get_mortgage_programs_from_mongo(complex_id=None):
         try:
             db = get_mongo_connection()
-            docs = list(db['mortgage_programs'].find({'is_active': True}).sort('rate', 1))
+            # Получаем ВСЕ активные программы (и основные, и индивидуальные)
+            all_docs = list(db['mortgage_programs'].find({'is_active': True}).sort('rate', 1))
+            
+            # Фильтруем программы для данного ЖК
+            filtered_docs = []
+            for doc in all_docs:
+                is_individual = doc.get('is_individual', False)
+                complexes = doc.get('complexes', [])
+                
+                # Если программа основная (не индивидуальная) - показываем всегда
+                if not is_individual:
+                    filtered_docs.append(doc)
+                # Если программа индивидуальная - показываем только если она привязана к данному ЖК
+                elif complex_id and ObjectId(complex_id) in complexes:
+                    filtered_docs.append(doc)
+            
             class P:
-                def __init__(self, name, rate):
-                    self.name, self.rate = name, rate
-            return [P(d.get('name',''), float(d.get('rate', 0))) for d in docs]
+                def __init__(self, name, rate, is_individual=False):
+                    self.name, self.rate, self.is_individual = name, rate, is_individual
+            return [P(d.get('name',''), float(d.get('rate', 0)), d.get('is_individual', False)) for d in filtered_docs]
         except Exception:
             return []
-    mortgage_programs = get_mortgage_programs_from_mongo()
+    mortgage_programs = get_mortgage_programs_from_mongo(complex_id)
     
     # Проверяем, является ли ID MongoDB ObjectId (24 hex символа)
     is_mongodb_id = len(str(complex_id)) == 24 and all(c in '0123456789abcdef' for c in str(complex_id).lower())

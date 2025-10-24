@@ -37,7 +37,6 @@ from .views import (
     unified_delete, unified_get, unified_update, toggle_featured,
     domrf_create, delete_record, get_future_projects, create_future_project,
     get_domrf_data, delete_photo, get_apartment_stats,
-    delete_apartment_photo, delete_development_photo, delete_construction_photo,
     # Content Management API
     tags_api_list, tags_api_create, tags_api_get, tags_api_update, tags_api_toggle, tags_api_delete,
     categories_api_list, categories_api_create, categories_api_get, categories_api_update, categories_api_toggle, categories_api_delete,
@@ -66,8 +65,15 @@ from .views import (
     secondary_api_update, secondary_api_delete,
 )
 
-# Импортируем функцию из manual_matching_api
-from .api.manual_matching_api import get_location_options
+# Импортируем функции из manual_matching_api
+from .api.manual_matching_api import (
+    get_location_options,
+    delete_apartment_photo,
+    delete_development_photo,
+    delete_construction_photo,
+    get_complexes_for_mortgage,
+    get_mortgage_program
+)
 
 app_name = 'main'
 
@@ -276,6 +282,8 @@ urlpatterns = [
     # Mortgage Programs API
     path('api/mortgage-programs/', mortgage_programs_list, name='mortgage_programs_list'),
     path('api/mortgage-programs/create/', mortgage_programs_create, name='mortgage_programs_create'),
+    path('api/mortgage-programs/complexes/', get_complexes_for_mortgage, name='get_complexes_for_mortgage'),
+    path('api/mortgage-programs/<str:program_id>/get/', get_mortgage_program, name='get_mortgage_program'),
     path('api/mortgage-programs/<str:program_id>/update/', mortgage_programs_update, name='mortgage_programs_update'),
     path('api/mortgage-programs/<str:program_id>/', mortgage_programs_delete, name='mortgage_programs_delete'),
     
