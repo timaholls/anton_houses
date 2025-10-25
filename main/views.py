@@ -42,6 +42,7 @@ from .view_modules.mortgage_views import mortgage
 from .view_modules.offer_views import all_offers, offer_detail
 from .view_modules.future_complex_views import future_complexes, future_complex_detail
 from .view_modules.management_views import content_management, company_management, manual_matching
+from .view_modules.not_recommended_views import not_recommended, not_recommended_detail
 
 # API imports
 from .api.manual_matching_api import (
@@ -238,6 +239,7 @@ def catalog_api(request):
         price_from = request.GET.get('price_from', '').strip()
         price_to = request.GET.get('price_to', '').strip()
         has_offers = request.GET.get('has_offers', '').strip()
+        mortgage_program_id = request.GET.get('mortgage_program', '').strip()
         
         # Сортировка
         sort = request.GET.get('sort', 'price_asc')
@@ -247,6 +249,27 @@ def catalog_api(request):
 
         db = get_mongo_connection()
         unified_col = db['unified_houses']
+        
+        # Получаем информацию об ипотечной программе, если выбрана
+        mortgage_program_complexes = []
+        if mortgage_program_id:
+            try:
+                mortgage_program = db['mortgage_programs'].find_one({'_id': ObjectId(mortgage_program_id)})
+                if mortgage_program and mortgage_program.get('is_individual'):
+                    # Если программа индивидуальная, получаем список привязанных ЖК
+                    mortgage_program_complexes = mortgage_program.get('complexes', [])
+            except:
+                pass
+        
+        # Получаем список ЖК с акциями, если выбрана фильтрация по акциям
+        complexes_with_offers = []
+        if has_offers == 'true':
+            try:
+                promotions_col = db['promotions']
+                promotions_data = list(promotions_col.find({'is_active': True}))
+                complexes_with_offers = [promo.get('complex_id') for promo in promotions_data if promo.get('complex_id')]
+            except:
+                pass
 
         # Формируем фильтр - ищем записи с любой структурой (старая или новая)
         filter_query = {}
@@ -272,6 +295,18 @@ def catalog_api(request):
         
         for record in all_records:
             # Проверяем фильтры, которые требуют парсинга данных
+            
+            # Фильтр по ипотечной программе
+            if mortgage_program_complexes:
+                # Если выбрана индивидуальная программа, показываем только привязанные ЖК
+                if record['_id'] not in mortgage_program_complexes:
+                    continue
+            
+            # Фильтр по наличию акций
+            if has_offers == 'true' and complexes_with_offers:
+                # Если выбрана фильтрация по акциям, показываем только ЖК с активными акциями
+                if record['_id'] not in complexes_with_offers:
+                    continue
             
             # Фильтр по комнатам
             if rooms:
@@ -566,6 +601,7 @@ def catalog_api(request):
                 'city': record.get('city', 'Уфа'),
                 'district': record.get('district', ''),
                 'street': record.get('street', ''),
+                'rating': record.get('rating'),
             })
 
         total_pages = (total_count + per_page - 1) // per_page

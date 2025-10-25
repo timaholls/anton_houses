@@ -2655,6 +2655,9 @@
                             <button class="edit-tab" data-tab="construction" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
                                 🏗️ Ход строительства
                             </button>
+                            <button class="edit-tab" data-tab="rating" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
+                                ⭐ Рейтинг
+                            </button>
                         </div>
                         
                         <div style="overflow-y:auto; flex:1; padding:20px 24px;">
@@ -2676,6 +2679,60 @@
                             <!-- Вкладка: Ход строительства -->
                             <div class="edit-tab-content" data-tab-content="construction" style="display:none;">
                                 ${constructionProgressHtml || '<div style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет данных о ходе строительства</div>'}
+                            </div>
+                            
+                            <!-- Вкладка: Рейтинг -->
+                            <div class="edit-tab-content" data-tab-content="rating" style="display:none;">
+                                <div style="max-width:600px; margin:0 auto;">
+                                    <div style="background:#1e293b; border:1px solid #475569; border-radius:8px; padding:24px; margin-bottom:20px;">
+                                        <h3 style="color:#f1f5f9; margin:0 0 16px 0; font-size:18px; font-weight:600;">Оценка объекта</h3>
+                                        <p style="color:#94a3b8; margin:0 0 20px 0; font-size:14px; line-height:1.5;">
+                                            Оцените качество данного объекта по шкале от 1 до 5. При низкой оценке рекомендуется указать причины.
+                                        </p>
+                                        
+                                        <!-- Рейтинг -->
+                                        <div style="margin-bottom:20px;">
+                                            <label style="display:block; color:#f1f5f9; margin-bottom:8px; font-weight:500;">Рейтинг</label>
+                                            <div style="display:flex; gap:8px; align-items:center;">
+                                                <input type="radio" id="rating5" name="rating" value="5" style="display:none;">
+                                                <label for="rating5" style="font-size:24px; color:#64748b; cursor:pointer; transition:color 0.2s;">★</label>
+                                                
+                                                <input type="radio" id="rating4" name="rating" value="4" style="display:none;">
+                                                <label for="rating4" style="font-size:24px; color:#64748b; cursor:pointer; transition:color 0.2s;">★</label>
+                                                
+                                                <input type="radio" id="rating3" name="rating" value="3" style="display:none;">
+                                                <label for="rating3" style="font-size:24px; color:#64748b; cursor:pointer; transition:color 0.2s;">★</label>
+                                                
+                                                <input type="radio" id="rating2" name="rating" value="2" style="display:none;">
+                                                <label for="rating2" style="font-size:24px; color:#64748b; cursor:pointer; transition:color 0.2s;">★</label>
+                                                
+                                                <input type="radio" id="rating1" name="rating" value="1" style="display:none;">
+                                                <label for="rating1" style="font-size:24px; color:#64748b; cursor:pointer; transition:color 0.2s;">★</label>
+                                                
+                                                <span id="rating-text" style="margin-left:12px; color:#94a3b8; font-size:14px;">Не выбрано</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Описание рейтинга -->
+                                        <div id="rating-description-section" style="display:none;">
+                                            <label style="display:block; color:#f1f5f9; margin-bottom:8px; font-weight:500;">Описание причины оценки</label>
+                                            <textarea name="rating_description" placeholder="Опишите причины вашей оценки (необязательно для высоких оценок)..." 
+                                                style="width:100%; min-height:80px; padding:12px; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#f1f5f9; font-size:14px; resize:vertical; font-family:inherit;"></textarea>
+                                        </div>
+                                        
+                                        <!-- Информация о рейтинге -->
+                                        <div id="rating-info" style="margin-top:16px; padding:12px; background:#0f172a; border-radius:6px; border:1px solid #475569; display:none;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                                <span style="color:#94a3b8; font-size:14px;">Текущий рейтинг:</span>
+                                                <span id="current-rating-display" style="color:#f1f5f9; font-weight:600;"></span>
+                                            </div>
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <span style="color:#94a3b8; font-size:14px;">Дата оценки:</span>
+                                                <span id="rating-date-display" style="color:#f1f5f9; font-size:14px;"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -2724,6 +2781,75 @@
                     const sel = modal.querySelector('#ue-agent');
                     sel.innerHTML = `<option value="">— Без агента —</option>` + (e.items||[]).map(p=>`<option value="${p._id}" ${item.agent_id && (p._id===item.agent_id || p._id===String(item.agent_id))? 'selected':''}>${escapeHtml(p.full_name)} — ${escapeHtml(p.position||'')}</option>`).join('');
                 });
+                
+                // Загружаем данные рейтинга
+                if (item.rating) {
+                    const ratingInput = modal.querySelector(`input[name="rating"][value="${item.rating}"]`);
+                    if (ratingInput) {
+                        ratingInput.checked = true;
+                        updateRatingDisplay(item.rating);
+                    }
+                    
+                    if (item.rating_description) {
+                        const descriptionTextarea = modal.querySelector('textarea[name="rating_description"]');
+                        if (descriptionTextarea) {
+                            descriptionTextarea.value = item.rating_description;
+                        }
+                    }
+                    
+                    // Показываем информацию о рейтинге
+                    const ratingInfo = modal.querySelector('#rating-info');
+                    if (ratingInfo) {
+                        ratingInfo.style.display = 'block';
+                        modal.querySelector('#current-rating-display').textContent = `${item.rating}/5`;
+                        if (item.rating_created_at) {
+                            const date = new Date(item.rating_created_at);
+                            modal.querySelector('#rating-date-display').textContent = date.toLocaleDateString('ru-RU');
+                        }
+                    }
+                }
+                
+                // Обработка звездочек рейтинга
+                const ratingInputs = modal.querySelectorAll('input[name="rating"]');
+                const ratingText = modal.querySelector('#rating-text');
+                const descriptionSection = modal.querySelector('#rating-description-section');
+                
+                ratingInputs.forEach(input => {
+                    input.addEventListener('change', function() {
+                        const rating = parseInt(this.value);
+                        updateRatingDisplay(rating);
+                        
+                        // Показываем поле описания для низких оценок
+                        if (rating <= 3) {
+                            descriptionSection.style.display = 'block';
+                        } else {
+                            descriptionSection.style.display = 'none';
+                        }
+                    });
+                });
+                
+                function updateRatingDisplay(rating) {
+                    // Обновляем текст
+                    const ratingTexts = {
+                        1: 'Очень плохо',
+                        2: 'Плохо', 
+                        3: 'Удовлетворительно',
+                        4: 'Хорошо',
+                        5: 'Отлично'
+                    };
+                    ratingText.textContent = ratingTexts[rating] || 'Не выбрано';
+                    
+                    // Обновляем цвет звездочек
+                    ratingInputs.forEach((input, index) => {
+                        const label = input.nextElementSibling;
+                        const value = parseInt(input.value);
+                        if (value <= rating) {
+                            label.style.color = '#fbbf24'; // Золотой цвет для выбранных звезд
+                        } else {
+                            label.style.color = '#64748b'; // Серый цвет для невыбранных
+                        }
+                    });
+                }
                 
                 modal.querySelector('#ue-cancel').onclick = ()=> modal.remove();
                 modal.querySelector('#ue-save').onclick = ()=>{
@@ -2776,6 +2902,17 @@
                                 }
                             }
                         });
+                    }
+                    
+                    // Добавляем данные рейтинга
+                    const ratingInput = modal.querySelector('input[name="rating"]:checked');
+                    const ratingDescription = modal.querySelector('textarea[name="rating_description"]');
+                    
+                    if (ratingInput) {
+                        data.rating = parseInt(ratingInput.value);
+                        if (ratingDescription) {
+                            data.rating_description = ratingDescription.value.trim();
+                        }
                     }
                     
                     console.log('Saving data:', data);

@@ -193,6 +193,9 @@ async function saveMatch() {
             
             // Очищаем выбор
             clearSelection();
+            
+            // Показываем модальное окно для рейтинга
+            showRatingModal(result.unified_id);
         } else {
             showToast('Ошибка: ' + result.error, 'error');
         }
@@ -271,4 +274,251 @@ document.getElementById('searchInput')?.addEventListener('input', function() {
         loadData();
     }, 500);
 });
+
+// ========== МОДАЛЬНОЕ ОКНО РЕЙТИНГА ==========
+
+function showRatingModal(unifiedId) {
+    const modal = document.createElement('div');
+    modal.className = 'rating-modal';
+    modal.innerHTML = `
+        <div class="rating-modal-content">
+            <div class="rating-modal-header">
+                <h3>Оцените объект</h3>
+                <button class="rating-modal-close" onclick="closeRatingModal()">&times;</button>
+            </div>
+            <div class="rating-modal-body">
+                <p>Пожалуйста, оцените качество данного объекта по шкале от 1 до 5:</p>
+                
+                <div class="rating-stars">
+                    <input type="radio" id="star5" name="rating" value="5">
+                    <label for="star5" class="star">★</label>
+                    
+                    <input type="radio" id="star4" name="rating" value="4">
+                    <label for="star4" class="star">★</label>
+                    
+                    <input type="radio" id="star3" name="rating" value="3">
+                    <label for="star3" class="star">★</label>
+                    
+                    <input type="radio" id="star2" name="rating" value="2">
+                    <label for="star2" class="star">★</label>
+                    
+                    <input type="radio" id="star1" name="rating" value="1">
+                    <label for="star1" class="star">★</label>
+                </div>
+                
+                <div class="rating-description" id="ratingDescription" style="display: none;">
+                    <label for="description">Опишите причину низкой оценки (необязательно):</label>
+                    <textarea id="description" placeholder="Например: плохое качество строительства, проблемы с документами..."></textarea>
+                </div>
+            </div>
+            <div class="rating-modal-footer">
+                <button class="btn btn-secondary" onclick="closeRatingModal()">Пропустить</button>
+                <button class="btn btn-primary" onclick="saveRating('${unifiedId}')">Сохранить оценку</button>
+            </div>
+        </div>
+    `;
+    
+    // Добавляем стили для модального окна
+    const style = document.createElement('style');
+    style.textContent = `
+        .rating-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .rating-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .rating-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .rating-modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .rating-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .rating-stars {
+            display: flex;
+            gap: 8px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .rating-stars input[type="radio"] {
+            display: none;
+        }
+        
+        .rating-stars .star {
+            font-size: 32px;
+            color: #ddd;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .rating-stars input[type="radio"]:checked ~ .star,
+        .rating-stars .star:hover {
+            color: #ffd700;
+        }
+        
+        .rating-stars input[type="radio"]:checked ~ .star {
+            color: #ffd700;
+        }
+        
+        .rating-description {
+            margin-top: 20px;
+        }
+        
+        .rating-description label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .rating-description textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            resize: vertical;
+        }
+        
+        .rating-modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+    `;
+    
+    document.head.appendChild(style);
+    document.body.appendChild(modal);
+    
+    // Обработчик изменения рейтинга
+    const ratingInputs = modal.querySelectorAll('input[name="rating"]');
+    const descriptionDiv = modal.querySelector('#ratingDescription');
+    
+    ratingInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const rating = parseInt(this.value);
+            if (rating < 3) {
+                descriptionDiv.style.display = 'block';
+            } else {
+                descriptionDiv.style.display = 'none';
+            }
+        });
+    });
+}
+
+function closeRatingModal() {
+    const modal = document.querySelector('.rating-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function saveRating(unifiedId) {
+    const rating = document.querySelector('input[name="rating"]:checked');
+    const description = document.querySelector('#description');
+    
+    if (!rating) {
+        showToast('Пожалуйста, выберите оценку', 'error');
+        return;
+    }
+    
+    const ratingValue = parseInt(rating.value);
+    const descriptionValue = description ? description.value.trim() : '';
+    
+    // Если рейтинг меньше 3, но описание пустое - предупреждаем
+        if (ratingValue <= 3 && !descriptionValue) {
+            if (!confirm('Вы поставили низкую оценку. Рекомендуется указать причину. Продолжить без описания?')) {
+                return;
+            }
+        }
+    
+    try {
+        const response = await fetch(`/api/manual-matching/unified/${unifiedId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                rating: ratingValue,
+                rating_description: descriptionValue
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('✓ Оценка сохранена!', 'success');
+            closeRatingModal();
+        } else {
+            showToast('Ошибка сохранения оценки: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error saving rating:', error);
+        showToast('Ошибка сохранения оценки', 'error');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 

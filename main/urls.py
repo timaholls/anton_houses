@@ -29,6 +29,8 @@ from .views import (
     future_complexes, future_complex_detail,
     # Management
     content_management, company_management, manual_matching,
+    # Not recommended
+    not_recommended, not_recommended_detail,
     # API (реально существующие в views.py)
     catalog_api, secondary_api, secondary_api_list,
     districts_api, streets_api, article_view_api,
@@ -72,7 +74,8 @@ from .api.manual_matching_api import (
     delete_development_photo,
     delete_construction_photo,
     get_complexes_for_mortgage,
-    get_mortgage_program
+    get_mortgage_program,
+    get_not_recommended_objects
 )
 
 app_name = 'main'
@@ -146,6 +149,10 @@ urlpatterns = [
     path('future-complexes/', future_complexes, name='future_complexes'),
     path('future-complexes/<str:complex_id>/', future_complex_detail, name='future_complex_detail'),
     
+    # Не рекомендуем
+    path('not-recommended/', not_recommended, name='not_recommended'),
+    path('not-recommended/<str:object_id>/', not_recommended_detail, name='not_recommended_detail'),
+    
     # ========== УПРАВЛЕНИЕ ==========
     
     path('content-management/', content_management, name='content_management'),
@@ -173,6 +180,7 @@ urlpatterns = [
     path('api/manual-matching/apartment-stats/<str:domrf_id>/', get_apartment_stats, name='get_apartment_stats'),
     path('api/manual-matching/location-options/', get_location_options, name='get_location_options'),
     path('api/domrf/create/', domrf_create, name='domrf_create'),
+    path('api/not-recommended/', get_not_recommended_objects, name='get_not_recommended_objects'),
     
     # ========== API (РАБОЧИЕ ЭНДПОИНТЫ) ==========
     

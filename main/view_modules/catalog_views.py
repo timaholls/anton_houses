@@ -10,10 +10,10 @@ from ..s3_service import PLACEHOLDER_IMAGE_URL
 
 
 def catalog(request):
-    """Каталог ЖК - данные из MongoDB"""
+    """Каталог ЖК - теперь только рендерит шаблон, данные загружаются через API"""
     page = request.GET.get('page', 1)
 
-    # Получаем параметры фильтрации
+    # Получаем параметры фильтрации для начального состояния формы
     rooms = request.GET.get('rooms', '')
     city = request.GET.get('city', '')
     district = request.GET.get('district', '')
@@ -25,51 +25,6 @@ def catalog(request):
     delivery_date = request.GET.get('delivery_date', '')
     has_offers = request.GET.get('has_offers', '')
     sort = request.GET.get('sort', 'price_asc')
-
-    # Собираем фильтры для MongoDB
-    filters = {}
-    if city:
-        filters['city'] = city
-    if district:
-        filters['district'] = district
-    if street:
-        filters['street'] = street
-
-    # Получаем данные из MongoDB (используем unified_houses)
-    complexes = get_unified_houses_from_mongo(filters=filters, sort_by=sort)
-
-    # Применяем дополнительные фильтры
-    filters_applied = False
-    if rooms or city or district or street or area_from or area_to or price_from or price_to or delivery_date or has_offers:
-        filters_applied = True
-
-        filtered_complexes = []
-        for complex_data in complexes:
-            # Фильтр по цене
-            if price_from and complex_data.get('price', {}).get('min'):
-                if float(complex_data['price']['min']) < float(price_from):
-                    continue
-            if price_to and complex_data.get('price', {}).get('min'):
-                if float(complex_data['price']['min']) > float(price_to):
-                    continue
-            
-            # Фильтр по комнатам
-            if rooms and complex_data.get('apartment_types'):
-                has_matching_rooms = False
-                for apt_type in complex_data['apartment_types'].values():
-                    if apt_type.get('rooms') == rooms:
-                        has_matching_rooms = True
-                        break
-                if not has_matching_rooms:
-                    continue
-            
-            filtered_complexes.append(complex_data)
-        
-        complexes = filtered_complexes
-
-    # Пагинация по 9 элементов
-    paginator = Paginator(complexes, 9)
-    page_obj = paginator.get_page(page)
 
     # Получаем уникальные города, районы и улицы для фильтра из MongoDB
     cities = []
@@ -113,10 +68,23 @@ def catalog(request):
     except Exception:
         mortgage_programs = []
 
+    # Создаем пустые объекты для обратной совместимости с шаблоном
+    class EmptyPaginator:
+        num_pages = 0
+    class EmptyPage:
+        number = 1
+        paginator = EmptyPaginator()
+        has_previous = False
+        has_next = False
+        previous_page_number = 1
+        next_page_number = 1
+
+    page_obj = EmptyPage()
+
     context = {
-        'complexes': page_obj,
+        'complexes': [],  # Пустой список - карточки загружаются через API
         'page_obj': page_obj,
-        'paginator': paginator,
+        'paginator': EmptyPaginator(),
         'cities': cities,
         'districts': districts,
         'streets': streets,
@@ -135,7 +103,7 @@ def catalog(request):
             'has_offers': has_offers,
             'sort': sort,
         },
-        'filters_applied': filters_applied,
+        'filters_applied': False,
         'dataset_type': 'newbuild'
     }
     return render(request, 'main/catalog.html', context)

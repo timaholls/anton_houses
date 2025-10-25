@@ -384,6 +384,14 @@
         .home-card-price{margin-top:10px}
         .home-price-text{font-weight:800;color:var(--c21-gold)}
         
+        /* Стили для звездочек рейтинга */
+        .home-card-rating{margin-top:8px}
+        .rating-stars{display:flex;align-items:center;gap:2px}
+        .rating-stars .star{font-size:14px;line-height:1}
+        .rating-stars .star.filled{color:#fbbf24}
+        .rating-stars .star.empty{color:#d1d5db}
+        .rating-stars .rating-text{margin-left:4px;font-size:12px;color:#6b7280}
+        
         /* Галерея изображений для карточек ЖК */
         .home-card-image-gallery{position:relative;aspect-ratio:16/10;overflow:hidden}
         .home-card-image-gallery .gallery-image{width:100%;height:100%;object-fit:cover;display:block;transition:opacity 0.3s ease}
@@ -427,6 +435,20 @@
                 <div class="home-card-content" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
                     <div class="home-card-header">
                         <h3 class="home-card-title">{{ complex.development.name|default:'ЖК' }}</h3>
+                        {% if complex.rating and complex.rating > 0 %}
+                        <div class="home-card-rating">
+                            <span class="rating-stars">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= complex.rating %}
+                                        <span class="star filled">★</span>
+                                    {% else %}
+                                        <span class="star empty">☆</span>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="rating-text">({{ complex.rating }}/5)</span>
+                            </span>
+                        </div>
+                        {% endif %}
                     </div>
                     
                     <div class="home-card-price">

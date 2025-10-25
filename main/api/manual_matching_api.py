@@ -264,7 +264,12 @@ def save_manual_match(request):
             # Добавляем поля для адреса
             'city': 'Уфа',  # По умолчанию
             'district': '',
-            'street': ''
+            'street': '',
+            # Поля рейтинга
+            'rating': None,  # Рейтинг от 1 до 5
+            'rating_description': '',  # Описание причины низкого рейтинга
+            'rating_created_at': None,  # Дата создания рейтинга
+            'rating_updated_at': None   # Дата обновления рейтинга
         }
         
         # Привязка агента
@@ -1236,6 +1241,21 @@ def unified_update(request, unified_id: str):
             except (ValueError, TypeError):
                 payload['longitude'] = None
         
+        # Обработка рейтинга
+        if 'rating' in payload:
+            try:
+                rating = int(payload['rating']) if payload['rating'] else None
+                if rating is not None and (rating < 1 or rating > 5):
+                    return JsonResponse({'success': False, 'error': 'Рейтинг должен быть от 1 до 5'}, status=400)
+                payload['rating'] = rating
+                # Обновляем даты рейтинга
+                if rating is not None:
+                    payload['rating_updated_at'] = datetime.now()
+                    if not col.find_one({'_id': ObjectId(unified_id), 'rating': {'$exists': True}}):
+                        payload['rating_created_at'] = datetime.now()
+            except (ValueError, TypeError):
+                payload['rating'] = None
+        
         # Обработка вложенных полей (development.name, development.parameters.X и т.д.)
         update_operations = {}
         for key, value in payload.items():
@@ -1287,6 +1307,83 @@ def get_location_options(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_not_recommended_objects(request):
+    """API: получить объекты с рейтингом меньше 3 для страницы 'Не рекомендуем'."""
+    try:
+        db = get_mongo_connection()
+        col = db['unified_houses']
+        
+        # Параметры пагинации
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 12))
+        skip = (page - 1) * per_page
+        
+        # Получаем объекты с рейтингом меньше или равным 3
+        query = {
+            'rating': {'$lte': 3, '$exists': True}
+        }
+        
+        records = list(col.find(query).sort('rating_created_at', -1).skip(skip).limit(per_page))
+        total = col.count_documents(query)
+        
+        # Форматируем записи
+        formatted_records = []
+        for record in records:
+            # Получаем основную информацию
+            name = ''
+            if 'development' in record and 'name' in record['development']:
+                name = record['development']['name']
+            elif 'domrf' in record and 'objCommercNm' in record['domrf']:
+                name = record['domrf']['objCommercNm']
+            elif 'avito' in record and 'name' in record['avito']:
+                name = record['avito']['name']
+            
+            # Получаем адрес
+            address = ''
+            if 'development' in record and 'address' in record['development']:
+                address = record['development']['address']
+            elif 'domrf' in record and 'address' in record['domrf']:
+                address = record['domrf']['address']
+            elif 'avito' in record and 'address' in record['avito']:
+                address = record['avito']['address']
+            
+            # Получаем изображения
+            images = []
+            if 'development' in record and 'photos' in record['development']:
+                images = record['development']['photos']
+            elif 'domclick' in record and 'photos' in record['domclick']:
+                images = record['domclick']['photos']
+            
+            formatted_records.append({
+                '_id': str(record['_id']),
+                'name': name,
+                'address': address,
+                'images': images[:3] if images else [],  # Берем первые 3 изображения
+                'rating': record.get('rating'),
+                'rating_description': record.get('rating_description', ''),
+                'city': record.get('city', 'Уфа'),
+                'district': record.get('district', ''),
+                'street': record.get('street', ''),
+                'latitude': record.get('latitude'),
+                'longitude': record.get('longitude'),
+                'rating_created_at': record.get('rating_created_at'),
+                'rating_updated_at': record.get('rating_updated_at')
+            })
+        
+        return JsonResponse({
+            'success': True, 
+            'records': formatted_records,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 # ===================== Mortgage Programs (Mongo) =====================

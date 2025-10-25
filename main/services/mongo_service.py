@@ -114,6 +114,9 @@ def get_unified_houses_from_mongo(filters=None, sort_by=None, limit=None, random
                     self.is_featured = data.get('is_featured', False)
                     self.total_apartments = len(self.apartment_types)
                     
+                    # Рейтинг
+                    self.rating = data.get('rating')
+                    
                 def get_main_image(self):
                     if self.photos:
                         class ImageAdapter:

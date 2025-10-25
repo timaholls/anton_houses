@@ -3404,11 +3404,27 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
+    border: 2px solid #dc3545;
 }
 
 .property-card-compact:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Обводка по рейтингу */
+.property-card-compact.rating-5 {
+    border-color: #22c55e; /* Зеленая для 5 звезд */
+}
+
+.property-card-compact.rating-4 {
+    border-color: #eab308; /* Желтая для 4 звезд */
+}
+
+.property-card-compact.rating-3,
+.property-card-compact.rating-2,
+.property-card-compact.rating-1 {
+    border-color: #dc3545; /* Красная для 3 и ниже */
 }
 
 /* Изображение компактной карточки */
