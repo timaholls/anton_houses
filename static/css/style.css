@@ -3488,7 +3488,7 @@ body {
 .compact-card-details {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
     margin-bottom: 12px;
     font-size: 13px;
     color: #6b7280;
@@ -3498,11 +3498,88 @@ body {
     display: flex;
     align-items: center;
     gap: 4px;
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .compact-detail-item i {
     color: var(--c21-gold);
     font-size: 11px;
+}
+
+/* Специальные стили для элемента рейтинга */
+.compact-detail-item.rating-item {
+    width: 100%;
+    flex-basis: 100%;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.compact-detail-item.rating-item .rating-stars {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.compact-detail-item.rating-item .rating-stars .star {
+    font-size: 12px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.compact-detail-item.rating-item .rating-stars .star.filled {
+    color: #fbbf24;
+}
+
+.compact-detail-item.rating-item .rating-stars .star.empty {
+    color: #d1d5db;
+}
+
+/* Специальные стили для элемента с квартирами */
+.compact-detail-item.apartments-item {
+    width: 100%;
+    flex-basis: 100%;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Специальные стили для карточек ипотеки */
+.mortgage-page .property-card-compact .compact-detail-item {
+    margin-bottom: 2px;
+}
+
+.mortgage-page .property-card-compact .compact-card-details {
+    gap: 8px;
+}
+
+.mortgage-page .property-card-compact .compact-detail-item.rating-item {
+    width: 100%;
+    flex-basis: 100%;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mortgage-page .property-card-compact .compact-detail-item.apartments-item {
+    width: 100%;
+    flex-basis: 100%;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mortgage-page .property-card-compact .compact-detail-item.apartments-item span {
+    flex: 1;
 }
 
 .compact-card-price {
@@ -3561,12 +3638,61 @@ body {
     }
     
     .compact-card-details {
-        gap: 8px;
+        gap: 4px;
+        font-size: 12px;
+    }
+    
+    .compact-detail-item.rating-item {
+        flex-direction: row;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        margin-bottom: 2px;
+    }
+    
+    .compact-detail-item.rating-item .rating-stars {
+        gap: 1px;
+        flex-wrap: wrap;
+        flex: 1;
+    }
+    
+    .compact-detail-item.rating-item .rating-stars .star {
+        font-size: 10px;
+    }
+    
+    .compact-detail-item.rating-item .rating-stars .rating-text {
+        font-size: 10px;
+        margin-left: 2px;
+    }
+    
+    .compact-detail-item.apartments-item {
+        flex-direction: row;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        margin-bottom: 2px;
+    }
+    
+    .compact-detail-item.apartments-item span {
+        flex: 1;
         font-size: 12px;
     }
     
     .compact-price-text {
         font-size: 15px;
+    }
+    
+    /* Мобильные стили для карточек ипотеки */
+    .mortgage-page .property-card-compact .compact-card-details {
+        gap: 4px;
+    }
+    
+    .mortgage-page .property-card-compact .compact-detail-item.rating-item {
+        margin-bottom: 2px;
+    }
+    
+    .mortgage-page .property-card-compact .compact-detail-item.apartments-item {
+        margin-bottom: 2px;
     }
 }
 

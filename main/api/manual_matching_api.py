@@ -1497,10 +1497,60 @@ def get_complexes_for_mortgage(request):
                              (doc.get('domclick', {}) or {}).get('development', {}).get('complex_name', '')
             
             if complex_name:
-                complexes.append({
-                    '_id': str(doc.get('_id')),
-                    'name': complex_name
-                })
+                # Получаем изображения из новой или старой структуры
+                photos = []
+                if 'development' in doc and 'avito' not in doc:
+                    # Новая структура
+                    photos = doc.get('development', {}).get('photos', [])
+                else:
+                    # Старая структура - берем из avito или domclick
+                    avito_photos = (doc.get('avito', {}) or {}).get('photos', [])
+                    domclick_photos = (doc.get('domclick', {}) or {}).get('photos', [])
+                    photos = avito_photos + domclick_photos
+                
+                # Получаем отдельные поля изображений
+                image_url = doc.get('image_url')
+                image_2_url = doc.get('image_2_url')
+                image_3_url = doc.get('image_3_url')
+                image_4_url = doc.get('image_4_url')
+                
+            # Извлекаем данные точно как в каталоге (UnifiedComplexAdapter)
+            development = doc.get('development', {})
+            
+            # Адрес - как в каталоге
+            address = development.get('address', '')
+            if not address:
+                address = doc.get('street', '')
+            
+            # Город
+            city = doc.get('city', 'Уфа')
+            
+            # Дата сдачи - пока не используется в каталоге, оставляем None
+            completion_date = None
+            
+            # Квартиры - как в каталоге (из apartment_types)
+            apartment_types = doc.get('apartment_types', {})
+            total_apartments = len(apartment_types) if apartment_types else None
+            
+            # Цена - как в каталоге
+            price_range = development.get('price_range', '')
+            
+            complexes.append({
+                '_id': str(doc.get('_id')),
+                'name': complex_name,
+                'rating': doc.get('rating', 0),
+                'photos': photos,
+                'image_url': image_url,
+                'image_2_url': image_2_url,
+                'image_3_url': image_3_url,
+                'image_4_url': image_4_url,
+                'address': address,
+                'city': city,
+                'completion_date': completion_date,
+                'total_apartments': total_apartments,
+                'price_range': price_range,
+                'price_display': price_range
+            })
         
         return JsonResponse({'success': True, 'complexes': complexes})
     except Exception as e:

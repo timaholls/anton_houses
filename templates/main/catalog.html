@@ -735,13 +735,13 @@ window.updateCatalog = function(data) {
                             </div>
                             ` : ''}
                             ${complex.total_apartments ? `
-                            <div class="compact-detail-item">
+                            <div class="compact-detail-item apartments-item">
                                 <i class="fas fa-home"></i>
                                 <span>${complex.total_apartments} квартир</span>
                             </div>
                             ` : ''}
                             ${complex.rating ? `
-                            <div class="compact-detail-item">
+                            <div class="compact-detail-item rating-item">
                                 <i class="fas fa-star"></i>
                                 <span class="rating-stars">
                                     ${'★'.repeat(complex.rating)}${'☆'.repeat(5-complex.rating)}

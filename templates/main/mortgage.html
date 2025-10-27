@@ -3,6 +3,90 @@
 {% block title %}Ипотека - CENTURY 21{% endblock %}
 
 {% block content %}
+
+<style>
+/* Галерея фото в карточках ипотеки - точно как в каталоге */
+.compact-card-image-gallery {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+}
+
+.compact-card-image-gallery .gallery-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 10;
+  opacity: 0;
+}
+
+.compact-card-image-gallery:hover .gallery-nav {
+  opacity: 1;
+}
+
+.gallery-nav:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.gallery-prev {
+  left: 10px;
+}
+
+.gallery-next {
+  right: 10px;
+}
+
+.gallery-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.gallery-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.gallery-dots .dot.active {
+  background: rgba(255, 255, 255, 1);
+  width: 24px;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .compact-card-image-gallery { height: 200px; }
+  .gallery-nav { opacity: 1; width: 32px; height: 32px; }
+}
+</style>
 <div class="container mortgage-page">
     <!-- Заголовок страницы -->
     <section class="page-header">
@@ -636,41 +720,104 @@
             .then(data => {
                 if (data.success) {
                     const selectedComplexes = data.complexes.filter(complex => 
-                        complexIds.includes(complex._id)
+                        complexIds.includes(complex._id) && 
+                        complex.rating && 
+                        complex.rating >= 4
                     );
                     
                     if (selectedComplexes.length > 0) {
                         let html = '<div class="complexes-section" style="margin-top:30px;">';
-                        html += '<h3 style="margin-bottom:20px; color:#333; font-size:24px; font-weight:500;">Доступно в ЖК:</h3>';
+                        html += '<h3 style="margin-bottom:20px; color:#333; font-size:24px; font-weight:500;">Доступно в ЖК с рейтингом 4+ звезд:</h3>';
                         html += '<div class="catalog-grid" style="margin-top:20px;">';
                         
                         selectedComplexes.forEach(complex => {
+                            // Получаем изображения из базы данных как в каталоге
+                            let photos = [];
+                            if (complex.photos && complex.photos.length > 0) {
+                                photos = complex.photos.map(photo => {
+                                    // Если фото уже содержит полный URL, используем как есть
+                                    if (photo.startsWith('http')) {
+                                        return photo;
+                                    }
+                                    // Иначе добавляем префикс /media/
+                                    return `/media/${photo}`;
+                                });
+                            } else {
+                                const img1 = complex.image_url || '/media/gallery/placeholders.png';
+                                const img2 = complex.image_2_url;
+                                const img3 = complex.image_3_url;
+                                const img4 = complex.image_4_url;
+                                photos = [img1, img2, img3, img4].filter(p => p);
+                            }
+                            
+                            // Добавляем класс рейтинга для обводки (как в каталоге)
+                            const rating = complex.rating || 0;
+                            let ratingClass = '';
+                            if (rating >= 5) {
+                                ratingClass = 'rating-5';
+                            } else if (rating >= 4) {
+                                ratingClass = 'rating-4';
+                            } else if (rating >= 1) {
+                                ratingClass = 'rating-3';
+                            }
+                            
+                            // Генерируем HTML для галереи как в каталоге
+                            const galleryHtml = photos.map((photo, i) => 
+                                `<img src="${photo}" alt="${complex.name}" class="gallery-image ${i === 0 ? 'active' : ''}" style="display: ${i === 0 ? 'block' : 'none'};">`
+                            ).join('');
+                            
+                            const cardClasses = `property-card-compact ${ratingClass}`;
+                            
                             html += `
-                                <div class="property-card-compact" onclick="window.location.href='/complex/${complex._id}/'" style="cursor: pointer;">
-                                    <div class="compact-card-image">
-                                        <img src="/media/uploads/back_home.jpg" alt="${complex.name}">
+                                <div class="${cardClasses}" data-complex-id="${complex._id}">
+                                    <div class="compact-card-image-gallery" onclick="window.location.href='/complex/${complex._id}/'" style="cursor: pointer;">
+                                        ${galleryHtml}
+                                        ${photos.length > 1 ? `
+                                            <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </button>
+                                            <button class="gallery-nav gallery-next" onclick="event.stopPropagation(); changeImage(this, 1)">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </button>
+                                            <div class="gallery-dots">
+                                                ${photos.map((_, i) => `<span class="dot ${i === 0 ? 'active' : ''}" onclick="event.stopPropagation(); setImage(this, ${i})"></span>`).join('')}
+                                            </div>
+                                        ` : ''}
                                     </div>
                                     
-                                    <div class="compact-card-content">
+                                    <div class="compact-card-content" onclick="window.location.href='/complex/${complex._id}/'" style="cursor: pointer;">
                                         <div class="compact-card-header">
                                             <h3 class="compact-card-title">${complex.name}</h3>
                                             <div class="compact-card-location">
                                                 <i class="fas fa-map-marker-alt"></i>
-                                                <span>ул. Летчика Кобелева/Валерия Лесунова</span>
+                                                <span>${complex.address || complex.city || 'Уфа'}</span>
                                             </div>
                                             <div class="compact-card-details">
+                                                ${complex.completion_date ? `
                                                 <div class="compact-detail-item">
                                                     <i class="fas fa-calendar"></i>
-                                                    <span>4 кв. 2017 - 2 кв. 2027</span>
+                                                    <span>${complex.completion_date}</span>
                                                 </div>
-                                                <div class="compact-detail-item">
+                                                ` : ''}
+                                                ${complex.total_apartments ? `
+                                                <div class="compact-detail-item apartments-item">
                                                     <i class="fas fa-home"></i>
-                                                    <span>174 квартир</span>
+                                                    <span>${complex.total_apartments} квартир</span>
                                                 </div>
+                                                ` : ''}
+                                                ${complex.rating ? `
+                                                <div class="compact-detail-item rating-item">
+                                                    <i class="fas fa-star"></i>
+                                                    <span class="rating-stars">
+                                                        ${'★'.repeat(complex.rating)}${'☆'.repeat(5-complex.rating)}
+                                                        <span class="rating-text">(${complex.rating}/5)</span>
+                                                    </span>
+                                                </div>
+                                                ` : ''}
                                             </div>
                                         </div>
                                         <div class="compact-card-price">
-                                            <div class="compact-price-text">От 2,8 до 12,68 млн ₽</div>
+                                            <div class="compact-price-text">${complex.price_range || complex.price_display || 'Цена по запросу'}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -679,6 +826,15 @@
                         
                         html += '</div></div>';
                         complexesContainer.innerHTML = html;
+                        complexesContainer.style.display = 'block';
+                    } else {
+                        // Если нет ЖК с рейтингом 4+, показываем сообщение
+                        complexesContainer.innerHTML = `
+                            <div class="complexes-section" style="margin-top:30px; text-align:center; padding:40px 20px;">
+                                <h3 style="margin-bottom:15px; color:#666; font-size:20px; font-weight:500;">Нет доступных ЖК с рейтингом 4+ звезд</h3>
+                                <p style="color:#888; font-size:16px; margin:0;">Для данной индивидуальной программы нет жилых комплексов с высоким рейтингом.</p>
+                            </div>
+                        `;
                         complexesContainer.style.display = 'block';
                     }
                 }
@@ -689,6 +845,48 @@
     }
 })();
 
+// Функции для галереи изображений в карточках ипотеки
+window.changeImage = function(button, direction) {
+    const gallery = button.parentElement;
+    const images = gallery.querySelectorAll('.gallery-image');
+    const dots = gallery.querySelectorAll('.dot');
+    let currentIndex = 0;
+    
+    // Находим текущий индекс
+    images.forEach((img, i) => {
+        if (img.style.display === 'block') {
+            currentIndex = i;
+        }
+    });
+    
+    // Вычисляем новый индекс
+    let newIndex = currentIndex + direction;
+    if (newIndex < 0) newIndex = images.length - 1;
+    if (newIndex >= images.length) newIndex = 0;
+    
+    // Переключаем изображения
+    images[currentIndex].style.display = 'none';
+    images[newIndex].style.display = 'block';
+    
+    // Переключаем точки
+    dots[currentIndex].classList.remove('active');
+    dots[newIndex].classList.add('active');
+}
+
+window.setImage = function(dot, index) {
+    const gallery = dot.parentElement.parentElement;
+    const images = gallery.querySelectorAll('.gallery-image');
+    const dots = gallery.querySelectorAll('.dot');
+    
+    // Скрываем все изображения
+    images.forEach(img => img.style.display = 'none');
+    // Показываем выбранное
+    images[index].style.display = 'block';
+    
+    // Обновляем точки
+    dots.forEach(d => d.classList.remove('active'));
+    dots[index].classList.add('active');
+}
 
 </script>
 {% endblock %}
