@@ -1,0 +1,19 @@
+# Настройки SMTP для отправки email уведомлений
+# Скопируйте этот файл в .env и заполните своими данными
+
+# SMTP сервер (для Gmail используйте smtp.gmail.com)
+SMTP_SERVER=smtp.gmail.com
+
+# Порт SMTP (для Gmail используйте 587)
+SMTP_PORT=587
+
+# Email адрес отправителя
+SENDER_EMAIL=noreply@century21-ufa.ru
+
+# Пароль приложения для Gmail (не обычный пароль!)
+# Получить можно в настройках Google аккаунта -> Безопасность -> Пароли приложений
+APP_PASSWORD=your_gmail_app_password_here
+
+# Настройки MongoDB (если нужно изменить)
+MONGO_URI=mongodb://root:Kfleirb_17@176.98.177.188:27017/admin
+DB_NAME=houses

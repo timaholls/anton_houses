@@ -231,7 +231,14 @@ def detail(request, complex_id):
                             if isinstance(layout_photos, str):
                                 layout_photos = [layout_photos] if layout_photos else []
                             
+                            # Генерируем уникальный ID если его нет
+                            apt_id = apt.get('_id')
+                            if not apt_id:
+                                # Создаем уникальный ID на основе типа и индекса
+                                apt_id = f"{apt_type}_{len(apartment_variants)}"
+                            
                             apartment_variants.append({
+                                'id': str(apt_id),  # Добавляем ID квартиры
                                 'type': apt_type,
                                 'title': apt.get('title', ''),
                                 'price': apt.get('price', ''),
@@ -239,7 +246,27 @@ def detail(request, complex_id):
                                 'completion_date': apt.get('completionDate', ''),
                                 'image': layout_photos[0] if layout_photos else '',  # Первое фото для превью
                                 'url': apt.get('url', ''),
-                                'layout_photos': layout_photos  # Все фото для галереи
+                                'layout_photos': layout_photos,  # Все фото для галереи
+                                '_id': apt.get('_id'),  # Сохраняем оригинальный _id
+                                'rooms': apt.get('rooms', ''),
+                                'totalArea': apt.get('totalArea', ''),
+                                'floor': apt.get('floor', ''),
+                                'pricePerSqm': apt.get('pricePerSqm', ''),
+                                'layout': apt.get('layout', ''),
+                                'balcony': apt.get('balcony', ''),
+                                'loggia': apt.get('loggia', ''),
+                                'view': apt.get('view', ''),
+                                'condition': apt.get('condition', ''),
+                                'furniture': apt.get('furniture', ''),
+                                'ceilingHeight': apt.get('ceilingHeight', ''),
+                                'windows': apt.get('windows', ''),
+                                'bathroom': apt.get('bathroom', ''),
+                                'kitchenArea': apt.get('kitchenArea', ''),
+                                'livingArea': apt.get('livingArea', ''),
+                                'bedroomArea': apt.get('bedroomArea', ''),
+                                'photos': apt.get('photos', []),
+                                'description': apt.get('description', ''),
+                                'features': apt.get('features', [])
                             })
             
             else:
@@ -262,7 +289,14 @@ def detail(request, complex_id):
                             domclick_photos.extend(dc_apt.get('photos', []))
                     
                     for apt in apartments:
+                        # Генерируем уникальный ID если его нет
+                        apt_id = apt.get('_id')
+                        if not apt_id:
+                            # Создаем уникальный ID на основе типа и индекса
+                            apt_id = f"{apt_type}_{len(apartment_variants)}"
+                        
                         apartment_variants.append({
+                            'id': str(apt_id),  # Добавляем ID квартиры
                             'type': apt_type,
                             'title': apt.get('title', ''),
                             'price': apt.get('price', ''),
@@ -270,7 +304,27 @@ def detail(request, complex_id):
                             'completion_date': apt.get('completionDate', ''),
                             'image': apt.get('image', {}).get('128x96', ''),
                             'url': apt.get('urlPath', ''),
-                            'layout_photos': domclick_photos[:5]  # Первые 5 фото планировок
+                            'layout_photos': domclick_photos[:5],  # Первые 5 фото планировок
+                            '_id': apt.get('_id'),  # Сохраняем оригинальный _id
+                            'rooms': apt.get('rooms', ''),
+                            'totalArea': apt.get('totalArea', ''),
+                            'floor': apt.get('floor', ''),
+                            'pricePerSqm': apt.get('pricePerSqm', ''),
+                            'layout': apt.get('layout', ''),
+                            'balcony': apt.get('balcony', ''),
+                            'loggia': apt.get('loggia', ''),
+                            'view': apt.get('view', ''),
+                            'condition': apt.get('condition', ''),
+                            'furniture': apt.get('furniture', ''),
+                            'ceilingHeight': apt.get('ceilingHeight', ''),
+                            'windows': apt.get('windows', ''),
+                            'bathroom': apt.get('bathroom', ''),
+                            'kitchenArea': apt.get('kitchenArea', ''),
+                            'livingArea': apt.get('livingArea', ''),
+                            'bedroomArea': apt.get('bedroomArea', ''),
+                            'photos': apt.get('photos', []),
+                            'description': apt.get('description', ''),
+                            'features': apt.get('features', [])
                         })
             
             # Формируем контекст для MongoDB версии

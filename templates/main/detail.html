@@ -49,6 +49,14 @@
   transform: translateY(-50%) scale(1.1);
 }
 
+/* Стили для кнопки перехода на детальную страницу квартиры */
+.apartment-detail-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(190,175,135,0.4);
+  text-decoration: none;
+  color: #1f2937;
+}
+
 .gallery-prev {
   left: 10px;
 }
@@ -674,6 +682,14 @@
                                 <span>{{ apt.completion_date }}</span>
                             </div>
                             {% endif %}
+                        </div>
+                        
+                        <!-- Кнопка для перехода на детальную страницу квартиры -->
+                        <div style="margin-top: 12px;">
+                            <a href="{% url 'main:apartment_detail' complex.id apt.id %}" class="apartment-detail-link" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; background: linear-gradient(135deg, #beaf87 0%, #d4af37 100%); color: #1f2937; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(190,175,135,0.3);">
+                                <i class="fas fa-eye"></i>
+                                Подробнее
+                            </a>
                         </div>
                     </div>
                 </div>

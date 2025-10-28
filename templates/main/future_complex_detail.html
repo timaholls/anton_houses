@@ -99,6 +99,26 @@
                         </div>
                         {% endif %}
                         
+                        {% if complex.delivery_date %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Срок сдачи</span>
+                                <span class="characteristic-value">{{ complex.delivery_date|date:"d.m.Y" }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complex.sales_start %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-shopping-cart"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Старт продаж</span>
+                                <span class="characteristic-value">{{ complex.sales_start|date:"d.m.Y" }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
                         {% if complex.house_class %}
                         <div class="characteristic-item">
                             <i class="fas fa-star"></i>
@@ -481,6 +501,48 @@
             </div>
         </div>
         {% endif %}
+    </section>
+
+    <!-- Секция подписки на обновления -->
+    <section class="subscription-section">
+        <div class="subscription-content">
+            <div class="subscription-header">
+                <h2 class="subscription-title">📧 Подпишитесь на обновления</h2>
+                <p class="subscription-subtitle">Получайте уведомления о новых будущих проектах и акциях</p>
+            </div>
+            
+            <form class="subscription-form" id="subscriptionForm">
+                <div class="subscription-form-row">
+                    <div class="subscription-form-group">
+                        <label for="subscriberName">Ваше имя</label>
+                        <input type="text" id="subscriberName" name="name" placeholder="Введите ваше имя" required>
+                    </div>
+                    
+                    <div class="subscription-form-group">
+                        <label for="subscriberEmail">Email адрес</label>
+                        <input type="email" id="subscriberEmail" name="email" placeholder="Введите ваш email" required>
+                    </div>
+                </div>
+                
+                <div class="subscription-checkboxes">
+                    <div class="subscription-checkbox">
+                        <input type="checkbox" id="subscribeProjects" name="subscribe_to_projects" checked>
+                        <label for="subscribeProjects">Уведомления о новых будущих проектах</label>
+                    </div>
+                    
+                    <div class="subscription-checkbox">
+                        <input type="checkbox" id="subscribePromotions" name="subscribe_to_promotions" checked>
+                        <label for="subscribePromotions">Уведомления о новых акциях</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="subscription-button" id="subscriptionButton">
+                    Подписаться
+                </button>
+                
+                <div class="subscription-message" id="subscriptionMessage"></div>
+            </form>
+        </div>
     </section>
 </div>
 
@@ -1271,6 +1333,206 @@
         height: 70px;
     }
 }
+
+/* Стили для формы подписки */
+.subscription-section {
+    margin: 60px 0;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    border: 1px solid #efe7ce;
+    position: relative;
+    overflow: hidden;
+}
+
+.subscription-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(190,175,135,0.05)"/><circle cx="75" cy="75" r="1" fill="rgba(190,175,135,0.03)"/><circle cx="50" cy="10" r="0.5" fill="rgba(190,175,135,0.04)"/><circle cx="10" cy="60" r="0.5" fill="rgba(190,175,135,0.02)"/><circle cx="90" cy="40" r="0.5" fill="rgba(190,175,135,0.03)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+}
+
+.subscription-content {
+    position: relative;
+    z-index: 2;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.subscription-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.subscription-title {
+    color: var(--c21-dark);
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.subscription-subtitle {
+    color: #666;
+    font-size: 16px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.subscription-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.subscription-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.subscription-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.subscription-form-group label {
+    color: var(--c21-dark);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.subscription-form-group input {
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--c21-dark);
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.subscription-form-group input::placeholder {
+    color: #999;
+}
+
+.subscription-form-group input:focus {
+    outline: none;
+    border-color: var(--c21-gold);
+    box-shadow: 0 0 0 3px rgba(190,175,135,0.2);
+}
+
+.subscription-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 8px 0;
+}
+
+.subscription-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.subscription-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--c21-gold);
+    cursor: pointer;
+}
+
+.subscription-checkbox label {
+    color: var(--c21-dark);
+    font-size: 14px;
+    cursor: pointer;
+    margin: 0;
+    font-weight: 500;
+}
+
+.subscription-button {
+    background: linear-gradient(135deg, var(--c21-gold) 0%, #d4af37 100%);
+    color: var(--c21-dark);
+    border: none;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(190,175,135,0.3);
+    align-self: center;
+    min-width: 200px;
+}
+
+.subscription-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(190,175,135,0.4);
+}
+
+.subscription-button:active {
+    transform: translateY(0);
+}
+
+.subscription-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.subscription-message {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: none;
+    text-align: center;
+}
+
+.subscription-message.success {
+    background: rgba(34,197,94,0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34,197,94,0.3);
+}
+
+.subscription-message.error {
+    background: rgba(239,68,68,0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.3);
+}
+
+@media (max-width: 768px) {
+    .subscription-section {
+        margin: 40px 0;
+        padding: 30px 16px;
+    }
+    
+    .subscription-title {
+        font-size: 24px;
+    }
+    
+    .subscription-subtitle {
+        font-size: 15px;
+    }
+    
+    .subscription-form-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .subscription-button {
+        min-width: 100%;
+    }
+}
 </style>
 
 <script>
@@ -1330,5 +1592,96 @@ function openImageFullSize(imageSrc) {
     };
     document.addEventListener('keydown', handleEscape);
 }
+
+// Обработка формы подписки
+document.addEventListener('DOMContentLoaded', function() {
+    const subscriptionForm = document.getElementById('subscriptionForm');
+    const subscriptionButton = document.getElementById('subscriptionButton');
+    const subscriptionMessage = document.getElementById('subscriptionMessage');
+    
+    if (subscriptionForm) {
+        subscriptionForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(subscriptionForm);
+            const data = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                subscribe_to_projects: formData.get('subscribe_to_projects') === 'on',
+                subscribe_to_promotions: formData.get('subscribe_to_promotions') === 'on'
+            };
+            
+            // Валидация
+            if (!data.email || !data.email.includes('@')) {
+                showMessage('Пожалуйста, введите корректный email адрес', 'error');
+                return;
+            }
+            
+            if (!data.subscribe_to_projects && !data.subscribe_to_promotions) {
+                showMessage('Пожалуйста, выберите хотя бы один тип уведомлений', 'error');
+                return;
+            }
+            
+            // Отправка данных
+            subscriptionButton.disabled = true;
+            subscriptionButton.textContent = 'Подписываем...';
+            
+            try {
+                const response = await fetch('/api/subscribe/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    subscriptionForm.reset();
+                    // Автоматически отмечаем чекбоксы
+                    document.getElementById('subscribeProjects').checked = true;
+                    document.getElementById('subscribePromotions').checked = true;
+                } else {
+                    showMessage(result.error || 'Произошла ошибка при подписке', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка подписки:', error);
+                showMessage('Произошла ошибка при отправке запроса', 'error');
+            } finally {
+                subscriptionButton.disabled = false;
+                subscriptionButton.textContent = 'Подписаться';
+            }
+        });
+    }
+    
+    function showMessage(text, type) {
+        subscriptionMessage.textContent = text;
+        subscriptionMessage.className = `subscription-message ${type}`;
+        subscriptionMessage.style.display = 'block';
+        
+        // Скрываем сообщение через 5 секунд
+        setTimeout(() => {
+            subscriptionMessage.style.display = 'none';
+        }, 5000);
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
 </script>
 {% endblock %}

@@ -11,6 +11,7 @@ import json
 
 from ..services.mongo_service import get_mongo_connection
 from ..s3_service import s3_client
+from .subscription_api import notify_new_future_project
 
 
 @require_http_methods(["GET"])
@@ -623,6 +624,7 @@ def create_future_project(request):
             'district': data.get('district', domrf_record.get('district', '')),
             'street': data.get('street', domrf_record.get('street', '')),
             'delivery_date': datetime.strptime(data.get('delivery_date', '2026-12-31'), '%Y-%m-%d'),
+            'sales_start': datetime.strptime(data.get('sales_start', '2024-01-01'), '%Y-%m-%d') if data.get('sales_start') else None,
             'house_class': data.get('house_class', ''),
             'developer': data.get('developer', domrf_record.get('developer', '')),
             'is_active': True,
@@ -700,6 +702,12 @@ def create_future_project(request):
                     {'$set': {'is_processed': True, 'processed_at': now, 'future_project_id': str(result.inserted_id)}}
                 )
                 
+                # Отправляем уведомления подписчикам
+                try:
+                    notify_new_future_project(future_project)
+                except Exception as e:
+                    print(f"Ошибка отправки уведомлений о новом проекте: {e}")
+                
                 return JsonResponse({
                     'success': True,
                     'message': 'Проект успешно перенесен в будущие проекты',
@@ -753,6 +761,115 @@ def get_future_projects(request):
             'success': True,
             'data': formatted_projects
         })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_future_project(request, project_id):
+    """API: Получить один будущий проект по ID"""
+    try:
+        db = get_mongo_connection()
+        collection = db['future_complexes']
+        
+        # Получаем проект по ID
+        project = collection.find_one({'_id': ObjectId(project_id), 'is_active': True})
+        
+        if not project:
+            return JsonResponse({
+                'success': False,
+                'error': 'Проект не найден'
+            }, status=404)
+        
+        # Форматируем для отображения
+        formatted_project = {
+            '_id': str(project['_id']),
+            'name': project.get('name', 'Без названия'),
+            'city': project.get('city', ''),
+            'district': project.get('district', ''),
+            'street': project.get('street', ''),
+            'delivery_date': project.get('delivery_date', ''),
+            'sales_start': project.get('sales_start', ''),
+            'house_class': project.get('house_class', ''),
+            'developer': project.get('developer', ''),
+            'description': project.get('description', ''),
+            'price_from': project.get('price_from', 0),
+            'created_at': project.get('created_at', ''),
+            'updated_at': project.get('updated_at', '')
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': formatted_project
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_future_project(request, project_id):
+    """API: Обновить будущий проект"""
+    try:
+        data = json.loads(request.body)
+        
+        db = get_mongo_connection()
+        collection = db['future_complexes']
+        
+        # Проверяем существование проекта
+        project = collection.find_one({'_id': ObjectId(project_id), 'is_active': True})
+        if not project:
+            return JsonResponse({
+                'success': False,
+                'error': 'Проект не найден'
+            }, status=404)
+        
+        # Подготавливаем данные для обновления
+        update_data = {
+            'name': data.get('name', project.get('name')),
+            'city': data.get('city', project.get('city')),
+            'district': data.get('district', project.get('district')),
+            'street': data.get('street', project.get('street')),
+            'house_class': data.get('house_class', project.get('house_class')),
+            'developer': data.get('developer', project.get('developer')),
+            'description': data.get('description', project.get('description')),
+            'updated_at': datetime.now()
+        }
+        
+        # Обрабатываем даты
+        if data.get('delivery_date'):
+            update_data['delivery_date'] = datetime.strptime(data.get('delivery_date'), '%Y-%m-%d')
+        
+        if data.get('sales_start'):
+            update_data['sales_start'] = datetime.strptime(data.get('sales_start'), '%Y-%m-%d')
+        elif 'sales_start' in data and not data.get('sales_start'):
+            update_data['sales_start'] = None
+        
+        # Обновляем проект
+        result = collection.update_one(
+            {'_id': ObjectId(project_id)},
+            {'$set': update_data}
+        )
+        
+        if result.modified_count > 0:
+            return JsonResponse({
+                'success': True,
+                'message': 'Проект успешно обновлен'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Не удалось обновить проект'
+            }, status=500)
         
     except Exception as e:
         return JsonResponse({

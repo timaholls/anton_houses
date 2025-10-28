@@ -5,7 +5,7 @@ from .views import (
     # Auth
     login_view, logout_view,
     # Home
-    home, privacy_policy,
+    home, privacy_policy, unsubscribe_page,
     # Catalog
     catalog, detail, secondary_detail_mongo, secondary_detail,
     catalog_completed, catalog_construction, catalog_economy, catalog_comfort,
@@ -75,8 +75,27 @@ from .api.manual_matching_api import (
     delete_construction_photo,
     get_complexes_for_mortgage,
     get_mortgage_program,
-    get_not_recommended_objects
+    get_not_recommended_objects,
+    get_future_project,
+    update_future_project
 )
+
+# Импортируем функции из subscription_api
+from .api.subscription_api import (
+    subscribe_to_updates,
+    unsubscribe_from_updates,
+    get_subscription_stats
+)
+
+# Импортируем функции из apartment_booking_api
+from .api.apartment_booking_api import (
+    book_apartment,
+    get_booking_stats,
+    update_booking_status
+)
+
+# Импортируем view для квартир
+from .view_modules.apartment_views import apartment_detail
 
 app_name = 'main'
 
@@ -90,11 +109,13 @@ urlpatterns = [
     # Home
     path('', home, name='home'),
     path('privacy/', privacy_policy, name='privacy'),
+    path('unsubscribe/', unsubscribe_page, name='unsubscribe'),
     
     # ========== КАТАЛОГ ==========
     
     path('catalog/', catalog, name='catalog'),
     path('complex/<str:complex_id>/', detail, name='detail'),
+    path('apartment/<str:complex_id>/<str:apartment_id>/', apartment_detail, name='apartment_detail'),
     
     # Быстрые ссылки каталога
     path('catalog/completed/', catalog_completed, name='catalog_completed'),
@@ -171,6 +192,8 @@ urlpatterns = [
     path('api/manual-matching/records/', get_unmatched_records, name='get_unmatched_records_alt'),
     path('api/manual-matching/delete/', delete_record, name='delete_record'),
     path('api/manual-matching/future-projects/', get_future_projects, name='get_future_projects'),
+    path('api/manual-matching/future-projects/<str:project_id>/', get_future_project, name='get_future_project'),
+    path('api/manual-matching/future-projects/<str:project_id>/update/', update_future_project, name='update_future_project'),
     path('api/manual-matching/create-future-project/', create_future_project, name='create_future_project'),
     path('api/manual-matching/domrf-data/<str:domrf_id>/', get_domrf_data, name='get_domrf_data'),
     path('api/manual-matching/delete-photo/', delete_photo, name='delete_photo'),
@@ -308,4 +331,14 @@ urlpatterns = [
     path('api/secondary/<str:secondary_id>/', secondary_api_delete, name='secondary_api_delete'),
     path('api/secondary/<str:secondary_id>/get/', secondary_api_get, name='secondary_api_get'),
     path('api/secondary/<str:secondary_id>/update/', secondary_api_update, name='secondary_api_update'),
+    
+    # Subscription API
+    path('api/subscribe/', subscribe_to_updates, name='subscribe_to_updates'),
+    path('api/unsubscribe/', unsubscribe_from_updates, name='unsubscribe_from_updates'),
+    path('api/subscription-stats/', get_subscription_stats, name='get_subscription_stats'),
+    
+    # Apartment Booking API
+    path('api/book-apartment/', book_apartment, name='book_apartment'),
+    path('api/booking-stats/', get_booking_stats, name='get_booking_stats'),
+    path('api/booking/<str:booking_id>/update-status/', update_booking_status, name='update_booking_status'),
 ]

@@ -10,6 +10,7 @@ from datetime import datetime
 import json
 
 from ..services.mongo_service import get_mongo_connection
+from .subscription_api import notify_new_promotion
 
 
 @csrf_exempt
@@ -42,6 +43,13 @@ def promotions_create(request):
         if ends_at: doc['ends_at'] = ends_at
 
         inserted = promotions.insert_one(doc)
+        
+        # Отправляем уведомления подписчикам
+        try:
+            notify_new_promotion(doc)
+        except Exception as e:
+            print(f"Ошибка отправки уведомлений о новой акции: {e}")
+        
         return JsonResponse({'success': True, 'id': str(inserted.inserted_id)})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)

@@ -3558,6 +3558,186 @@
             });
         });
 
+        // Редактирование будущего проекта
+        async function editFutureProject(projectId) {
+            console.log('🔧 editFutureProject вызвана с ID:', projectId);
+            try {
+                // Получаем данные проекта
+                console.log('📡 Запрашиваем данные проекта...');
+                const response = await fetch(`/api/manual-matching/future-projects/${projectId}/`);
+                console.log('📡 Ответ получен:', response.status);
+                const result = await response.json();
+                console.log('📡 Данные проекта:', result);
+                
+                if (!result.success) {
+                    showToast('Ошибка загрузки данных проекта: ' + result.error, 'error');
+                    return;
+                }
+                
+                const project = result.data;
+                
+                // Создаем модальное окно редактирования
+                const modalHtml = `
+                    <div class="modal" id="editFutureProjectModal" onclick="if(event.target === this) closeEditFutureProjectModal();">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>✏️ Редактировать будущий проект</h3>
+                                <button class="modal-close" onclick="closeEditFutureProjectModal()">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="editFutureProjectForm">
+                                    <div class="form-group">
+                                        <label for="editProjectName">Название проекта *</label>
+                                        <input type="text" id="editProjectName" class="form-input" value="${escapeHtml(project.name)}" required>
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="editProjectCity">Город *</label>
+                                            <input type="text" id="editProjectCity" class="form-input" value="${escapeHtml(project.city)}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="editProjectDistrict">Район</label>
+                                            <input type="text" id="editProjectDistrict" class="form-input" value="${escapeHtml(project.district || '')}" placeholder="Например: Советский">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="editProjectStreet">Улица</label>
+                                        <input type="text" id="editProjectStreet" class="form-input" value="${escapeHtml(project.street || '')}" placeholder="Например: ул. Ленина, д. 1">
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="editProjectDeliveryDate">Срок сдачи *</label>
+                                            <input type="date" id="editProjectDeliveryDate" class="form-input" value="${project.delivery_date ? new Date(project.delivery_date).toISOString().split('T')[0] : ''}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="editProjectSalesStart">Старт продаж</label>
+                                            <input type="date" id="editProjectSalesStart" class="form-input" value="${project.sales_start ? new Date(project.sales_start).toISOString().split('T')[0] : ''}" placeholder="Дата начала продаж">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="editProjectHouseClass">Класс дома</label>
+                                        <select id="editProjectHouseClass" class="form-input">
+                                            <option value="">Выберите класс</option>
+                                            <option value="Эконом" ${project.house_class === 'Эконом' ? 'selected' : ''}>Эконом</option>
+                                            <option value="Комфорт" ${project.house_class === 'Комфорт' ? 'selected' : ''}>Комфорт</option>
+                                            <option value="Бизнес" ${project.house_class === 'Бизнес' ? 'selected' : ''}>Бизнес</option>
+                                            <option value="Элит" ${project.house_class === 'Элит' ? 'selected' : ''}>Элит</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="editProjectDeveloper">Застройщик</label>
+                                        <input type="text" id="editProjectDeveloper" class="form-input" value="${escapeHtml(project.developer || '')}" placeholder="Название застройщика">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="editProjectDescription">Описание</label>
+                                        <textarea id="editProjectDescription" class="form-input" rows="4" placeholder="Описание проекта...">${escapeHtml(project.description || '')}</textarea>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-secondary" onclick="closeEditFutureProjectModal()">Отмена</button>
+                                <button class="btn btn-primary" onclick="saveFutureProjectEdit('${projectId}')">Сохранить изменения</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                console.log('✅ Модальное окно создано и добавлено в DOM');
+                
+                // Показываем модальное окно
+                const modal = document.getElementById('editFutureProjectModal');
+                if (modal) {
+                    modal.style.position = 'fixed';
+                    modal.style.top = '0';
+                    modal.style.left = '0';
+                    modal.style.right = '0';
+                    modal.style.bottom = '0';
+                    modal.style.background = 'rgba(0,0,0,0.6)';
+                    modal.style.zIndex = '9999';
+                    modal.style.display = 'flex';
+                    modal.style.alignItems = 'center';
+                    modal.style.justifyContent = 'center';
+                    console.log('✅ Модальное окно отображено');
+                    
+                    // Добавляем обработчик клавиши Escape
+                    const escapeHandler = function(e) {
+                        if (e.key === 'Escape' && modal.style.display === 'flex') {
+                            closeEditFutureProjectModal();
+                            document.removeEventListener('keydown', escapeHandler);
+                        }
+                    };
+                    document.addEventListener('keydown', escapeHandler);
+                } else {
+                    console.error('❌ Не удалось найти модальное окно в DOM');
+                }
+                
+            } catch (error) {
+                console.error('❌ Ошибка загрузки данных проекта:', error);
+                showToast('Ошибка подключения к серверу', 'error');
+            }
+        }
+
+        // Закрытие модального окна редактирования
+        function closeEditFutureProjectModal() {
+            const modal = document.getElementById('editFutureProjectModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Сохранение изменений будущего проекта
+        async function saveFutureProjectEdit(projectId) {
+            const formData = {
+                name: document.getElementById('editProjectName').value,
+                city: document.getElementById('editProjectCity').value,
+                district: document.getElementById('editProjectDistrict').value,
+                street: document.getElementById('editProjectStreet').value,
+                delivery_date: document.getElementById('editProjectDeliveryDate').value,
+                sales_start: document.getElementById('editProjectSalesStart').value,
+                house_class: document.getElementById('editProjectHouseClass').value,
+                developer: document.getElementById('editProjectDeveloper').value,
+                description: document.getElementById('editProjectDescription').value
+            };
+            
+            // Валидация
+            if (!formData.name || !formData.city || !formData.delivery_date) {
+                showToast('Пожалуйста, заполните обязательные поля (название, город, срок сдачи)', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/manual-matching/future-projects/${projectId}/update/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('Проект успешно обновлен', 'success');
+                    closeEditFutureProjectModal();
+                    await loadFutureProjects();
+                } else {
+                    console.error('❌ Ошибка обновления проекта:', result.error);
+                    showToast(`Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Ошибка сети при обновлении проекта:', error);
+                showToast('Ошибка подключения к серверу', 'error');
+            }
+        }
+
         // Функции для управления записями
         function deleteVideo(videoId) {
             if (!confirm('Удалить видеообзор?')) return;
@@ -3840,9 +4020,15 @@
                                     <input type="text" id="projectStreet" class="form-input" value="${domrfData.street || ''}" placeholder="Например: ул. Ленина, д. 1">
                                 </div>
                                 
-                                <div class="form-group">
-                                    <label for="projectDeliveryDate">Срок сдачи *</label>
-                                    <input type="date" id="projectDeliveryDate" class="form-input" required>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="projectDeliveryDate">Срок сдачи *</label>
+                                        <input type="date" id="projectDeliveryDate" class="form-input" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="projectSalesStart">Старт продаж</label>
+                                        <input type="date" id="projectSalesStart" class="form-input" placeholder="Дата начала продаж">
+                                    </div>
                                 </div>
                                 
                                 <div class="form-group">
@@ -4241,6 +4427,7 @@
                 district: document.getElementById('projectDistrict').value,
                 street: document.getElementById('projectStreet').value,
                 delivery_date: document.getElementById('projectDeliveryDate').value,
+                sales_start: document.getElementById('projectSalesStart').value,
                 house_class: document.getElementById('projectHouseClass').value,
                 developer: document.getElementById('projectDeveloper').value,
                 description: document.getElementById('projectDescription').value,
@@ -4350,6 +4537,9 @@
                                 <a href="/future-complexes/${project._id}/" class="future-project-btn edit-btn" target="_blank" title="Открыть детальную страницу">
                                     👁️
                                 </a>
+                                <button class="future-project-btn edit-future-btn" onclick="editFutureProject('${project._id}')" title="Редактировать проект">
+                                    ✏️
+                                </button>
                                 <button class="future-project-btn delete-future-btn" onclick="deleteFutureProject('${project._id}', '${escapeHtml(project.name)}')" title="Удалить проект">
                                     🗑️
                                 </button>
@@ -4830,6 +5020,8 @@
                 showToast('Ошибка подключения к серверу', 'error');
             }
         }
+
+
 
         // Загружаем ипотечные программы при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {

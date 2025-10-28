@@ -117,3 +117,8 @@ def privacy_policy(request):
     """Страница политики конфиденциальности"""
     return render(request, 'main/privacy.html')
 
+
+def unsubscribe_page(request):
+    """Страница отписки от рассылки"""
+    return render(request, 'main/unsubscribe.html')
+

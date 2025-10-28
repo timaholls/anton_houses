@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block title %}Отписка от рассылки - CENTURY 21{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="unsubscribe-page">
+        <div class="unsubscribe-content">
+            <h1 class="unsubscribe-title">📧 Отписка от рассылки</h1>
+            <p class="unsubscribe-subtitle">Если вы больше не хотите получать уведомления о новых проектах и акциях</p>
+            
+            <form class="unsubscribe-form" id="unsubscribeForm">
+                <div class="form-group">
+                    <label for="unsubscribeEmail">Ваш email адрес</label>
+                    <input type="email" id="unsubscribeEmail" name="email" placeholder="Введите ваш email" required>
+                </div>
+                
+                <button type="submit" class="unsubscribe-button" id="unsubscribeButton">
+                    Отписаться
+                </button>
+                
+                <div class="unsubscribe-message" id="unsubscribeMessage"></div>
+            </form>
+            
+            <div class="unsubscribe-info">
+                <p>После отписки вы больше не будете получать уведомления о:</p>
+                <ul>
+                    <li>🏗️ Новых будущих проектах</li>
+                    <li>🎟️ Новых акциях и спецпредложениях</li>
+                </ul>
+                <p>Если передумаете, вы всегда можете подписаться заново на главной странице сайта.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.unsubscribe-page {
+    max-width: 600px;
+    margin: 60px auto;
+    padding: 0 20px;
+}
+
+.unsubscribe-content {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.unsubscribe-title {
+    color: var(--c21-dark);
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.unsubscribe-subtitle {
+    color: #666;
+    font-size: 18px;
+    margin-bottom: 32px;
+    line-height: 1.5;
+}
+
+.unsubscribe-form {
+    max-width: 400px;
+    margin: 0 auto 32px auto;
+    text-align: left;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: var(--c21-dark);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--c21-gold);
+    box-shadow: 0 0 0 3px rgba(190,175,135,0.2);
+}
+
+.unsubscribe-button {
+    width: 100%;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.unsubscribe-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239,68,68,0.4);
+}
+
+.unsubscribe-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.unsubscribe-message {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: none;
+}
+
+.unsubscribe-message.success {
+    background: rgba(34,197,94,0.2);
+    color: #22c55e;
+    border: 1px solid rgba(34,197,94,0.3);
+}
+
+.unsubscribe-message.error {
+    background: rgba(239,68,68,0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.3);
+}
+
+.unsubscribe-info {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: left;
+    border-left: 4px solid var(--c21-gold);
+}
+
+.unsubscribe-info p {
+    color: #666;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.unsubscribe-info ul {
+    color: #666;
+    margin: 12px 0;
+    padding-left: 20px;
+}
+
+.unsubscribe-info li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .unsubscribe-page {
+        margin: 40px auto;
+        padding: 0 16px;
+    }
+    
+    .unsubscribe-content {
+        padding: 30px 20px;
+    }
+    
+    .unsubscribe-title {
+        font-size: 24px;
+    }
+    
+    .unsubscribe-subtitle {
+        font-size: 16px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const unsubscribeForm = document.getElementById('unsubscribeForm');
+    const unsubscribeButton = document.getElementById('unsubscribeButton');
+    const unsubscribeMessage = document.getElementById('unsubscribeMessage');
+    
+    unsubscribeForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(unsubscribeForm);
+        const email = formData.get('email');
+        
+        // Валидация
+        if (!email || !email.includes('@')) {
+            showMessage('Пожалуйста, введите корректный email адрес', 'error');
+            return;
+        }
+        
+        // Отправка данных
+        unsubscribeButton.disabled = true;
+        unsubscribeButton.textContent = 'Отписываем...';
+        
+        try {
+            const response = await fetch('/api/unsubscribe/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ email: email })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showMessage(result.message, 'success');
+                unsubscribeForm.reset();
+            } else {
+                showMessage(result.error || 'Произошла ошибка при отписке', 'error');
+            }
+        } catch (error) {
+            console.error('Ошибка отписки:', error);
+            showMessage('Произошла ошибка при отправке запроса', 'error');
+        } finally {
+            unsubscribeButton.disabled = false;
+            unsubscribeButton.textContent = 'Отписаться';
+        }
+    });
+    
+    function showMessage(text, type) {
+        unsubscribeMessage.textContent = text;
+        unsubscribeMessage.className = `unsubscribe-message ${type}`;
+        unsubscribeMessage.style.display = 'block';
+        
+        // Скрываем сообщение через 5 секунд
+        setTimeout(() => {
+            unsubscribeMessage.style.display = 'none';
+        }, 5000);
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

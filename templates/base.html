@@ -73,10 +73,37 @@
                 <a href="{% url 'main:articles' %}"
                    class="nav-link {% if 'articles' in request.resolver_match.url_name %}active{% endif %}">Новости</a>
                 <a href="{% url 'main:mortgage' %}" class="nav-link">Ипотека</a>
-                <a href="{% url 'main:team' %}"
-                   class="nav-link {% if request.resolver_match.url_name == 'team' %}active{% endif %}">Наша команда</a>
-                <a href="{% url 'main:vacancies' %}"
-                   class="nav-link {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
+                
+                <!-- Выпадающее меню Услуги -->
+                <div class="nav-dropdown">
+                    <a href="#"
+                       class="nav-link dropdown-toggle {% if 'services' in request.resolver_match.url_name %}active{% endif %}">
+                        Услуги
+                        <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="#" class="dropdown-item">Оценка недвижимости</a>
+                        <a href="#" class="dropdown-item">Консультации</a>
+                        <a href="#" class="dropdown-item">Юридические услуги</a>
+                        <a href="#" class="dropdown-item">Страхование</a>
+                    </div>
+                </div>
+                
+                <!-- Выпадающее меню Команда и карьера -->
+                <div class="nav-dropdown">
+                    <a href="#"
+                       class="nav-link dropdown-toggle {% if request.resolver_match.url_name == 'team' or 'vacanc' in request.resolver_match.url_name %}active{% endif %}">
+                        Команда и карьера
+                        <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="{% url 'main:team' %}"
+                           class="dropdown-item {% if request.resolver_match.url_name == 'team' %}active{% endif %}">Наша команда</a>
+                        <a href="{% url 'main:vacancies' %}"
+                           class="dropdown-item {% if 'vacanc' in request.resolver_match.url_name %}active{% endif %}">Вакансии</a>
+                    </div>
+                </div>
+                
                 <a href="{% url 'main:offices' %}"
                    class="nav-link {% if 'office' in request.resolver_match.url_name %}active{% endif %}">Офисы
                     продаж</a>
@@ -118,8 +145,21 @@
                 </div>
                 <a href="{% url 'main:articles' %}" class="drawer-link">Новости</a>
                 <a href="{% url 'main:mortgage' %}" class="drawer-link">Ипотека</a>
-                <a href="{% url 'main:team' %}" class="drawer-link">Наша команда</a>
-                <a href="{% url 'main:vacancies' %}" class="drawer-link">Вакансии</a>
+                
+                <div class="drawer-group">
+                    <div class="drawer-title">Услуги</div>
+                    <a href="#" class="drawer-sublink">Оценка недвижимости</a>
+                    <a href="#" class="drawer-sublink">Консультации</a>
+                    <a href="#" class="drawer-sublink">Юридические услуги</a>
+                    <a href="#" class="drawer-sublink">Страхование</a>
+                </div>
+                
+                <div class="drawer-group">
+                    <div class="drawer-title">Команда и карьера</div>
+                    <a href="{% url 'main:team' %}" class="drawer-sublink">Наша команда</a>
+                    <a href="{% url 'main:vacancies' %}" class="drawer-sublink">Вакансии</a>
+                </div>
+                
                 <a href="{% url 'main:offices' %}" class="drawer-link">Офисы продаж</a>
             </nav>
             <div class="mobile-drawer-footer">

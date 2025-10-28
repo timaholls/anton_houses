@@ -15,7 +15,7 @@ from .services.mongo_service import (
 )
 
 # Views
-from .view_modules.home_views import home, privacy_policy
+from .view_modules.home_views import home, privacy_policy, unsubscribe_page
 from .view_modules.catalog_views import (
     catalog,
     detail,
