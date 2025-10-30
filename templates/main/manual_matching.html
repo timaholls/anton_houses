@@ -1766,72 +1766,689 @@
         // Сохранение сопоставления
         async function saveMatch() {
             const selectedCount = Object.values(appState.selected).filter(id => id !== null).length;
-            if (selectedCount < 2) {
-                showToast('Необходимо выбрать минимум 2 записи для объединения', 'error');
-                return;
-            }
-            // Перед сохранением спросим агента
+            if (selectedCount < 2) { showToast('Необходимо выбрать минимум 2 записи для объединения', 'error'); return; }
             const agentId = await pickAgent();
-            if(agentId === null) return; // отмена
+            if(agentId === null) return;
 
             const saveBtn = document.getElementById('saveBtn');
             saveBtn.disabled = true;
-            saveBtn.innerHTML = '<div class="spinner"></div> Сохранение...';
-            
+            saveBtn.innerHTML = '<div class="spinner"></div> Подготовка...';
+
             try {
-                const response = await fetch('/api/manual-matching/save/', {
+                const response = await fetch('/api/manual-matching/preview/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         domrf_id: appState.selected.domrf,
                         avito_id: appState.selected.avito,
                         domclick_id: appState.selected.domclick,
                         is_featured: document.getElementById('isFeaturedCheckbox').checked,
-                        agent_id: agentId || '',
-                        created_at: new Date().toISOString()
+                        agent_id: agentId || ''
                     })
                 });
-                
                 const result = await response.json();
-                
-                if (result.success) {
-                    showToast('✓ Сопоставление успешно сохранено!', 'success');
-                    
-                    // Перезагружаем данные
-                    await loadData();
-                    await loadUnifiedRecords();
-                    
-                    // Очищаем выбор
-                    clearSelection();
-                } else {
-                    // Если DomRF не найден или отсутствуют координаты, предлагаем создать/дополнить его
-                    if (result.error === 'Запись DomRF не найдена' || result.error_type === 'missing_coordinates') {
-                        const avitoData = appState.selected.avito ? appState.data.avito.find(item => item._id === appState.selected.avito) : null;
-                        const domclickData = appState.selected.domclick ? appState.data.domclick.find(item => item._id === appState.selected.domclick) : null;
-                        const isMissingCoordinates = result.error_type === 'missing_coordinates';
-                        
-                        if (isMissingCoordinates) {
-                            showToast('⚠️ Необходимо ввести координаты для объединения записей', 'warning');
-                        } else {
-                            // Координаты уже есть
-                        }
-                        
-                        // Сохраняем выбранного агента для использования в модальном окне
-                        appState.selectedAgentId = agentId;
-                        openDomrfModal(avitoData, domclickData, isMissingCoordinates);
-                    } else {
-                        showToast('Ошибка: ' + result.error, 'error');
-                    }
-                }
+                if (!result.success) { showToast(result.error || 'Не удалось подготовить предпросмотр', 'error'); return; }
+
+                // Откроем предпросмотр в редакторе
+                openEditUnifiedPreview(result.item, {
+                    domrf: appState.selected.domrf,
+                    avito: appState.selected.avito,
+                    domclick: appState.selected.domclick,
+                    is_featured: document.getElementById('isFeaturedCheckbox').checked,
+                    agent_id: agentId || ''
+                });
             } catch (error) {
-                console.error('Error saving match:', error);
-                showToast('Ошибка сохранения данных', 'error');
+                console.error('Error preview:', error);
+                showToast('Ошибка подготовки предпросмотра', 'error');
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '✓ Объединить';
             }
+        }
+
+        function openEditUnifiedPreview(item, selectedMeta){
+            // Полноценное окно редактирования по образцу openEditUnified, без ID; при сохранении создаём и обновляем
+            const modal = document.createElement('div');
+            modal.style.position='fixed';
+            modal.style.top='0';
+            modal.style.left='0';
+            modal.style.right='0';
+            modal.style.bottom='0';
+            modal.style.background='rgba(0,0,0,0.7)';
+            modal.style.zIndex='10000';
+            modal.style.display='flex';
+            modal.style.alignItems='center';
+            modal.style.justifyContent='center';
+            modal.style.padding='20px';
+            modal.style.overflow='auto';
+
+            function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+            // Подготовка данных для отображения
+            const apartmentTypes = item.apartment_types || {};
+            const developmentPhotos = item.development?.photos || [];
+            
+            // Ход строительства может быть в разных форматах
+            let constructionProgress = [];
+            if (item.construction_progress) {
+                if (Array.isArray(item.construction_progress)) {
+                    constructionProgress = item.construction_progress;
+                } else if (item.construction_progress.construction_stages && Array.isArray(item.construction_progress.construction_stages)) {
+                    constructionProgress = item.construction_progress.construction_stages;
+                } else if (item.construction_progress.photos && Array.isArray(item.construction_progress.photos)) {
+                    constructionProgress = [{
+                        stage: 'Ход строительства',
+                        photos: item.construction_progress.photos
+                    }];
+                }
+            }
+            
+            // Генерация HTML для квартир
+            let apartmentsHtml = '';
+            Object.keys(apartmentTypes).forEach(roomType => {
+                const apartments = apartmentTypes[roomType]?.apartments || [];
+                if (apartments.length > 0) {
+                    apartmentsHtml += `
+                        <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569; margin-bottom:16px;" data-room-type="${escapeHtml(roomType)}">
+                            <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">
+                                ${roomType === 'Студия' ? '🏠 Студия' : `🏠 ${roomType}-комнатные`}
+                                <span style="color:#94a3b8; font-size:14px; font-weight:normal;">(${apartments.length} вариантов)</span>
+                            </h4>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+                                ${apartments.map((apt, idx) => {
+                                    const images = Array.isArray(apt.image) ? apt.image : (apt.image ? [apt.image] : []);
+                                    return `
+                                        <div class="apartment-card" data-apt-idx="${idx}" style="background:#334155; padding:12px; border-radius:8px; border:1px solid #475569; position:relative;">
+                                            <button onclick="deletePreviewApartment('${escapeHtml(roomType)}', ${idx})" 
+                                                style="position:absolute; top:8px; right:8px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; z-index:10; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                title="Удалить квартиру">
+                                                🗑️ Удалить
+                                            </button>
+                                            <label style="display:block; margin-bottom:6px;">
+                                                <span style="font-size:11px; color:#94a3b8;">Название:</span>
+                                                <input type="text" value="${escapeHtml(apt.title || 'Квартира')}" 
+                                                    class="apt-field" data-room-type="${escapeHtml(roomType)}" data-apt-idx="${idx}" data-field="title"
+                                                    style="width:100%; padding:6px 8px; background:#1e293b; border:1px solid #475569; border-radius:4px; color:#cbd5e1; font-size:12px; margin-top:2px;">
+                                            </label>
+                                            <label style="display:block; margin-bottom:6px;">
+                                                <span style="font-size:11px; color:#94a3b8;">💰 Цена:</span>
+                                                <input type="text" value="${escapeHtml(apt.price || '')}" 
+                                                    class="apt-field" data-room-type="${escapeHtml(roomType)}" data-apt-idx="${idx}" data-field="price"
+                                                    style="width:100%; padding:6px 8px; background:#1e293b; border:1px solid #475569; border-radius:4px; color:#fff; font-size:12px; margin-top:2px;">
+                                            </label>
+                                            <label style="display:block; margin-bottom:6px;">
+                                                <span style="font-size:11px; color:#94a3b8;">📏 Цена за м²:</span>
+                                                <input type="text" value="${escapeHtml(apt.pricePerSquare || '')}" 
+                                                    class="apt-field" data-room-type="${escapeHtml(roomType)}" data-apt-idx="${idx}" data-field="pricePerSquare"
+                                                    style="width:100%; padding:6px 8px; background:#1e293b; border:1px solid #475569; border-radius:4px; color:#fff; font-size:12px; margin-top:2px;">
+                                            </label>
+                                            <label style="display:block; margin-bottom:8px;">
+                                                <span style="font-size:11px; color:#94a3b8;">📅 Срок сдачи:</span>
+                                                <input type="text" value="${escapeHtml(apt.completionDate || '')}" 
+                                                    class="apt-field" data-room-type="${escapeHtml(roomType)}" data-apt-idx="${idx}" data-field="completionDate"
+                                                    style="width:100%; padding:6px 8px; background:#1e293b; border:1px solid #475569; border-radius:4px; color:#fff; font-size:12px; margin-top:2px;">
+                                            </label>
+                                            ${images.length > 0 ? `
+                                                <div style="margin-top:8px;">
+                                                    <div style="font-size:12px; color:#94a3b8; margin-bottom:6px;">🖼️ Планировки (${images.length}):</div>
+                                                    <div class="apt-images-container" style="display:flex; flex-direction:column; gap:6px;">
+                                                        ${images.map((img, imgIdx) => `
+                                                            <div class="apt-image-wrapper" data-img-idx="${imgIdx}" style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                                <img src="${img}" alt="Планировка" 
+                                                                    style="width:100%; height:120px; object-fit:cover; display:block;"
+                                                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                                    Изображение недоступно
+                                                                </div>
+                                                                <button onclick="deletePreviewAptPhoto('${escapeHtml(roomType)}', ${idx}, ${imgIdx})" 
+                                                                    style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                                    title="Удалить фото">
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        `).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : '<div style="font-size:11px; color:#6b7280; font-style:italic; margin-top:8px;">Нет фотографий</div>'}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            // Генерация HTML для фото ЖК
+            let developmentPhotosHtml = '';
+            if (developmentPhotos.length > 0) {
+                developmentPhotosHtml = `
+                    <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569; margin-bottom:16px;">
+                        <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">
+                            📸 Фото ЖК (${developmentPhotos.length})
+                        </h4>
+                        <div class="dev-photos-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+                            ${developmentPhotos.map((photo, idx) => `
+                                <div class="dev-photo-wrapper" data-photo-idx="${idx}" style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                    <img src="${photo}" alt="Фото ЖК" 
+                                        style="width:100%; height:140px; object-fit:cover; display:block;"
+                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                        Изображение недоступно
+                                    </div>
+                                    <button onclick="deletePreviewDevPhoto(${idx})" 
+                                        style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                        title="Удалить фото">
+                                        ✕
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Генерация HTML для хода строительства
+            let constructionProgressHtml = '';
+            if (constructionProgress && Array.isArray(constructionProgress) && constructionProgress.length > 0) {
+                constructionProgressHtml = `
+                    <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569; margin-bottom:16px;">
+                        <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">
+                            🏗️ Ход строительства (${constructionProgress.length} этапов)
+                        </h4>
+                        <div class="construction-stages-container" style="display:flex; flex-direction:column; gap:12px;">
+                            ${constructionProgress.map((stage, stageIdx) => {
+                                const photos = stage.photos || [];
+                                return `
+                                    <div class="construction-stage" data-stage-idx="${stageIdx}" data-stage-name="${escapeHtml(stage.stage || `Этап ${stageIdx + 1}`)}" data-stage-date="${escapeHtml(stage.date || '')}" style="background:#334155; padding:12px; border-radius:8px; border:1px solid #475569; position:relative;">
+                                        <button onclick="deletePreviewConstructionStage(${stageIdx})" 
+                                            style="position:absolute; top:8px; right:8px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; z-index:10; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                            title="Удалить этап">
+                                            🗑️ Удалить этап
+                                        </button>
+                                        <div class="stage-name" style="font-size:14px; color:#cbd5e1; margin-bottom:8px; font-weight:600; padding-right:100px;">
+                                            ${escapeHtml(stage.stage || `Этап ${stageIdx + 1}`)}
+                                        </div>
+                                        ${stage.date ? `<div class="stage-date" style="font-size:12px; color:#94a3b8; margin-bottom:8px;">📅 ${escapeHtml(stage.date)}</div>` : ''}
+                                        ${photos.length > 0 ? `
+                                            <div class="stage-photos-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; margin-top:8px;">
+                                                ${photos.map((photo, photoIdx) => `
+                                                    <div class="stage-photo-wrapper" data-photo-idx="${photoIdx}" style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                        <img src="${photo}" alt="Ход строительства" 
+                                                            style="width:100%; height:120px; object-fit:cover; display:block;"
+                                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                        <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                            Изображение недоступно
+                                                        </div>
+                                                        <button onclick="deletePreviewConstructionPhoto(${stageIdx}, ${photoIdx})" 
+                                                            style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                            title="Удалить фото">
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        ` : '<div style="font-size:11px; color:#6b7280; font-style:italic;">Нет фотографий</div>'}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Генерация HTML для характеристик
+            const params = item.development?.parameters || {};
+            const priceRange = item.development?.price_range || '';
+            let characteristicsHtml = `
+                <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569;">
+                    <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">📊 Характеристики ЖК (редактируемые)</h4>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:12px;">
+                        <label style="display:flex; flex-direction:column; background:#334155; padding:12px; border-radius:6px; border:1px solid #475569;">
+                            <span style="font-size:12px; color:#94a3b8; margin-bottom:6px;">💰 Диапазон цен</span>
+                            <input type="text" class="char-field" data-field="price_range" value="${escapeHtml(priceRange)}" 
+                                placeholder="Например: от 3 млн ₽"
+                                style="background:#1e293b; border:1px solid #475569; border-radius:6px; padding:8px; color:#fff; font-size:14px;">
+                        </label>
+                        ${Object.keys(params).map(key => `
+                            <label style="display:flex; flex-direction:column; background:#334155; padding:12px; border-radius:6px; border:1px solid #475569;">
+                                <span style="font-size:12px; color:#94a3b8; margin-bottom:6px;">${escapeHtml(key)}</span>
+                                <input type="text" class="char-field" data-field="param_${escapeHtml(key)}" value="${escapeHtml(String(params[key]))}" 
+                                    style="background:#1e293b; border:1px solid #475569; border-radius:6px; padding:8px; color:#fff; font-size:14px;">
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            modal.innerHTML = `
+                <div style="background:#1e293b; color:#fff; width:95%; max-width:1400px; border-radius:12px; border:1px solid #475569; box-shadow:0 20px 50px rgba(0,0,0,.4); max-height:90vh; display:flex; flex-direction:column;">
+                    <div style="padding:20px 24px; border-bottom:1px solid #475569; font-weight:700; font-size:20px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🔎 Предпросмотр объединения • Редактирование</span>
+                        <button onclick="this.closest('[style*=position]').remove()" style="background:transparent; border:none; color:#94a3b8; font-size:28px; cursor:pointer; padding:0; line-height:1;">&times;</button>
+                    </div>
+                    
+                    <!-- Основная информация (всегда видна) -->
+                    <div style="padding:16px 24px; border-bottom:1px solid #475569; background:#0f172a;">
+                        <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">📝 Основная информация</h4>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                            <label style="grid-column:1 / -1; display:flex; flex-direction:column;">
+                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Название ЖК</span>
+                                <input id="pv-name" type="text" value="${escapeHtml(item.development?.name || item.name || '')}" 
+                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                            </label>
+                            <label style="display:flex; flex-direction:column;">
+                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">🏙️ Город</span>
+                                <input id="pv-city" type="text" value="${escapeHtml(item.city || 'Уфа')}" 
+                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                            </label>
+                            <label style="display:flex; flex-direction:column;">
+                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">🗺️ Район</span>
+                                <input id="pv-district" type="text" value="${escapeHtml(item.district || '')}" 
+                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                            </label>
+                            <label style="display:flex; flex-direction:column;">
+                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">📍 Улица</span>
+                                <input id="pv-street" type="text" value="${escapeHtml(item.street || '')}" 
+                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                            </label>
+                            <label style="display:flex; flex-direction:column;">
+                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Показывать на главной</span>
+                                <select id="pv-featured" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                                    <option value="true" ${item.is_featured? 'selected':''}>Да</option>
+                                    <option value="false" ${!item.is_featured? 'selected':''}>Нет</option>
+                                </select>
+                            </label>
+                            <label style="display:flex; flex-direction:column;">
+                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Координаты (широта)</span>
+                                <input id="pv-latitude" type="number" step="any" value="${item.latitude || ''}" 
+                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                            </label>
+                            <label style="display:flex; flex-direction:column;">
+                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Координаты (долгота)</span>
+                                <input id="pv-longitude" type="number" step="any" value="${item.longitude || ''}" 
+                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Вкладки -->
+                    <div style="display:flex; border-bottom:1px solid #475569; background:#0f172a; padding:0 24px;">
+                        <button class="edit-tab" data-tab="characteristics" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
+                            📊 Характеристики
+                        </button>
+                        <button class="edit-tab active" data-tab="apartments" style="padding:12px 20px; border:none; background:transparent; color:#10b981; cursor:pointer; border-bottom:2px solid #10b981; font-size:14px; font-weight:500; transition:all 0.3s;">
+                            🏠 Квартиры
+                        </button>
+                        <button class="edit-tab" data-tab="photos" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
+                            📸 Фото ЖК
+                        </button>
+                        <button class="edit-tab" data-tab="construction" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
+                            🏗️ Ход строительства
+                        </button>
+                        <button class="edit-tab" data-tab="rating" style="padding:12px 20px; border:none; background:transparent; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; font-weight:500; transition:all 0.3s;">
+                            ⭐ Рейтинг
+                        </button>
+                    </div>
+                    
+                    <div style="overflow-y:auto; flex:1; padding:20px 24px;">
+                        <!-- Вкладка: Характеристики -->
+                        <div class="edit-tab-content" data-tab-content="characteristics" style="display:none;">
+                            ${characteristicsHtml}
+                        </div>
+                        
+                        <!-- Вкладка: Квартиры -->
+                        <div class="edit-tab-content" data-tab-content="apartments" style="display:block;">
+                            ${apartmentsHtml || '<div style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет данных о квартирах</div>'}
+                        </div>
+                        
+                        <!-- Вкладка: Фото ЖК -->
+                        <div class="edit-tab-content" data-tab-content="photos" style="display:none;">
+                            ${developmentPhotosHtml || '<div style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет фото ЖК</div>'}
+                        </div>
+                        
+                        <!-- Вкладка: Ход строительства -->
+                        <div class="edit-tab-content" data-tab-content="construction" style="display:none;">
+                            ${constructionProgressHtml || '<div style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет данных о ходе строительства</div>'}
+                        </div>
+                        
+                        <!-- Вкладка: Рейтинг -->
+                        <div class="edit-tab-content" data-tab-content="rating" style="display:none;">
+                            <div style="max-width:600px; margin:0 auto;">
+                                <div style="background:#1e293b; border:1px solid #475569; border-radius:8px; padding:24px; margin-bottom:20px;">
+                                    <h3 style="color:#f1f5f9; margin:0 0 16px 0; font-size:18px; font-weight:600;">Оценка объекта</h3>
+                                    <p style="color:#94a3b8; margin:0 0 20px 0; font-size:14px; line-height:1.5;">
+                                        Оцените качество данного объекта по шкале от 1 до 5. При низкой оценке рекомендуется указать причины.
+                                    </p>
+                                    
+                                    <!-- Рейтинг -->
+                                    <div style="margin-bottom:20px;">
+                                        <label style="display:block; color:#f1f5f9; margin-bottom:8px; font-weight:500;">Рейтинг</label>
+                                        <div style="display:flex; gap:8px; align-items:center;">
+                                            ${[5,4,3,2,1].map(val => `
+                                                <input type="radio" id="pv-rating${val}" name="pv-rating" value="${val}" style="display:none;">
+                                                <label for="pv-rating${val}" style="font-size:24px; color:#64748b; cursor:pointer; transition:color 0.2s;">★</label>
+                                            `).join('')}
+                                            <span id="pv-rating-text" style="margin-left:12px; color:#94a3b8; font-size:14px;">Не выбрано</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Описание рейтинга -->
+                                    <div id="pv-rating-description-section" style="display:none;">
+                                        <label style="display:block; color:#f1f5f9; margin-bottom:8px; font-weight:500;">Описание причины оценки</label>
+                                        <textarea name="pv-rating_description" placeholder="Опишите причины вашей оценки (необязательно для высоких оценок)..." 
+                                            style="width:100%; min-height:80px; padding:12px; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#f1f5f9; font-size:14px; resize:vertical; font-family:inherit;"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding:16px 24px; display:flex; gap:12px; justify-content:flex-end; border-top:1px solid #475569; background:#0f172a;">
+                        <button class="btn" style="background:#475569; color:#fff; padding:12px 24px;" id="pv-cancel">Отмена</button>
+                        <button class="btn btn-success" style="padding:12px 24px;" id="pv-save">💾 Сохранить</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Обработка переключения вкладок
+            const tabs = modal.querySelectorAll('.edit-tab');
+            const tabContents = modal.querySelectorAll('.edit-tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetTab = tab.dataset.tab;
+                    
+                    // Деактивируем все вкладки
+                    tabs.forEach(t => {
+                        t.style.color = '#94a3b8';
+                        t.style.borderBottomColor = 'transparent';
+                        t.classList.remove('active');
+                    });
+                    
+                    // Активируем выбранную вкладку
+                    tab.style.color = '#10b981';
+                    tab.style.borderBottomColor = '#10b981';
+                    tab.classList.add('active');
+                    
+                    // Показываем соответствующий контент
+                    tabContents.forEach(content => {
+                        if (content.dataset.tabContent === targetTab) {
+                            content.style.display = 'block';
+                        } else {
+                            content.style.display = 'none';
+                        }
+                    });
+                });
+            });
+
+            // Обработка рейтинга
+            const ratingInputs = modal.querySelectorAll('input[name="pv-rating"]');
+            const ratingText = modal.querySelector('#pv-rating-text');
+            const descriptionSection = modal.querySelector('#pv-rating-description-section');
+            
+            function updatePreviewRatingDisplay(rating) {
+                const ratingTexts = {1: 'Очень плохо', 2: 'Плохо', 3: 'Удовлетворительно', 4: 'Хорошо', 5: 'Отлично'};
+                ratingText.textContent = ratingTexts[rating] || 'Не выбрано';
+                
+                ratingInputs.forEach((input, index) => {
+                    const label = input.nextElementSibling;
+                    const value = parseInt(input.value);
+                    if (value <= rating) {
+                        label.style.color = '#fbbf24';
+                    } else {
+                        label.style.color = '#64748b';
+                    }
+                });
+            }
+            
+            ratingInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    const rating = parseInt(this.value);
+                    updatePreviewRatingDisplay(rating);
+                    if (rating <= 3) {
+                        descriptionSection.style.display = 'block';
+                    } else {
+                        descriptionSection.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Функции удаления для предпросмотра
+            window.deletePreviewApartment = function(roomType, aptIdx) {
+                const roomSection = modal.querySelector(`[data-room-type="${roomType}"]`);
+                const aptCard = roomSection?.querySelector(`[data-apt-idx="${aptIdx}"]`);
+                if (aptCard) {
+                    aptCard.remove();
+                    // Обновляем счетчик
+                    const remaining = roomSection.querySelectorAll('.apartment-card').length;
+                    if (remaining === 0) {
+                        roomSection.remove();
+                    } else {
+                        const counter = roomSection.querySelector('h4 span');
+                        if (counter) counter.textContent = `(${remaining} вариантов)`;
+                    }
+                }
+            };
+            
+            window.deletePreviewAptPhoto = function(roomType, aptIdx, imgIdx) {
+                const roomSection = modal.querySelector(`[data-room-type="${roomType}"]`);
+                const aptCard = roomSection?.querySelector(`[data-apt-idx="${aptIdx}"]`);
+                const imgWrapper = aptCard?.querySelector(`[data-img-idx="${imgIdx}"]`);
+                if (imgWrapper) {
+                    imgWrapper.remove();
+                    const remaining = aptCard.querySelectorAll('.apt-image-wrapper').length;
+                    const photoLabel = aptCard.querySelector('.apt-images-container')?.previousElementSibling;
+                    if (photoLabel && remaining > 0) {
+                        photoLabel.textContent = `🖼️ Планировки (${remaining}):`;
+                    }
+                }
+            };
+            
+            window.deletePreviewDevPhoto = function(photoIdx) {
+                const photoWrapper = modal.querySelector(`.dev-photo-wrapper[data-photo-idx="${photoIdx}"]`);
+                if (photoWrapper) {
+                    photoWrapper.remove();
+                    const remaining = modal.querySelectorAll('.dev-photo-wrapper').length;
+                    const header = modal.querySelector('.dev-photos-container')?.closest('div')?.querySelector('h4');
+                    if (header && remaining > 0) {
+                        header.innerHTML = `📸 Фото ЖК (${remaining})`;
+                    }
+                }
+            };
+            
+            window.deletePreviewConstructionStage = function(stageIdx) {
+                const stage = modal.querySelector(`.construction-stage[data-stage-idx="${stageIdx}"]`);
+                if (stage) {
+                    stage.remove();
+                    const remaining = modal.querySelectorAll('.construction-stage').length;
+                    const header = modal.querySelector('.construction-stages-container')?.closest('div')?.querySelector('h4');
+                    if (header && remaining > 0) {
+                        header.innerHTML = `🏗️ Ход строительства (${remaining} этапов)`;
+                    }
+                }
+            };
+            
+            window.deletePreviewConstructionPhoto = function(stageIdx, photoIdx) {
+                const stage = modal.querySelector(`.construction-stage[data-stage-idx="${stageIdx}"]`);
+                const photoWrapper = stage?.querySelector(`.stage-photo-wrapper[data-photo-idx="${photoIdx}"]`);
+                if (photoWrapper) {
+                    photoWrapper.remove();
+                }
+            };
+
+            modal.querySelector('#pv-cancel').onclick = ()=> modal.remove();
+            modal.querySelector('#pv-save').onclick = async ()=>{
+                // Собираем ВСЕ актуальные данные из DOM
+                const finalData = {
+                    domrf_id: selectedMeta.domrf,
+                    avito_id: selectedMeta.avito,
+                    domclick_id: selectedMeta.domclick,
+                    is_featured: (modal.querySelector('#pv-featured')?.value === 'true') || selectedMeta.is_featured,
+                    agent_id: selectedMeta.agent_id || '',
+                    name: modal.querySelector('#pv-name').value.trim(),
+                    city: modal.querySelector('#pv-city').value.trim(),
+                    district: modal.querySelector('#pv-district').value.trim(),
+                    street: modal.querySelector('#pv-street').value.trim(),
+                    latitude: parseFloat(modal.querySelector('#pv-latitude').value) || null,
+                    longitude: parseFloat(modal.querySelector('#pv-longitude').value) || null,
+                };
+                
+                // Собираем квартиры из DOM (только те, которые остались)
+                const apartmentTypes = {};
+                modal.querySelectorAll('[data-room-type]').forEach(roomSection => {
+                    const roomType = roomSection.dataset.roomType;
+                    const apartments = [];
+                    
+                    roomSection.querySelectorAll('.apartment-card').forEach(aptCard => {
+                        const apt = {
+                            title: aptCard.querySelector('[data-field="title"]')?.value || '',
+                            price: aptCard.querySelector('[data-field="price"]')?.value || '',
+                            pricePerSquare: aptCard.querySelector('[data-field="pricePerSquare"]')?.value || '',
+                            completionDate: aptCard.querySelector('[data-field="completionDate"]')?.value || '',
+                            image: []
+                        };
+                        
+                        // Собираем оставшиеся фото
+                        aptCard.querySelectorAll('.apt-image-wrapper img').forEach(img => {
+                            const src = img.getAttribute('src');
+                            if (src) apt.image.push(src);
+                        });
+                        
+                        apartments.push(apt);
+                    });
+                    
+                    if (apartments.length > 0) {
+                        apartmentTypes[roomType] = { apartments };
+                    }
+                });
+                finalData.apartment_types = apartmentTypes;
+                
+                // Собираем фото ЖК
+                const devPhotos = [];
+                modal.querySelectorAll('.dev-photo-wrapper img').forEach(img => {
+                    const src = img.getAttribute('src');
+                    if (src) devPhotos.push(src);
+                });
+                if (devPhotos.length > 0) {
+                    finalData.development_photos = devPhotos;
+                }
+                
+                // Собираем ход строительства
+                const constructionStages = [];
+                modal.querySelectorAll('.construction-stage').forEach(stageEl => {
+                    // Используем data-атрибуты для получения названия и даты
+                    const stageName = stageEl.dataset.stageName || stageEl.querySelector('.stage-name')?.textContent?.trim() || 'Этап';
+                    const stageDate = stageEl.dataset.stageDate || '';
+                    const photos = [];
+                    
+                    stageEl.querySelectorAll('.stage-photo-wrapper img').forEach(img => {
+                        const src = img.getAttribute('src');
+                        if (src) photos.push(src);
+                    });
+                    
+                    if (photos.length > 0 || stageName) {
+                        constructionStages.push({ 
+                            stage: stageName, 
+                            date: stageDate, 
+                            photos 
+                        });
+                    }
+                });
+                if (constructionStages.length > 0) {
+                    finalData.construction_progress = { construction_stages: constructionStages };
+                }
+                
+                // Характеристики
+                const params = {};
+                modal.querySelectorAll('.char-field[data-field^="param_"]').forEach(f => {
+                    const k = f.dataset.field.replace('param_', '');
+                    if (f.value.trim()) params[k] = f.value.trim();
+                });
+                const priceRange = modal.querySelector('[data-field="price_range"]')?.value || '';
+                finalData.development_parameters = params;
+                finalData.development_price_range = priceRange;
+                
+                // Рейтинг
+                const selectedRating = modal.querySelector('input[name="pv-rating"]:checked');
+                if (selectedRating) {
+                    finalData.rating = parseInt(selectedRating.value);
+                    const ratingDesc = modal.querySelector('textarea[name="pv-rating_description"]');
+                    if (ratingDesc && ratingDesc.value.trim()) {
+                        finalData.rating_description = ratingDesc.value.trim();
+                    }
+                }
+                
+                // Сначала создаём базовую unified запись
+                const createResp = await fetch('/api/manual-matching/save/', { 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body: JSON.stringify({
+                        domrf_id: finalData.domrf_id,
+                        avito_id: finalData.avito_id,
+                        domclick_id: finalData.domclick_id,
+                        is_featured: finalData.is_featured,
+                        agent_id: finalData.agent_id
+                    })
+                });
+                const createData = await createResp.json();
+                if(!createData.success){ 
+                    showToast(createData.error||'Ошибка создания', 'error'); 
+                    return; 
+                }
+                const unifiedId = createData.unified_id;
+
+                // Теперь обновляем со всеми данными
+                const updatePayload = {
+                    name: finalData.name,
+                    city: finalData.city,
+                    district: finalData.district,
+                    street: finalData.street,
+                    latitude: finalData.latitude,
+                    longitude: finalData.longitude,
+                    is_featured: finalData.is_featured,
+                    'development.price_range': finalData.development_price_range
+                };
+                
+                // Добавляем параметры
+                Object.keys(finalData.development_parameters).forEach(k => {
+                    updatePayload[`development.parameters.${k}`] = finalData.development_parameters[k];
+                });
+                
+                // Полностью заменяем apartment_types, development.photos, construction_progress
+                updatePayload.apartment_types = finalData.apartment_types;
+                if (finalData.development_photos) {
+                    updatePayload['development.photos'] = finalData.development_photos;
+                }
+                if (finalData.construction_progress) {
+                    updatePayload.construction_progress = finalData.construction_progress;
+                }
+                if (finalData.rating) {
+                    updatePayload.rating = finalData.rating;
+                    if (finalData.rating_description) {
+                        updatePayload.rating_description = finalData.rating_description;
+                    }
+                }
+
+                const updResp = await fetch(`/api/manual-matching/unified/${unifiedId}/update/`, { 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body: JSON.stringify(updatePayload) 
+                });
+                const updData = await updResp.json();
+                if(!updData.success){ 
+                    showToast(updData.error||'Ошибка сохранения', 'error'); 
+                    return; 
+                }
+
+                showToast('✓ Объединено и сохранено', 'success');
+                modal.remove();
+                await loadData();
+                await loadUnifiedRecords();
+                clearSelection();
+            };
         }
 
         // Функции для работы с модальным окном DomRF
@@ -2059,13 +2676,8 @@
                 modal.querySelector('#agent-ok').onclick = async ()=>{ 
                     const val = modal.querySelector('#agent-select').value||''; 
                     modal.remove(); 
-                    // Открываем модальное окно с данными и фильтрацией
-                    const confirmed = await showDataPreviewModal(val);
-                    if (confirmed) {
-                        resolve(val);
-                    } else {
-                        resolve(null);
-                    }
+                    // Возвращаем выбранного агента, предпросмотр откроется в saveMatch
+                    resolve(val);
                 };
             });
         }
@@ -2782,6 +3394,48 @@
                     sel.innerHTML = `<option value="">— Без агента —</option>` + (e.items||[]).map(p=>`<option value="${p._id}" ${item.agent_id && (p._id===item.agent_id || p._id===String(item.agent_id))? 'selected':''}>${escapeHtml(p.full_name)} — ${escapeHtml(p.position||'')}</option>`).join('');
                 });
                 
+                // Обработка звездочек рейтинга
+                const ratingInputs = modal.querySelectorAll('input[name="rating"]');
+                const ratingText = modal.querySelector('#rating-text');
+                const descriptionSection = modal.querySelector('#rating-description-section');
+                
+                function updateRatingDisplay(rating) {
+                    // Обновляем текст
+                    const ratingTexts = {
+                        1: 'Очень плохо',
+                        2: 'Плохо', 
+                        3: 'Удовлетворительно',
+                        4: 'Хорошо',
+                        5: 'Отлично'
+                    };
+                    ratingText.textContent = ratingTexts[rating] || 'Не выбрано';
+                    
+                    // Обновляем цвет звездочек
+                    ratingInputs.forEach((input, index) => {
+                        const label = input.nextElementSibling;
+                        const value = parseInt(input.value);
+                        if (value <= rating) {
+                            label.style.color = '#fbbf24'; // Золотой цвет для выбранных звезд
+                        } else {
+                            label.style.color = '#64748b'; // Серый цвет для невыбранных
+                        }
+                    });
+                }
+                
+                ratingInputs.forEach(input => {
+                    input.addEventListener('change', function() {
+                        const rating = parseInt(this.value);
+                        updateRatingDisplay(rating);
+                        
+                        // Показываем поле описания для низких оценок
+                        if (rating <= 3) {
+                            descriptionSection.style.display = 'block';
+                        } else {
+                            descriptionSection.style.display = 'none';
+                        }
+                    });
+                });
+                
                 // Загружаем данные рейтинга
                 if (item.rating) {
                     const ratingInput = modal.querySelector(`input[name="rating"][value="${item.rating}"]`);
@@ -2807,48 +3461,6 @@
                             modal.querySelector('#rating-date-display').textContent = date.toLocaleDateString('ru-RU');
                         }
                     }
-                }
-                
-                // Обработка звездочек рейтинга
-                const ratingInputs = modal.querySelectorAll('input[name="rating"]');
-                const ratingText = modal.querySelector('#rating-text');
-                const descriptionSection = modal.querySelector('#rating-description-section');
-                
-                ratingInputs.forEach(input => {
-                    input.addEventListener('change', function() {
-                        const rating = parseInt(this.value);
-                        updateRatingDisplay(rating);
-                        
-                        // Показываем поле описания для низких оценок
-                        if (rating <= 3) {
-                            descriptionSection.style.display = 'block';
-                        } else {
-                            descriptionSection.style.display = 'none';
-                        }
-                    });
-                });
-                
-                function updateRatingDisplay(rating) {
-                    // Обновляем текст
-                    const ratingTexts = {
-                        1: 'Очень плохо',
-                        2: 'Плохо', 
-                        3: 'Удовлетворительно',
-                        4: 'Хорошо',
-                        5: 'Отлично'
-                    };
-                    ratingText.textContent = ratingTexts[rating] || 'Не выбрано';
-                    
-                    // Обновляем цвет звездочек
-                    ratingInputs.forEach((input, index) => {
-                        const label = input.nextElementSibling;
-                        const value = parseInt(input.value);
-                        if (value <= rating) {
-                            label.style.color = '#fbbf24'; // Золотой цвет для выбранных звезд
-                        } else {
-                            label.style.color = '#64748b'; // Серый цвет для невыбранных
-                        }
-                    });
                 }
                 
                 modal.querySelector('#ue-cancel').onclick = ()=> modal.remove();

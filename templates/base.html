@@ -74,20 +74,8 @@
                    class="nav-link {% if 'articles' in request.resolver_match.url_name %}active{% endif %}">Новости</a>
                 <a href="{% url 'main:mortgage' %}" class="nav-link">Ипотека</a>
                 
-                <!-- Выпадающее меню Услуги -->
-                <div class="nav-dropdown">
-                    <a href="#"
-                       class="nav-link dropdown-toggle {% if 'services' in request.resolver_match.url_name %}active{% endif %}">
-                        Услуги
-                        <i class="fas fa-chevron-down"></i>
-                    </a>
-                    <div class="dropdown-menu">
-                        <a href="#" class="dropdown-item">Оценка недвижимости</a>
-                        <a href="#" class="dropdown-item">Консультации</a>
-                        <a href="#" class="dropdown-item">Юридические услуги</a>
-                        <a href="#" class="dropdown-item">Страхование</a>
-                    </div>
-                </div>
+                <a href="{% url 'main:services' %}"
+                   class="nav-link {% if 'services' in request.resolver_match.url_name %}active{% endif %}">Услуги</a>
                 
                 <!-- Выпадающее меню Команда и карьера -->
                 <div class="nav-dropdown">
@@ -146,13 +134,7 @@
                 <a href="{% url 'main:articles' %}" class="drawer-link">Новости</a>
                 <a href="{% url 'main:mortgage' %}" class="drawer-link">Ипотека</a>
                 
-                <div class="drawer-group">
-                    <div class="drawer-title">Услуги</div>
-                    <a href="#" class="drawer-sublink">Оценка недвижимости</a>
-                    <a href="#" class="drawer-sublink">Консультации</a>
-                    <a href="#" class="drawer-sublink">Юридические услуги</a>
-                    <a href="#" class="drawer-sublink">Страхование</a>
-                </div>
+                <a href="{% url 'main:services' %}" class="drawer-link">Услуги</a>
                 
                 <div class="drawer-group">
                     <div class="drawer-title">Команда и карьера</div>

@@ -38,6 +38,7 @@ from .view_modules.vacancy_views import vacancies, vacancy_detail
 from .view_modules.office_views import offices, office_detail
 from .view_modules.video_views import videos, video_detail
 from .view_modules.employee_views import team, agent_properties, employee_detail
+from .view_modules.services_views import services
 from .view_modules.mortgage_views import mortgage
 from .view_modules.offer_views import all_offers, offer_detail
 from .view_modules.future_complex_views import future_complexes, future_complex_detail
@@ -48,6 +49,7 @@ from .view_modules.not_recommended_views import not_recommended, not_recommended
 from .api.manual_matching_api import (
     get_unmatched_records,
     save_manual_match,
+    preview_manual_match,
     get_unified_records,
     unified_delete,
     unified_get,
@@ -114,6 +116,7 @@ __all__ = [
     # Home & General
     'home', 
     'privacy_policy',
+    'services',
     # Catalog Views
     'catalog', 
     'detail', 

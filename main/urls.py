@@ -5,7 +5,7 @@ from .views import (
     # Auth
     login_view, logout_view,
     # Home
-    home, privacy_policy, unsubscribe_page,
+    home, privacy_policy, unsubscribe_page, services,
     # Catalog
     catalog, detail, secondary_detail_mongo, secondary_detail,
     catalog_completed, catalog_construction, catalog_economy, catalog_comfort,
@@ -36,6 +36,7 @@ from .views import (
     districts_api, streets_api, article_view_api,
     # Manual Matching API
     get_unmatched_records, save_manual_match, get_unified_records,
+    preview_manual_match,
     unified_delete, unified_get, unified_update, toggle_featured,
     domrf_create, delete_record, get_future_projects, create_future_project,
     get_domrf_data, delete_photo, get_apartment_stats,
@@ -108,6 +109,7 @@ urlpatterns = [
     
     # Home
     path('', home, name='home'),
+    path('services/', services, name='services'),
     path('privacy/', privacy_policy, name='privacy'),
     path('unsubscribe/', unsubscribe_page, name='unsubscribe'),
     
@@ -184,6 +186,7 @@ urlpatterns = [
     
     path('api/manual-matching/unmatched/', get_unmatched_records, name='get_unmatched_records'),
     path('api/manual-matching/save/', save_manual_match, name='save_manual_match'),
+    path('api/manual-matching/preview/', preview_manual_match, name='preview_manual_match'),
     path('api/manual-matching/unified/', get_unified_records, name='get_unified_records'),
     path('api/manual-matching/unified/<str:unified_id>/', unified_delete, name='unified_delete'),
     path('api/manual-matching/unified/<str:unified_id>/get/', unified_get, name='unified_get'),

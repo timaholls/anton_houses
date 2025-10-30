@@ -67,8 +67,8 @@ def get_unmatched_records(request):
         
         # Формируем фильтры для поиска
         domrf_filter = {'is_processed': {'$ne': True}}  # Исключаем обработанные записи
-        avito_filter = {}
-        domclick_filter = {}
+        avito_filter = {'is_matched': {'$ne': True}}
+        domclick_filter = {'is_matched': {'$ne': True}}
         
         if search:
             domrf_filter['objCommercNm'] = {'$regex': search, '$options': 'i'}
@@ -412,6 +412,31 @@ def save_manual_match(request):
         
         # Сохраняем
         result = unified_col.insert_one(unified_record)
+
+        # Помечаем исходники как сопоставленные, чтобы скрывать их из списков
+        try:
+            if avito_record:
+                avito_col.update_one({'_id': avito_record['_id']}, {'$set': {
+                    'is_matched': True,
+                    'matched_unified_id': result.inserted_id,
+                    'matched_at': datetime.now()
+                }})
+            if domclick_record:
+                domclick_col.update_one({'_id': domclick_record['_id']}, {'$set': {
+                    'is_matched': True,
+                    'matched_unified_id': result.inserted_id,
+                    'matched_at': datetime.now()
+                }})
+            if domrf_record:
+                # DomRF раньше помечался is_processed, сохраним обратную совместимость
+                domrf_col.update_one({'_id': domrf_record['_id']}, {'$set': {
+                    'is_processed': True,
+                    'processed_at': datetime.now(),
+                    'matched_unified_id': result.inserted_id
+                }})
+        except Exception:
+            pass
+
         return JsonResponse({
             'success': True,
             'message': 'Сопоставление успешно сохранено',
@@ -430,6 +455,166 @@ def save_manual_match(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"]) 
+def preview_manual_match(request):
+    """API: Предпросмотр объединения без сохранения. Возвращает структуру как для unified_get."""
+    try:
+        data = json.loads(request.body)
+        domrf_id = data.get('domrf_id')
+        avito_id = data.get('avito_id')
+        domclick_id = data.get('domclick_id')
+        is_featured = data.get('is_featured', False)
+        agent_id = (data.get('agent_id') or '').strip()
+        provided_latitude = data.get('latitude')
+        provided_longitude = data.get('longitude')
+
+        selected_sources = [domrf_id, avito_id, domclick_id]
+        selected_count = sum(1 for source_id in selected_sources if source_id and source_id != 'null')
+        if selected_count < 2:
+            return JsonResponse({'success': False, 'error': 'Необходимо выбрать минимум 2 источника для сопоставления'}, status=400)
+
+        db = get_mongo_connection()
+        domrf_col = db['domrf']
+        avito_col = db['avito']
+        domclick_col = db['domclick']
+
+        domrf_record = None
+        if domrf_id and domrf_id != 'null':
+            domrf_record = domrf_col.find_one({'_id': ObjectId(domrf_id)})
+
+        avito_record = None
+        if avito_id and avito_id != 'null':
+            avito_record = avito_col.find_one({'_id': ObjectId(avito_id)})
+
+        domclick_record = None
+        if domclick_id and domclick_id != 'null':
+            domclick_record = domclick_col.find_one({'_id': ObjectId(domclick_id)})
+
+        if not avito_record and not domclick_record:
+            return JsonResponse({'success': False, 'error': 'Не найдены записи для объединения'}, status=400)
+
+        # Координаты
+        latitude = None
+        longitude = None
+        if provided_latitude and provided_longitude:
+            latitude = float(provided_latitude)
+            longitude = float(provided_longitude)
+        elif domrf_record:
+            latitude = domrf_record.get('latitude')
+            longitude = domrf_record.get('longitude')
+        elif avito_record:
+            latitude = avito_record.get('latitude')
+            longitude = avito_record.get('longitude')
+        elif domclick_record:
+            latitude = domclick_record.get('latitude')
+            longitude = domclick_record.get('longitude')
+
+        preview = {
+            'latitude': latitude,
+            'longitude': longitude,
+            'source': 'manual_preview',
+            'created_by': 'manual',
+            'is_featured': is_featured,
+            'city': 'Уфа',
+            'district': '',
+            'street': '',
+            'rating': None,
+            'rating_description': '',
+            'rating_created_at': None,
+            'rating_updated_at': None
+        }
+
+        if agent_id:
+            try:
+                preview['agent_id'] = str(ObjectId(agent_id))
+            except Exception:
+                preview['agent_id'] = None
+
+        address = ''
+        if avito_record:
+            address = avito_record.get('development', {}).get('address', '')
+        elif domclick_record:
+            address = domclick_record.get('development', {}).get('address', '')
+        if 'Уфа' in address or 'уфа' in (address or '').lower():
+            preview['city'] = 'Уфа'
+
+        if avito_record:
+            avito_dev = avito_record.get('development', {})
+            preview['development'] = {
+                'name': avito_dev.get('name', ''),
+                'address': avito_dev.get('address', ''),
+                'price_range': avito_dev.get('price_range', ''),
+                'parameters': avito_dev.get('parameters', {}),
+                'korpuses': avito_dev.get('korpuses', []),
+                'photos': []
+            }
+            if domclick_record:
+                domclick_dev = domclick_record.get('development', {})
+                preview['development']['photos'] = domclick_dev.get('photos', [])
+                dc_construction = domclick_dev.get('construction_progress') or domclick_record.get('construction_progress')
+                if dc_construction:
+                    preview['construction_progress'] = dc_construction
+
+        preview['apartment_types'] = {}
+        if avito_record and domclick_record:
+            avito_apt_types = avito_record.get('apartment_types', {})
+            domclick_apt_types = domclick_record.get('apartment_types', {})
+            name_mapping = {
+                'Студия': 'Студия',
+                '1 ком.': '1','1-комн': '1','1-комн.': '1',
+                '2 ком.': '2','2': '2','2-комн': '2','2-комн.': '2',
+                '3': '3','3-комн': '3','3-комн.': '3',
+                '4': '4','4-комн': '4','4-комн.': '4','4-комн.+': '4','4-комн+': '4'
+            }
+            processed = set()
+            for dc_type_name, dc_type_data in domclick_apt_types.items():
+                simplified_name = name_mapping.get(dc_type_name, dc_type_name)
+                if simplified_name in processed:
+                    continue
+                processed.add(simplified_name)
+                dc_apartments = dc_type_data.get('apartments', []) or []
+                if not dc_apartments:
+                    continue
+                avito_apartments = []
+                for avito_type_name, avito_data in avito_apt_types.items():
+                    if name_mapping.get(avito_type_name, avito_type_name) == simplified_name:
+                        avito_apartments = avito_data.get('apartments', [])
+                        break
+                if not avito_apartments:
+                    continue
+                combined_apartments = []
+                for i, dc_apt in enumerate(dc_apartments):
+                    photos = dc_apt.get('photos', []) or []
+                    if not photos:
+                        continue
+                    avito_apt = avito_apartments[i % len(avito_apartments)]
+                    combined_apartments.append({
+                        'title': avito_apt.get('title', ''),
+                        'price': avito_apt.get('price', ''),
+                        'pricePerSquare': avito_apt.get('pricePerSquare', ''),
+                        'completionDate': avito_apt.get('completionDate', ''),
+                        'url': avito_apt.get('urlPath', ''),
+                        'image': photos
+                    })
+                if combined_apartments:
+                    preview['apartment_types'][simplified_name] = {'apartments': combined_apartments}
+
+        preview['_source_ids'] = {
+            'domrf': str(domrf_record['_id']) if domrf_record else None,
+            'avito': str(avito_record['_id']) if avito_record else None,
+            'domclick': str(domclick_record['_id']) if domclick_record else None
+        }
+
+        # Приводим ObjectId к строкам для фронтенда
+        preview = convert_objectid_to_str(preview)
+        return JsonResponse({'success': True, 'item': preview})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @csrf_exempt
@@ -1860,6 +2045,48 @@ def unified_delete(request, unified_id):
         # Удаляем записи из галереи
         gallery.delete_many({'content_type': 'residential_complex', 'object_id': str(unified_id)})
         
+        # Перед удалением сбрасываем флаги matched у исходников, чтобы они снова появились в списках
+        try:
+            source_ids = doc.get('_source_ids', {}) if isinstance(doc, dict) else {}
+            domrf_id = source_ids.get('domrf')
+            avito_id = source_ids.get('avito')
+            domclick_id = source_ids.get('domclick')
+
+            domrf_col = db['domrf']
+            avito_col = db['avito']
+            domclick_col = db['domclick']
+
+            if domrf_id:
+                try:
+                    domrf_col.update_one({'_id': ObjectId(domrf_id)}, {'$unset': {
+                        'is_processed': '', 'processed_at': '', 'matched_unified_id': ''
+                    }})
+                except Exception:
+                    pass
+            # Обратная совместимость: старые структуры могли хранить вложенные id
+            if not avito_id:
+                avito_id = (doc.get('avito') or {}).get('_id')
+            if not domclick_id:
+                domclick_id = (doc.get('domclick') or {}).get('_id')
+
+            if avito_id:
+                try:
+                    avito_col.update_one({'_id': ObjectId(avito_id)}, {'$unset': {
+                        'is_matched': '', 'matched_unified_id': '', 'matched_at': ''
+                    }})
+                except Exception:
+                    pass
+            if domclick_id:
+                try:
+                    domclick_col.update_one({'_id': ObjectId(domclick_id)}, {'$unset': {
+                        'is_matched': '', 'matched_unified_id': '', 'matched_at': ''
+                    }})
+                except Exception:
+                    pass
+        except Exception:
+            # Сбрасывание флагов не должно блокировать удаление unified
+            pass
+
         # Удаляем объединенную запись
         result = unified.delete_one({'_id': ObjectId(unified_id)})
         

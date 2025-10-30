@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Услуги — CENTURY 21{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Светлый стиль в единой палитре сайта */
+  .services-hero{background:url('/media/uploads/back_home.jpg') center/cover no-repeat; color:#fff; padding:72px 0; border-radius:16px; position:relative; overflow:hidden}
+  .services-hero::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.55) 100%)}
+  .services-hero .container{position:relative; z-index:2}
+  .services-hero .subtitle{color:#d7c99f; letter-spacing:.08em; text-transform:uppercase; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.35)}
+  .services-hero .subtitle .subtitle-slogan{font-size:.5em}
+  .services-hero h1{margin-top:8px; font-size:38px; line-height:1.2; color:#fff; text-shadow:0 2px 6px rgba(0,0,0,.35)}
+  .services-hero p{color:#f1f1f1; text-shadow:0 1px 2px rgba(0,0,0,.35)}
+  .services-wrapper{padding:36px 0 72px}
+  .services-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:22px}
+  .service-card{background:#fff; color:#222; border:1px solid #f0f0f0; border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.05); transition:.25s}
+  .service-card:hover{transform:translateY(-4px); box-shadow:0 18px 40px rgba(0,0,0,.08)}
+  .service-icon{width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:12px; background:linear-gradient(135deg, rgba(190,175,135,.12), rgba(161,146,118,.12)); color:#BEAF87; margin-bottom:12px; font-size:22px}
+  .service-title{font-weight:700; color:#1a1a1a; margin:0 0 6px}
+  .service-desc{color:#666; margin:0}
+  .cta-panel{margin-top:22px; background:rgba(255,255,255,.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,.28); border-radius:14px; padding:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; box-shadow:0 8px 26px rgba(0,0,0,.25)}
+  .cta-panel .badge{background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.25); color:#fff; padding:8px 12px; border-radius:999px; font-weight:600}
+  .cta-panel .btn{background:#bcaf8a; color:#111; padding:12px 18px; border-radius:10px; font-weight:800; box-shadow:0 6px 18px rgba(188,175,138,.45); transition:.2s}
+  .cta-panel .btn:hover{filter:brightness(1.05); transform:translateY(-1px)}
+  /* Блок преимуществ в стиле ипотеки */
+  .section-header{text-align:center; margin:38px 0 18px}
+  .section-title{font-size:32px; font-weight:800; color:#1a1a1a; margin:0 0 8px}
+  .section-subtitle{font-size:18px; color:#666; margin:0}
+  .benefits-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:22px}
+  .benefit-card{background:#fff; padding:22px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.05); border:1px solid #f0f0f0; transition:.25s}
+  .benefit-card:hover{transform:translateY(-4px); box-shadow:0 18px 40px rgba(0,0,0,.08)}
+  .benefit-icon{width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, rgba(190,175,135,.1), rgba(161,146,118,.1)); color:#BEAF87; font-size:22px; margin-bottom:12px}
+  .benefit-title{font-size:18px; font-weight:700; margin:0 0 6px; color:#1a1a1a}
+  .benefit-description{margin:0; color:#666}
+  @media(max-width:1200px){.benefits-grid{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:900px){.benefits-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:1024px){.services-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){.services-grid{grid-template-columns:1fr}.services-hero{padding:48px 16px;border-radius:12px}.services-hero h1{font-size:28px}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container services-wrapper">
+  <div class="services-hero">
+    <div class="container">
+      <div class="subtitle">CENTURY 21 • <span class="subtitle-slogan">Мир в Квадратах</span></div>
+      <h1>Профессиональные услуги в сфере недвижимости</h1>
+      <p style="max-width:740px;color:#e5e5e5;margin-top:8px">Работаем в Уфе, по всей Республике Башкортостан. Сопровождаем сделки любого уровня сложности и защищаем интересы клиентов.</p>
+      <div class="cta-panel">
+        <span class="badge"><i class="fas fa-shield-alt"></i>&nbsp;Юридическое сопровождение</span>
+        <span class="badge"><i class="fas fa-percent"></i>&nbsp;Ипотека и лучшие условия</span>
+        <a href="tel:+73472019478" class="btn">Позвонить</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" style="margin-top:24px">
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-globe"></i></div>
+        <h3 class="service-title">Все сделки с недвижимостью</h3>
+        <p class="service-desc">Уфа, РБ, Россия и международные сделки. Полный цикл работ под ключ.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-home"></i></div>
+        <h3 class="service-title">Покупка и продажа квартир, домов, земли</h3>
+        <p class="service-desc">«Вторичный рынок» с профессиональным маркетингом и безопасными расчётами.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-chart-line"></i></div>
+        <h3 class="service-title">Инвестиции в недвижимость</h3>
+        <p class="service-desc">Подбор стратегий, анализ риска/доходности, сопровождение сделок.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-tree"></i></div>
+        <h3 class="service-title">Земля и коттеджные посёлки</h3>
+        <p class="service-desc">Покупка/продажа участков, дома, коммуникации, юридическая чистота.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-building"></i></div>
+        <h3 class="service-title">Коммерческая недвижимость</h3>
+        <p class="service-desc">Аренда и продажа, оценка окупаемости, проверка контрагентов.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-city"></i></div>
+        <h3 class="service-title">Новостройки</h3>
+        <p class="service-desc">В Уфе и по всей России. Спецусловия от застройщиков, помощь в выборе.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-gem"></i></div>
+        <h3 class="service-title">Элитная недвижимость</h3>
+        <p class="service-desc">Квартиры и дома премиум-класса. Конфиденциальность и эксклюзив.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-globe-europe"></i></div>
+        <h3 class="service-title">Недвижимость по всему миру</h3>
+        <p class="service-desc">Партнёрская сеть, сопровождение сделок за рубежом.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-handshake"></i></div>
+        <h3 class="service-title">Сопровождение сделок</h3>
+        <p class="service-desc">От первичной консультации до регистрации — берём заботы на себя.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-university"></i></div>
+        <h3 class="service-title">Ипотека: одобрение всех программ</h3>
+        <p class="service-desc">Под разные объекты. Помощь в одобрении, снижении ставки, субсидии.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-money-bill-wave"></i></div>
+        <h3 class="service-title">Выкуп квартир</h3>
+        <p class="service-desc">Быстрые сделки с прозрачной оценкой и безопасными расчётами.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-people-arrows"></i></div>
+        <h3 class="service-title">Расселение</h3>
+        <p class="service-desc">Комплексные кейсы по обмену/расселению с контролем всех стадий.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-project-diagram"></i></div>
+        <h3 class="service-title">Девелоперские проекты</h3>
+        <p class="service-desc">Подготовка и ведение проектов: анализ, вывод на рынок, продажи.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-warehouse"></i></div>
+        <h3 class="service-title">Ипотека коммерческой недвижимости</h3>
+        <p class="service-desc">Подбор банков и программ финансирования для бизнеса.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><i class="fas fa-briefcase"></i></div>
+        <h3 class="service-title">Продажа бизнеса</h3>
+        <p class="service-desc">Оценка, упаковка, поиск покупателя и сопровождение сделки.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Преимущества работы с нами (светлые карточки как на ипотеке) -->
+  <div class="container" style="margin-top:36px">
+    <div class="section-header">
+      <h2 class="section-title">Почему клиенты выбирают нас</h2>
+      <p class="section-subtitle">Единый стандарт сервиса CENTURY 21</p>
+    </div>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-icon"><i class="fas fa-balance-scale"></i></div>
+        <h3 class="benefit-title">Юридическая чистота</h3>
+        <p class="benefit-description">Проверяем объекты, готовим договоры и защищаем ваши интересы на каждом шаге.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon"><i class="fas fa-user-tie"></i></div>
+        <h3 class="benefit-title">Персональный менеджер</h3>
+        <p class="benefit-description">Вы всегда на связи с ответственным агентом — от первой консультации до ключей.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon"><i class="fas fa-bolt"></i></div>
+        <h3 class="benefit-title">Сроки и прозрачность</h3>
+        <p class="benefit-description">Чёткий план сделки, понятные этапы и регулярные отчёты без скрытых платежей.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon"><i class="fas fa-star"></i></div>
+        <h3 class="benefit-title">Эксклюзивные условия</h3>
+        <p class="benefit-description">Доступ к спецпредложениям застройщиков и партнёрским программам банков.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon"><i class="fas fa-headset"></i></div>
+        <h3 class="benefit-title">Поддержка 7 дней в неделю</h3>
+        <p class="benefit-description">Мы на связи, чтобы решать вопросы быстро и без стресса.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon"><i class="fas fa-shield-alt"></i></div>
+        <h3 class="benefit-title">Безопасные расчёты</h3>
+        <p class="benefit-description">Эскроу, аккредитив, банковские ячейки — подбираем безопасный способ оплаты.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon"><i class="fas fa-tachometer-alt"></i></div>
+        <h3 class="benefit-title">Скорость сделки</h3>
+        <p class="benefit-description">Оптимизированные процессы и прямые контакты ускоряют каждый этап оформления.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon"><i class="fas fa-bullhorn"></i></div>
+        <h3 class="benefit-title">Маркетинг и оценка</h3>
+        <p class="benefit-description">Профессиональная оценка стоимости и продвижение объектов для быстрой продажи.</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
