@@ -5,8 +5,11 @@ API функции для управления компанией (информ�
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.text import slugify
 from bson import ObjectId
 from datetime import datetime
+import os
+from django.conf import settings
 
 from ..services.mongo_service import get_mongo_connection
 from ..s3_service import s3_client
@@ -398,6 +401,51 @@ def company_info_api_delete(request, company_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def company_info_delete_image(request, company_id):
+    """API: удалить отдельное изображение из галереи компании."""
+    try:
+        import json
+        db = get_mongo_connection()
+        col = db['company_info']
+        
+        company = col.find_one({'_id': ObjectId(company_id)})
+        if not company:
+            return JsonResponse({'success': False, 'error': 'Информация не найдена'}, status=404)
+        
+        # Получаем URL изображения для удаления
+        data = json.loads(request.body)
+        image_url = data.get('image_url', '')
+        image_type = data.get('image_type', 'gallery')  # 'gallery' or 'main'
+        
+        if not image_url:
+            return JsonResponse({'success': False, 'error': 'URL изображения не указан'}, status=400)
+        
+        if image_type == 'main':
+            # Удаляем главное изображение
+            col.update_one(
+                {'_id': ObjectId(company_id)},
+                {'$set': {'main_image': ''}}
+            )
+        else:
+            # Удаляем изображение из галереи
+            images = company.get('images', [])
+            if image_url in images:
+                images.remove(image_url)
+                col.update_one(
+                    {'_id': ObjectId(company_id)},
+                    {'$set': {'images': images}}
+                )
+        
+        # Можно также удалить файл из S3, если необходимо
+        # s3_client.delete_file(image_url)
+        
+        return JsonResponse({'success': True, 'message': 'Изображение удалено'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # ========== BRANCH OFFICE API ==========
 @require_http_methods(["GET"])
 def branch_office_api_list(request):
@@ -771,10 +819,7 @@ def employee_api_create(request):
             for url in video_urls.split('\n'):
                 url = url.strip()
                 if url:
-                    videos_data.append({
-                        'url': url,
-                        'thumbnail': get_video_thumbnail(url)
-                    })
+                    videos_data.append(url)
         
         employee_data = {
             'full_name': full_name,

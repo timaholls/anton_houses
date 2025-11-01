@@ -563,9 +563,16 @@
             </div>
             
             <div class="about-text">
-                <blockquote class="about-quote">
-                    {{ company_info.quote }}
-                </blockquote>
+                <div class="about-quote-container">
+                    <blockquote class="about-quote" id="aboutQuoteText">
+                        {{ company_info.quote|linebreaks }}
+                    </blockquote>
+                    <button class="read-more-btn" id="readMoreBtn" style="display: none;">
+                        <span class="read-more-text">Читать далее</span>
+                        <span class="read-less-text" style="display: none;">Свернуть</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
                 
                 <div class="about-signature">
                     <div class="signature-line">{{ company_info.founder_name }}</div>
@@ -902,66 +909,56 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    const aboutSection = document.querySelector('.about-section');
-    const aboutImage = document.querySelector('.about-image');
-    const aboutQuote = document.querySelector('.about-quote');
+    // Функционал "Читать далее" для текста о компании
+    const aboutQuote = document.getElementById('aboutQuoteText');
+    const readMoreBtn = document.getElementById('readMoreBtn');
     
-    if (aboutSection && aboutImage && aboutQuote) {
-        let isTypewriterActive = false;
+    if (aboutQuote && readMoreBtn) {
+        const maxHeight = 300; // Максимальная высота в пикселях до сворачивания
+        const fullHeight = aboutQuote.scrollHeight;
         
-        // Анимация появления цитаты при наведении на изображение
-        aboutImage.addEventListener('mouseenter', function() {
-            if (!isTypewriterActive) {
-                aboutQuote.style.transform = 'scale(1.02)';
-                aboutQuote.style.transition = 'transform 0.3s ease';
-            }
-        });
-        
-        aboutImage.addEventListener('mouseleave', function() {
-            if (!isTypewriterActive) {
-                aboutQuote.style.transform = 'scale(1)';
-            }
-        });
-        
-        // Эффект печатной машинки для цитаты
-        const quoteText = aboutQuote.textContent.trim();
-        aboutQuote.textContent = '';
-        let i = 0;
-        
-        function typeWriter() {
-            if (i < quoteText.length) {
-                aboutQuote.textContent += quoteText.charAt(i);
-                i++;
-                setTimeout(typeWriter, 30);
-            } else {
-                // Завершаем анимацию печатной машинки
-                isTypewriterActive = false;
-                // Восстанавливаем возможность hover эффектов
-                aboutQuote.style.transition = 'transform 0.3s ease';
-            }
-        }
-        
-        // Запускаем анимацию печатной машинки при появлении в области видимости
-        const observer = new IntersectionObserver(function(entries) {
-            entries.forEach(function(entry) {
-                if (entry.isIntersecting && !isTypewriterActive) {
-                    isTypewriterActive = true;
-                    // Фиксируем изображение во время анимации печатной машинки
-                    aboutImage.style.transform = 'perspective(1000px) rotateY(-5deg)';
-                    aboutImage.style.transition = 'transform 0.3s ease';
+        // Если текст длинный, показываем кнопку и ограничиваем высоту
+        if (fullHeight > maxHeight) {
+            aboutQuote.style.maxHeight = maxHeight + 'px';
+            aboutQuote.style.overflow = 'hidden';
+            aboutQuote.style.position = 'relative';
+            aboutQuote.classList.add('collapsed');
+            readMoreBtn.style.display = 'flex';
+            
+            // Добавляем градиент затухания
+            aboutQuote.style.maskImage = 'linear-gradient(to bottom, black 70%, transparent 100%)';
+            aboutQuote.style.webkitMaskImage = 'linear-gradient(to bottom, black 70%, transparent 100%)';
+            
+            let isExpanded = false;
+            
+            readMoreBtn.addEventListener('click', function() {
+                isExpanded = !isExpanded;
+                const readMoreText = readMoreBtn.querySelector('.read-more-text');
+                const readLessText = readMoreBtn.querySelector('.read-less-text');
+                const icon = readMoreBtn.querySelector('i');
+                
+                if (isExpanded) {
+                    aboutQuote.style.maxHeight = fullHeight + 'px';
+                    aboutQuote.style.maskImage = 'none';
+                    aboutQuote.style.webkitMaskImage = 'none';
+                    aboutQuote.classList.remove('collapsed');
+                    readMoreText.style.display = 'none';
+                    readLessText.style.display = 'inline';
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    aboutQuote.style.maxHeight = maxHeight + 'px';
+                    aboutQuote.style.maskImage = 'linear-gradient(to bottom, black 70%, transparent 100%)';
+                    aboutQuote.style.webkitMaskImage = 'linear-gradient(to bottom, black 70%, transparent 100%)';
+                    aboutQuote.classList.add('collapsed');
+                    readMoreText.style.display = 'inline';
+                    readLessText.style.display = 'none';
+                    icon.style.transform = 'rotate(0deg)';
                     
-                    setTimeout(typeWriter, 1000);
-                    observer.unobserve(entry.target);
+                    // Плавно прокручиваем к началу секции
+                    aboutQuote.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             });
-        });
-        
-        observer.observe(aboutSection);
-        
-        // Отключен эффект параллакса при прокрутке: изображение не «следит» за скроллом
-        window.addEventListener('scroll', function() {
-            // без действий — фиксированное изображение
-        });
+        }
     }
     
 

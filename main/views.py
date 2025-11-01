@@ -81,7 +81,7 @@ from .api.company_management_api import (
     employee_reviews_api, employee_review_toggle, employee_review_update, employee_review_delete,
     # Company Info API
     company_info_api_list, company_info_api_create, company_info_api_detail, company_info_api_update, 
-    company_info_api_toggle, company_info_api_delete,
+    company_info_api_toggle, company_info_api_delete, company_info_delete_image,
     # Branch Office API
     branch_office_api_list, branch_office_api_create, branch_office_api_detail, branch_office_api_update, 
     branch_office_api_toggle, branch_office_api_delete,

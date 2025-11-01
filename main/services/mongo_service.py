@@ -13,6 +13,15 @@ def get_mongo_connection():
     return db
 
 
+
+# sudo nmcli connection add \
+#     type vpn \
+#     con-name "office" \
+#     ifname -- \
+#     vpn-type l2tp \
+#     vpn.data "gateway=145.255.25.220, ipsec-enabled=yes, ipsec-psk=BY23AQES83hapaxRTHX8CHQrt9, password-flags=0, user=office" \
+#     vpn.secrets "password=7591362+qQ"
+
 def get_mongo_user(email: str):
     """Получить пользователя из Mongo по email."""
     try:

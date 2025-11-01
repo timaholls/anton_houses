@@ -535,8 +535,18 @@ function editCompanyInfo(id) {
             <div class="form-group"><label class="form-label">Должность основателя</label><input class="form-input" name="founder_position"></div>
             <div class="form-group"><label class="form-label">Цитата</label><textarea class="form-input" name="quote" rows="4"></textarea></div>
             <div class="form-group"><label class="form-label"><input type="checkbox" name="is_active"> Активна</label></div>
-            <div class="form-group"><label class="form-label">Главное изображение</label><input class="form-input" name="main_image" type="file" accept="image/*"></div>
-            <div class="form-group"><label class="form-label">Галерея изображений</label><input class="form-input" name="images" type="file" accept="image/*" multiple></div>
+            
+            <div class="form-group">
+              <label class="form-label">Главное изображение</label>
+              <div id="mainImagePreview" style="margin-bottom: 10px;"></div>
+              <input class="form-input" name="main_image" type="file" accept="image/*">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Галерея изображений</label>
+              <div id="galleryPreview" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;"></div>
+              <input class="form-input" name="images" type="file" accept="image/*" multiple>
+            </div>
           </form>
         </div>
         <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
@@ -560,6 +570,33 @@ function editCompanyInfo(id) {
         form.founder_position.value = item.founder_position || '';
         form.quote.value = item.quote || '';
         form.is_active.checked = !!item.is_active;
+        
+        // Отображаем главное изображение
+        const mainImagePreview = document.getElementById('mainImagePreview');
+        if (item.main_image) {
+          mainImagePreview.innerHTML = `
+            <div style="position: relative; display: inline-block;">
+              <img src="${item.main_image}" style="max-width: 200px; max-height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+              <button type="button" onclick="deleteCompanyImage('${id}', '${item.main_image}', 'main')" 
+                      style="position: absolute; top: 5px; right: 5px; background: #e74c3c; color: white; border: none; 
+                             border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; 
+                             display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
+            </div>`;
+        }
+        
+        // Отображаем галерею изображений
+        const galleryPreview = document.getElementById('galleryPreview');
+        if (item.images && item.images.length > 0) {
+          galleryPreview.innerHTML = item.images.map(img => `
+            <div style="position: relative; display: inline-block;">
+              <img src="${img}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+              <button type="button" onclick="deleteCompanyImage('${id}', '${img}', 'gallery')" 
+                      style="position: absolute; top: 5px; right: 5px; background: #e74c3c; color: white; border: none; 
+                             border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; 
+                             display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
+            </div>
+          `).join('');
+        }
       })
       .catch(() => showToast('Ошибка сети', 'error'));
 }
@@ -761,6 +798,35 @@ async function submitEditCompanyInfo() {
             loadCompanyInfo();
         } else {
             showToast(data.error || 'Ошибка сохранения', 'error');
+        }
+    } catch (e) {
+        showToast('Ошибка сети', 'error');
+    }
+}
+
+async function deleteCompanyImage(companyId, imageUrl, imageType) {
+    if (!confirm('Удалить это изображение?')) return;
+    
+    try {
+        const response = await fetch(`/api/company-info/${companyId}/delete-image/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                image_url: imageUrl,
+                image_type: imageType
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showToast('Изображение удалено', 'success');
+            // Перезагружаем модальное окно
+            closeModal();
+            editCompanyInfo(companyId);
+        } else {
+            showToast(data.error || 'Ошибка удаления', 'error');
         }
     } catch (e) {
         showToast('Ошибка сети', 'error');

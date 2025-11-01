@@ -50,7 +50,7 @@ from .views import (
     # Company Management API
     employee_reviews_api, employee_review_toggle, employee_review_update, employee_review_delete,
     company_info_api_list, company_info_api_create, company_info_api_detail, company_info_api_update,
-    company_info_api_toggle, company_info_api_delete,
+    company_info_api_toggle, company_info_api_delete, company_info_delete_image,
     branch_office_api_list, branch_office_api_create, branch_office_api_detail, branch_office_api_update,
     branch_office_api_toggle, branch_office_api_delete,
     employee_api_list, employee_api_create, employee_api_detail, employee_api_update,
@@ -273,6 +273,7 @@ urlpatterns = [
     path('api/company-info/<str:company_id>/get/', company_info_api_detail, name='company_info_api_detail'),
     path('api/company-info/<str:company_id>/update/', company_info_api_update, name='company_info_api_update'),
     path('api/company-info/<str:company_id>/toggle/', company_info_api_toggle, name='company_info_api_toggle'),
+    path('api/company-info/<str:company_id>/delete-image/', company_info_delete_image, name='company_info_delete_image'),
     path('api/company-info/<str:company_id>/', company_info_api_delete, name='company_info_api_delete'),
     
     # Branch Office API
