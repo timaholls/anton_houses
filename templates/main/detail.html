@@ -1357,14 +1357,25 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 
 
-	// Плавный скролл к блоку ипотеки
+	// Плавный скролл к блоку ипотеки с улучшенной логикой
 	document.querySelectorAll('a[href="#mortgage"]').forEach(a=>{
 		a.addEventListener('click', function(e){
+			e.preventDefault();
 			const target = document.getElementById('mortgage');
 			if (target) {
-				e.preventDefault();
-				const top = target.getBoundingClientRect().top + window.pageYOffset - 30;
-				window.scrollTo({ top, behavior: 'smooth' });
+				// Показываем элементы ипотеки, если они скрыты
+				target.style.opacity = '1';
+				target.style.transform = 'translateY(0)';
+				
+				// Прокручиваем с правильным отступом
+				const headerOffset = 100;
+				const elementPosition = target.getBoundingClientRect().top;
+				const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+				
+				window.scrollTo({
+					top: offsetPosition,
+					behavior: 'smooth'
+				});
 			}
 		});
 	});

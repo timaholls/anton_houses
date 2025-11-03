@@ -35,7 +35,19 @@ def all_offers(request):
                         photos = comp.get('development', {}).get('photos', []) or []
                     else:
                         photos = (comp.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
-                m = _MainImg(); i = _Img(); i.url = photos[0] if photos else PLACEHOLDER_IMAGE_URL; m.image = i
+                # Правильная обработка URL фотографий (S3 или локальные)
+                m = _MainImg()
+                i = _Img()
+                if photos:
+                    photo_url = photos[0]
+                    # Проверяем, является ли URL уже полным (S3)
+                    if photo_url.startswith('http://') or photo_url.startswith('https://'):
+                        i.url = photo_url
+                    else:
+                        i.url = '/media/' + photo_url if not photo_url.startswith('/media/') else photo_url
+                else:
+                    i.url = PLACEHOLDER_IMAGE_URL
+                m.image = i
                 offer.get_main_image = m
                 adapters.append(offer)
             return adapters
@@ -81,7 +93,19 @@ def offer_detail(request, offer_id):
                         photos = comp.get('development', {}).get('photos', []) or []
                     else:
                         photos = (comp.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
-                m=_MainImg(); i=_Img(); i.url = ('/media/' + photos[0]) if photos else PLACEHOLDER_IMAGE_URL; m.image=i
+                # Правильная обработка URL фотографий (S3 или локальные)
+                m = _MainImg()
+                i = _Img()
+                if photos:
+                    photo_url = photos[0]
+                    # Проверяем, является ли URL уже полным (S3)
+                    if photo_url.startswith('http://') or photo_url.startswith('https://'):
+                        i.url = photo_url
+                    else:
+                        i.url = '/media/' + photo_url
+                else:
+                    i.url = PLACEHOLDER_IMAGE_URL
+                m.image = i
                 offer.get_main_image = m
                 return offer
             offer = adapt(p)

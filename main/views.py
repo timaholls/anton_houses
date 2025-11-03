@@ -84,10 +84,10 @@ from .api.company_management_api import (
     company_info_api_toggle, company_info_api_delete, company_info_delete_image,
     # Branch Office API
     branch_office_api_list, branch_office_api_create, branch_office_api_detail, branch_office_api_update, 
-    branch_office_api_toggle, branch_office_api_delete,
+    branch_office_api_toggle, branch_office_api_delete, branch_office_delete_image,
     # Employee API
-    employee_api_list, employee_api_create, employee_api_detail, employee_api_update, 
-    employee_api_toggle, employee_api_delete,
+    employee_api_list, employee_api_create, employee_api_detail, employee_api_update,
+    employee_api_toggle, employee_api_delete, employee_delete_image,
 )
 
 # Дополнительные API модули

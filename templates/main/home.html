@@ -57,6 +57,14 @@
         
         <!-- Карусель акций -->
         <div class="offers-carousel-container">
+            <!-- Кнопки навигации для мобильных -->
+            <button class="offers-nav-btn offers-prev-btn" id="offersPrevBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="offers-nav-btn offers-next-btn" id="offersNextBtn">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            
             <div class="offers-carousel" id="offersCarousel">
                 <!-- Фиксированные 3 позиции для карточек -->
                 <div class="offer-slide">
@@ -146,10 +154,10 @@
             </div>
             
             <!-- Навигационные точки -->
-            {% if offers|length > 3 %}
+            {% if offers|length > 1 %}
             <div class="carousel-dots">
                 {% for i in "123456789"|make_list %}
-                    {% if forloop.counter0|add:3 <= offers|length %}
+                    {% if forloop.counter0 < offers|length %}
                     <button type="button" class="carousel-dot {% if forloop.first %}active{% endif %}" data-page="{{ forloop.counter0 }}"></button>
                     {% endif %}
                 {% endfor %}
@@ -165,22 +173,18 @@
             {% endfor %}
         </div>
         
-        <!-- Скрытые данные для JavaScript -->
-        <script type="application/json" id="offers-data">
-        [
+        <!-- Скрытые данные для JavaScript (защищенный формат) -->
+        <div id="offers-data" style="display: none;">
             {% for o in offers %}
-            {
-                "id": {{ o.id }},
-                "title": "{{ o.title|escapejs }}",
-                "complex_name": "{{ o.residential_complex.name|escapejs }}",
-                "description": "{{ o.description|escapejs }}",
-                "expires_at": "{% if o.expires_at %}{{ o.expires_at|date:'d.m.Y' }}{% else %}Временное предложение{% endif %}",
-                "image_url": "{% if o.get_main_image and o.get_main_image.image %}{{ o.get_main_image.image.url }}{% else %}/media/gallery/placeholders.png{% endif %}",
-                "detail_url": "{% url 'main:offer_detail' o.id %}"
-            }{% if not forloop.last %},{% endif %}
+            <div class="offer-item" 
+                 data-id="{{ o.id }}"
+                 data-title="{{ o.title|striptags }}"
+                 data-complex="{{ o.residential_complex.name|striptags }}"
+                 data-expires="{% if o.expires_at %}{{ o.expires_at|date:'d.m.Y' }}{% else %}Временное предложение{% endif %}"
+                 data-image="{% if o.get_main_image and o.get_main_image.image %}{{ o.get_main_image.image.url }}{% else %}/media/gallery/placeholders.png{% endif %}"
+                 data-url="{% url 'main:offer_detail' o.id %}"></div>
             {% endfor %}
-        ]
-        </script>
+        </div>
         
         <!-- Кнопка "Посмотреть все акции" -->
         <div class="offers-more-section">
@@ -197,10 +201,10 @@
         .offers-carousel-container{position:relative;margin:0 auto;max-width:1200px}
         .offers-carousel{display:flex;border-radius:16px;position:relative}
         .offer-slide{flex:0 0 33.333%;min-width:0;padding:0 8px}
-        .offer-card{width:100%;display:grid;grid-template-columns:140px 1fr;gap:12px;background:#fff;border:1px solid #efe7ce;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.08);transition:box-shadow .3s ease, transform .3s ease, border-color .3s ease;text-decoration:none;color:inherit;height:180px;opacity:1;transition:opacity .5s ease}
+        .offer-card{width:100%;display:grid;grid-template-columns:140px 1fr;gap:12px;background:#fff;border:1px solid #efe7ce;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.08);transition:box-shadow .3s ease, transform .3s ease, border-color .3s ease, opacity .3s ease;text-decoration:none;color:inherit;height:180px;opacity:1}
         .offer-card:hover{box-shadow:0 12px 28px rgba(0,0,0,.15);transform:translateY(-3px);border-color:var(--c21-gold)}
-        .offer-card.fade-out{opacity:0}
-        .offer-card.fade-in{opacity:1}
+        .offer-card.fade-out{opacity:0;transform:scale(0.95)}
+        .offer-card.fade-in{opacity:1;transform:scale(1)}
         .offer-media{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:4/3;min-height:80px}
         .offer-media img{width:100%;height:100%;object-fit:cover;display:block}
         .offer-badge-hot{position:absolute;left:6px;top:6px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:3px 6px;border-radius:999px;font-weight:800;display:inline-flex;gap:3px;align-items:center;font-size:10px;box-shadow:0 3px 8px rgba(190,175,135,.4)}
@@ -217,6 +221,37 @@
         .carousel-dot{width:12px;height:12px;border-radius:50%;border:none;background:#ddd;cursor:pointer;transition:all .3s ease}
         .carousel-dot.active{background:var(--c21-gold);transform:scale(1.2)}
         .carousel-dot:hover{background:var(--c21-gold);opacity:.7}
+        
+        /* Кнопки навигации влево-вправо */
+        .offers-nav-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all 0.3s ease;z-index:10;opacity:0.9}
+        .offers-nav-btn:hover{background:var(--c21-gold);color:var(--c21-dark);opacity:1;transform:translateY(-50%) scale(1.1)}
+        .offers-nav-btn:active{transform:translateY(-50%) scale(0.95)}
+        .offers-prev-btn{left:10px}
+        .offers-next-btn{right:10px}
+        .offers-nav-btn.hidden{display:none !important}
+        
+        /* Показываем кнопки навигации на мобильных */
+        @media (max-width: 768px){
+            .offers-nav-btn{display:flex}
+            .offer-slide{flex:0 0 100%;padding:0 8px}
+            .offer-slide:nth-child(2),
+            .offer-slide:nth-child(3){display:none}
+            .offers-carousel{overflow:visible;scroll-snap-type:none;-webkit-overflow-scrolling:touch}
+            .offers-carousel::-webkit-scrollbar{display:none}
+            .offers-carousel-container{padding:0 12px;position:relative}
+        }
+        
+        /* Адаптация карточки для очень малых экранов */
+        @media (max-width: 480px){
+            .offer-card{grid-template-columns:1fr;height:auto;padding:10px}
+            .offer-card a{grid-template-columns:1fr !important;gap:10px}
+            .offer-media{aspect-ratio:16/9;min-height:140px}
+            .offer-content{min-height:auto}
+            .offer-title{font-size:15px}
+            .offers-nav-btn{width:36px;height:36px}
+            .offers-prev-btn{left:8px}
+            .offers-next-btn{right:8px}
+        }
         
         
          
@@ -235,7 +270,23 @@
                     console.error('Offers data element not found');
                     return;
                 }
-                const offersData = JSON.parse(offersDataElement.textContent);if (!offersData || offersData.length === 0) {return;
+                
+                // Читаем данные из data-атрибутов
+                const offerItems = offersDataElement.querySelectorAll('.offer-item');
+                const offersData = Array.from(offerItems).map(item => ({
+                    id: parseInt(item.dataset.id),
+                    title: item.dataset.title,
+                    complex_name: item.dataset.complex,
+                    expires_at: item.dataset.expires,
+                    image_url: item.dataset.image,
+                    detail_url: item.dataset.url
+                }));
+                
+                console.log('Offers loaded:', offersData.length);
+                
+                if (!offersData || offersData.length === 0) {
+                    console.log('No offers data available');
+                    return;
                 }
                 const dotsContainer = document.querySelector('.carousel-dots');
                 let carouselDots = document.querySelectorAll('.carousel-dot');
@@ -245,14 +296,22 @@
                     document.getElementById('offer-card-3')
                 ];
                 let currentPage = 0;
-                const offersPerPage = 3;
-                const totalPages = Math.ceil(offersData.length / offersPerPage);if (dotsContainer) {
+                
+                // Определяем количество акций на страницу в зависимости от размера экрана
+                const isMobile = window.innerWidth < 768;
+                const offersPerPage = isMobile ? 1 : 3;
+                const totalPages = Math.ceil(offersData.length / offersPerPage);
+                
+                if (dotsContainer) {
                     let dotsMarkup = '';
-                    for (let i = 0; i < totalPages; i += 1) {
+                    // На мобильных создаем точку для каждой акции, на десктопе - для каждой страницы
+                    const dotsCount = isMobile ? offersData.length : totalPages;
+                    for (let i = 0; i < dotsCount; i += 1) {
                         dotsMarkup += `<button type="button" class="carousel-dot${i === 0 ? ' active' : ''}" data-page="${i}"></button>`;
                     }
                     dotsContainer.innerHTML = dotsMarkup;
-                    carouselDots = dotsContainer.querySelectorAll('.carousel-dot');}
+                    carouselDots = dotsContainer.querySelectorAll('.carousel-dot');
+                }
                 function updateOfferCards(page) {
                     const startIndex = page * offersPerPage;
                     offerCards.forEach((card, index) => {
@@ -299,61 +358,227 @@
                             event.preventDefault();
                             const indexAttr = target.getAttribute('data-page');
                             const index = indexAttr ? parseInt(indexAttr, 10) : Array.prototype.indexOf.call(dotsContainer.querySelectorAll('.carousel-dot'), target);
-                            if (!Number.isNaN(index)) {currentPage = index;
-                                updateOfferCards(currentPage);
-                                updateActiveDot(currentPage);
+                            if (!Number.isNaN(index)) {
+                                stopAutoSlide();
+                                currentPage = index;
+                                if (isMobile) {
+                                    updateOfferCardsAdaptive(currentPage);
+                                    updateActiveDotMobile(currentPage);
+                                } else {
+                                    updateOfferCards(currentPage);
+                                    updateActiveDot(currentPage);
+                                }
+                                startAutoSlide();
                             }
                         }
                     });
                 }
 
-                // На мобильных: при достижении края загружаем следующую/предыдущую страницу
-                if (window.innerWidth < 992) {
-                    const scroller = document.querySelector('.offers-carousel');
-                    if (scroller) {
-                        let isPaging = false; // защита от дребезга
-                        scroller.addEventListener('scroll', function() {
-                            if (isPaging) return;
-                            const nearRight = scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 3;
-                            const nearLeft = scroller.scrollLeft <= 3;
-                            if (nearRight && currentPage < totalPages - 1) {
-                                isPaging = true;
-                                currentPage += 1;
-                                // начинаем новую страницу с первой карточки, без авто-долистывания
-                                updateOfferCards(currentPage);
-                                updateActiveDot(currentPage);
-                                scroller.classList.add('no-snap');
-                                scroller.scrollLeft = 0;
-                                setTimeout(() => scroller.classList.remove('no-snap'), 50);
-                                setTimeout(() => { isPaging = false; }, 120);
-                            } else if (nearLeft && currentPage > 0) {
-                                isPaging = true;
-                                currentPage -= 1;
-                                // начинаем страницу с первой карточки
-                                updateOfferCards(currentPage);
-                                updateActiveDot(currentPage);
-                                scroller.classList.add('no-snap');
-                                scroller.scrollLeft = 0;
-                                setTimeout(() => scroller.classList.remove('no-snap'), 50);
-                                setTimeout(() => { isPaging = false; }, 120);
+                // Обработка свайпа на мобильных
+                if (isMobile) {
+                    const carousel = document.querySelector('.offers-carousel');
+                    if (carousel) {
+                        let touchStartX = 0;
+                        let touchEndX = 0;
+                        
+                        carousel.addEventListener('touchstart', function(e) {
+                            touchStartX = e.changedTouches[0].screenX;
+                            stopAutoSlide();
+                        }, { passive: true });
+                        
+                        carousel.addEventListener('touchend', function(e) {
+                            touchEndX = e.changedTouches[0].screenX;
+                            handleSwipe();
+                            setTimeout(startAutoSlide, 2000);
+                        }, { passive: true });
+                        
+                        function handleSwipe() {
+                            const swipeThreshold = 50; // минимальное расстояние для свайпа
+                            const diff = touchStartX - touchEndX;
+                            
+                            if (Math.abs(diff) > swipeThreshold) {
+                                if (diff > 0) {
+                                    // Свайп влево - следующая карточка
+                                    nextPage();
+                                } else {
+                                    // Свайп вправо - предыдущая карточка
+                                    prevPage();
+                                }
                             }
-                        });
+                        }
                     }
                 }
-                function autoSlide() {
-                    if (totalPages > 1 && window.innerWidth >= 992) {
-                        currentPage = (currentPage + 1) % totalPages;
-                        updateOfferCards(currentPage);
-                        updateActiveDot(currentPage);
+                // Обновление карточек с учетом мобильной/десктопной версии
+                function updateOfferCardsAdaptive(page) {
+                    if (isMobile && offersData.length > 0) {
+                        // На мобильном показываем только 1 карточку с плавной анимацией
+                        const offerIndex = page % offersData.length;
+                        const offer = offersData[offerIndex];
+                        const card = offerCards[0]; // Используем только первую карточку
+                        
+                        if (card && offer) {
+                            // Добавляем fade-out эффект
+                            card.classList.add('fade-out');
+                            
+                            setTimeout(() => {
+                                card.innerHTML = `
+                                    <a href="${offer.detail_url}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                                        <div class="offer-media">
+                                            <img src="${offer.image_url}" alt="${offer.title}" loading="lazy" decoding="async">
+                                        </div>
+                                        <div class="offer-content">
+                                            <div class="offer-head">
+                                                <span class="offer-chip">${offer.complex_name}</span>
+                                                <h3 class="offer-title">${offer.title}</h3>
+                                            </div>
+                                            <div class="offer-limited">
+                                                <i class="far fa-clock"></i>
+                                                <span>До ${offer.expires_at}</span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                `;
+                                // Убираем fade-out и добавляем fade-in
+                                card.classList.remove('fade-out');
+                                card.classList.add('fade-in');
+                                
+                                setTimeout(() => {
+                                    card.classList.remove('fade-in');
+                                }, 300);
+                            }, 300);
+                            
+                            // Скрываем остальные карточки на мобильном
+                            if (offerCards[1]) offerCards[1].style.display = 'none';
+                            if (offerCards[2]) offerCards[2].style.display = 'none';
+                        }
+                    } else {
+                        // На десктопе используем старую логику
+                        updateOfferCards(page);
                     }
                 }
-                updateOfferCards(0);
-                updateActiveDot(0);
-                if (totalPages > 1 && window.innerWidth >= 992) {
-                    setInterval(autoSlide, 8000);
+                
+                // Обновление активной точки для мобильных (по одной акции)
+                function updateActiveDotMobile(page) {
+                    carouselDots.forEach((dot, index) => {
+                        if (index === page) {
+                            dot.classList.add('active');
+                        } else {
+                            dot.classList.remove('active');
+                        }
+                    });
+                }
+                
+                // Функция переключения на следующую страницу
+                function nextPage() {
+                    if (isMobile) {
+                        // На мобильном листаем по одной акции
+                        if (offersData.length > 1) {
+                            currentPage = (currentPage + 1) % offersData.length;
+                            updateOfferCardsAdaptive(currentPage);
+                            updateActiveDotMobile(currentPage);
+                        }
+                    } else {
+                        // На десктопе листаем по 3 акции
+                        if (totalPages > 1) {
+                            currentPage = (currentPage + 1) % totalPages;
+                            updateOfferCards(currentPage);
+                            updateActiveDot(currentPage);
+                        }
+                    }
+                }
+                
+                // Функция переключения на предыдущую страницу
+                function prevPage() {
+                    if (isMobile) {
+                        // На мобильном листаем по одной акции
+                        if (offersData.length > 1) {
+                            currentPage = (currentPage - 1 + offersData.length) % offersData.length;
+                            updateOfferCardsAdaptive(currentPage);
+                            updateActiveDotMobile(currentPage);
+                        }
+                    } else {
+                        // На десктопе листаем по 3 акции
+                        if (totalPages > 1) {
+                            currentPage = (currentPage - 1 + totalPages) % totalPages;
+                            updateOfferCards(currentPage);
+                            updateActiveDot(currentPage);
+                        }
+                    }
+                }
+                
+                // Автопрокрутка
+                let autoSlideInterval;
+                function startAutoSlide() {
+                    // Запускаем автопрокрутку если больше одной акции
+                    if (offersData.length > (isMobile ? 1 : 3)) {
+                        autoSlideInterval = setInterval(nextPage, 3000); // 3 секунды
+                    }
+                }
+                
+                function stopAutoSlide() {
+                    if (autoSlideInterval) {
+                        clearInterval(autoSlideInterval);
+                        autoSlideInterval = null;
+                    }
+                }
+                
+                // Обработчики для кнопок навигации
+                const prevBtn = document.getElementById('offersPrevBtn');
+                const nextBtn = document.getElementById('offersNextBtn');
+                
+                if (prevBtn) {
+                    prevBtn.addEventListener('click', function() {
+                        stopAutoSlide();
+                        prevPage();
+                        startAutoSlide();
+                    });
+                }
+                
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', function() {
+                        stopAutoSlide();
+                        nextPage();
+                        startAutoSlide();
+                    });
+                }
+                
+                // Остановка автопрокрутки при взаимодействии (только для десктопа)
+                const carouselContainer = document.querySelector('.offers-carousel-container');
+                
+                if (carouselContainer && !isMobile) {
+                    // На десктопе - остановка при наведении
+                    carouselContainer.addEventListener('mouseenter', stopAutoSlide);
+                    carouselContainer.addEventListener('mouseleave', startAutoSlide);
+                }
+                
+                // Инициализация
+                if (isMobile) {
+                    updateOfferCardsAdaptive(0);
+                    updateActiveDotMobile(0);
+                    // Скрываем кнопки навигации, если акция только одна
+                    if (offersData.length <= 1 && prevBtn && nextBtn) {
+                        prevBtn.classList.add('hidden');
+                        nextBtn.classList.add('hidden');
+                    }
+                } else {
+                    updateOfferCards(0);
+                    updateActiveDot(0);
+                }
+                
+                // Запускаем автопрокрутку (работает на всех устройствах)
+                if (offersData.length > (isMobile ? 1 : 3)) {
+                    startAutoSlide();
                 }
             } catch (error) {
                 console.error('Error initializing offers carousel:', error);
+                console.error('Error details:', error.message);
+                console.error('Error stack:', error.stack);
+                
+                // Скрываем кнопки навигации при ошибке
+                const prevBtn = document.getElementById('offersPrevBtn');
+                const nextBtn = document.getElementById('offersNextBtn');
+                if (prevBtn) prevBtn.style.display = 'none';
+                if (nextBtn) nextBtn.style.display = 'none';
             }
         });
         </script>

@@ -83,7 +83,7 @@ def home(request):
                 rc.name = (complex_doc.get('development', {}) or {}).get('name') if complex_doc else ''
                 rc.id = str(complex_doc.get('_id')) if complex_doc and complex_doc.get('_id') else ''
                 offer.residential_complex = rc
-                # get_main_image.image.url
+                # get_main_image.image.url - правильная обработка S3 и локальных URL
                 photos = []
                 if complex_doc:
                     if 'development' in complex_doc and 'avito' not in complex_doc:
@@ -92,7 +92,15 @@ def home(request):
                         photos = (complex_doc.get('domclick', {}) or {}).get('development', {}).get('photos', []) or []
                 main = _MainImg()
                 img = _Img()
-                img.url = photos[0] if photos else PLACEHOLDER_IMAGE_URL
+                if photos:
+                    photo_url = photos[0]
+                    # Проверяем, является ли URL уже полным (S3)
+                    if photo_url.startswith('http://') or photo_url.startswith('https://'):
+                        img.url = photo_url
+                    else:
+                        img.url = '/media/' + photo_url if not photo_url.startswith('/media/') else photo_url
+                else:
+                    img.url = PLACEHOLDER_IMAGE_URL
                 main.image = img
                 offer.get_main_image = main
                 items.append(offer)
