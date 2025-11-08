@@ -238,6 +238,36 @@
             font-weight: 600;
         }
 
+        .delete-all-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+            white-space: nowrap;
+        }
+
+        .delete-all-btn:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .delete-all-btn:active {
+            transform: translateY(0);
+        }
+
+        .delete-all-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .column-body {
             flex: 1;
             overflow-y: auto;
@@ -1241,7 +1271,12 @@
                         <span>🏠</span>
                         DomRF
                     </h2>
-                    <span class="badge" id="badgeDomrf">0</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge" id="badgeDomrf">0</span>
+                        <button onclick="deleteAllRecords('domrf')" class="delete-all-btn" id="deleteAllDomrf" style="display: none;" title="Удалить все записи DomRF">
+                            🗑️ Удалить всё
+                        </button>
+                    </div>
                 </div>
                 <div class="column-body" id="domrfList">
                     <div class="empty-state">
@@ -1258,7 +1293,12 @@
                         <span>🏪</span>
                         Avito
                     </h2>
-                    <span class="badge" id="badgeAvito">0</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge" id="badgeAvito">0</span>
+                        <button onclick="deleteAllRecords('avito')" class="delete-all-btn" id="deleteAllAvito" style="display: none;" title="Удалить все записи Avito">
+                            🗑️ Удалить всё
+                        </button>
+                    </div>
                 </div>
                 <div class="column-body" id="avitoList">
                     <div class="empty-state">
@@ -1275,7 +1315,12 @@
                         <span>🏢</span>
                         DomClick
                     </h2>
-                    <span class="badge" id="badgeDomclick">0</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge" id="badgeDomclick">0</span>
+                        <button onclick="deleteAllRecords('domclick')" class="delete-all-btn" id="deleteAllDomclick" style="display: none;" title="Удалить все записи DomClick">
+                            🗑️ Удалить всё
+                        </button>
+                    </div>
                 </div>
                 <div class="column-body" id="domclickList">
                     <div class="empty-state">
@@ -1553,6 +1598,11 @@
                     renderList('avito', sortedAvito);
                     renderList('domclick', sortedDomclick);
                     
+                    // Показываем/скрываем кнопки "Удалить всё"
+                    document.getElementById('deleteAllDomrf').style.display = result.totals.domrf > 0 ? 'block' : 'none';
+                    document.getElementById('deleteAllAvito').style.display = result.totals.avito > 0 ? 'block' : 'none';
+                    document.getElementById('deleteAllDomclick').style.display = result.totals.domclick > 0 ? 'block' : 'none';
+                    
                     // Загружаем будущие проекты
                     await loadFutureProjects();
                 } else {
@@ -1691,6 +1741,110 @@
             } catch (error) {
                 console.error('❌ Ошибка сети при удалении:', error);
                 showToast('Ошибка подключения к серверу', 'error');
+            }
+        }
+
+        // Массовое удаление всех записей из источника
+        async function deleteAllRecords(source) {
+            const sourceNames = {
+                'domrf': 'DomRF',
+                'avito': 'Avito',
+                'domclick': 'DomClick'
+            };
+            
+            const sourceName = sourceNames[source] || source;
+            
+            // Получаем текущее количество записей
+            const currentData = appState.data[source] || [];
+            const recordCount = currentData.length;
+            
+            if (recordCount === 0) {
+                showToast('Нет записей для удаления', 'info');
+                return;
+            }
+            
+            // Подтверждение удаления
+            const confirmMessage = `⚠️ ВЫ УВЕРЕНЫ?\n\nЭто действие удалит ВСЕ ${recordCount} записей из ${sourceName}!\n\n❌ ЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ!\n\nДля подтверждения нажмите OK.`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Дополнительное подтверждение для больших списков
+            if (recordCount > 20) {
+                const doubleConfirm = confirm(`Вы действительно хотите удалить ${recordCount} записей? Это последнее предупреждение!`);
+                if (!doubleConfirm) {
+                    return;
+                }
+            }
+            
+            // Отключаем кнопку на время удаления
+            const deleteBtn = document.getElementById(`deleteAll${source.charAt(0).toUpperCase() + source.slice(1)}`);
+            if (deleteBtn) {
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = '⏳ Удаление...';
+            }
+            
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+                
+                // Удаляем записи по одной
+                for (let i = 0; i < currentData.length; i++) {
+                    const record = currentData[i];
+                    
+                    try {
+                        const response = await fetch('/api/manual-matching/delete/', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                source: source,
+                                record_id: record._id
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                            console.error(`❌ Ошибка удаления записи ${record.name}:`, result.error);
+                        }
+                        
+                        // Обновляем прогресс в кнопке
+                        if (deleteBtn) {
+                            deleteBtn.innerHTML = `⏳ Удалено ${successCount}/${recordCount}...`;
+                        }
+                        
+                    } catch (error) {
+                        errorCount++;
+                        console.error(`❌ Ошибка сети при удалении записи ${record.name}:`, error);
+                    }
+                }
+                
+                // Показываем результат
+                if (errorCount === 0) {
+                    showToast(`✅ Успешно удалено ${successCount} записей из ${sourceName}!`, 'success');
+                } else {
+                    showToast(`⚠️ Удалено ${successCount} из ${recordCount} записей. Ошибок: ${errorCount}`, 'warning');
+                }
+                
+                // Перезагружаем данные
+                await loadData();
+                
+            } catch (error) {
+                console.error('❌ Критическая ошибка при массовом удалении:', error);
+                showToast('Критическая ошибка при удалении записей', 'error');
+                
+                // Восстанавливаем кнопку
+                if (deleteBtn) {
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = '🗑️ Удалить всё';
+                }
             }
         }
 
@@ -2059,15 +2213,40 @@
                                     <option value="false" ${!item.is_featured? 'selected':''}>Нет</option>
                                 </select>
                             </label>
-                            <label style="display:flex; flex-direction:column;">
-                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Координаты (широта)</span>
-                                <input id="pv-latitude" type="number" step="any" value="${item.latitude || ''}" 
-                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
-                            </label>
-                            <label style="display:flex; flex-direction:column;">
-                                <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Координаты (долгота)</span>
-                                <input id="pv-longitude" type="number" step="any" value="${item.longitude || ''}" 
-                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff; font-size:14px;">
+                            <label style="grid-column: span 2; display:flex; flex-direction:column; background:${!item.latitude || !item.longitude ? '#422006' : 'transparent'}; padding:${!item.latitude || !item.longitude ? '12px' : '0'}; border-radius:8px; border:${!item.latitude || !item.longitude ? '1px solid #f59e0b' : 'none'};">
+                                ${!item.latitude || !item.longitude ? `
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                                        <span style="font-size:18px;">⚠️</span>
+                                        <div>
+                                            <div style="color:#f59e0b; font-weight:600; font-size:14px;">Координаты не найдены</div>
+                                            <div style="color:#94a3b8; font-size:12px;">
+                                                Найдите ЖК на <a href="https://yandex.ru/maps/" target="_blank" style="color:#3b82f6; text-decoration:underline;">Яндекс.Картах</a> 
+                                                или <a href="https://www.google.com/maps" target="_blank" style="color:#3b82f6; text-decoration:underline;">Google Maps</a>, 
+                                                кликните правой кнопкой на объект и скопируйте координаты
+                                            </div>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                                    <div style="display:flex; flex-direction:column;">
+                                        <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">
+                                            📍 Широта <span style="color:#ef4444;">*</span>
+                                        </span>
+                                        <input id="pv-latitude" type="number" step="any" value="${item.latitude || ''}" 
+                                            placeholder="Например: 54.735147"
+                                            required
+                                            style="width:100%; padding:10px 12px; border-radius:8px; border:${!item.latitude ? '2px solid #f59e0b' : '1px solid #475569'}; background:#334155; color:#fff; font-size:14px;">
+                                    </div>
+                                    <div style="display:flex; flex-direction:column;">
+                                        <span style="font-size:13px; color:#94a3b8; margin-bottom:6px;">
+                                            📍 Долгота <span style="color:#ef4444;">*</span>
+                                        </span>
+                                        <input id="pv-longitude" type="number" step="any" value="${item.longitude || ''}" 
+                                            placeholder="Например: 55.958736"
+                                            required
+                                            style="width:100%; padding:10px 12px; border-radius:8px; border:${!item.longitude ? '2px solid #f59e0b' : '1px solid #475569'}; background:#334155; color:#fff; font-size:14px;">
+                                    </div>
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -2381,7 +2560,40 @@
                     }
                 }
                 
+                // ПРОВЕРКА: Убедимся, что координаты заполнены
+                console.log('🔍 Проверка координат:', {
+                    latitude: finalData.latitude,
+                    longitude: finalData.longitude,
+                    latitudeField: modal.querySelector('#pv-latitude')?.value,
+                    longitudeField: modal.querySelector('#pv-longitude')?.value
+                });
+                
+                // Если координат нет, показываем предупреждение
+                if (!finalData.latitude || !finalData.longitude) {
+                    showToast('⚠️ Пожалуйста, заполните координаты (широту и долготу)', 'error');
+                    // Подсвечиваем поля
+                    const latField = modal.querySelector('#pv-latitude');
+                    const lngField = modal.querySelector('#pv-longitude');
+                    if (!finalData.latitude && latField) {
+                        latField.style.border = '2px solid #ef4444';
+                        setTimeout(() => latField.style.border = '', 3000);
+                    }
+                    if (!finalData.longitude && lngField) {
+                        lngField.style.border = '2px solid #ef4444';
+                        setTimeout(() => lngField.style.border = '', 3000);
+                    }
+                    return;
+                }
+                
                 // Сначала создаём базовую unified запись
+                console.log('📤 Отправка данных на сервер:', {
+                    domrf_id: finalData.domrf_id,
+                    avito_id: finalData.avito_id,
+                    domclick_id: finalData.domclick_id,
+                    latitude: finalData.latitude,
+                    longitude: finalData.longitude
+                });
+                
                 const createResp = await fetch('/api/manual-matching/save/', { 
                     method:'POST', 
                     headers:{'Content-Type':'application/json'}, 
@@ -2390,10 +2602,14 @@
                         avito_id: finalData.avito_id,
                         domclick_id: finalData.domclick_id,
                         is_featured: finalData.is_featured,
-                        agent_id: finalData.agent_id
+                        agent_id: finalData.agent_id,
+                        latitude: finalData.latitude,
+                        longitude: finalData.longitude
                     })
                 });
                 const createData = await createResp.json();
+                console.log('📥 Ответ сервера:', createData);
+                
                 if(!createData.success){ 
                     showToast(createData.error||'Ошибка создания', 'error'); 
                     return; 

@@ -136,9 +136,9 @@ def get_unmatched_records(request):
                 'domrf': len(domrf_unmatched),
                 'avito': len(avito_unmatched),
                 'domclick': len(domclick_unmatched),
-                'total_domrf': total_domrf - len(matched_domrf_names),
-                'total_avito': total_avito - len(matched_avito_ids),
-                'total_domclick': total_domclick - len(matched_domclick_ids)
+                'total_domrf': max(0, total_domrf - len(matched_domrf_names)),
+                'total_avito': max(0, total_avito - len(matched_avito_ids)),
+                'total_domclick': max(0, total_domclick - len(matched_domclick_ids))
             }
         })
         
@@ -234,8 +234,15 @@ def save_manual_match(request):
         
         # Сначала проверяем переданные координаты (из модального окна)
         if provided_latitude and provided_longitude:
-            latitude = float(provided_latitude)
-            longitude = float(provided_longitude)
+            try:
+                latitude = float(provided_latitude)
+                longitude = float(provided_longitude)
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Некорректный формат координат. Широта: {provided_latitude}, Долгота: {provided_longitude}',
+                    'error_type': 'invalid_coordinates'
+                }, status=400)
         elif domrf_record:
             latitude = domrf_record.get('latitude')
             longitude = domrf_record.get('longitude')
@@ -250,10 +257,24 @@ def save_manual_match(request):
         
         # Если координат нет ни в одном источнике - требуем ввести вручную
         if not latitude or not longitude:
+            # Формируем подробное сообщение об ошибке
+            error_details = []
+            if domrf_record:
+                error_details.append(f"DomRF: широта={domrf_record.get('latitude')}, долгота={domrf_record.get('longitude')}")
+            if avito_record:
+                error_details.append(f"Avito: широта={avito_record.get('latitude')}, долгота={avito_record.get('longitude')}")
+            if domclick_record:
+                error_details.append(f"DomClick: широта={domclick_record.get('latitude')}, долгота={domclick_record.get('longitude')}")
+            
             return JsonResponse({
                 'success': False,
-                'error': 'Необходимо ввести координаты',
-                'error_type': 'missing_coordinates'
+                'error': 'Необходимо ввести координаты. Координаты не найдены ни в одном источнике.',
+                'error_type': 'missing_coordinates',
+                'details': {
+                    'provided_latitude': provided_latitude,
+                    'provided_longitude': provided_longitude,
+                    'sources': error_details
+                }
             }, status=400)
         
         unified_record = {
