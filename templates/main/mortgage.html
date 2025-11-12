@@ -82,9 +82,40 @@
   border-radius: 4px;
 }
 
+/* Адаптация галереи для мобильных */
 @media (max-width: 768px) {
-  .compact-card-image-gallery { height: 200px; }
-  .gallery-nav { opacity: 1; width: 32px; height: 32px; }
+  .compact-card-image-gallery { 
+    height: 180px; 
+    border-radius: 10px 10px 0 0;
+  }
+  .gallery-nav { 
+    opacity: 1; 
+    width: 30px; 
+    height: 30px; 
+  }
+  .gallery-nav i {
+    font-size: 14px;
+  }
+  .gallery-prev { left: 8px; }
+  .gallery-next { right: 8px; }
+  .gallery-dots { bottom: 8px; gap: 4px; }
+  .gallery-dots .dot {
+    width: 6px;
+    height: 6px;
+  }
+  .gallery-dots .dot.active {
+    width: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .compact-card-image-gallery { 
+    height: 160px; 
+  }
+  .gallery-nav { 
+    width: 28px; 
+    height: 28px; 
+  }
 }
 </style>
 <div class="container mortgage-page">
@@ -516,44 +547,317 @@
 }
 
 @media (max-width: 768px) {
+    /* Заголовок страницы */
     .page-header {
-        padding: 60px 0 40px;
+        padding: 40px 0 30px;
+        margin-bottom: 32px;
+        border-radius: 0 0 20px 20px;
     }
     
     .page-title {
-        font-size: 36px;
+        font-size: 32px;
     }
     
     .page-subtitle {
-        font-size: 18px;
+        font-size: 16px;
     }
     
+    /* Секции */
     .section-title {
-        font-size: 28px;
+        font-size: 24px;
+        margin-bottom: 20px;
     }
     
+    .section-subtitle {
+        font-size: 16px;
+    }
+    
+    .section-header {
+        margin-bottom: 32px;
+    }
+    
+    /* Калькулятор ипотеки */
+    .mortgage-section {
+        margin: 20px 0;
+        border-radius: 12px;
+    }
+    
+    .mortgage-card {
+        padding: 16px !important;
+    }
+    
+    .mortgage-title {
+        font-size: 20px !important;
+    }
+    
+    .mortgage-label {
+        font-size: 16px !important;
+    }
+    
+    .mini-input {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+    
+    .summary-title {
+        font-size: 18px !important;
+    }
+    
+    .summary-amount {
+        font-size: 22px !important;
+    }
+    
+    .mortgage-logos img {
+        height: 36px !important;
+    }
+    
+    /* Преимущества и недостатки */
     .benefits-grid,
     .disadvantages-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
     
     .benefit-card,
     .disadvantage-card {
-        padding: 25px 20px;
+        padding: 20px;
+        border-radius: 16px;
+    }
+    
+    .benefit-icon,
+    .disadvantage-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+        margin-bottom: 16px;
+    }
+    
+    .benefit-title,
+    .disadvantage-title {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+    
+    .benefit-description,
+    .disadvantage-description {
+        font-size: 15px;
+    }
+    
+    /* Секции с отступами */
+    .mortgage-with-us-section,
+    .self-mortgage-section {
+        margin-bottom: 40px;
+    }
+    
+    /* Контейнер с ЖК */
+    #complexes-container {
+        margin-top: 16px !important;
+    }
+    
+    .complexes-section h3 {
+        font-size: 20px !important;
+        margin-bottom: 16px !important;
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 576px) {
+    /* Заголовок */
     .page-header {
-        padding: 50px 0 30px;
+        padding: 30px 0 24px;
+        margin-bottom: 24px;
     }
     
     .page-title {
         font-size: 28px;
     }
     
-    .section-title {
+    .page-subtitle {
+        font-size: 15px;
+    }
+    
+    /* Калькулятор */
+    .mortgage-card {
+        padding: 14px !important;
+    }
+    
+    .mortgage-title {
+        font-size: 18px !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .mortgage-label {
+        font-size: 15px !important;
+    }
+    
+    .summary-title {
+        font-size: 16px !important;
+    }
+    
+    .summary-main {
+        padding: 8px 0 12px 0 !important;
+    }
+    
+    /* Карточки преимуществ */
+    .benefit-card,
+    .disadvantage-card {
+        padding: 16px;
+    }
+    
+    .benefit-icon,
+    .disadvantage-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+        margin-bottom: 14px;
+    }
+    
+    .benefit-title,
+    .disadvantage-title {
+        font-size: 17px;
+        margin-bottom: 10px;
+    }
+    
+    .benefit-description,
+    .disadvantage-description {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Заголовок */
+    .page-header {
+        padding: 24px 0 20px;
+        margin-bottom: 20px;
+        border-radius: 0 0 16px 16px;
+    }
+    
+    .page-header-content {
+        padding: 0 16px;
+    }
+    
+    .page-title {
         font-size: 24px;
+        margin-bottom: 12px;
+    }
+    
+    .page-subtitle {
+        font-size: 14px;
+    }
+    
+    /* Секции */
+    .section-title {
+        font-size: 20px;
+    }
+    
+    .section-subtitle {
+        font-size: 14px;
+    }
+    
+    .section-header {
+        margin-bottom: 24px;
+    }
+    
+    /* Калькулятор - еще более компактный */
+    .mortgage-section {
+        margin: 16px 0;
+        padding: 0;
+    }
+    
+    .mortgage-card {
+        padding: 12px !important;
+    }
+    
+    .mortgage-title {
+        font-size: 16px !important;
+    }
+    
+    .mortgage-label {
+        font-size: 14px !important;
+        margin-bottom: 4px !important;
+    }
+    
+    .mini-input {
+        height: 38px;
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+    
+    .mortgage-select {
+        height: 38px !important;
+        font-size: 13px;
+    }
+    
+    .summary-title {
+        font-size: 15px !important;
+    }
+    
+    .summary-amount {
+        font-size: 20px !important;
+    }
+    
+    .summary-row {
+        padding: 10px 0;
+        font-size: 13px;
+    }
+    
+    .summary-row strong {
+        font-size: 13px;
+    }
+    
+    .mortgage-logos {
+        margin: 12px 0 !important;
+    }
+    
+    .mortgage-logos img {
+        height: 32px !important;
+    }
+    
+    .btn-large {
+        padding: 12px 20px !important;
+        font-size: 14px !important;
+    }
+    
+    /* Карточки преимуществ - максимально компактно */
+    .benefits-grid,
+    .disadvantages-grid {
+        gap: 12px;
+    }
+    
+    .benefit-card,
+    .disadvantage-card {
+        padding: 14px;
+        border-radius: 12px;
+    }
+    
+    .benefit-icon,
+    .disadvantage-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+    
+    .benefit-title,
+    .disadvantage-title {
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+    
+    .benefit-description,
+    .disadvantage-description {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    
+    /* Секции с отступами */
+    .mortgage-with-us-section,
+    .self-mortgage-section {
+        margin-bottom: 32px;
+    }
+    
+    /* Форма обратной связи */
+    .mortgage-page .feedback-section {
+        margin: 12px 0 40px 0;
     }
 }
 </style>

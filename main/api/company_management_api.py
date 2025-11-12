@@ -993,3 +993,92 @@ def employee_api_delete(request, employee_id):
         return JsonResponse({'success': True, 'message': 'Сотрудник удален'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def branch_office_delete_image(request, office_id):
+    """API: удалить отдельное изображение офиса."""
+    try:
+        import json
+        db = get_mongo_connection()
+        col = db['branch_offices']
+        
+        office = col.find_one({'_id': ObjectId(office_id)})
+        if not office:
+            return JsonResponse({'success': False, 'error': 'Офис не найден'}, status=404)
+        
+        # Получаем URL изображения для удаления
+        data = json.loads(request.body)
+        image_url = data.get('image_url', '')
+        image_type = data.get('image_type', 'gallery')  # 'gallery' or 'main'
+        
+        if not image_url:
+            return JsonResponse({'success': False, 'error': 'URL изображения не указан'}, status=400)
+        
+        if image_type == 'main':
+            # Удаляем главное изображение
+            col.update_one(
+                {'_id': ObjectId(office_id)},
+                {'$set': {'main_image': ''}}
+            )
+        else:
+            # Удаляем изображение из галереи
+            images = office.get('images', [])
+            if image_url in images:
+                images.remove(image_url)
+                col.update_one(
+                    {'_id': ObjectId(office_id)},
+                    {'$set': {'images': images}}
+                )
+        
+        # Опционально: удаление файла из S3
+        # s3_client.delete_file(image_url)
+        
+        return JsonResponse({'success': True, 'message': 'Изображение удалено'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def employee_delete_image(request, employee_id):
+    """API: удалить отдельное изображение сотрудника."""
+    try:
+        import json
+        db = get_mongo_connection()
+        col = db['employees']
+        
+        employee = col.find_one({'_id': ObjectId(employee_id)})
+        if not employee:
+            return JsonResponse({'success': False, 'error': 'Сотрудник не найден'}, status=404)
+        
+        # Получаем URL изображения для удаления
+        data = json.loads(request.body)
+        image_url = data.get('image_url', '')
+        
+        if not image_url:
+            return JsonResponse({'success': False, 'error': 'URL изображения не указан'}, status=400)
+        
+        # Удаляем изображение из массива images
+        images = employee.get('images', [])
+        if image_url in images:
+            images.remove(image_url)
+            col.update_one(
+                {'_id': ObjectId(employee_id)},
+                {'$set': {'images': images}}
+            )
+        
+        # Проверяем, может это главное фото (photo)
+        if employee.get('photo') == image_url:
+            col.update_one(
+                {'_id': ObjectId(employee_id)},
+                {'$set': {'photo': ''}}
+            )
+        
+        # Опционально: удаление файла из S3
+        # s3_client.delete_file(image_url)
+        
+        return JsonResponse({'success': True, 'message': 'Изображение удалено'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

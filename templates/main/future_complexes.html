@@ -18,53 +18,67 @@
 
 
 
-        <!-- Список ЖК -->
+        <!-- Список ЖК (стиль как в каталоге) -->
         <div class="future-complexes-grid">
             {% for complex in complexes %}
-            <a href="{% url 'main:future_complex_detail' complex.id %}" class="future-complex-card">
-                <div class="future-complex-media">
+            <div class="property-card-compact" data-complex-id="{{ complex.id }}">
+                <div class="compact-card-image-gallery" style="cursor: pointer;">
                     {% if complex.gallery_photos and complex.gallery_photos.0 %}
-                        <img src="{{ complex.gallery_photos.0 }}" alt="{{ complex.name }}" loading="lazy" decoding="async">
+                        <img src="{{ complex.gallery_photos.0 }}" alt="{{ complex.name }}" class="gallery-image active" loading="lazy" decoding="async">
                     {% else %}
-                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ complex.name }}" loading="lazy" decoding="async">
+                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ complex.name }}" class="gallery-image active" loading="lazy" decoding="async">
                     {% endif %}
+                    
+                    <!-- Бейджи с датами -->
                     <div class="future-complex-badge">
                         <i class="fas fa-calendar-alt"></i>
                         <span>Сдача: {{ complex.delivery_date|date:"d.m.Y" }}</span>
                     </div>
-                </div>
-                <div class="future-complex-content">
-                    <div class="future-complex-head">
-                        <span class="future-complex-chip">{{ complex.district|default:complex.city }}</span>
-                        <h3 class="future-complex-title">{{ complex.name }}</h3>
+                    {% if complex.sales_start %}
+                    <div class="future-complex-badge sales-start-badge">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Старт: {{ complex.sales_start|date:"d.m.Y" }}</span>
                     </div>
-                    <p class="future-complex-text">{{ complex.description|truncatechars:120 }}</p>
-                    <div class="future-complex-details">
+                    {% endif %}
+                </div>
+                
+                <div class="compact-card-content" style="cursor: pointer;">
+                    <div class="compact-card-header">
+                        <h3 class="compact-card-title">{{ complex.name }}</h3>
+                        <div class="compact-card-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}</span>
+                        </div>
+                        <div class="compact-card-details">
+                            {% if complex.delivery_date %}
+                            <div class="compact-detail-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>Сдача {{ complex.delivery_date|date:"d.m.Y" }}</span>
+                            </div>
+                            {% endif %}
+                            {% if complex.developer %}
+                            <div class="compact-detail-item">
+                                <i class="fas fa-building"></i>
+                                <span>{{ complex.developer }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="compact-card-price">
                         {% if complex.price_from %}
-                        <div class="future-complex-price">
-                            <i class="fas fa-tag"></i>
-                            <span>от {{ complex.price_from }} млн ₽</span>
-                        </div>
-                        {% endif %}
-                        {% if complex.area_from %}
-                        <div class="future-complex-area">
-                            <i class="fas fa-ruler-combined"></i>
-                            <span>{{ complex.area_from }}-{{ complex.area_to|default:complex.area_from }} м²</span>
-                        </div>
-                        {% endif %}
-                        {% if complex.developer %}
-                        <div class="future-complex-developer">
-                            <i class="fas fa-building"></i>
-                            <span>{{ complex.developer }}</span>
-                        </div>
+                        <div class="compact-price-text">от {{ complex.price_from }} млн ₽</div>
+                        {% else %}
+                        <div class="compact-price-text">Цена по запросу</div>
                         {% endif %}
                     </div>
-                    <div class="future-complex-actions">
-                        <span class="future-complex-cta">Подробнее о проекте</span>
-                        <span class="future-complex-cta secondary anchor-feedback-btn" onclick="event.preventDefault(); event.stopPropagation(); document.getElementById('feedback-title').scrollIntoView({behavior: 'smooth', block: 'start'});">Оставить заявку</span>
+                    
+                    <!-- Кнопки действий -->
+                    <div class="future-complex-actions" style="margin-top: 12px;">
+                        <a href="{% url 'main:future_complex_detail' complex.id %}" class="btn btn-primary btn-sm" style="width: 100%;">Подробнее о проекте</a>
+                        <a href="#feedback-title" class="btn btn-secondary btn-sm anchor-feedback-btn" style="width: 100%;" onclick="event.stopPropagation();">Оставить заявку</a>
                     </div>
                 </div>
-            </a>
+            </div>
             {% empty %}
             <div class="no-complexes">
                 <p>По вашему запросу ничего не найдено. Попробуйте изменить параметры поиска.</p>
@@ -190,56 +204,106 @@
 
 
 
-/* Сетка ЖК */
+/* Сетка ЖК (как в каталоге) */
 .future-complexes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 24px;
-    justify-items: center;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 24px !important;
+    margin-bottom: 20px;
 }
 
-.future-complex-card {
-    width: 100%;
-    max-width: 600px;
-    display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 16px;
+/* Карточка ЖК (используем стили из каталога) */
+.property-card-compact {
     background: #fff;
-    border: 1px solid #efe7ce;
+    border: 1px solid #e9ecef;
     border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.06);
-    transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
-    text-decoration: none;
-    color: inherit;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0,0,0,.08);
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
-.future-complex-card:hover {
-    box-shadow: 0 16px 36px rgba(0,0,0,.14);
-    transform: translateY(-2px);
+.property-card-compact:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,.15);
     border-color: var(--c21-gold);
 }
 
-.future-complex-media {
+/* Галерея изображений */
+.compact-card-image-gallery {
     position: relative;
-    border-radius: 12px;
+    width: 100%;
+    height: 240px;
     overflow: hidden;
-    aspect-ratio: 16/10;
-    min-height: 120px;
+    border-radius: 12px 12px 0 0;
 }
 
-.future-complex-media img {
+.compact-card-image-gallery .gallery-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
+    transition: opacity 0.3s ease;
 }
 
-.future-complex-media::after {
-    content: "";
+.gallery-nav {
     position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg,rgba(0,0,0,.00) 40%, rgba(0,0,0,.18) 100%);
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+    opacity: 0;
+}
+
+.compact-card-image-gallery:hover .gallery-nav {
+    opacity: 1;
+}
+
+.gallery-nav:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.gallery-prev {
+    left: 10px;
+}
+
+.gallery-next {
+    right: 10px;
+}
+
+.gallery-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+}
+
+.gallery-dots .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.gallery-dots .dot.active {
+    background: rgba(255, 255, 255, 1);
+    width: 24px;
+    border-radius: 4px;
 }
 
 .future-complex-badge {
@@ -263,122 +327,125 @@
     font-size: 11px;
 }
 
-.future-complex-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 120px;
+/* Бейдж старта продаж - ниже срока сдачи */
+.future-complex-badge.sales-start-badge {
+    top: auto;
+    bottom: 8px;
+    background: #ff9800;
+    box-shadow: 0 4px 10px rgba(255,152,0,.35);
 }
 
-.future-complex-head {
+/* Контент карточки (из каталога) */
+.compact-card-content {
+    padding: 16px;
+}
+
+.compact-card-header {
+    margin-bottom: 12px;
+}
+
+.compact-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+
+.compact-card-location {
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: #666;
+    font-size: 14px;
     margin-bottom: 8px;
 }
 
-.future-complex-chip {
-    display: inline-block;
-    background: var(--c21-dark);
+.compact-card-location i {
     color: var(--c21-gold);
-    padding: 3px 8px;
-    border-radius: 999px;
-    font-weight: 700;
-    font-size: 11px;
-    white-space: nowrap;
+    font-size: 12px;
 }
 
-.future-complex-title {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 800;
-    color: #222;
-    line-height: 1.3;
-    word-wrap: break-word;
-    hyphens: auto;
-}
-
-.future-complex-text {
-    color: #444;
-    margin: 8px 0 0 0;
-    font-size: 14px;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.future-complex-details {
+.compact-card-details {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
 }
 
-.future-complex-price,
-.future-complex-area,
-.future-complex-developer {
+.compact-detail-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: #7b6a3e;
-    background: #faf7ee;
-    border: 1px solid #efe7ce;
-    border-radius: 8px;
-    padding: 6px 8px;
-    font-weight: 600;
-    font-size: 12px;
+    gap: 4px;
+    font-size: 13px;
+    color: #666;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 6px;
 }
 
-.future-complex-price i,
-.future-complex-area i,
-.future-complex-developer i {
+.compact-detail-item i {
     color: var(--c21-gold);
     font-size: 12px;
 }
 
+.compact-card-price {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.compact-price-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--c21-gold);
+}
+
+/* Кнопки действий */
 .future-complex-actions {
     display: flex;
+    flex-direction: column;
     gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
     margin-top: 12px;
-    justify-content: flex-start;
 }
 
-        .future-complex-cta {
-            flex: none;
-            text-align: center;
-            padding: 8px 16px !important;
-            border-radius: 8px;
-            background: linear-gradient(180deg,var(--c21-gold), var(--c21-gold-dark)) !important;
-            color: var(--c21-dark) !important;
-            border: none !important;
-            box-shadow: 0 4px 12px rgba(190,175,135,.45);
-            font-size: 13px;
-            font-weight: 700;
-            min-width: 140px;
-            text-decoration: none;
-            display: inline-block;
-            cursor: pointer;
-        }
+.btn-sm {
+    padding: 10px 16px;
+    font-size: 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
 
-        .future-complex-cta:hover {
-            filter: brightness(.98);
-            transform: translateY(-1px);
-        }
-        
-        .future-complex-cta.secondary {
-            background: #6c757d !important;
-            color: white !important;
-        }
-        
-        .future-complex-cta.secondary:hover {
-            background: #5a6268 !important;
-        }
+.btn-primary {
+    background: linear-gradient(135deg, var(--c21-gold), var(--c21-gold-dark));
+    color: var(--c21-dark);
+    box-shadow: 0 4px 12px rgba(190,175,135,.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(190,175,135,.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,.2);
+}
 
 .no-complexes {
     grid-column: 1 / -1;
@@ -425,75 +492,149 @@
     font-weight: 500;
 }
 
-/* Адаптивность */
-@media (max-width: 768px) {
-    .future-complexes-header .section-title {
-        font-size: 2rem;
-    }
-    
-    .filters-row {
-        grid-template-columns: 1fr;
-    }
-    
+/* Адаптивность (как в каталоге) */
+@media (max-width: 1200px) {
     .future-complexes-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .future-complexes-section {
+        margin: 24px 0;
     }
     
-    .future-complex-card {
-        grid-template-columns: 1fr;
-        max-width: 100%;
+    .future-complexes-header {
+        margin-bottom: 24px;
     }
     
-    .future-complex-media {
-        aspect-ratio: 16/9;
+    .future-complexes-header .section-title {
+        font-size: 28px;
     }
     
-    .future-complex-content {
-        min-height: auto;
+    .future-complexes-header .section-subtitle {
+        font-size: 16px;
     }
     
-    .future-complex-title {
-        font-size: 18px;
+    /* Одна колонка на мобильных */
+    .future-complexes-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
     }
     
-    .future-complex-text {
-        font-size: 15px;
+    /* Компактные карточки */
+    .compact-card-image-gallery {
+        height: 200px;
+    }
+    
+    .gallery-nav {
+        opacity: 1;
+        width: 32px;
+        height: 32px;
+    }
+    
+    .compact-card-title {
+        font-size: 16px;
+    }
+    
+    .compact-card-location {
+        font-size: 13px;
+    }
+    
+    .compact-detail-item {
+        font-size: 12px;
+    }
+    
+    .compact-price-text {
+        font-size: 16px;
+    }
+    
+    .future-complex-badge {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+    
+    .future-complex-badge i {
+        font-size: 9px;
+    }
+    
+    .btn-sm {
+        padding: 8px 14px;
+        font-size: 13px;
     }
     
     .pagination {
-        flex-direction: column;
+        margin-top: 32px;
         gap: 12px;
+    }
+    
+    .pagination-btn {
+        padding: 10px 16px;
+        font-size: 13px;
     }
 }
 
 @media (max-width: 480px) {
-    .future-complex-card {
-        padding: 12px;
-        gap: 12px;
+    .future-complexes-section {
+        margin: 20px 0;
     }
     
-    .future-complex-title {
-        font-size: 16px;
+    .future-complexes-header {
+        margin-bottom: 20px;
     }
     
-    .future-complex-text {
+    .future-complexes-header .section-title {
+        font-size: 22px;
+    }
+    
+    .future-complexes-header .section-subtitle {
         font-size: 14px;
     }
     
-    .future-complex-actions {
-        flex-direction: column;
-        align-items: center;
+    /* Еще более компактные карточки */
+    .compact-card-image-gallery {
+        height: 180px;
     }
     
-    .future-complex-cta {
-        flex: none;
+    .compact-card-content {
+        padding: 12px;
+    }
+    
+    .compact-card-title {
+        font-size: 15px;
+    }
+    
+    .compact-card-location {
+        font-size: 12px;
+    }
+    
+    .compact-detail-item {
+        font-size: 11px;
+    }
+    
+    .compact-price-text {
+        font-size: 15px;
+    }
+    
+    .future-complex-badge {
+        font-size: 9px;
+        padding: 3px 6px;
+    }
+    
+    .btn-sm {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    
+    .pagination {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .pagination-btn {
         width: 100%;
         max-width: 200px;
-    }
-    
-    .filters-section {
-        padding: 16px;
     }
 }
 
@@ -700,6 +841,29 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Делаем карточки кликабельными
+    document.querySelectorAll('.property-card-compact').forEach(card => {
+        const complexId = card.dataset.complexId;
+        const imageGallery = card.querySelector('.compact-card-image-gallery');
+        const content = card.querySelector('.compact-card-content');
+        
+        if (imageGallery && complexId) {
+            imageGallery.addEventListener('click', function() {
+                window.location.href = `/future-complexes/${complexId}/`;
+            });
+        }
+        
+        if (content && complexId) {
+            content.addEventListener('click', function(e) {
+                // Не переходим если кликнули по кнопке
+                if (e.target.closest('.btn, .anchor-feedback-btn')) {
+                    return;
+                }
+                window.location.href = `/future-complexes/${complexId}/`;
+            });
+        }
+    });
+    
     const subscriptionForm = document.getElementById('subscriptionForm');
     const subscriptionButton = document.getElementById('subscriptionButton');
     const subscriptionMessage = document.getElementById('subscriptionMessage');

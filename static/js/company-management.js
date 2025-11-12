@@ -624,8 +624,19 @@ function editBranchOffice(id) {
             <div class="form-group"><label class="form-label">Широта (lat)</label><input class="form-input" name="latitude"></div>
             <div class="form-group"><label class="form-label">Долгота (lng)</label><input class="form-input" name="longitude"></div>
             <div class="form-group"><label class="form-label"><input type="checkbox" name="is_head_office"> Головной офис</label></div>
-            <div class="form-group"><label class="form-label">Главное изображение</label><input class="form-input" name="main_image" type="file" accept="image/*"></div>
-            <div class="form-group"><label class="form-label">Изображения</label><input class="form-input" name="images" type="file" accept="image/*" multiple></div>
+            
+            <div class="form-group">
+              <label class="form-label">Главное изображение</label>
+              <div id="officeMainImagePreview" style="margin-bottom: 10px;"></div>
+              <input class="form-input" name="main_image" type="file" accept="image/*">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Галерея изображений</label>
+              <div id="officeGalleryPreview" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;"></div>
+              <input class="form-input" name="images" type="file" accept="image/*" multiple>
+            </div>
+            
             <div class="form-group"><label class="form-label">Видео (YouTube/Rutube ссылки, каждое с новой строки)</label><textarea class="form-input" name="video_urls" rows="3" placeholder="https://www.youtube.com/watch?v=...&#10;https://rutube.ru/video/..."></textarea></div>
           </form>
         </div>
@@ -655,6 +666,33 @@ function editBranchOffice(id) {
         form.longitude.value = (item.longitude ?? '').toString();
         form.is_head_office.checked = !!item.is_head_office;
         form.video_urls.value = (item.videos || []).join('\n');
+        
+        // Отображаем главное изображение
+        const mainImagePreview = document.getElementById('officeMainImagePreview');
+        if (item.main_image) {
+          mainImagePreview.innerHTML = `
+            <div style="position: relative; display: inline-block;">
+              <img src="${item.main_image}" style="max-width: 200px; max-height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+              <button type="button" onclick="deleteOfficeImage('${id}', '${item.main_image}', 'main')" 
+                      style="position: absolute; top: 5px; right: 5px; background: #e74c3c; color: white; border: none; 
+                             border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; 
+                             display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
+            </div>`;
+        }
+        
+        // Отображаем галерею изображений
+        const galleryPreview = document.getElementById('officeGalleryPreview');
+        if (item.images && item.images.length > 0) {
+          galleryPreview.innerHTML = item.images.map(img => `
+            <div style="position: relative; display: inline-block;">
+              <img src="${img}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+              <button type="button" onclick="deleteOfficeImage('${id}', '${img}', 'gallery')" 
+                      style="position: absolute; top: 5px; right: 5px; background: #e74c3c; color: white; border: none; 
+                             border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; 
+                             display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
+            </div>
+          `).join('');
+        }
       })
       .catch(() => showToast('Ошибка сети', 'error'));
 }
@@ -702,7 +740,13 @@ function editEmployee(id) {
             <div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" name="bio" rows="4"></textarea></div>
             <div class="form-group"><label class="form-label">Достижения (через запятую)</label><input class="form-input" name="achievements"></div>
             <div class="form-group"><label class="form-label"><input type="checkbox" name="is_active"> Активен</label></div>
-            <div class="form-group"><label class="form-label">Фото сотрудника</label><input class="form-input" name="images" type="file" accept="image/*" multiple></div>
+            
+            <div class="form-group">
+              <label class="form-label">Фото сотрудника</label>
+              <div id="employeePhotosPreview" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;"></div>
+              <input class="form-input" name="images" type="file" accept="image/*" multiple>
+            </div>
+            
             <div class="form-group"><label class="form-label">Видео (YouTube/Rutube ссылки, каждое с новой строки)</label><textarea class="form-input" name="video_urls" rows="3" placeholder="https://www.youtube.com/watch?v=...&#10;https://rutube.ru/video/..."></textarea></div>
           </form>
         </div>
@@ -732,6 +776,40 @@ function editEmployee(id) {
         form.achievements.value = (item.achievements || []).join(', ');
         form.is_active.checked = !!item.is_active;
         form.video_urls.value = (item.videos || []).join('\n');
+        
+        // Отображаем фотографии сотрудника
+        const photosPreview = document.getElementById('employeePhotosPreview');
+        if (item.photo) {
+          // Если есть одно главное фото
+          photosPreview.innerHTML = `
+            <div style="position: relative; display: inline-block;">
+              <img src="${item.photo}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+              <button type="button" onclick="deleteEmployeeImage('${id}', '${item.photo}')" 
+                      style="position: absolute; top: 5px; right: 5px; background: #e74c3c; color: white; border: none; 
+                             border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; 
+                             display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
+            </div>
+          `;
+        }
+        
+        // Если есть галерея фотографий
+        if (item.images && item.images.length > 0) {
+          const imagesHtml = item.images.map(img => `
+            <div style="position: relative; display: inline-block;">
+              <img src="${img}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+              <button type="button" onclick="deleteEmployeeImage('${id}', '${img}')" 
+                      style="position: absolute; top: 5px; right: 5px; background: #e74c3c; color: white; border: none; 
+                             border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; 
+                             display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
+            </div>
+          `).join('');
+          
+          if (item.photo) {
+            photosPreview.innerHTML += imagesHtml;
+          } else {
+            photosPreview.innerHTML = imagesHtml;
+          }
+        }
       })
       .catch(() => showToast('Ошибка сети', 'error'));
 }
@@ -825,6 +903,63 @@ async function deleteCompanyImage(companyId, imageUrl, imageType) {
             // Перезагружаем модальное окно
             closeModal();
             editCompanyInfo(companyId);
+        } else {
+            showToast(data.error || 'Ошибка удаления', 'error');
+        }
+    } catch (e) {
+        showToast('Ошибка сети', 'error');
+    }
+}
+
+async function deleteOfficeImage(officeId, imageUrl, imageType) {
+    if (!confirm('Удалить это изображение?')) return;
+    
+    try {
+        const response = await fetch(`/api/branch-offices/${officeId}/delete-image/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                image_url: imageUrl,
+                image_type: imageType
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showToast('Изображение удалено', 'success');
+            // Перезагружаем модальное окно
+            closeModal();
+            editBranchOffice(officeId);
+        } else {
+            showToast(data.error || 'Ошибка удаления', 'error');
+        }
+    } catch (e) {
+        showToast('Ошибка сети', 'error');
+    }
+}
+
+async function deleteEmployeeImage(employeeId, imageUrl) {
+    if (!confirm('Удалить это изображение?')) return;
+    
+    try {
+        const response = await fetch(`/api/employees/${employeeId}/delete-image/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                image_url: imageUrl
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showToast('Изображение удалено', 'success');
+            // Перезагружаем модальное окно
+            closeModal();
+            editEmployee(employeeId);
         } else {
             showToast(data.error || 'Ошибка удаления', 'error');
         }

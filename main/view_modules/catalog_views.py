@@ -356,12 +356,17 @@ def detail(request, complex_id):
                     rc.name = name  # Используем название ЖК из записи
                     offer.residential_complex = rc
                     
-                    # get_main_image.image.url - используем изображение из ЖК
+                    # get_main_image.image.url - правильная обработка S3 и локальных URL
                     main = _MainImg()
                     img = _Img()
                     # Берем первое фото из ЖК для акции
                     if photos:
-                        img.url = photos[0]
+                        photo_url = photos[0]
+                        # Проверяем, является ли URL уже полным (S3)
+                        if photo_url.startswith('http://') or photo_url.startswith('https://'):
+                            img.url = photo_url
+                        else:
+                            img.url = '/media/' + photo_url if not photo_url.startswith('/media/') else photo_url
                     else:
                         img.url = PLACEHOLDER_IMAGE_URL
                     main.image = img

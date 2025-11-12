@@ -479,14 +479,5 @@
 }
 </style>
 
-<script>
-// Плавный скролл к форме по кнопке "Получить предложение" (только для основной кнопки)
-document.querySelector('.offer-detail-actions .offer-cta').addEventListener('click', function(e) {
-    const target = document.getElementById('feedback-form');
-    if (target) {
-        e.preventDefault();
-        target.scrollIntoView({behavior: 'smooth', block: 'start'});
-    }
-});
-</script>
+<!-- Скрипт прокрутки теперь в anchor-scroll.js (глобальный обработчик для всех страниц) -->
 {% endblock %}

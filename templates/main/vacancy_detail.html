@@ -73,7 +73,7 @@
 </div>
 
 <!-- Форма отклика на вакансию -->
-<a id="vacancy-feedback"></a>
+<div id="vacancy-feedback" style="scroll-margin-top: 120px;"></div>
 {% include 'includes/vacancy_feedback_form.html' %}
 <script>
 document.addEventListener('DOMContentLoaded', function(){
@@ -82,7 +82,33 @@ document.addEventListener('DOMContentLoaded', function(){
     btn.addEventListener('click', function(e){
       e.preventDefault();
       const target = document.getElementById('vacancy-feedback');
-      if(target){ target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      
+      if(target){ 
+        // Показываем форму, если она скрыта анимацией
+        const formWrapper = target.nextElementSibling;
+        if (formWrapper) {
+          formWrapper.style.opacity = '1';
+          formWrapper.style.transform = 'translateY(0)';
+        }
+        
+        // Прокручиваем с отступом
+        const headerOffset = 100;
+        const elementPosition = target.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+        
+        // Дополнительная проверка после прокрутки
+        setTimeout(() => {
+          if (formWrapper) {
+            formWrapper.style.opacity = '1';
+            formWrapper.style.transform = 'translateY(0)';
+          }
+        }, 600);
+      }
     });
   }
 });

@@ -313,4 +313,337 @@ html, body { max-width: 100%; overflow-x: hidden; }
     .office-map-section .contact-item { font-size: 14px; }
 }
 
+/* ===== About Company Section - Improved Mobile Text ===== */
+@media (max-width: 768px) {
+    /* Улучшенный текст цитаты для мобильных */
+    .about-quote {
+        font-size: 14px !important;
+        line-height: 1.65 !important;
+        letter-spacing: 0.3px !important;
+        padding: 20px !important;
+        background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        backdrop-filter: blur(5px) !important;
+    }
+    
+    .about-quote p {
+        margin-bottom: 0.9em !important;
+        hyphens: auto !important;
+        word-spacing: 0.05em !important;
+    }
+    
+    .about-quote p:first-of-type {
+        font-weight: 500 !important;
+        color: rgba(255, 255, 255, 1) !important;
+    }
+    
+    /* Более красивая кнопка "Читать далее" */
+    .read-more-btn {
+        font-size: 13px !important;
+        padding: 10px 18px !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-top: 16px !important;
+        background: linear-gradient(135deg, rgba(190,175,135,0.2) 0%, rgba(190,175,135,0.1) 100%) !important;
+        border: 1px solid rgba(190,175,135,0.4) !important;
+        color: rgba(255, 255, 255, 0.95) !important;
+        font-weight: 600 !important;
+    }
+    
+    .read-more-btn:hover {
+        background: linear-gradient(135deg, rgba(190,175,135,0.3) 0%, rgba(190,175,135,0.15) 100%) !important;
+        border-color: rgba(190,175,135,0.6) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(190,175,135,0.3) !important;
+    }
+    
+    /* Уменьшаем кавычки для лучшей читаемости */
+    .about-quote::before,
+    .about-quote::after {
+        font-size: 40px !important;
+        opacity: 0.2 !important;
+    }
+    
+    .about-quote::before {
+        top: -10px !important;
+        left: -15px !important;
+    }
+    
+    .about-quote::after {
+        bottom: -25px !important;
+        right: -15px !important;
+    }
+    
+    /* Более красивая подпись */
+    .about-signature {
+        padding: 24px !important;
+        background: linear-gradient(135deg, rgba(190,175,135,0.15) 0%, rgba(190,175,135,0.05) 100%) !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(190,175,135,0.3) !important;
+    }
+    
+    .signature-line {
+        font-size: 22px !important;
+        letter-spacing: 0.5px !important;
+        background: linear-gradient(135deg, #fff 0%, rgba(190,175,135,1) 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        margin-bottom: 6px !important;
+    }
+    
+    .founder-title {
+        opacity: 0.9 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Максимально улучшенная цитата для очень малых экранов */
+    .about-quote {
+        font-size: 13px !important;
+        line-height: 1.7 !important;
+        padding: 16px !important;
+        letter-spacing: 0.2px !important;
+        background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%) !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+    }
+    
+    .about-quote p {
+        margin-bottom: 0.8em !important;
+    }
+    
+    .about-quote p:first-of-type {
+        margin-bottom: 1em !important;
+    }
+    
+    /* Компактная красивая кнопка "Читать далее" */
+    .read-more-btn {
+        font-size: 12px !important;
+        padding: 10px 16px !important;
+        margin-top: 12px !important;
+        background: linear-gradient(135deg, rgba(190,175,135,0.25) 0%, rgba(190,175,135,0.12) 100%) !important;
+        border: 1px solid rgba(190,175,135,0.5) !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Еще меньше кавычки */
+    .about-quote::before,
+    .about-quote::after {
+        font-size: 35px !important;
+        opacity: 0.15 !important;
+    }
+    
+    .about-quote::before {
+        top: -8px !important;
+        left: -12px !important;
+    }
+    
+    .about-quote::after {
+        bottom: -20px !important;
+        right: -12px !important;
+    }
+    
+    /* Компактная подпись с градиентом */
+    .about-signature {
+        padding: 20px !important;
+        margin-top: 30px !important;
+        border-radius: 14px !important;
+        background: linear-gradient(135deg, rgba(190,175,135,0.18) 0%, rgba(190,175,135,0.08) 100%) !important;
+        border: 1px solid rgba(190,175,135,0.35) !important;
+    }
+    
+    .signature-line {
+        font-size: 20px !important;
+        letter-spacing: 0.4px !important;
+    }
+}
+
+/* ===== Mortgage page ===== */
+@media (max-width: 1024px) {
+    .mortgage-page .container { padding: 0 16px; }
+}
+
+@media (max-width: 768px) {
+    /* Основной контейнер */
+    .mortgage-page { padding: 0; }
+    .mortgage-page .container { padding: 0 12px; }
+    
+    /* Шапка страницы */
+    .mortgage-page .page-header { 
+        padding: 40px 16px 30px;
+        margin-bottom: 24px;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .mortgage-page .page-title { 
+        font-size: 32px; 
+        margin-bottom: 16px;
+    }
+    
+    .mortgage-page .page-subtitle { 
+        font-size: 16px;
+        line-height: 1.5;
+    }
+    
+    /* Калькулятор ипотеки */
+    .mortgage-page .mortgage-section {
+        margin: 20px 0;
+    }
+    
+    .mortgage-page .mortgage-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0;
+    }
+    
+    .mortgage-page .mortgage-card {
+        padding: 16px 18px !important;
+    }
+    
+    .mortgage-page .mortgage-card + .mortgage-card {
+        border-left: none;
+        border-top: 1px solid #eee;
+    }
+    
+    /* Секции преимуществ и недостатков */
+    .mortgage-page .section-header {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+    
+    .mortgage-page .section-title {
+        font-size: 24px;
+    }
+    
+    .mortgage-page .section-subtitle {
+        font-size: 15px;
+    }
+    
+    .mortgage-page .benefits-grid,
+    .mortgage-page .disadvantages-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .mortgage-page .benefit-card,
+    .mortgage-page .disadvantage-card {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Компактный вид на малых экранах */
+    .mortgage-page .page-header {
+        padding: 32px 12px 24px;
+        margin-bottom: 20px;
+    }
+    
+    .mortgage-page .page-title {
+        font-size: 28px;
+    }
+    
+    .mortgage-page .page-subtitle {
+        font-size: 15px;
+    }
+    
+    .mortgage-page .mortgage-card {
+        padding: 14px 16px !important;
+    }
+    
+    .mortgage-page .section-title {
+        font-size: 22px;
+    }
+    
+    .mortgage-page .benefit-card,
+    .mortgage-page .disadvantage-card {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Максимально компактный вид */
+    .mortgage-page .page-header {
+        padding: 24px 12px 20px;
+        margin-bottom: 16px;
+        border-radius: 0 0 16px 16px;
+    }
+    
+    .mortgage-page .page-header-content {
+        padding: 0;
+    }
+    
+    .mortgage-page .page-title {
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+    
+    .mortgage-page .page-subtitle {
+        font-size: 14px;
+    }
+    
+    .mortgage-page .mortgage-section {
+        margin: 16px 0;
+    }
+    
+    .mortgage-page .mortgage-card {
+        padding: 12px 14px !important;
+    }
+    
+    .mortgage-page .section-header {
+        margin-bottom: 20px;
+    }
+    
+    .mortgage-page .section-title {
+        font-size: 20px;
+    }
+    
+    .mortgage-page .section-subtitle {
+        font-size: 14px;
+    }
+    
+    .mortgage-page .benefits-grid,
+    .mortgage-page .disadvantages-grid {
+        gap: 12px;
+    }
+    
+    .mortgage-page .benefit-card,
+    .mortgage-page .disadvantage-card {
+        padding: 14px;
+        border-radius: 12px;
+    }
+    
+    .mortgage-page .mortgage-with-us-section,
+    .mortgage-page .self-mortgage-section {
+        margin-bottom: 32px;
+    }
+    
+    /* Компактные карточки ЖК */
+    .mortgage-page .catalog-grid {
+        gap: 12px;
+        grid-template-columns: 1fr !important;
+    }
+    
+    .mortgage-page .property-card-compact {
+        padding: 10px;
+        border-radius: 12px;
+    }
+    
+    .mortgage-page .compact-card-title {
+        font-size: 16px;
+    }
+    
+    .mortgage-page .compact-card-location {
+        font-size: 12px;
+    }
+    
+    .mortgage-page .compact-detail-item {
+        font-size: 11px;
+    }
+    
+    .mortgage-page .compact-price-text {
+        font-size: 14px;
+    }
+}
+
 

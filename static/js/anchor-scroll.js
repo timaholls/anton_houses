@@ -1,51 +1,76 @@
-// Простой скрипт для прокрутки к форме обратной связи
+// Скрипт для прокрутки к форме обратной связи с показом скрытых элементов
 document.addEventListener('DOMContentLoaded', function() {
-    // Находим все кнопки с якорными ссылками к кнопке отправки
-    const buttons = document.querySelectorAll('a[href="#feedback-submit-btn"]');
     
-    buttons.forEach(button => {
-        button.addEventListener('click', function(e) {
+    // Функция для показа формы обратной связи
+    function showFeedbackForm() {
+        const formElements = document.querySelectorAll('.feedback-header, .feedback-form');
+        formElements.forEach(el => {
+            if (el) {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }
+        });
+    }
+    
+    // Функция прокрутки к форме
+    function scrollToFeedback(target, offset = 100) {
+        if (target) {
+            // Сначала показываем форму
+            showFeedbackForm();
+            
+            // Затем прокручиваем
+            const rect = target.getBoundingClientRect();
+            const elementTop = rect.top + window.pageYOffset;
+            
+            window.scrollTo({
+                top: elementTop - offset,
+                behavior: 'smooth'
+            });
+            
+            // Дополнительная проверка после прокрутки
+            setTimeout(() => {
+                showFeedbackForm();
+            }, 600);
+        }
+    }
+    
+    // Обработчик для всех якорных ссылок к форме обратной связи
+    const feedbackAnchors = document.querySelectorAll('a[href="#feedback-title"], a[href="#feedback-form"], a[href="#feedback-submit-btn"], .anchor-feedback-btn');
+    
+    feedbackAnchors.forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
             e.preventDefault();
             
-            // Ищем кнопку отправки формы по уникальному ID
+            // Пробуем найти целевой элемент
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackForm = document.getElementById('feedback-form');
             const submitButton = document.getElementById('feedback-submit-btn');
             
-            if (submitButton) {
-                // Получаем абсолютную позицию элемента относительно документа
-                const rect = submitButton.getBoundingClientRect();
-                const elementTop = rect.top + window.pageYOffset;
-                
-                // Добавляем отступ для фиксированного заголовка (примерно 80px)
-                const headerOffset = 80;
-                
-                // Прокручиваем с учетом заголовка
-                window.scrollTo({
-                    top: elementTop - headerOffset,
-                    behavior: 'smooth'
-                });
+            const target = feedbackTitle || feedbackForm || submitButton;
+            
+            if (target) {
+                scrollToFeedback(target, 100);
             } else {
-                // Попробуем найти форму по ID
-                const form = document.getElementById('feedback-form');
-                if (form) {
-                    const rect = form.getBoundingClientRect();
-                    const formTop = rect.top + window.pageYOffset;
-                    window.scrollTo({
-                        top: formTop - 80,
-                        behavior: 'smooth'
-                    });
-                } else {
-                    // Попробуем найти любую форму обратной связи
-                    const feedbackSection = document.querySelector('.feedback-section, .feedback-wrapper, form');
-                    if (feedbackSection) {
-                        const rect = feedbackSection.getBoundingClientRect();
-                        const sectionTop = rect.top + window.pageYOffset;
-                        window.scrollTo({
-                            top: sectionTop - 80,
-                            behavior: 'smooth'
-                        });
-                    }
+                // Fallback: ищем секцию формы
+                const feedbackSection = document.querySelector('.feedback-section, .feedback-wrapper');
+                if (feedbackSection) {
+                    scrollToFeedback(feedbackSection, 100);
                 }
             }
         });
     });
+    
+    // Обработчик для прямых переходов по якорю при загрузке страницы
+    if (window.location.hash) {
+        const hash = window.location.hash;
+        if (hash === '#feedback-title' || hash === '#feedback-form' || hash === '#feedback-submit-btn') {
+            setTimeout(() => {
+                showFeedbackForm();
+                const target = document.querySelector(hash);
+                if (target) {
+                    scrollToFeedback(target, 100);
+                }
+            }, 300);
+        }
+    }
 });

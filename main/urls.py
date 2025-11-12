@@ -52,9 +52,9 @@ from .views import (
     company_info_api_list, company_info_api_create, company_info_api_detail, company_info_api_update,
     company_info_api_toggle, company_info_api_delete, company_info_delete_image,
     branch_office_api_list, branch_office_api_create, branch_office_api_detail, branch_office_api_update,
-    branch_office_api_toggle, branch_office_api_delete,
+    branch_office_api_toggle, branch_office_api_delete, branch_office_delete_image,
     employee_api_list, employee_api_create, employee_api_detail, employee_api_update,
-    employee_api_toggle, employee_api_delete,
+    employee_api_toggle, employee_api_delete, employee_delete_image,
     # Vacancies API
     vacancies_api_list, vacancies_api_create, vacancies_api_toggle, vacancies_api_delete,
     # Videos API
@@ -285,6 +285,7 @@ urlpatterns = [
     path('api/branch-offices/<str:office_id>/get/', branch_office_api_detail, name='branch_office_api_detail'),
     path('api/branch-offices/<str:office_id>/update/', branch_office_api_update, name='branch_office_api_update'),
     path('api/branch-offices/<str:office_id>/toggle/', branch_office_api_toggle, name='branch_office_api_toggle'),
+    path('api/branch-offices/<str:office_id>/delete-image/', branch_office_delete_image, name='branch_office_delete_image'),
     path('api/branch-offices/<str:office_id>/', branch_office_api_delete, name='branch_office_api_delete'),
     
     # Employee API
@@ -293,6 +294,7 @@ urlpatterns = [
     path('api/employees/<str:employee_id>/get/', employee_api_detail, name='employee_api_detail'),
     path('api/employees/<str:employee_id>/update/', employee_api_update, name='employee_api_update'),
     path('api/employees/<str:employee_id>/toggle/', employee_api_toggle, name='employee_api_toggle'),
+    path('api/employees/<str:employee_id>/delete-image/', employee_delete_image, name='employee_delete_image'),
     path('api/employees/<str:employee_id>/', employee_api_delete, name='employee_api_delete'),
     
     # Employee Reviews API
