@@ -95,6 +95,9 @@ from .api.apartment_booking_api import (
     update_booking_status
 )
 
+# Импортируем функции из feedback_api
+from .api.feedback_api import submit_feedback
+
 # Импортируем view для квартир
 from .view_modules.apartment_views import apartment_detail
 
@@ -345,4 +348,7 @@ urlpatterns = [
     path('api/book-apartment/', book_apartment, name='book_apartment'),
     path('api/booking-stats/', get_booking_stats, name='get_booking_stats'),
     path('api/booking/<str:booking_id>/update-status/', update_booking_status, name='update_booking_status'),
+    
+    # Feedback API
+    path('api/feedback/', submit_feedback, name='submit_feedback'),
 ]

@@ -692,6 +692,24 @@
     const programSelect = document.getElementById('mp-program');
     const complexesContainer = document.getElementById('complexes-container');
     
+    // Отслеживание выбора ипотечной программы
+    if (programSelect && window.UserTracking && typeof window.UserTracking.trackMortgageProgram === 'function') {
+        programSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const programName = selectedOption.text.trim();
+            const programRate = parseFloat(this.value);
+            window.UserTracking.trackMortgageProgram(programName, programRate);
+        });
+        
+        // Отслеживаем начальную программу при загрузке страницы
+        const initialOption = programSelect.options[programSelect.selectedIndex];
+        if (initialOption) {
+            const programName = initialOption.text.trim();
+            const programRate = parseFloat(programSelect.value);
+            window.UserTracking.trackMortgageProgram(programName, programRate);
+        }
+    }
+    
     if (programSelect && complexesContainer) {
         programSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];

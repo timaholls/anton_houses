@@ -1343,6 +1343,20 @@ document.addEventListener('DOMContentLoaded', function() {
             closeBookingModal();
         }
     });
+    
+    // Отслеживание просмотра квартиры
+    if (window.UserTracking && typeof window.UserTracking.trackApartmentView === 'function') {
+        const apartmentId = '{{ apartment.id }}';
+        const apartmentData = {
+            rooms: {{ apartment.rooms|default:0 }},
+            area: {{ apartment.area|default:0 }},
+            price: {{ apartment.price|default:0 }},
+            complex_name: '{{ complex.name|escapejs }}'
+        };
+        if (apartmentId && apartmentId !== 'None') {
+            window.UserTracking.trackApartmentView(apartmentId, apartmentData);
+        }
+    }
 });
 </script>
 {% endblock %}

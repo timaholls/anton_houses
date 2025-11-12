@@ -2129,6 +2129,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация
     updateStagesDisplay();
     
+    // Отслеживание просмотра ЖК
+    if (window.UserTracking && typeof window.UserTracking.trackComplexView === 'function') {
+        const complexId = '{{ complex.id }}';
+        const complexName = '{{ complex.name|escapejs }}';
+        if (complexId && complexName) {
+            window.UserTracking.trackComplexView(complexId, complexName);
+        }
+    }
+    
     // Глобальные функции для навигации по фотографиям
     window.changeStagePhoto = function(button, direction) {
         const card = button.closest('.construction-stage-card');

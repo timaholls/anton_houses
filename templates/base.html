@@ -360,8 +360,10 @@
     </div>
 </footer>
 
+<script src="{% static 'js/user-tracking.js' %}"></script>
 <script src="{% static 'js/main.js' %}"></script>
 <script src="{% static 'js/anchor-scroll.js' %}"></script>
 <script src="{% static 'js/dropdown-menu.js' %}"></script>
+{% block extra_js %}{% endblock %}
 </body>
 </html> 

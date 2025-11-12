@@ -185,24 +185,82 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitButton.style.background = 'linear-gradient(135deg, #A19276 0%, #8B7D5F 100%)';
             }
             
-            // Имитация отправки
-            setTimeout(() => {showNotification('Спасибо! Мы свяжемся с вами в ближайшее время.', 'success');
-                feedbackForm.reset();
-                
-                // Сброс стилей инпутов
-                inputs.forEach(input => {
-                    input.style.borderColor = 'rgba(190, 175, 135, 0.2)';
-                    input.style.background = 'rgba(255, 255, 255, 0.9)';
-                });
-                
+            // Получаем историю активности пользователя
+            let userActivity = {};
+            if (window.UserTracking && typeof window.UserTracking.getActivityHistory === 'function') {
+                userActivity = window.UserTracking.getActivityHistory();
+                // Генерируем summary если его нет
+                if (!userActivity.summary && window.UserTracking.generateActivitySummary) {
+                    userActivity.summary = window.UserTracking.generateActivitySummary();
+                }
+            }
+            
+            // Формируем данные для отправки
+            const phoneNormalized = '+7' + digits;
+            const payload = {
+                name: name,
+                phone: phoneNormalized,
+                user_activity: userActivity
+            };
+            
+            // Отправляем данные на сервер
+            fetch('/api/feedback/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message || 'Спасибо! Мы свяжемся с вами в ближайшее время.', 'success');
+                    feedbackForm.reset();
+                    
+                    // Очищаем историю активности после успешной отправки
+                    if (window.UserTracking && typeof window.UserTracking.clearActivityHistory === 'function') {
+                        window.UserTracking.clearActivityHistory();
+                    }
+                    
+                    // Сброс стилей инпутов
+                    inputs.forEach(input => {
+                        input.style.borderColor = 'rgba(190, 175, 135, 0.2)';
+                        input.style.background = 'rgba(255, 255, 255, 0.9)';
+                    });
+                } else {
+                    showNotification(data.error || 'Произошла ошибка при отправке формы', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка отправки формы:', error);
+                showNotification('Произошла ошибка при отправке формы. Попробуйте позже.', 'error');
+            })
+            .finally(() => {
                 // Восстановление кнопки
                 if (submitButton) {
                     submitButton.textContent = 'Отправить';
                     submitButton.style.pointerEvents = 'auto';
                     submitButton.style.background = 'linear-gradient(135deg, #BEAF87 0%, #A19276 100%)';
                 }
-            }, 2000);
+            });
         });
+    }
+    
+    // Функция для получения CSRF токена из cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
 
     // Функция показа уведомлений
