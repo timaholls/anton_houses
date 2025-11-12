@@ -13,13 +13,19 @@ def home(request):
         db = get_mongo_connection()
         unified_collection = db['unified_houses']
         
-        # Получаем все ЖК с флагом is_featured
-        featured_complexes = list(unified_collection.find({'is_featured': True}))
+        # Получаем все ЖК с флагом is_featured и рейтингом 4 или 5
+        featured_complexes = list(unified_collection.find({
+            'is_featured': True,
+            'rating': {'$in': [4, 5], '$exists': True}
+        }))
         
         if len(featured_complexes) > 9:
             # Если больше 9, показываем 9 случайных
             complexes = list(unified_collection.aggregate([
-                {'$match': {'is_featured': True}},
+                {'$match': {
+                    'is_featured': True,
+                    'rating': {'$in': [4, 5], '$exists': True}
+                }},
                 {'$sample': {'size': 9}}
             ]))
         else:

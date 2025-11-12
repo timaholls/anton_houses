@@ -3987,7 +3987,7 @@
 
         async function loadPromotions(){
             try{
-                const resp = await fetch('/api/promotions/list/?active=1');
+                const resp = await fetch('/api/promotions/list/');
                 const data = await resp.json();
                 const holder = document.getElementById('promotionsList');
                 if(!data.success || !data.data || data.data.length===0){
@@ -4295,7 +4295,10 @@
                             <textarea name="description" rows="4" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"></textarea>
                         </label>
                         <label style="grid-column:1 / -1">Фотографии
-                            <input name="photos" type="file" multiple accept="image/*" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px dashed #475569; background:#334155; color:#fff;">
+                            <input id="secondary-photos-input" name="photos" type="file" multiple accept="image/*" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px dashed #475569; background:#334155; color:#fff;">
+                            <div class="photo-tiles-container" style="margin-top:10px;">
+                                <div class="existing-photos-tiles" id="secondaryCreatePhotosTiles"></div>
+                            </div>
                         </label>
                     </div>
                     <div style="padding:16px 20px; border-top:1px solid #475569; display:flex; gap:10px; justify-content:flex-end;">
@@ -4307,9 +4310,60 @@
             document.body.appendChild(modal);
 
             const form = modal.querySelector('#secondary-form');
+            const photosInput = modal.querySelector('#secondary-photos-input');
+            const photosTiles = modal.querySelector('#secondaryCreatePhotosTiles');
+            let selectedPhotos = [];
+
+            // Обработка выбора файлов
+            photosInput.addEventListener('change', function(e) {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            const photoUrl = event.target.result;
+                            selectedPhotos.push({file: file, preview: photoUrl});
+                            updatePhotosTiles();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            });
+
+            function updatePhotosTiles() {
+                if (selectedPhotos.length === 0) {
+                    photosTiles.innerHTML = '<div class="no-photos">Фотографии не выбраны</div>';
+                    return;
+                }
+                photosTiles.innerHTML = selectedPhotos.map((photo, index) => `
+                    <div class="photo-tile" data-photo-index="${index}">
+                        <img src="${photo.preview}" alt="Фото ${index + 1}" loading="lazy">
+                        <button class="photo-delete-btn" onclick="removeSecondaryCreatePhoto(${index})" title="Удалить фото">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            // Функция удаления фото из списка выбранных
+            window.removeSecondaryCreatePhoto = function(index) {
+                selectedPhotos.splice(index, 1);
+                updatePhotosTiles();
+                // Обновляем input file
+                const dt = new DataTransfer();
+                selectedPhotos.forEach(p => dt.items.add(p.file));
+                photosInput.files = dt.files;
+            };
+
+            updatePhotosTiles();
+
             form.addEventListener('submit', async (e)=>{
                 e.preventDefault();
                 const fd = new FormData(form);
+                // Добавляем файлы из selectedPhotos
+                selectedPhotos.forEach(photo => {
+                    fd.append('photos', photo.file);
+                });
                 try{
                     const res = await fetch('/api/secondary/create/', { method:'POST', body: fd });
                     const j = await res.json();
@@ -4667,6 +4721,12 @@
                             <label style="grid-column:1 / -1">Адрес<input id="se-address" type="text" value="${escapeHtml(d.address||'')}" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"></label>
                             <label style="grid-column:1 / -1">Описание<textarea id="se-description" rows="4" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;">${escapeHtml(d.description||'')}</textarea></label>
                             <label>Активен<select id="se-active" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#334155; color:#fff;"><option value="true" ${d.is_active? 'selected':''}>Да</option><option value="false" ${!d.is_active? 'selected':''}>Нет</option></select></label>
+                            <label style="grid-column:1 / -1">Фотографии
+                                <input id="se-photos-input" name="photos" type="file" multiple accept="image/*" style="width:100%; margin-top:6px; padding:10px 12px; border-radius:8px; border:1px dashed #475569; background:#334155; color:#fff;">
+                                <div class="photo-tiles-container" style="margin-top:10px;">
+                                    <div class="existing-photos-tiles" id="secondaryEditPhotosTiles"></div>
+                                </div>
+                            </label>
                         </div>
                         <div style="padding:16px 20px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #475569;">
                             <button class="btn" style="background:#475569; color:#fff;" id="se-cancel">Отмена</button>
@@ -4674,6 +4734,97 @@
                         </div>
                     </div>`;
                 document.body.appendChild(modal);
+                
+                // Инициализация фото
+                const photosTiles = modal.querySelector('#secondaryEditPhotosTiles');
+                const photosInput = modal.querySelector('#se-photos-input');
+                const existingPhotos = (d.photos || []).slice(); // Копия массива
+                let newPhotos = [];
+
+                function updateEditPhotosTiles() {
+                    const allPhotos = existingPhotos.length + newPhotos.length;
+                    if (allPhotos === 0) {
+                        photosTiles.innerHTML = '<div class="no-photos">Фотографии не загружены</div>';
+                        return;
+                    }
+                    let html = '';
+                    // Существующие фото
+                    existingPhotos.forEach((photoUrl, index) => {
+                        const escapedUrl = photoUrl.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        html += `
+                            <div class="photo-tile" data-photo-url="${escapedUrl}">
+                                <img src="${photoUrl}" alt="Фото ${index + 1}" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
+                                <button class="photo-delete-btn" onclick="deleteSecondaryEditPhoto('${id}', '${escapedUrl}')" title="Удалить фото">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        `;
+                    });
+                    // Новые фото
+                    newPhotos.forEach((photo, index) => {
+                        html += `
+                            <div class="photo-tile" data-photo-index="${index}">
+                                <img src="${photo.preview}" alt="Новое фото ${index + 1}" loading="lazy">
+                                <button class="photo-delete-btn" onclick="removeSecondaryEditNewPhoto(${index})" title="Удалить фото">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        `;
+                    });
+                    photosTiles.innerHTML = html;
+                }
+
+                // Функция удаления существующего фото
+                window.deleteSecondaryEditPhoto = function(secondaryId, photoUrl) {
+                    if (!confirm('Удалить это фото?')) return;
+                    fetch(`/api/secondary/${secondaryId}/delete-photo/`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                        body: JSON.stringify({photo_url: photoUrl})
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success) {
+                            const index = existingPhotos.indexOf(photoUrl);
+                            if (index > -1) {
+                                existingPhotos.splice(index, 1);
+                            }
+                            updateEditPhotosTiles();
+                            showToast('Фото удалено');
+                        } else {
+                            showToast(res.error || 'Ошибка удаления', 'error');
+                        }
+                    })
+                    .catch(() => showToast('Ошибка сети', 'error'));
+                };
+
+                // Функция удаления нового фото из списка
+                window.removeSecondaryEditNewPhoto = function(index) {
+                    newPhotos.splice(index, 1);
+                    updateEditPhotosTiles();
+                    const dt = new DataTransfer();
+                    newPhotos.forEach(p => dt.items.add(p.file));
+                    photosInput.files = dt.files;
+                };
+
+                // Обработка выбора новых файлов
+                photosInput.addEventListener('change', function(e) {
+                    const files = Array.from(e.target.files);
+                    files.forEach(file => {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                const photoUrl = event.target.result;
+                                newPhotos.push({file: file, preview: photoUrl});
+                                updateEditPhotosTiles();
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                });
+
+                updateEditPhotosTiles();
+
                 modal.querySelector('#se-cancel').onclick = ()=> modal.remove();
                 modal.querySelector('#se-save').onclick = ()=>{
                     const fd = new FormData();
@@ -4688,6 +4839,10 @@
                     push('address', val('#se-address'));
                     push('description', modal.querySelector('#se-description').value.trim());
                     push('is_active', modal.querySelector('#se-active').value);
+                    // Добавляем новые фото
+                    newPhotos.forEach(photo => {
+                        fd.append('photos', photo.file);
+                    });
                     fetch(`/api/secondary/${id}/update/`, { method:'POST', body: fd })
                         .then(r=>r.json()).then(rs=>{ if(rs.success){ showToast('Сохранено'); modal.remove(); loadSecondary(); } else { showToast(rs.error||'Ошибка','error'); }})
                         .catch(()=>showToast('Ошибка сети','error'));

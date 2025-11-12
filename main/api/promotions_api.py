@@ -104,7 +104,7 @@ def promotions_delete(request, promo_id):
 
 
 @csrf_exempt
-@require_http_methods(["POST"]) 
+@require_http_methods(["POST", "PATCH"]) 
 def promotions_toggle(request, promo_id):
     try:
         db = get_mongo_connection()

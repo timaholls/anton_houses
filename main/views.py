@@ -105,7 +105,7 @@ from .api.promotions_api import (
 )
 from .api.secondary_api import (
     secondary_list, secondary_create, secondary_api_toggle, secondary_api_get, 
-    secondary_api_update, secondary_api_delete,
+    secondary_api_update, secondary_api_delete, secondary_api_delete_photo,
 )
 
 # Явно экспортируем все функции для использования в urls.py
@@ -208,7 +208,7 @@ __all__ = [
     'promotions_create', 'promotions_list', 'promotions_delete', 'promotions_toggle',
     # Secondary API
     'secondary_list', 'secondary_create', 'secondary_api_toggle', 'secondary_api_get', 
-    'secondary_api_update', 'secondary_api_delete',
+    'secondary_api_update', 'secondary_api_delete', 'secondary_api_delete_photo',
 ]
 
 # Дополнительные импорты для API

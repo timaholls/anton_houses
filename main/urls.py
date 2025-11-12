@@ -65,7 +65,7 @@ from .views import (
     promotions_create, promotions_list, promotions_delete, promotions_toggle,
     # Secondary API
     secondary_list, secondary_create, secondary_api_toggle, secondary_api_get, 
-    secondary_api_update, secondary_api_delete,
+    secondary_api_update, secondary_api_delete, secondary_api_delete_photo,
 )
 
 # Импортируем функции из manual_matching_api
@@ -337,6 +337,7 @@ urlpatterns = [
     path('api/secondary/list/', secondary_list, name='secondary_list'),
     path('api/secondary/create/', secondary_create, name='secondary_create'),
     path('api/secondary/<str:secondary_id>/toggle/', secondary_api_toggle, name='secondary_api_toggle'),
+    path('api/secondary/<str:secondary_id>/delete-photo/', secondary_api_delete_photo, name='secondary_api_delete_photo'),
     path('api/secondary/<str:secondary_id>/', secondary_api_delete, name='secondary_api_delete'),
     path('api/secondary/<str:secondary_id>/get/', secondary_api_get, name='secondary_api_get'),
     path('api/secondary/<str:secondary_id>/update/', secondary_api_update, name='secondary_api_update'),

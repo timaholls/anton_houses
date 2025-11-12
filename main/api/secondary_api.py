@@ -153,6 +153,12 @@ def secondary_api_update(request, secondary_id: str):
     try:
         db = get_mongo_connection()
         col = db['secondary_properties']
+        
+        # Получаем текущий документ
+        doc = col.find_one({'_id': ObjectId(secondary_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Объект не найден'}, status=404)
+        
         payload = {}
         if request.content_type and 'application/json' in request.content_type:
             payload = json.loads(request.body or '{}')
@@ -160,6 +166,26 @@ def secondary_api_update(request, secondary_id: str):
             payload = {k: v for k, v in request.POST.items()}
 
         payload.pop('_id', None)
+        
+        # Обработка новых фото
+        new_photos = []
+        if request.FILES:
+            files = request.FILES.getlist('photos')
+            slug = doc.get('slug') or slugify(doc.get('name', '')) or f"secondary-{int(datetime.utcnow().timestamp())}"
+            for f in files:
+                filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
+                ext = os.path.splitext(f.name)[1].lower()
+                final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}{ext}"
+                s3_key = f"secondary_complexes/{slug}/{final_name}"
+                content_type = f.content_type if hasattr(f, 'content_type') else 'image/jpeg'
+                s3_url = s3_client.upload_fileobj(f, s3_key, content_type)
+                new_photos.append(s3_url)
+        
+        # Объединяем существующие фото с новыми
+        if new_photos:
+            existing_photos = doc.get('photos', [])
+            payload['photos'] = existing_photos + new_photos
+        
         # Преобразование типов
         for key in ('rooms', 'total_floors'):
             if key in payload and str(payload[key]).strip() != '':
@@ -180,6 +206,47 @@ def secondary_api_update(request, secondary_id: str):
             return JsonResponse({'success': False, 'error': 'Нет полей для обновления'}, status=400)
 
         col.update_one({'_id': ObjectId(secondary_id)}, {'$set': payload})
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def secondary_api_delete_photo(request, secondary_id: str):
+    """API: удалить одно фото из объекта вторичной недвижимости."""
+    try:
+        data = json.loads(request.body or '{}')
+        photo_url = data.get('photo_url')
+        
+        if not photo_url:
+            return JsonResponse({'success': False, 'error': 'URL фото не указан'}, status=400)
+        
+        db = get_mongo_connection()
+        col = db['secondary_properties']
+        
+        # Получаем документ
+        doc = col.find_one({'_id': ObjectId(secondary_id)})
+        if not doc:
+            return JsonResponse({'success': False, 'error': 'Объект не найден'}, status=404)
+        
+        # Удаляем файл из S3
+        try:
+            s3_key = s3_client.extract_key_from_url(photo_url)
+            if s3_key:
+                s3_client.delete_object(s3_key)
+        except Exception as e:
+            pass  # Игнорируем ошибки удаления файла
+        
+        # Удаляем фото из массива photos
+        photos = doc.get('photos', [])
+        if photo_url in photos:
+            photos.remove(photo_url)
+            col.update_one(
+                {'_id': ObjectId(secondary_id)},
+                {'$set': {'photos': photos}}
+            )
+        
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
