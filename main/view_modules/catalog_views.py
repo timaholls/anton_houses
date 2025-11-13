@@ -9,6 +9,48 @@ from ..utils import get_video_thumbnail
 from ..s3_service import PLACEHOLDER_IMAGE_URL
 
 
+def get_complexes_list_for_filter():
+    """Общая функция для получения списка ЖК для фильтра"""
+    complexes_list = []
+    try:
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        all_complexes = list(unified_col.find({}))
+        
+        for comp in all_complexes:
+            comp_id = str(comp.get('_id'))
+            name = None
+            
+            is_new_structure = 'development' in comp and 'avito' not in comp
+            
+            if is_new_structure:
+                name = (comp.get('development', {}) or {}).get('name', '')
+            else:
+                avito_dev = (comp.get('avito', {}) or {}).get('development', {}) or {}
+                domclick_dev = (comp.get('domclick', {}) or {}).get('development', {}) or {}
+                name = avito_dev.get('name') or domclick_dev.get('complex_name') or ''
+            
+            if name and name.strip() and name != 'Без названия':
+                complexes_list.append({'id': comp_id, 'name': name.strip()})
+        
+        # Удаляем дубликаты по названию
+        seen_names = set()
+        unique_complexes = []
+        for comp in complexes_list:
+            if comp['name'] not in seen_names:
+                seen_names.add(comp['name'])
+                unique_complexes.append(comp)
+        
+        complexes_list = sorted(unique_complexes, key=lambda x: x['name'])
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Ошибка получения списка ЖК: {e}")
+        traceback.print_exc()
+        complexes_list = []
+    
+    return complexes_list
+
+
 def catalog(request):
     """Каталог ЖК - теперь только рендерит шаблон, данные загружаются через API"""
     page = request.GET.get('page', 1)
@@ -25,6 +67,9 @@ def catalog(request):
     delivery_date = request.GET.get('delivery_date', '')
     has_offers = request.GET.get('has_offers', '')
     sort = request.GET.get('sort', 'price_asc')
+    # Получаем выбранные ЖК (может быть несколько через запятую)
+    selected_complexes = request.GET.get('complexes', '').strip()
+    selected_complexes_list = [c.strip() for c in selected_complexes.split(',') if c.strip()] if selected_complexes else []
 
     # Получаем уникальные города, районы и улицы для фильтра из MongoDB
     cities = []
@@ -68,6 +113,9 @@ def catalog(request):
     except Exception:
         mortgage_programs = []
 
+    # Получаем список ЖК для фильтра по названиям
+    complexes_list = get_complexes_list_for_filter()
+
     # Создаем пустые объекты для обратной совместимости с шаблоном
     class EmptyPaginator:
         num_pages = 0
@@ -88,6 +136,7 @@ def catalog(request):
         'cities': cities,
         'districts': districts,
         'streets': streets,
+        'complexes_list': complexes_list,
         'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'mortgage_programs': mortgage_programs,
         'filters': {
@@ -102,6 +151,7 @@ def catalog(request):
             'delivery_date': delivery_date,
             'has_offers': has_offers,
             'sort': sort,
+            'complexes': selected_complexes,
         },
         'filters_applied': False,
         'dataset_type': 'newbuild'
@@ -592,10 +642,14 @@ def catalog_completed(request):
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
+        'complexes_list': complexes_list,
         'projects': [],  # Можно получить из MongoDB если нужно
         'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
@@ -617,10 +671,14 @@ def catalog_construction(request):
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
+        'complexes_list': complexes_list,
         'projects': [],  # Можно получить из MongoDB если нужно
         'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
@@ -642,10 +700,14 @@ def catalog_economy(request):
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
+        'complexes_list': complexes_list,
         'projects': [],  # Можно получить из MongoDB если нужно
         'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
@@ -667,10 +729,14 @@ def catalog_comfort(request):
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
+        'complexes_list': complexes_list,
         'projects': [],  # Можно получить из MongoDB если нужно
         'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
@@ -692,10 +758,14 @@ def catalog_premium(request):
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
+        'complexes_list': complexes_list,
         'projects': [],  # Можно получить из MongoDB если нужно
         'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
@@ -717,10 +787,14 @@ def catalog_finished(request):
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
+        'complexes_list': complexes_list,
         'projects': [],  # Можно получить из MongoDB если нужно
         'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
@@ -742,10 +816,14 @@ def catalog_unfinished(request):
     paginator = Paginator(complexes, 10)
     page_obj = paginator.get_page(page)
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
+        'complexes_list': complexes_list,
         'projects': [],  # Можно получить из MongoDB если нужно
         'house_types': [],  # Можно получить из MongoDB если нужно
         'filters': {},
@@ -792,11 +870,15 @@ def catalog_landing(request, slug):
 
     categories = list(db['catalog_landings'].find({'kind': landing['kind'], 'is_active': True}).sort('name', 1))
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+    
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
         'cities': [],  # Можно получить из MongoDB если нужно
+        'complexes_list': complexes_list,
         'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'filters': {},
         'filters_applied': True,
@@ -856,6 +938,9 @@ def _catalog_fallback(request, kind: str, title: str):
             districts = []
             streets = []
 
+    # Получаем список ЖК для фильтра
+    complexes_list = get_complexes_list_for_filter()
+
     context = {
         'complexes': page_obj,
         'page_obj': page_obj,
@@ -863,6 +948,7 @@ def _catalog_fallback(request, kind: str, title: str):
         'cities': cities,
         'districts': districts,
         'streets': streets,
+        'complexes_list': complexes_list,
         'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
         'filters': ({'stype': request.GET.get('stype', '')} if kind == 'secondary' else {}),
         'filters_applied': True,

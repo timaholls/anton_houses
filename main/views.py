@@ -249,6 +249,15 @@ def catalog_api(request):
         
         # Поиск
         search = request.GET.get('search', '').strip()
+        
+        # Фильтр по выбранным ЖК (может быть несколько через запятую)
+        complexes_param = request.GET.get('complexes', '').strip()
+        selected_complex_ids = []
+        if complexes_param:
+            try:
+                selected_complex_ids = [ObjectId(cid.strip()) for cid in complexes_param.split(',') if cid.strip()]
+            except:
+                selected_complex_ids = []
 
         db = get_mongo_connection()
         unified_col = db['unified_houses']
@@ -298,6 +307,11 @@ def catalog_api(request):
         
         for record in all_records:
             # Проверяем фильтры, которые требуют парсинга данных
+            
+            # Фильтр по выбранным ЖК
+            if selected_complex_ids:
+                if record['_id'] not in selected_complex_ids:
+                    continue
             
             # Фильтр по ипотечной программе
             if mortgage_program_complexes:

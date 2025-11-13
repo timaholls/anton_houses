@@ -4870,7 +4870,7 @@
                                     <td>${(p.rate||0).toFixed(2)}</td>
                                     <td>${p.is_active? 'Активна':'Выключена'}</td>
                                     <td>
-                                        <button class="btn" style="background:#475569;color:#fff;" onclick="openEditMortgageModal('${p._id}', '${escapeHtml(p.name)}', ${p.rate}, ${p.is_active})">Редактировать</button>
+                                        <button class="btn" style="background:#475569;color:#fff;" onclick="openEditMortgageModal('${p._id}', ${JSON.stringify(p.name || '')}, ${p.rate || 0}, ${p.is_active ? 'true' : 'false'})">Редактировать</button>
                                         <button class="btn btn-danger" onclick="deleteMortgage('${p._id}')">Удалить</button>
                                     </td>
                                 </tr>
@@ -4922,11 +4922,21 @@
                         <label style="display:flex; align-items:center; gap:8px;"><input id="mpr-e-active" type="checkbox" ${is_active? 'checked':''}> Активна</label>
                     </div>
                     <div style="padding:16px 20px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #475569;">
-                        <button class="btn" style="background:#475569; color:#fff;" onclick="this.closest('div[style*=box-shadow]').parentElement.remove()">Отмена</button>
+                        <button class="btn" style="background:#475569; color:#fff;" onclick="closeEditMortgageModal()">Отмена</button>
                         <button class="btn btn-success" onclick="saveMortgage('${id}')">Сохранить</button>
                     </div>
                 </div>`;
             document.body.appendChild(modal);
+            // Сохраняем ссылку на модальное окно
+            window.currentEditMortgageModal = modal;
+        }
+
+        function closeEditMortgageModal() {
+            const modal = window.currentEditMortgageModal || document.querySelector('div[style*="position:fixed"][style*="z-index:9999"]');
+            if (modal) {
+                modal.remove();
+                window.currentEditMortgageModal = null;
+            }
         }
 
         function saveMortgage(id){
@@ -4938,7 +4948,15 @@
             if(rate) fd.append('rate', rate);
             fd.append('is_active', is_active? 'on':'');
             fetch(`/api/mortgage-programs/${id}/update/`, { method:'POST', body: fd })
-                .then(r=>r.json()).then(res=>{ if(res.success){ showToast('Изменения сохранены'); document.querySelector('div[style*="box-shadow"]').parentElement.remove(); loadMortgagePrograms(); } else { showToast(res.error||'Ошибка','error'); }})
+                .then(r=>r.json()).then(res=>{ 
+                    if(res.success){ 
+                        showToast('Изменения сохранены', 'success'); 
+                        closeEditMortgageModal();
+                        loadMortgagePrograms(); 
+                    } else { 
+                        showToast(res.error||'Ошибка','error'); 
+                    }
+                })
                 .catch(()=>showToast('Ошибка сети','error'));
         }
 
@@ -5454,7 +5472,8 @@
                 
                 const result = await response.json();
                 
-                if (result.success) {showToast(result.message, 'success');
+                if (result.success) {
+                    showToast(result.message || 'Проект успешно сохранен', 'success');
                     closeFutureProjectModal();
                     
                     // Перезагружаем данные
@@ -5874,7 +5893,7 @@
                             </div>
                         </div>
                         <div style="padding:16px 20px; border-top:1px solid #475569; display:flex; gap:12px; justify-content:flex-end;">
-                            <button class="btn" onclick="this.closest('div[style*=\'position:fixed\']').remove()">Отмена</button>
+                            <button class="btn" onclick="closeEditMortgageProgramModal()">Отмена</button>
                             <button class="btn btn-success" onclick="updateMortgageProgram('${programId}')">Сохранить</button>
                         </div>
                     </div>
@@ -5884,14 +5903,17 @@
                 
                 // Сохраняем ссылку на модальное окно в глобальной переменной
                 window.currentEditModal = modal;
+                window.currentEditMortgageProgramModal = modal;
                 
                 // Обработчик для показа/скрытия секции ЖК
                 const isIndividualCheckbox = modal.querySelector('#editProgramIsIndividual');
                 const complexesSection = modal.querySelector('#editComplexesSection');
                 
-                isIndividualCheckbox.addEventListener('change', function() {
-                    complexesSection.style.display = this.checked ? 'block' : 'none';
-                });
+                if (isIndividualCheckbox && complexesSection) {
+                    isIndividualCheckbox.addEventListener('change', function() {
+                        complexesSection.style.display = this.checked ? 'block' : 'none';
+                    });
+                }
                 
             } catch (error) {
                 console.error('❌ Ошибка при открытии модального окна редактирования:', error);
@@ -5963,7 +5985,7 @@
                 
                 if (result.success) {
                     showToast('Ипотечная программа обновлена успешно', 'success');
-                    modal.remove();
+                    closeEditMortgageProgramModal();
                     await loadMortgagePrograms();
                 } else {
                     showToast('Ошибка: ' + result.error, 'error');
@@ -5971,6 +5993,15 @@
             } catch (error) {
                 console.error('❌ Ошибка обновления ипотечной программы:', error);
                 showToast('Ошибка подключения к серверу', 'error');
+            }
+        }
+
+        function closeEditMortgageProgramModal() {
+            const modal = window.currentEditMortgageProgramModal || document.querySelector('div[style*="position:fixed"][style*="z-index:10000"]');
+            if (modal) {
+                modal.remove();
+                window.currentEditMortgageProgramModal = null;
+                window.currentEditModal = null;
             }
         }
 

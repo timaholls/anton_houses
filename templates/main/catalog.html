@@ -294,6 +294,27 @@
                     </div>
                     {% endif %}
                     
+                    <!-- Фильтр по названиям ЖК (только для новостроек, не для вторички) -->
+                    {% if dataset_type != 'secondary' %}
+                    <div class="filter-group" style="grid-column: 1 / -1;">
+                        <label>Жилые комплексы</label>
+                        <div class="complexes-filter-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+                            {% for complex in complexes_list %}
+                            <label style="display: flex; align-items: center; padding: 6px 0; cursor: pointer;">
+                                <input type="checkbox" name="complexes" value="{{ complex.id }}" 
+                                       class="complex-checkbox" 
+                                       data-complex-id="{{ complex.id }}"
+                                       style="margin-right: 8px; width: 16px; height: 16px; cursor: pointer;">
+                                <span style="font-size: 14px; color: #374151;">{{ complex.name }}</span>
+                            </label>
+                            {% empty %}
+                            <div style="padding: 12px; text-align: center; color: #9ca3af;">ЖК не найдены</div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="complexes" id="complexes-hidden" value="{{ filters.complexes|default:'' }}">
+                    </div>
+                    {% endif %}
+                    
                     <!-- Фильтр по ипотечным программам -->
                     <div class="filter-group">
                         <label for="mortgage_program">Ипотечная программа</label>
@@ -492,18 +513,8 @@ window.renderItems = function(data){
           `<img src="${photo}" alt="${item.name}" class="gallery-image ${i === 0 ? 'active' : ''}" style="display: ${i === 0 ? 'block' : 'none'};">`
         ).join('');
         
-        // Добавляем класс рейтинга для обводки (если есть рейтинг)
-        const rating = item.rating || 0;
-        let ratingClass = '';
-        if (rating >= 5) {
-            ratingClass = 'rating-5';
-        } else if (rating >= 4) {
-            ratingClass = 'rating-4';
-        } else if (rating >= 1) {
-            ratingClass = 'rating-3';
-        }
-        
-        const cardClasses = `property-card-compact ${ratingClass}`;
+        // Для вторички не добавляем класс рейтинга (у вторички нет рейтинга)
+        const cardClasses = 'property-card-compact';
         return `
         <div class="${cardClasses}" data-complex-id="${item.id}">
           <div class="compact-card-image-gallery" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
@@ -980,9 +991,20 @@ window.serialize = function() {
   
   const fd = new FormData(form);
   const params = new URLSearchParams();
+  
+  // Собираем все параметры, исключая чекбоксы complexes (они обрабатываются через скрытое поле)
   for (const [k, v] of fd.entries()) {
-    if (v !== '') params.append(k, v);
+    if (k !== 'complexes' && v !== '') {
+      params.append(k, v);
+    }
   }
+  
+  // Добавляем complexes из скрытого поля
+  const complexesHidden = document.getElementById('complexes-hidden');
+  if (complexesHidden && complexesHidden.value) {
+    params.set('complexes', complexesHidden.value);
+  }
+  
   const sort = document.getElementById('sort-hidden');
   if (sort && sort.value) params.set('sort', sort.value);
   return params.toString();
@@ -1525,15 +1547,58 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sortingText) sortingText.textContent = 'Дешевле';
     document.querySelectorAll('.sorting-option').forEach(o => o.classList.toggle('active', o.getAttribute('data-sort') === 'price_asc'));
 
+    // reset complexes checkboxes
+    const complexesCheckboxes = document.querySelectorAll('.complex-checkbox');
+    const complexesHidden = document.getElementById('complexes-hidden');
+    if (complexesCheckboxes) {
+      complexesCheckboxes.forEach(cb => cb.checked = false);
+    }
+    if (complexesHidden) complexesHidden.value = '';
+
     // fetch with cleared filters
     window.fetchData();
   });
+
+  // Обработка чекбоксов ЖК будет инициализирована в DOMContentLoaded
 })();
 
 // Мгновенный сабмит при выборe фильтров — обрабатывается AJAX-слоем
 
 // Современные анимации для фильтров
 document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация чекбоксов ЖК
+    const complexesCheckboxes = document.querySelectorAll('.complex-checkbox');
+    const complexesHidden = document.getElementById('complexes-hidden');
+    
+    function updateComplexesHidden() {
+        const selected = Array.from(complexesCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        if (complexesHidden) {
+            complexesHidden.value = selected.join(',');
+        }
+    }
+
+    complexesCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateComplexesHidden();
+            window.fetchData();
+        });
+    });
+
+    // Инициализация выбранных ЖК из URL параметров или фильтров
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedComplexes = urlParams.get('complexes') || (complexesHidden ? complexesHidden.value : '');
+    if (selectedComplexes && complexesCheckboxes.length) {
+        const selectedIds = selectedComplexes.split(',').map(id => id.trim()).filter(id => id);
+        complexesCheckboxes.forEach(cb => {
+            if (selectedIds.includes(cb.value)) {
+                cb.checked = true;
+            }
+        });
+        updateComplexesHidden();
+    }
+    
     // Анимация появления фильтров
     const filterGroups = document.querySelectorAll('.filter-group');
     filterGroups.forEach((group, index) => {
