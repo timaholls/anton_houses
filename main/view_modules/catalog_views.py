@@ -281,6 +281,17 @@ def detail(request, complex_id):
                             if isinstance(layout_photos, str):
                                 layout_photos = [layout_photos] if layout_photos else []
                             
+                            # Извлекаем площадь - сначала из отдельного поля, потом из title
+                            area = apt.get('area') or apt.get('totalArea') or ''
+                            if not area:
+                                # Парсим из title если нет в отдельном поле
+                                title = apt.get('title', '')
+                                if title:
+                                    import re
+                                    area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
+                                    if area_match:
+                                        area = area_match.group(1).replace(',', '.')
+                            
                             # Генерируем уникальный ID если его нет
                             apt_id = apt.get('_id')
                             if not apt_id:
@@ -299,7 +310,8 @@ def detail(request, complex_id):
                                 'layout_photos': layout_photos,  # Все фото для галереи
                                 '_id': apt.get('_id'),  # Сохраняем оригинальный _id
                                 'rooms': apt.get('rooms', ''),
-                                'totalArea': apt.get('totalArea', ''),
+                                'area': area,  # Площадь из DomClick (приоритет над totalArea)
+                                'totalArea': apt.get('totalArea', '') or area,  # Для совместимости
                                 'floor': apt.get('floor', ''),
                                 'pricePerSqm': apt.get('pricePerSqm', ''),
                                 'layout': apt.get('layout', ''),
@@ -331,12 +343,10 @@ def detail(request, complex_id):
                     if apartments and apt_type not in apartment_types_list:
                         apartment_types_list.append(apt_type)
                     
-                    # Ищем фото планировок из domclick для этого типа
-                    domclick_photos = []
+                    # Получаем квартиры из DomClick для этого типа
+                    dc_apartments = []
                     if apt_type in domclick_apartment_types:
                         dc_apartments = domclick_apartment_types[apt_type].get('apartments', [])
-                        for dc_apt in dc_apartments:
-                            domclick_photos.extend(dc_apt.get('photos', []))
                     
                     for apt in apartments:
                         # Генерируем уникальный ID если его нет
@@ -344,6 +354,49 @@ def detail(request, complex_id):
                         if not apt_id:
                             # Создаем уникальный ID на основе типа и индекса
                             apt_id = f"{apt_type}_{len(apartment_variants)}"
+                        
+                        # Извлекаем площадь - сначала из отдельного поля, потом из title
+                        area = apt.get('area') or apt.get('totalArea') or ''
+                        if not area:
+                            # Парсим из title если нет в отдельном поле
+                            title = apt.get('title', '')
+                            if title:
+                                import re
+                                area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
+                                if area_match:
+                                    area = area_match.group(1).replace(',', '.')
+                        
+                        # Ищем соответствующую квартиру из DomClick по площади
+                        # Берем фото только из соответствующей квартиры, а не из всех
+                        layout_photos = []
+                        if dc_apartments and area:
+                            try:
+                                area_float = float(area)
+                                # Ищем квартиру с наиболее близкой площадью
+                                best_match = None
+                                min_diff = float('inf')
+                                for dc_apt in dc_apartments:
+                                    dc_title = dc_apt.get('title', '')
+                                    if dc_title:
+                                        import re
+                                        dc_area_match = re.search(r'(\d+[,.]?\d*)\s*м²', dc_title)
+                                        if dc_area_match:
+                                            dc_area = float(dc_area_match.group(1).replace(',', '.'))
+                                            diff = abs(area_float - dc_area)
+                                            if diff < min_diff and diff < 1.0:  # Разница меньше 1 м²
+                                                min_diff = diff
+                                                best_match = dc_apt
+                                
+                                if best_match:
+                                    layout_photos = best_match.get('photos', [])
+                            except (ValueError, AttributeError):
+                                pass
+                        
+                        # Если не нашли совпадение - берем первые фото из всех (fallback)
+                        if not layout_photos and dc_apartments:
+                            for dc_apt in dc_apartments[:1]:  # Берем только первую квартиру
+                                layout_photos = dc_apt.get('photos', [])[:5]
+                                break
                         
                         apartment_variants.append({
                             'id': str(apt_id),  # Добавляем ID квартиры
@@ -354,10 +407,11 @@ def detail(request, complex_id):
                             'completion_date': apt.get('completionDate', ''),
                             'image': apt.get('image', {}).get('128x96', ''),
                             'url': apt.get('urlPath', ''),
-                            'layout_photos': domclick_photos[:5],  # Первые 5 фото планировок
+                            'layout_photos': layout_photos[:5],  # Фото из соответствующей квартиры DomClick
                             '_id': apt.get('_id'),  # Сохраняем оригинальный _id
                             'rooms': apt.get('rooms', ''),
-                            'totalArea': apt.get('totalArea', ''),
+                            'area': area,  # Площадь из DomClick (приоритет над totalArea)
+                            'totalArea': apt.get('totalArea', '') or area,  # Для совместимости
                             'floor': apt.get('floor', ''),
                             'pricePerSqm': apt.get('pricePerSqm', ''),
                             'layout': apt.get('layout', ''),

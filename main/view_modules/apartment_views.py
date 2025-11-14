@@ -197,22 +197,31 @@ def apartment_detail(request, complex_id, apartment_id):
                 
                 other_apartments.append(other_apt_data)
         
-        # Парсим данные из title (например: "2-к. квартира, 63,9 м², 3/15 эт.")
+        # Парсим данные из title (например: "2-к. квартира, 63,9 м², 3/15 эт.)
+        # ВАЖНО: Сначала проверяем поле area/totalArea, потом парсим из title
         title = apartment_data.get('title', '')
         rooms = ''
         area = ''
         floor = ''
+        
+        # Сначала пытаемся взять площадь из отдельного поля (из DomClick)
+        area = apartment_data.get('area') or apartment_data.get('totalArea') or ''
+        if area:
+            # Преобразуем в строку, если это число
+            if isinstance(area, (int, float)):
+                area = str(area)
         
         if title:
             # Извлекаем количество комнат
             if '-к.' in title:
                 rooms = title.split('-к.')[0].strip()
             
-            # Извлекаем площадь
-            import re
-            area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
-            if area_match:
-                area = area_match.group(1).replace(',', '.')
+            # Извлекаем площадь из title только если не нашли в отдельном поле
+            if not area:
+                import re
+                area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
+                if area_match:
+                    area = area_match.group(1).replace(',', '.')
             
             # Извлекаем этаж
             floor_match = re.search(r'(\d+)/(\d+)\s*эт', title)

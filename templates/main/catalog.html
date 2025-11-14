@@ -111,6 +111,29 @@
     white-space: nowrap;
 }
 
+/* Стили для поля поиска ЖК */
+.complex-search-input {
+    transition: all 0.3s ease;
+}
+
+.complex-search-input:focus {
+    outline: none;
+    border-color: #d4a574 !important;
+    box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+}
+
+.complex-search-input::placeholder {
+    color: #9ca3af;
+}
+
+.complex-filter-item {
+    transition: opacity 0.2s ease;
+}
+
+.complex-filter-item[style*="display: none"] {
+    display: none !important;
+}
+
 /* Ограничиваем ширину полей фильтров */
 .filters-row-grid .filter-group {
     min-width: 0; /* Позволяет flex/grid элементам сжиматься */
@@ -298,14 +321,19 @@
                     {% if dataset_type != 'secondary' %}
                     <div class="filter-group" style="grid-column: 1 / -1;">
                         <label>Жилые комплексы</label>
+                        <input type="text" 
+                               id="complex-search-input" 
+                               class="complex-search-input" 
+                               placeholder="Поиск ЖК по названию..."
+                               style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: #fff; color: #374151; box-sizing: border-box;">
                         <div class="complexes-filter-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
                             {% for complex in complexes_list %}
-                            <label style="display: flex; align-items: center; padding: 6px 0; cursor: pointer;">
+                            <label class="complex-filter-item" style="display: flex; align-items: center; padding: 6px 0; cursor: pointer;" data-complex-name="{{ complex.name|lower }}">
                                 <input type="checkbox" name="complexes" value="{{ complex.id }}" 
                                        class="complex-checkbox" 
                                        data-complex-id="{{ complex.id }}"
                                        style="margin-right: 8px; width: 16px; height: 16px; cursor: pointer;">
-                                <span style="font-size: 14px; color: #374151;">{{ complex.name }}</span>
+                                <span class="complex-name" style="font-size: 14px; color: #374151;">{{ complex.name }}</span>
                             </label>
                             {% empty %}
                             <div style="padding: 12px; text-align: center; color: #9ca3af;">ЖК не найдены</div>
@@ -1550,10 +1578,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // reset complexes checkboxes
     const complexesCheckboxes = document.querySelectorAll('.complex-checkbox');
     const complexesHidden = document.getElementById('complexes-hidden');
+    const complexSearchInput = document.getElementById('complex-search-input');
     if (complexesCheckboxes) {
       complexesCheckboxes.forEach(cb => cb.checked = false);
     }
     if (complexesHidden) complexesHidden.value = '';
+    // Очистка поля поиска ЖК и показ всех элементов
+    if (complexSearchInput) {
+      complexSearchInput.value = '';
+      // Показываем все элементы списка
+      const complexFilterItems = document.querySelectorAll('.complex-filter-item');
+      complexFilterItems.forEach(item => {
+        item.style.display = 'flex';
+      });
+      // Скрываем сообщение "не найдено"
+      const container = document.querySelector('.complexes-filter-container');
+      const noResultsMsg = container ? container.querySelector('.no-results-message') : null;
+      if (noResultsMsg) {
+        noResultsMsg.style.display = 'none';
+      }
+    }
 
     // fetch with cleared filters
     window.fetchData();
@@ -1569,6 +1613,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация чекбоксов ЖК
     const complexesCheckboxes = document.querySelectorAll('.complex-checkbox');
     const complexesHidden = document.getElementById('complexes-hidden');
+    const complexSearchInput = document.getElementById('complex-search-input');
+    const complexFilterItems = document.querySelectorAll('.complex-filter-item');
     
     function updateComplexesHidden() {
         const selected = Array.from(complexesCheckboxes)
@@ -1577,6 +1623,57 @@ document.addEventListener('DOMContentLoaded', function() {
         if (complexesHidden) {
             complexesHidden.value = selected.join(',');
         }
+    }
+
+    // Функция фильтрации списка ЖК по поисковому запросу
+    function filterComplexes(searchText) {
+        const searchLower = searchText.toLowerCase().trim();
+        let visibleCount = 0;
+        
+        complexFilterItems.forEach(item => {
+            const complexName = item.getAttribute('data-complex-name') || '';
+            const shouldShow = !searchLower || complexName.includes(searchLower);
+            
+            if (shouldShow) {
+                item.style.display = 'flex';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Показываем сообщение, если ничего не найдено
+        const container = document.querySelector('.complexes-filter-container');
+        let noResultsMsg = container.querySelector('.no-results-message');
+        
+        if (searchLower && visibleCount === 0) {
+            if (!noResultsMsg) {
+                noResultsMsg = document.createElement('div');
+                noResultsMsg.className = 'no-results-message';
+                noResultsMsg.style.cssText = 'padding: 12px; text-align: center; color: #9ca3af; font-size: 14px;';
+                noResultsMsg.textContent = 'ЖК не найдены';
+                container.appendChild(noResultsMsg);
+            }
+            noResultsMsg.style.display = 'block';
+        } else if (noResultsMsg) {
+            noResultsMsg.style.display = 'none';
+        }
+    }
+
+    // Обработчик поиска ЖК
+    if (complexSearchInput) {
+        complexSearchInput.addEventListener('input', function(e) {
+            filterComplexes(e.target.value);
+        });
+        
+        // Очистка поиска при нажатии Escape
+        complexSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                e.target.value = '';
+                filterComplexes('');
+                e.target.blur();
+            }
+        });
     }
 
     complexesCheckboxes.forEach(checkbox => {
