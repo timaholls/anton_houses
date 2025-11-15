@@ -112,6 +112,26 @@
                         </div>
                         {% endif %}
                         
+                        {% if apartment.price_per_sqm or apartment.price_per_sqm_formatted %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-ruble-sign"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Цена за м²</span>
+                                <span class="characteristic-value">{% if apartment.price_per_sqm_formatted %}{{ apartment.price_per_sqm_formatted }}{% elif apartment.price_per_sqm %}{{ apartment.price_per_sqm|floatformat:0 }}{% endif %} ₽</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if apartment.completion_date %}
+                        <div class="characteristic-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <div class="characteristic-content">
+                                <span class="characteristic-label">Срок сдачи</span>
+                                <span class="characteristic-value">{{ apartment.completion_date }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
                         {% if apartment.layout %}
                         <div class="characteristic-item">
                             <i class="fas fa-th-large"></i>

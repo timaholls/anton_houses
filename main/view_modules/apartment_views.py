@@ -6,6 +6,8 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, Http404
 from bson import ObjectId
 from datetime import datetime
+import re
+import json
 
 from ..services.mongo_service import get_mongo_connection
 from ..s3_service import PLACEHOLDER_IMAGE_URL
@@ -67,10 +69,37 @@ def apartment_detail(request, complex_id, apartment_id):
                     if not apt_id:
                         apt_id = f"{apt_type}_{len(apartments)}"
                     
+                    # Парсим данные из title, если их нет в отдельных полях
+                    title = apt.get('title', '')
+                    rooms = apt.get('rooms', '')
+                    floor = apt.get('floor', '')
+                    
+                    if title and not rooms:
+                        # Извлекаем количество комнат из title
+                        if '-комн' in title:
+                            rooms = title.split('-комн')[0].strip()
+                        elif '-к.' in title:
+                            rooms = title.split('-к.')[0].strip()
+                        elif ' ком.' in title:
+                            rooms = title.split(' ком.')[0].strip()
+                        elif re.search(r'^(\d+)-комн', title):
+                            match = re.search(r'^(\d+)-комн', title)
+                            rooms = match.group(1)
+                    
+                    if title and not floor:
+                        # Извлекаем этаж из title
+                        floor_range_match = re.search(r'(\d+)-(\d+)\s*этаж', title)
+                        if floor_range_match:
+                            floor = f"{floor_range_match.group(1)}-{floor_range_match.group(2)}"
+                        else:
+                            floor_match = re.search(r'(\d+)/(\d+)\s*эт', title)
+                            if floor_match:
+                                floor = f"{floor_match.group(1)}/{floor_match.group(2)}"
+                    
                     apartments.append({
                         'id': str(apt_id),  # Добавляем ID квартиры
                         'type': apt_type,
-                        'title': apt.get('title', ''),
+                        'title': title,
                         'price': apt.get('price', ''),
                         'price_per_square': apt.get('pricePerSquare', ''),
                         'completion_date': apt.get('completionDate', ''),
@@ -78,9 +107,9 @@ def apartment_detail(request, complex_id, apartment_id):
                         'url': apt.get('url', ''),
                         'layout_photos': layout_photos,  # Все фото для галереи
                         '_id': apt.get('_id'),  # Сохраняем оригинальный _id
-                        'rooms': apt.get('rooms', ''),
-                        'totalArea': apt.get('totalArea', ''),
-                        'floor': apt.get('floor', ''),
+                        'rooms': rooms,
+                        'totalArea': apt.get('totalArea', '') or apt.get('area', ''),
+                        'floor': floor,
                         'pricePerSqm': apt.get('pricePerSqm', ''),
                         'layout': apt.get('layout', ''),
                         'balcony': apt.get('balcony', ''),
@@ -171,16 +200,56 @@ def apartment_detail(request, complex_id, apartment_id):
                 other_rooms = ''
                 other_area = ''
                 
+                # Используем уже извлеченное количество комнат из apt, если есть
+                other_rooms = apt.get('rooms', '')
+                
                 if other_apt_title:
-                    # Извлекаем количество комнат
-                    if '-к.' in other_apt_title:
-                        other_rooms = other_apt_title.split('-к.')[0].strip()
+                    # Извлекаем количество комнат из title, если не нашли в отдельном поле
+                    if not other_rooms:
+                        if '-комн' in other_apt_title:
+                            other_rooms = other_apt_title.split('-комн')[0].strip()
+                        elif '-к.' in other_apt_title:
+                            other_rooms = other_apt_title.split('-к.')[0].strip()
+                        elif ' ком.' in other_apt_title:
+                            other_rooms = other_apt_title.split(' ком.')[0].strip()
+                        elif re.search(r'^(\d+)-комн', other_apt_title):
+                            match = re.search(r'^(\d+)-комн', other_apt_title)
+                            other_rooms = match.group(1)
                     
                     # Извлекаем площадь
-                    import re
-                    area_match = re.search(r'(\d+[,.]?\d*)\s*м²', other_apt_title)
-                    if area_match:
-                        other_area = area_match.group(1).replace(',', '.')
+                    other_area = apt.get('totalArea', '') or apt.get('area', '')
+                    if not other_area:
+                        area_match = re.search(r'(\d+[,.]?\d*)\s*м²', other_apt_title)
+                        if area_match:
+                            other_area = area_match.group(1).replace(',', '.')
+                    else:
+                        # Преобразуем в строку, если это число
+                        if isinstance(other_area, (int, float)):
+                            other_area = str(other_area)
+                else:
+                    other_area = apt.get('totalArea', '') or apt.get('area', '')
+                    if isinstance(other_area, (int, float)):
+                        other_area = str(other_area)
+                
+                # Формируем title с количеством комнат, если его нет
+                if other_apt_title and not other_rooms:
+                    # Если title есть, но комнат нет, пытаемся извлечь из type
+                    apt_type = apt.get('type', '')
+                    if apt_type and apt_type.isdigit():
+                        other_rooms = apt_type
+                
+                # Формируем правильный title для отображения
+                display_title = other_apt_title
+                if not display_title or (other_rooms and other_rooms not in display_title):
+                    # Если title пустой или не содержит количество комнат, формируем новый
+                    if other_rooms:
+                        display_title = f"{other_rooms}-комнатная квартира"
+                        if other_area:
+                            display_title += f", {other_area} м²"
+                    elif other_area:
+                        display_title = f"Квартира, {other_area} м²"
+                    else:
+                        display_title = "Квартира"
                 
                 other_apt_data = {
                     'id': apt.get('id'),
@@ -188,7 +257,7 @@ def apartment_detail(request, complex_id, apartment_id):
                     'area': other_area,
                     'price': apt.get('price', ''),
                     'photos': apt.get('image', []),
-                    'title': other_apt_title
+                    'title': display_title
                 }
                 
                 # Исправляем фотографии если это строка
@@ -197,12 +266,12 @@ def apartment_detail(request, complex_id, apartment_id):
                 
                 other_apartments.append(other_apt_data)
         
-        # Парсим данные из title (например: "2-к. квартира, 63,9 м², 3/15 эт.)
+        # Парсим данные из title (например: "1-комн, 30.05 м², 2-25 этаж" или "2-к. квартира, 63,9 м², 3/15 эт.)
         # ВАЖНО: Сначала проверяем поле area/totalArea, потом парсим из title
         title = apartment_data.get('title', '')
-        rooms = ''
+        rooms = apartment_data.get('rooms', '')  # Используем уже извлеченное значение
         area = ''
-        floor = ''
+        floor = apartment_data.get('floor', '')  # Используем уже извлеченное значение
         
         # Сначала пытаемся взять площадь из отдельного поля (из DomClick)
         area = apartment_data.get('area') or apartment_data.get('totalArea') or ''
@@ -212,47 +281,85 @@ def apartment_detail(request, complex_id, apartment_id):
                 area = str(area)
         
         if title:
-            # Извлекаем количество комнат
-            if '-к.' in title:
-                rooms = title.split('-к.')[0].strip()
+            # Извлекаем количество комнат (поддерживаем разные форматы: "1-комн", "1-к.", "1 ком.")
+            if not rooms:
+                # Пробуем разные варианты
+                if '-комн' in title:
+                    rooms = title.split('-комн')[0].strip()
+                elif '-к.' in title:
+                    rooms = title.split('-к.')[0].strip()
+                elif ' ком.' in title:
+                    rooms = title.split(' ком.')[0].strip()
+                elif re.search(r'^(\d+)-комн', title):
+                    match = re.search(r'^(\d+)-комн', title)
+                    rooms = match.group(1)
             
             # Извлекаем площадь из title только если не нашли в отдельном поле
             if not area:
-                import re
                 area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
                 if area_match:
                     area = area_match.group(1).replace(',', '.')
             
-            # Извлекаем этаж
-            floor_match = re.search(r'(\d+)/(\d+)\s*эт', title)
-            if floor_match:
-                floor = f"{floor_match.group(1)}/{floor_match.group(2)}"
+            # Извлекаем этаж (поддерживаем форматы: "2-25 этаж", "3/15 эт.")
+            if not floor:
+                # Формат "2-25 этаж"
+                floor_range_match = re.search(r'(\d+)-(\d+)\s*этаж', title)
+                if floor_range_match:
+                    floor = f"{floor_range_match.group(1)}-{floor_range_match.group(2)}"
+                else:
+                    # Формат "3/15 эт."
+                    floor_match = re.search(r'(\d+)/(\d+)\s*эт', title)
+                    if floor_match:
+                        floor = f"{floor_match.group(1)}/{floor_match.group(2)}"
         
-        # Форматируем данные квартиры
+        # Форматируем данные квартиры, используя данные из apartment_data
+        # Преобразуем цену за м² в число и форматируем с разделителями тысяч
+        # Проверяем разные варианты имен полей (из базы и из нашего списка)
+        price_per_sqm_raw = (apartment_data.get('pricePerSquare', '') or 
+                             apartment_data.get('pricePerSqm', '') or
+                             apartment_data.get('price_per_square', ''))
+        price_per_sqm = None
+        price_per_sqm_formatted = ''
+        if price_per_sqm_raw:
+            try:
+                # Преобразуем строку в число (убираем пробелы, заменяем запятую на точку)
+                price_per_sqm_str = str(price_per_sqm_raw).replace(',', '.').replace(' ', '')
+                price_per_sqm = float(price_per_sqm_str)
+                # Форматируем с разделителями тысяч
+                price_per_sqm_formatted = f"{price_per_sqm:,.0f}".replace(',', ' ')
+            except (ValueError, TypeError):
+                price_per_sqm = None
+                price_per_sqm_formatted = ''
+        
+        # Получаем срок сдачи (проверяем разные варианты имен полей)
+        completion_date = (apartment_data.get('completionDate', '') or 
+                          apartment_data.get('completion_date', ''))
+        
         apartment_info = {
             'id': apartment_id,  # Используем сгенерированный ID
             'rooms': rooms,
             'area': area,
             'floor': floor,
             'price': apartment_data.get('price', ''),
-            'price_per_sqm': apartment_data.get('pricePerSquare', ''),
-            'completion_date': apartment_data.get('completionDate', ''),
+            'price_per_sqm': price_per_sqm,
+            'price_per_sqm_formatted': price_per_sqm_formatted,
+            'completion_date': completion_date,
             'url': apartment_data.get('url', ''),
-            'layout': '',  # Не доступно в данных
-            'balcony': '',  # Не доступно в данных
-            'loggia': '',  # Не доступно в данных
-            'view': '',  # Не доступно в данных
-            'condition': '',  # Не доступно в данных
-            'furniture': '',  # Не доступно в данных
-            'ceiling_height': '',  # Не доступно в данных
-            'windows': '',  # Не доступно в данных
-            'bathroom': '',  # Не доступно в данных
-            'kitchen_area': '',  # Не доступно в данных
-            'living_area': '',  # Не доступно в данных
-            'bedroom_area': '',  # Не доступно в данных
+            'layout': apartment_data.get('layout', ''),
+            'balcony': apartment_data.get('balcony', ''),
+            'loggia': apartment_data.get('loggia', ''),
+            'view': apartment_data.get('view', ''),
+            'condition': apartment_data.get('condition', ''),
+            'furniture': apartment_data.get('furniture', ''),
+            'ceiling_height': apartment_data.get('ceilingHeight', ''),
+            'windows': apartment_data.get('windows', ''),
+            'bathroom': apartment_data.get('bathroom', ''),
+            'kitchen_area': apartment_data.get('kitchenArea', ''),
+            'living_area': apartment_data.get('livingArea', ''),
+            'bedroom_area': apartment_data.get('bedroomArea', ''),
             'photos': apartment_data.get('image', []),  # Используем поле image
-            'description': '',  # Не доступно в данных
-            'features': [],  # Не доступно в данных
+            'description': apartment_data.get('description', ''),
+            'features': apartment_data.get('features', []),
         }
         
         # Отладочная информация для фотографий
