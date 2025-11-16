@@ -10,7 +10,7 @@ from .views import (
     catalog, detail, secondary_detail_mongo, secondary_detail,
     catalog_completed, catalog_construction, catalog_economy, catalog_comfort,
     catalog_premium, catalog_finished, catalog_unfinished, catalog_landing,
-    newbuild_index, secondary_index,
+    newbuild_index, secondary_index, client_catalog,
     # Articles
     articles, article_detail, tag_detail,
     # Vacancies
@@ -39,7 +39,9 @@ from .views import (
     preview_manual_match,
     unified_delete, unified_get, unified_update, toggle_featured,
     domrf_create, delete_record, get_future_projects, create_future_project,
-    get_domrf_data, delete_photo, get_apartment_stats,
+    get_domrf_data, delete_photo, get_apartment_stats, get_client_catalog_apartments,
+    create_apartment_selection, get_apartment_selections, get_apartment_selection,
+    update_apartment_selection, delete_apartment_selection, get_complexes_with_apartments,
     # Content Management API
     tags_api_list, tags_api_create, tags_api_get, tags_api_update, tags_api_toggle, tags_api_delete,
     categories_api_list, categories_api_create, categories_api_get, categories_api_update, categories_api_toggle, categories_api_delete,
@@ -78,7 +80,14 @@ from .api.manual_matching_api import (
     get_mortgage_program,
     get_not_recommended_objects,
     get_future_project,
-    update_future_project
+    update_future_project,
+    create_apartment_selection,
+    get_apartment_selections,
+    get_apartment_selection,
+    update_apartment_selection,
+    delete_apartment_selection,
+    get_complexes_with_apartments,
+    get_complex_by_id
 )
 
 # Импортируем функции из subscription_api
@@ -100,6 +109,8 @@ from .api.feedback_api import submit_feedback
 
 # Импортируем view для квартир
 from .view_modules.apartment_views import apartment_detail
+# Импортируем view для избранного
+from .view_modules.catalog_views import favorites
 
 app_name = 'main'
 
@@ -119,6 +130,8 @@ urlpatterns = [
     # ========== КАТАЛОГ ==========
     
     path('catalog/', catalog, name='catalog'),
+    path('client-catalog/', client_catalog, name='client_catalog'),
+    path('favorites/', favorites, name='favorites'),
     path('complex/<str:complex_id>/', detail, name='detail'),
     path('apartment/<str:complex_id>/<str:apartment_id>/', apartment_detail, name='apartment_detail'),
     
@@ -208,8 +221,18 @@ urlpatterns = [
     path('api/manual-matching/delete-construction-photo/', delete_construction_photo, name='delete_construction_photo'),
     path('api/manual-matching/apartment-stats/<str:domrf_id>/', get_apartment_stats, name='get_apartment_stats'),
     path('api/manual-matching/location-options/', get_location_options, name='get_location_options'),
+    path('api/client-catalog/apartments/', get_client_catalog_apartments, name='get_client_catalog_apartments'),
     path('api/domrf/create/', domrf_create, name='domrf_create'),
     path('api/not-recommended/', get_not_recommended_objects, name='get_not_recommended_objects'),
+    
+    # ========== APARTMENT SELECTIONS API ==========
+    path('api/apartment-selections/', get_apartment_selections, name='get_apartment_selections'),
+    path('api/apartment-selections/create/', create_apartment_selection, name='create_apartment_selection'),
+    path('api/apartment-selections/<str:selection_id>/', get_apartment_selection, name='get_apartment_selection'),
+    path('api/apartment-selections/<str:selection_id>/update/', update_apartment_selection, name='update_apartment_selection'),
+    path('api/apartment-selections/<str:selection_id>/delete/', delete_apartment_selection, name='delete_apartment_selection'),
+    path('api/complexes-with-apartments/', get_complexes_with_apartments, name='get_complexes_with_apartments'),
+    path('api/complex/<str:complex_id>/', get_complex_by_id, name='get_complex_by_id'),
     
     # ========== API (РАБОЧИЕ ЭНДПОИНТЫ) ==========
     

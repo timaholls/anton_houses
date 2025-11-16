@@ -146,6 +146,50 @@
   .compact-card-image-gallery { height: 200px; }
   .gallery-nav { opacity: 1; width: 32px; height: 32px; }
 }
+
+/* Кнопка избранного на карточках */
+.favorite-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.favorite-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.favorite-btn i {
+  font-size: 18px;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.favorite-btn.favorite-active i,
+.favorite-btn:hover i {
+  color: #e74c3c;
+}
+
+.favorite-btn.favorite-active i {
+  color: #e74c3c;
+}
+
+.favorite-btn.favorite-active {
+  background: rgba(231, 76, 60, 0.1);
+}
 </style>
 {% endblock %}
 
@@ -488,7 +532,8 @@ window.renderItems = function(data){
   if (!isSecondary) {
     // Новостройки: рендерим и карту и список
     if (typeof renderMapPoints === 'function') {
-      renderMapPoints(data.complexes||[], false);
+      const mapPoints = data.map_points || data.complexes || [];
+      renderMapPoints(mapPoints, false);
     }
     
     const list = data.complexes || [];
@@ -547,6 +592,9 @@ window.renderItems = function(data){
         <div class="${cardClasses}" data-complex-id="${item.id}">
           <div class="compact-card-image-gallery" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
             ${galleryHtml}
+            <button class="favorite-btn" data-favorite-complex-id="${item.id}" onclick="event.stopPropagation(); toggleComplexFavoriteHandler('${item.id}', this)" title="Добавить в избранное">
+              <i class="far fa-heart"></i>
+            </button>
             ${photos.length > 1 ? `
               <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
                 <i class="fas fa-chevron-left"></i>
@@ -746,6 +794,9 @@ window.updateCatalog = function(data) {
             <div class="${cardClasses}" data-complex-id="${complex.id}">
                 <div class="compact-card-image-gallery" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
                     ${galleryHtml}
+                    <button class="favorite-btn" data-favorite-complex-id="${complex.id}" onclick="event.stopPropagation(); toggleComplexFavoriteHandler('${complex.id}', this)" title="Добавить в избранное">
+                      <i class="far fa-heart"></i>
+                    </button>
                     ${photos.length > 1 ? `
                         <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
                             <i class="fas fa-chevron-left"></i>
@@ -1127,10 +1178,39 @@ document.addEventListener('DOMContentLoaded', function() {
     const districtSelect = document.getElementById('district');
     const streetSelect = document.getElementById('street');
     
-    // Инициализация: показываем поля района и улицы, если город уже выбран
+    // Инициализация: загружаем районы и улицы, если город уже выбран
     if (citySelect.value) {
-        districtGroup.classList.remove('hidden');
-        streetGroup.classList.remove('hidden');
+        const selectedCity = citySelect.value;
+        const selectedDistrict = districtSelect.value;
+        
+        // Загружаем районы
+        fetch(`/api/districts/?city=${selectedCity}`)
+            .then(response => response.json())
+            .then(data => {
+                districtSelect.innerHTML = '<option value="">Любой</option>';
+                data.districts.forEach(district => {
+                    const selected = district === selectedDistrict ? 'selected' : '';
+                    districtSelect.innerHTML += `<option value="${district}" ${selected}>${district}</option>`;
+                });
+                districtGroup.classList.remove('hidden');
+            });
+        
+        // Загружаем улицы
+        let url = `/api/streets/?city=${selectedCity}`;
+        if (selectedDistrict) {
+            url += `&district=${selectedDistrict}`;
+        }
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const selectedStreet = streetSelect.value;
+                streetSelect.innerHTML = '<option value="">Любая</option>';
+                data.streets.forEach(street => {
+                    const selected = street === selectedStreet ? 'selected' : '';
+                    streetSelect.innerHTML += `<option value="${street}" ${selected}>${street}</option>`;
+                });
+                streetGroup.classList.remove('hidden');
+            });
     }
     
     citySelect.addEventListener('change', function() {
@@ -1162,6 +1242,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Показываем группу улиц
                     streetGroup.classList.remove('hidden');
                 });
+            
+            // Автоматически запускаем поиск после выбора города
+            const form = document.getElementById('filters-form');
+            if (form) {
+                form.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
         } else {
             // Сбрасываем значения
             districtSelect.innerHTML = '<option value="">Любой</option>';
@@ -1170,6 +1256,43 @@ document.addEventListener('DOMContentLoaded', function() {
             // Скрываем группы через CSS класс
             districtGroup.classList.add('hidden');
             streetGroup.classList.add('hidden');
+        }
+    });
+    
+    // Обработчик изменения района - обновляем улицы
+    districtSelect.addEventListener('change', function() {
+        const selectedCity = citySelect.value;
+        const selectedDistrict = this.value;
+        
+        if (selectedCity) {
+            // Загружаем улицы для выбранного города и района
+            let url = `/api/streets/?city=${selectedCity}`;
+            if (selectedDistrict) {
+                url += `&district=${selectedDistrict}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    streetSelect.innerHTML = '<option value="">Любая</option>';
+                    data.streets.forEach(street => {
+                        streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
+                    });
+                });
+            
+            // Автоматически запускаем поиск после выбора района
+            const form = document.getElementById('filters-form');
+            if (form) {
+                form.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        }
+    });
+    
+    // Обработчик изменения улицы - автоматически запускаем поиск
+    streetSelect.addEventListener('change', function() {
+        const form = document.getElementById('filters-form');
+        if (form) {
+            form.dispatchEvent(new Event('submit', { cancelable: true }));
         }
     });
     
@@ -1438,6 +1561,74 @@ window.addEventListener('scroll', function() {
 });
 
 
+
+// Обработчики для избранного
+function toggleComplexFavoriteHandler(complexId, button) {
+  const isFavorite = toggleComplexFavorite(complexId);
+  updateFavoriteIcon(button, isFavorite);
+  
+  // Показываем уведомление
+  if (isFavorite) {
+    showFavoriteNotification('Добавлено в избранное');
+  } else {
+    showFavoriteNotification('Удалено из избранного');
+  }
+}
+
+// Функция показа уведомления об избранном (глобальная)
+window.showFavoriteNotification = function(message) {
+  // Создаем временное уведомление
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    font-weight: 600;
+    animation: slideInRight 0.3s ease;
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOutRight 0.3s ease';
+    setTimeout(() => notification.remove(), 300);
+  }, 2000);
+};
+
+// Добавляем анимации для уведомлений
+if (!document.getElementById('favorite-notification-styles')) {
+  const style = document.createElement('style');
+  style.id = 'favorite-notification-styles';
+  style.textContent = `
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 // Инициализация карусели изображений при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {

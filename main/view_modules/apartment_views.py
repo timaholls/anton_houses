@@ -13,6 +13,40 @@ from ..services.mongo_service import get_mongo_connection
 from ..s3_service import PLACEHOLDER_IMAGE_URL
 
 
+def format_price(price):
+    """Форматирует цену: убирает лишние ₽, форматирует число с пробелами, добавляет один ₽"""
+    if not price:
+        return ''
+    
+    # Преобразуем в строку
+    price_str = str(price).strip()
+    
+    # Убираем все символы ₽
+    price_str = price_str.replace('₽', '').replace('руб', '').replace('руб.', '').strip()
+    
+    # Убираем пробелы и запятые для парсинга
+    price_clean = price_str.replace(' ', '').replace(',', '').replace('.', '').strip()
+    
+    # Проверяем, является ли это числом
+    if not price_clean.isdigit():
+        return price_str  # Возвращаем как есть, если не число
+    
+    try:
+        # Преобразуем в число
+        price_num = float(price_str.replace(' ', '').replace(',', '.').strip())
+        
+        if price_num <= 0:
+            return ''
+        
+        # Форматируем с разделителями тысяч
+        formatted = f"{price_num:,.0f}".replace(',', ' ')
+        
+        # Добавляем ₽
+        return f"{formatted} ₽"
+    except (ValueError, TypeError):
+        return price_str
+
+
 def apartment_detail(request, complex_id, apartment_id):
     """Детальная страница квартиры"""
     try:
@@ -39,24 +73,26 @@ def apartment_detail(request, complex_id, apartment_id):
         # Проверяем, есть ли поле apartment_types
         if 'apartment_types' in complex_data:
             apartment_types_data = complex_data.get('apartment_types', {})
-            # Формируем название ЖК из доступных данных
-            complex_name = complex_data.get('name', '')
+            # Формируем название ЖК из доступных данных (проверяем все возможные места)
+            development = complex_data.get('development', {})
+            complex_name = complex_data.get('name', '') or development.get('name', '')
             if not complex_name:
-                city = complex_data.get('city', '')
-                street = complex_data.get('street', '')
+                city = complex_data.get('city', '') or development.get('city', '')
+                street = complex_data.get('street', '') or development.get('street', '')
                 if city and street:
                     complex_name = f"ЖК на {street}, {city}"
                 elif city:
                     complex_name = f"ЖК в {city}"
                 else:
                     complex_name = "Жилой комплекс"
-            complex_images = complex_data.get('photos', [])
+            complex_images = complex_data.get('photos', []) or development.get('photos', [])
             
             # Формируем квартиры из apartment_types (используем ту же логику, что и в catalog_views.py)
             for apt_type, apt_data in apartment_types_data.items():
                 apt_apartments = apt_data.get('apartments', [])
                 
-                for apt in apt_apartments:
+                # Используем enumerate для правильной генерации ID (как в get_client_catalog_apartments)
+                for apt_index, apt in enumerate(apt_apartments):
                     # Получаем все фото планировки - это уже массив!
                     layout_photos = apt.get('image', [])
                     
@@ -64,10 +100,12 @@ def apartment_detail(request, complex_id, apartment_id):
                     if isinstance(layout_photos, str):
                         layout_photos = [layout_photos] if layout_photos else []
                     
-                    # Генерируем уникальный ID если его нет
+                    # Генерируем уникальный ID если его нет (формат: {complex_id}_{apt_type}_{apt_index})
                     apt_id = apt.get('_id')
                     if not apt_id:
-                        apt_id = f"{apt_type}_{len(apartments)}"
+                        apt_id = f"{complex_id}_{apt_type}_{apt_index}"
+                    else:
+                        apt_id = str(apt_id)
                     
                     # Парсим данные из title, если их нет в отдельных полях
                     title = apt.get('title', '')
@@ -159,12 +197,36 @@ def apartment_detail(request, complex_id, apartment_id):
         
         # Если apartment_id содержит подчеркивание, это сгенерированный ID
         if '_' in apartment_id:
-            # Разбираем сгенерированный ID: {type}_{index}
-            try:
-                apt_type, index_str = apartment_id.split('_', 1)
-                apartment_index = int(index_str)
-                
-                # Ищем квартиру по типу и индексу
+            # Проверяем формат ID: может быть {complex_id}_{type}_{index} или {type}_{index}
+            apt_id_parts = apartment_id.split('_')
+            
+            # Если ID начинается с complex_id (24 символа), убираем его
+            if len(apt_id_parts) >= 3 and len(apt_id_parts[0]) == 24:
+                # Формат: {complex_id}_{type}_{index}
+                # Проверяем, что первый элемент совпадает с complex_id
+                if apt_id_parts[0] == str(complex_id):
+                    apt_type = apt_id_parts[1]
+                    try:
+                        apartment_index = int(apt_id_parts[2])
+                    except (ValueError, IndexError):
+                        apt_type = None
+                else:
+                    # Не совпадает с complex_id, пробуем как {type}_{index}
+                    apt_type = apt_id_parts[0]
+                    try:
+                        apartment_index = int(apt_id_parts[1])
+                    except (ValueError, IndexError):
+                        apt_type = None
+            else:
+                # Формат: {type}_{index}
+                try:
+                    apt_type = apt_id_parts[0]
+                    apartment_index = int(apt_id_parts[1])
+                except (ValueError, IndexError):
+                    apt_type = None
+            
+            # Ищем квартиру по типу и индексу
+            if apt_type is not None and apartment_index is not None:
                 current_index = 0
                 for apt in apartments:
                     if apt.get('type') == apt_type:
@@ -172,12 +234,10 @@ def apartment_detail(request, complex_id, apartment_id):
                             apartment_data = apt
                             break
                         current_index += 1
-            except (ValueError, IndexError):
-                pass
         else:
             # Обычный поиск по _id
             for apt in apartments:
-                if str(apt.get('_id')) == str(apartment_id):
+                if str(apt.get('id')) == str(apartment_id) or str(apt.get('_id')) == str(apartment_id):
                     apartment_data = apt
                     break
         
@@ -251,11 +311,15 @@ def apartment_detail(request, complex_id, apartment_id):
                     else:
                         display_title = "Квартира"
                 
+                # Форматируем цену
+                other_price_raw = apt.get('price', '')
+                other_price_formatted = format_price(other_price_raw) if other_price_raw else ''
+                
                 other_apt_data = {
                     'id': apt.get('id'),
                     'rooms': other_rooms,
                     'area': other_area,
-                    'price': apt.get('price', ''),
+                    'price': other_price_formatted,
                     'photos': apt.get('image', []),
                     'title': display_title
                 }
@@ -335,12 +399,16 @@ def apartment_detail(request, complex_id, apartment_id):
         completion_date = (apartment_data.get('completionDate', '') or 
                           apartment_data.get('completion_date', ''))
         
+        # Форматируем цену
+        price_raw = apartment_data.get('price', '')
+        price_formatted = format_price(price_raw) if price_raw else ''
+        
         apartment_info = {
             'id': apartment_id,  # Используем сгенерированный ID
             'rooms': rooms,
             'area': area,
             'floor': floor,
-            'price': apartment_data.get('price', ''),
+            'price': price_formatted,
             'price_per_sqm': price_per_sqm,
             'price_per_sqm_formatted': price_per_sqm_formatted,
             'completion_date': completion_date,
@@ -372,14 +440,32 @@ def apartment_detail(request, complex_id, apartment_id):
         # Обновляем photos в apartment_info
         apartment_info['photos'] = photos
         
+        # Убеждаемся, что название ЖК не пустое
+        if not complex_name:
+            # Пробуем получить из development для всех структур
+            development = complex_data.get('development', {})
+            if development:
+                complex_name = development.get('name', '')
+            
+            # Если все еще пустое, формируем из города и улицы
+            if not complex_name:
+                city = complex_data.get('city', '') or development.get('city', '')
+                street = complex_data.get('street', '') or development.get('street', '')
+                if city and street:
+                    complex_name = f"ЖК на {street}, {city}"
+                elif city:
+                    complex_name = f"ЖК в {city}"
+                else:
+                    complex_name = "Жилой комплекс"
+        
         context = {
             'complex': {
                 'id': str(complex_data.get('_id')),
                 'name': complex_name,
                 'images': complex_images,
-                'district': complex_data.get('district', ''),
-                'city': complex_data.get('city', ''),
-                'street': complex_data.get('street', ''),
+                'district': complex_data.get('district', '') or complex_data.get('development', {}).get('district', ''),
+                'city': complex_data.get('city', '') or complex_data.get('development', {}).get('city', ''),
+                'street': complex_data.get('street', '') or complex_data.get('development', {}).get('street', ''),
             },
             'apartment': apartment_info,
             'agent': agent_data,

@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+
+{% block title %}Избранное — CENTURY 21{% endblock %}
+
+{% block extra_css %}
+<style>
+.favorites-page {
+    padding: 40px 0;
+    min-height: 60vh;
+}
+
+.favorites-header {
+    margin-bottom: 32px;
+}
+
+.favorites-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--c21-dark);
+    margin: 0 0 8px 0;
+}
+
+.favorites-header p {
+    color: #666;
+    font-size: 16px;
+    margin: 0;
+}
+
+.favorites-empty {
+    text-align: center;
+    padding: 80px 20px;
+    background: #f8f9fa;
+    border-radius: 16px;
+}
+
+.favorites-empty i {
+    font-size: 64px;
+    color: #ccc;
+    margin-bottom: 24px;
+}
+
+.favorites-empty h2 {
+    font-size: 1.5rem;
+    color: #666;
+    margin: 0 0 12px 0;
+}
+
+.favorites-empty p {
+    color: #999;
+    margin: 0 0 24px 0;
+}
+
+.favorites-empty .btn {
+    display: inline-block;
+    padding: 12px 24px;
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.favorites-empty .btn:hover {
+    background: var(--c21-gold-dark);
+    transform: translateY(-2px);
+}
+
+.favorites-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+}
+
+.favorite-card {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.favorite-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    text-decoration: none;
+    color: inherit;
+}
+
+.favorite-card-image {
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
+    background: #f8f9fa;
+}
+
+.favorite-card-content {
+    padding: 20px;
+}
+
+.favorite-card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--c21-dark);
+    margin: 0 0 8px 0;
+}
+
+.favorite-card-location {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.favorite-card-location i {
+    color: var(--c21-gold);
+}
+
+.favorite-card-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--c21-gold);
+    margin-top: 12px;
+}
+
+.favorite-card-remove {
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.favorite-card-remove:hover {
+    background: #fee;
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+@media (max-width: 768px) {
+    .favorites-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .favorites-header h1 {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="favorites-page">
+        <div class="favorites-header">
+            <h1>Избранное</h1>
+            <p>Ваши сохраненные объекты недвижимости</p>
+        </div>
+        
+        <div id="favorites-empty" class="favorites-empty" style="display: none;">
+            <i class="far fa-heart"></i>
+            <h2>Избранное пусто</h2>
+            <p>Добавьте объекты недвижимости в избранное, чтобы вернуться к ним позже</p>
+            <a href="{% url 'main:catalog' %}" class="btn">Перейти в каталог</a>
+        </div>
+        
+        <div id="favorites-grid" class="favorites-grid">
+            <!-- Карточки будут загружены через JavaScript -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadFavorites();
+});
+
+function loadFavorites() {
+    const favorites = getFavorites();
+    const grid = document.getElementById('favorites-grid');
+    const empty = document.getElementById('favorites-empty');
+    
+    const allIds = [...favorites.complexes, ...favorites.apartments];
+    
+    if (allIds.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+    }
+    
+    grid.style.display = 'grid';
+    empty.style.display = 'none';
+    
+    // Загружаем данные о ЖК
+    const complexPromises = favorites.complexes.map(id => 
+        fetch(`/api/complex/${id}/`)
+            .then(res => res.json())
+            .then(result => result.success ? ({ type: 'complex', id, data: result }) : null)
+            .catch(() => null)
+    );
+    
+    // Загружаем данные о квартирах
+    const apartmentPromises = favorites.apartments.map(fullId => {
+        const [complexId, apartmentId] = fullId.split('_');
+        return fetch(`/api/complex/${complexId}/`)
+            .then(res => res.json())
+            .then(result => {
+                if (!result.success) return null;
+                const complexData = result;
+                // Находим квартиру в данных ЖК
+                const apartment = findApartmentInComplex(complexData, apartmentId);
+                return apartment ? { type: 'apartment', complexId, apartmentId, complexData, apartment } : null;
+            })
+            .catch(() => null);
+    });
+    
+    Promise.all([...complexPromises, ...apartmentPromises]).then(results => {
+        const validResults = results.filter(r => r !== null);
+        grid.innerHTML = validResults.map(item => renderFavoriteCard(item)).join('');
+    });
+}
+
+function findApartmentInComplex(complexData, apartmentId) {
+    // Ищем квартиру в apartment_types
+    const apartmentTypes = complexData.apartment_types || {};
+    for (const aptType in apartmentTypes) {
+        const apartments = apartmentTypes[aptType].apartments || [];
+        for (let idx = 0; idx < apartments.length; idx++) {
+            const apt = apartments[idx];
+            // Проверяем разные форматы ID
+            const aptId = apt._id || `${complexData.id}_${aptType}_${idx}`;
+            const fullId = `${complexData.id}_${apartmentId}`;
+            if (String(aptId) === String(apartmentId) || 
+                String(aptId) === fullId || 
+                String(aptId).endsWith(`_${apartmentId}`) ||
+                `${complexData.id}_${aptType}_${idx}` === apartmentId) {
+                return apt;
+            }
+        }
+    }
+    return null;
+}
+
+function renderFavoriteCard(item) {
+    if (item.type === 'complex') {
+        const complex = item.data;
+        const image = complex.photos && complex.photos.length > 0 ? complex.photos[0] : '/static/images/placeholder.png';
+        const name = complex.name || 'Жилой комплекс';
+        const address = complex.address || '';
+        
+        return `
+            <div class="favorite-card" onclick="window.location.href='/complex/${item.id}/'">
+                <img src="${image}" alt="${name}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
+                <div class="favorite-card-content">
+                    <h3 class="favorite-card-title">${escapeHtml(name)}</h3>
+                    ${address ? `
+                        <div class="favorite-card-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>${escapeHtml(address)}</span>
+                        </div>
+                    ` : ''}
+                    <button class="favorite-card-remove" onclick="event.stopPropagation(); removeComplexFromFavorites('${item.id}'); loadFavorites(); updateFavoritesCount();">
+                        <i class="far fa-trash-alt"></i> Удалить из избранного
+                    </button>
+                </div>
+            </div>
+        `;
+    } else if (item.type === 'apartment') {
+        const apt = item.apartment;
+        const complex = item.complexData;
+        const complexName = complex.name || 'Жилой комплекс';
+        const image = (apt.image && Array.isArray(apt.image) && apt.image.length > 0) ? apt.image[0] : 
+                     (apt.image && typeof apt.image === 'string') ? apt.image : 
+                     '/static/images/placeholder.png';
+        const title = apt.title || 'Квартира';
+        const price = apt.price || '';
+        
+        return `
+            <div class="favorite-card" onclick="window.location.href='/apartment/${item.complexId}/${item.apartmentId}/'">
+                <img src="${image}" alt="${title}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
+                <div class="favorite-card-content">
+                    <h3 class="favorite-card-title">${escapeHtml(title)}</h3>
+                    <div class="favorite-card-location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>${escapeHtml(complexName)}</span>
+                    </div>
+                    ${price ? `<div class="favorite-card-price">${escapeHtml(formatPrice(price))}</div>` : ''}
+                    <button class="favorite-card-remove" onclick="event.stopPropagation(); removeApartmentFromFavorites('${item.complexId}', '${item.apartmentId}'); loadFavorites(); updateFavoritesCount();">
+                        <i class="far fa-trash-alt"></i> Удалить из избранного
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    return '';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatPrice(price) {
+    if (!price) return '';
+    let priceStr = String(price).trim();
+    priceStr = priceStr.replace(/₽/g, '').replace(/руб/g, '').trim();
+    const priceClean = priceStr.replace(/\s/g, '').replace(/,/g, '').replace(/\./g, '').trim();
+    if (!/^\d+$/.test(priceClean)) return priceStr;
+    try {
+        const priceNum = parseFloat(priceStr.replace(/\s/g, '').replace(/,/g, '.').trim());
+        if (priceNum <= 0) return '';
+        const formatted = priceNum.toLocaleString('ru-RU', {maximumFractionDigits: 0});
+        return `${formatted} ₽`;
+    } catch (e) {
+        return priceStr;
+    }
+}
+</script>
+{% endblock %}
+

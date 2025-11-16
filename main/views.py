@@ -32,6 +32,7 @@ from .view_modules.catalog_views import (
     _catalog_fallback,
     newbuild_index,
     secondary_index,
+    client_catalog,
 )
 from .view_modules.article_views import articles, article_detail, tag_detail
 from .view_modules.vacancy_views import vacancies, vacancy_detail
@@ -62,6 +63,13 @@ from .api.manual_matching_api import (
     get_domrf_data,
     delete_photo,
     get_apartment_stats,
+    get_client_catalog_apartments,
+    create_apartment_selection,
+    get_apartment_selections,
+    get_apartment_selection,
+    update_apartment_selection,
+    delete_apartment_selection,
+    get_complexes_with_apartments,
 )
 from .api.content_management_api import (
     # Tags API
@@ -286,13 +294,49 @@ def catalog_api(request):
         # Формируем фильтр - ищем записи с любой структурой (старая или новая)
         filter_query = {}
         
-        # Фильтр по местоположению
+        # Фильтр по местоположению - используем address_* поля с fallback на старые поля
         if city:
-            filter_query['city'] = city
+            filter_query['$or'] = [
+                {'address_city': city},
+                {'city': city}
+            ]
         if district:
-            filter_query['district'] = district
+            if '$or' in filter_query:
+                # Если уже есть $or для города, добавляем район через $and
+                filter_query = {
+                    '$and': [
+                        filter_query,
+                        {
+                            '$or': [
+                                {'address_district': district},
+                                {'district': district}
+                            ]
+                        }
+                    ]
+                }
+            else:
+                filter_query['$or'] = [
+                    {'address_district': district},
+                    {'district': district}
+                ]
         if street:
-            filter_query['street'] = street
+            street_filter = {
+                '$or': [
+                    {'address_street': street},
+                    {'street': street}
+                ]
+            }
+            if '$and' in filter_query:
+                filter_query['$and'].append(street_filter)
+            elif '$or' in filter_query:
+                filter_query = {
+                    '$and': [
+                        filter_query,
+                        street_filter
+                    ]
+                }
+            else:
+                filter_query.update(street_filter)
             
         # Поиск по названию
         if search:
@@ -538,12 +582,11 @@ def catalog_api(request):
         total_count = len(filtered_records)
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
-        paginated_records = filtered_records[start_idx:end_idx]
-
-        # Форматируем данные для каталога
-        complexes_data = []
+        # Форматируем данные для каталога и собираем данные для карты
+        formatted_records = []
+        map_points = []
         
-        for record in paginated_records:
+        for record in filtered_records:
             # Определяем структуру записи
             is_new_structure = 'development' in record and 'avito' not in record
             
@@ -578,9 +621,9 @@ def catalog_api(request):
                 # Фото из domclick - берем ВСЕ фото
                 photos = domclick_dev.get('photos', [])
                 
-                # Координаты из domrf
-                latitude = domrf_data.get('latitude')
-                longitude = domrf_data.get('longitude')
+                # Координаты: всегда берем из объединенной записи, DomRF используем только как резерв
+                latitude = record.get('latitude') or domrf_data.get('latitude')
+                longitude = record.get('longitude') or domrf_data.get('longitude')
                 
                 # Параметры из avito
                 parameters = avito_dev.get('parameters', {})
@@ -594,7 +637,7 @@ def catalog_api(request):
                 apartments = apt_data.get('apartments', [])
                 total_apartments += len(apartments)
 
-            complexes_data.append({
+            formatted_record = {
                 'id': str(record['_id']),
                 'name': name,
                 'address': address,
@@ -619,12 +662,29 @@ def catalog_api(request):
                 'district': record.get('district', ''),
                 'street': record.get('street', ''),
                 'rating': record.get('rating'),
-            })
+            }
+
+            formatted_records.append(formatted_record)
+
+            if latitude and longitude:
+                map_points.append({
+                    'id': formatted_record['id'],
+                    'name': formatted_record['name'],
+                    'price_range': formatted_record['price_range'],
+                    'price_display': formatted_record['price_display'],
+                    'lat': latitude,
+                    'lng': longitude,
+                    'latitude': latitude,
+                    'longitude': longitude,
+                })
+
+        complexes_data = formatted_records[start_idx:end_idx]
 
         total_pages = (total_count + per_page - 1) // per_page
 
         return JsonResponse({
             'complexes': complexes_data,
+            'map_points': map_points,
             'has_previous': page > 1,
             'has_next': page < total_pages,
             'current_page': page,
@@ -754,14 +814,23 @@ def secondary_api_list(request):
 
 
 def districts_api(request):
-    """API для получения районов по городу - данные из MongoDB"""
+    """API для получения районов по городу - данные из unified_houses"""
     city = request.GET.get('city', '')
     if city:
         try:
             db = get_mongo_connection()
-            collection = db['residential_complexes']
-            districts = collection.distinct('address.district', {'address.city': city})
+            collection = db['unified_houses']
+            # Фильтруем по address_city или city
+            query = {
+                '$or': [
+                    {'address_city': city},
+                    {'city': city}
+                ],
+                'address_district': {'$ne': None, '$ne': ''}
+            }
+            districts = collection.distinct('address_district', query)
             districts = [district for district in districts if district]
+            districts = sorted(districts)
         except Exception:
             districts = []
     else:
@@ -771,15 +840,44 @@ def districts_api(request):
 
 
 def streets_api(request):
-    """API для получения улиц по городу - данные из MongoDB"""
+    """API для получения улиц по городу и району - данные из unified_houses"""
     city = request.GET.get('city', '')
+    district = request.GET.get('district', '')
 
     if city:
         try:
             db = get_mongo_connection()
-            collection = db['residential_complexes']
-            streets = collection.distinct('address.street', {'address.city': city})
+            collection = db['unified_houses']
+            # Фильтруем по address_city или city
+            query = {
+                '$or': [
+                    {'address_city': city},
+                    {'city': city}
+                ],
+                'address_street': {'$ne': None, '$ne': ''}
+            }
+            # Если указан район, добавляем фильтр по району
+            if district:
+                query = {
+                    '$and': [
+                        {
+                            '$or': [
+                                {'address_city': city},
+                                {'city': city}
+                            ]
+                        },
+                        {
+                            '$or': [
+                                {'address_district': district},
+                                {'district': district}
+                            ]
+                        },
+                        {'address_street': {'$ne': None, '$ne': ''}}
+                    ]
+                }
+            streets = collection.distinct('address_street', query)
             streets = [street for street in streets if street]
+            streets = sorted(streets)
         except Exception:
             streets = []
     else:

@@ -1,5 +1,6 @@
 """Views для каталога жилых комплексов и недвижимости"""
 import json
+import re
 from django.shortcuts import render
 from django.http import Http404, JsonResponse
 from django.core.paginator import Paginator
@@ -7,6 +8,63 @@ from bson import ObjectId
 from ..services.mongo_service import get_mongo_connection, get_residential_complexes_from_mongo, get_unified_houses_from_mongo
 from ..utils import get_video_thumbnail
 from ..s3_service import PLACEHOLDER_IMAGE_URL
+
+
+def client_catalog(request):
+    """Каталог квартир для клиентов - страница с выбранными квартирами"""
+    return render(request, 'main/client_catalog.html')
+
+
+def favorites(request):
+    """Страница избранного"""
+    return render(request, 'main/favorites.html')
+
+
+def format_currency(value):
+    """Форматирует цену с пробелами и знаком ₽"""
+    if value is None:
+        return ''
+
+    try:
+        # Если число или строка с числом
+        if isinstance(value, (int, float)):
+            value_num = float(value)
+        else:
+            value_str = str(value).strip()
+            if not value_str:
+                return ''
+            # Удаляем все символы валют и текста
+            cleaned = re.sub(r'[^\d.,-]', '', value_str)
+            cleaned = cleaned.replace(',', '.')
+            value_num = float(cleaned)
+
+        if value_num <= 0:
+            return ''
+
+        formatted = f"{value_num:,.0f}".replace(',', ' ')
+        return f"{formatted} ₽"
+    except Exception:
+        # Если не получилось преобразовать, возвращаем исходное значение
+        value_str = str(value).strip()
+        if not value_str:
+            return ''
+        if '₽' in value_str:
+            base = value_str.split('₽')[0].strip()
+            return f"{base} ₽"
+        return f"{value_str} ₽"
+
+
+def format_currency_per_sqm(value):
+    """Форматирует цену за м²"""
+    formatted = format_currency(value)
+    if not formatted:
+        return ''
+    # Удаляем конечный символ ₽ перед добавлением /м²
+    if formatted.endswith(' ₽'):
+        formatted = formatted[:-2].strip()
+    elif formatted.endswith('₽'):
+        formatted = formatted[:-1].strip()
+    return f"{formatted} ₽/м²"
 
 
 def get_complexes_list_for_filter():
@@ -253,8 +311,8 @@ def detail(request, complex_id):
                 photos = domclick_dev.get('photos', [])
                 
                 # Координаты
-                latitude = domrf_data.get('latitude')
-                longitude = domrf_data.get('longitude')
+                latitude = record.get('latitude') or domrf_data.get('latitude')
+                longitude = record.get('longitude') or domrf_data.get('longitude')
                 
                 # Параметры ЖК
                 parameters = avito_dev.get('parameters', {})
@@ -268,12 +326,14 @@ def detail(request, complex_id):
                 # === НОВАЯ СТРУКТУРА: данные уже объединены ===
                 
                 for apt_type, apt_data in apartment_types_data.items():
+                    apt_type_str = str(apt_type)
                     apartments = apt_data.get('apartments', [])
                     
                     if apartments:
-                        apartment_types_list.append(apt_type)
+                        if apt_type_str not in apartment_types_list:
+                            apartment_types_list.append(apt_type_str)
                         
-                        for apt in apartments:
+                        for apt_index, apt in enumerate(apartments):
                             # Получаем все фото планировки - это уже массив!
                             layout_photos = apt.get('image', [])
                             
@@ -295,15 +355,20 @@ def detail(request, complex_id):
                             # Генерируем уникальный ID если его нет
                             apt_id = apt.get('_id')
                             if not apt_id:
-                                # Создаем уникальный ID на основе типа и индекса
-                                apt_id = f"{apt_type}_{len(apartment_variants)}"
+                                # Создаем уникальный ID на основе complex_id + тип + индекс
+                                apt_id = f"{complex_id}_{apt_type_str}_{apt_index}"
                             
+                            formatted_price = format_currency(apt.get('price', ''))
+                            formatted_price_per_sqm = format_currency_per_sqm(apt.get('pricePerSquare', ''))
+
                             apartment_variants.append({
                                 'id': str(apt_id),  # Добавляем ID квартиры
-                                'type': apt_type,
+                                'type': apt_type_str,
                                 'title': apt.get('title', ''),
                                 'price': apt.get('price', ''),
                                 'price_per_square': apt.get('pricePerSquare', ''),
+                                'formatted_price': formatted_price,
+                                'formatted_price_per_sqm': formatted_price_per_sqm,
                                 'completion_date': apt.get('completionDate', ''),
                                 'image': layout_photos[0] if layout_photos else '',  # Первое фото для превью
                                 'url': apt.get('url', ''),
@@ -337,23 +402,24 @@ def detail(request, complex_id):
                 domclick_apartment_types = domclick_data.get('apartment_types', {})
                 
                 for apt_type, apt_data in avito_apartment_types.items():
+                    apt_type_str = str(apt_type)
                     apartments = apt_data.get('apartments', [])
                     
                     # Добавляем тип в список если есть квартиры
-                    if apartments and apt_type not in apartment_types_list:
-                        apartment_types_list.append(apt_type)
+                    if apartments and apt_type_str not in apartment_types_list:
+                        apartment_types_list.append(apt_type_str)
                     
                     # Получаем квартиры из DomClick для этого типа
                     dc_apartments = []
                     if apt_type in domclick_apartment_types:
                         dc_apartments = domclick_apartment_types[apt_type].get('apartments', [])
                     
-                    for apt in apartments:
+                    for apt_index, apt in enumerate(apartments):
                         # Генерируем уникальный ID если его нет
                         apt_id = apt.get('_id')
                         if not apt_id:
-                            # Создаем уникальный ID на основе типа и индекса
-                            apt_id = f"{apt_type}_{len(apartment_variants)}"
+                            # Создаем уникальный ID на основе complex_id + тип + индекс
+                            apt_id = f"{complex_id}_{apt_type_str}_{apt_index}"
                         
                         # Извлекаем площадь - сначала из отдельного поля, потом из title
                         area = apt.get('area') or apt.get('totalArea') or ''
@@ -398,12 +464,17 @@ def detail(request, complex_id):
                                 layout_photos = dc_apt.get('photos', [])[:5]
                                 break
                         
+                        formatted_price = format_currency(apt.get('price', ''))
+                        formatted_price_per_sqm = format_currency_per_sqm(apt.get('pricePerSquare', ''))
+
                         apartment_variants.append({
                             'id': str(apt_id),  # Добавляем ID квартиры
-                            'type': apt_type,
+                            'type': apt_type_str,
                             'title': apt.get('title', ''),
                             'price': apt.get('price', ''),
                             'price_per_square': apt.get('pricePerSquare', ''),
+                            'formatted_price': formatted_price,
+                            'formatted_price_per_sqm': formatted_price_per_sqm,
                             'completion_date': apt.get('completionDate', ''),
                             'image': apt.get('image', {}).get('128x96', ''),
                             'url': apt.get('urlPath', ''),
@@ -430,6 +501,21 @@ def detail(request, complex_id):
                             'description': apt.get('description', ''),
                             'features': apt.get('features', [])
                         })
+            # Группируем квартиры по типам для удобного отображения
+            apartment_variants_grouped = {}
+            for apt in apartment_variants:
+                apt_type_key = str(apt.get('type', ''))
+                if apt_type_key not in apartment_variants_grouped:
+                    apartment_variants_grouped[apt_type_key] = []
+                apartment_variants_grouped[apt_type_key].append(apt)
+            
+            # Удаляем дубли в списке типов с сохранением порядка
+            unique_types = []
+            for apt_type in apartment_types_list:
+                apt_type_str = str(apt_type)
+                if apt_type_str not in unique_types:
+                    unique_types.append(apt_type_str)
+            apartment_types_list = unique_types
             
             # Формируем контекст для MongoDB версии
             # Получаем акции для этого ЖК
@@ -516,6 +602,7 @@ def detail(request, complex_id):
                     'parameters': parameters,
                     'korpuses': korpuses,
                     'apartment_variants': apartment_variants,
+                    'apartment_variants_grouped': apartment_variants_grouped,
                     'apartment_variants_json': json.dumps(apartment_variants),
                     'apartment_types': apartment_types_list,
                     'total_apartments': avito_data.get('total_apartments', 0),

@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Каталог квартир — CENTURY 21{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Стили для каталога квартир */
+.client-catalog-section {
+    margin-bottom: 30px !important;
+    padding: 40px 0;
+}
+
+.client-catalog-header {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.client-catalog-header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 12px;
+}
+
+.client-catalog-header p {
+    font-size: 18px;
+    color: #6b7280;
+}
+
+.apartments-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+/* Карточка квартиры в стиле каталога ЖК */
+.apartment-card-compact {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.apartment-card-compact:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.apartment-card-image {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    overflow: hidden;
+    background: #f3f4f6;
+}
+
+.apartment-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.apartment-card-compact:hover .apartment-card-image img {
+    transform: scale(1.05);
+}
+
+.apartment-card-content {
+    padding: 20px;
+}
+
+.apartment-card-header {
+    margin-bottom: 12px;
+}
+
+.apartment-card-complex {
+    font-size: 14px;
+    color: #d4a574;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.apartment-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.apartment-card-location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 12px;
+}
+
+.apartment-card-location i {
+    color: #9ca3af;
+}
+
+.apartment-card-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.apartment-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.apartment-detail-item i {
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+.apartment-card-price {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.apartment-price-text {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2563eb;
+}
+
+.apartment-price-per-sqm {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.no-apartments {
+    text-align: center;
+    padding: 80px 20px;
+    color: #6b7280;
+}
+
+.no-apartments p {
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.no-apartments p:last-child {
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.loading-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #6b7280;
+}
+
+.loading-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Мобильная версия */
+@media (max-width: 768px) {
+    .apartments-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .apartment-card-image {
+        height: 200px;
+    }
+    
+    .client-catalog-header h1 {
+        font-size: 28px;
+    }
+    
+    .client-catalog-header p {
+        font-size: 16px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="client-catalog-section">
+        <div class="client-catalog-header">
+            <h1>Каталог квартир</h1>
+            <p>Выбранные предложения для вас</p>
+        </div>
+        
+        <!-- Хлебные крошки -->
+        <div class="breadcrumbs">
+            <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
+            <span class="breadcrumb-separator">•</span>
+            <span class="breadcrumb-current">Каталог квартир</span>
+        </div>
+        
+        <!-- Сетка квартир -->
+        <div class="apartments-grid" id="apartmentsGrid">
+            <div class="loading-state">
+                <i class="fas fa-spinner"></i>
+                <p>Загрузка квартир...</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+// Получаем параметры из URL
+const urlParams = new URLSearchParams(window.location.search);
+const complexesParam = urlParams.get('complexes') || '';
+const apartmentsParam = urlParams.get('apartments') || '';
+
+// Загружаем квартиры
+async function loadApartments() {
+    const grid = document.getElementById('apartmentsGrid');
+    
+    if (!complexesParam) {
+        grid.innerHTML = `
+            <div class="no-apartments">
+                <p>Не указаны ЖК для отображения</p>
+                <p>Пожалуйста, используйте корректную ссылку</p>
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        // Формируем URL для API
+        let apiUrl = `/api/client-catalog/apartments/?complexes=${encodeURIComponent(complexesParam)}`;
+        if (apartmentsParam) {
+            apiUrl += `&apartments=${encodeURIComponent(apartmentsParam)}`;
+        }
+        
+        const response = await fetch(apiUrl);
+        const result = await response.json();
+        
+        if (!result.success) {
+            grid.innerHTML = `
+                <div class="no-apartments">
+                    <p>Ошибка загрузки данных</p>
+                    <p>${result.error || 'Неизвестная ошибка'}</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const apartments = result.apartments || [];
+        
+        if (apartments.length === 0) {
+            grid.innerHTML = `
+                <div class="no-apartments">
+                    <p>Квартиры не найдены</p>
+                    <p>Попробуйте выбрать другие параметры</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Функция форматирования цены
+        function formatPrice(price) {
+            if (!price) return '';
+            
+            // Преобразуем в строку
+            let priceStr = String(price).trim();
+            
+            // Убираем все символы ₽
+            priceStr = priceStr.replace(/₽/g, '').replace(/руб/g, '').replace(/руб\./g, '').trim();
+            
+            // Убираем пробелы и запятые для парсинга
+            const priceClean = priceStr.replace(/\s/g, '').replace(/,/g, '').replace(/\./g, '').trim();
+            
+            // Проверяем, является ли это числом
+            if (!/^\d+$/.test(priceClean)) {
+                return priceStr; // Возвращаем как есть, если не число
+            }
+            
+            try {
+                // Преобразуем в число
+                const priceNum = parseFloat(priceStr.replace(/\s/g, '').replace(/,/g, '.').trim());
+                
+                if (priceNum <= 0) {
+                    return '';
+                }
+                
+                // Форматируем с разделителями тысяч
+                const formatted = priceNum.toLocaleString('ru-RU', {maximumFractionDigits: 0});
+                
+                // Добавляем ₽
+                return `${formatted} ₽`;
+            } catch (e) {
+                return priceStr;
+            }
+        }
+        
+        // Рендерим карточки квартир
+        grid.innerHTML = apartments.map(apt => {
+            // Формируем изображение
+            const imageUrl = apt.image || '/static/images/placeholder.png';
+            
+            // Формируем заголовок
+            let title = apt.title || '';
+            if (!title) {
+                if (apt.rooms) {
+                    title = `${apt.rooms}-комнатная квартира`;
+                } else {
+                    title = 'Квартира';
+                }
+            }
+            
+            // Формируем детали
+            const details = [];
+            if (apt.area) {
+                details.push(`<div class="apartment-detail-item"><i class="fas fa-ruler-combined"></i><span>${apt.area} м²</span></div>`);
+            }
+            if (apt.floor) {
+                details.push(`<div class="apartment-detail-item"><i class="fas fa-building"></i><span>${apt.floor} эт.</span></div>`);
+            }
+            if (apt.rooms) {
+                details.push(`<div class="apartment-detail-item"><i class="fas fa-home"></i><span>${apt.rooms}-комн.</span></div>`);
+            }
+            
+            // Формируем цену (форматируем если нужно)
+            let priceHtml = '<div class="apartment-price-text">Цена по запросу</div>';
+            if (apt.price) {
+                const formattedPrice = formatPrice(apt.price);
+                priceHtml = `
+                    <div class="apartment-price-text">${formattedPrice || apt.price}</div>
+                    ${apt.price_per_sqm ? `<div class="apartment-price-per-sqm">${formatPrice(apt.price_per_sqm) || apt.price_per_sqm} ₽/м²</div>` : ''}
+                `;
+            }
+            
+            // Формируем ссылку на детальную страницу
+            const detailUrl = `/apartment/${apt.complex_id}/${apt.id}/`;
+            
+            return `
+                <div class="apartment-card-compact" onclick="window.location.href='${detailUrl}'">
+                    <div class="apartment-card-image">
+                        <img src="${imageUrl}" alt="${title}" loading="lazy" onerror="this.src='/static/images/placeholder.png'">
+                    </div>
+                    <div class="apartment-card-content">
+                        <div class="apartment-card-header">
+                            <div class="apartment-card-complex">${escapeHtml(apt.complex_name || 'ЖК')}</div>
+                            <h3 class="apartment-card-title">${escapeHtml(title)}</h3>
+                            ${apt.complex_address ? `
+                                <div class="apartment-card-location">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>${escapeHtml(apt.complex_address)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        ${details.length > 0 ? `
+                            <div class="apartment-card-details">
+                                ${details.join('')}
+                            </div>
+                        ` : ''}
+                        <div class="apartment-card-price">
+                            ${priceHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Ошибка загрузки квартир:', error);
+        grid.innerHTML = `
+            <div class="no-apartments">
+                <p>Ошибка загрузки данных</p>
+                <p>Попробуйте обновить страницу</p>
+            </div>
+        `;
+    }
+}
+
+// Функция экранирования HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Загружаем квартиры при загрузке страницы
+document.addEventListener('DOMContentLoaded', loadApartments);
+</script>
+{% endblock %}
+

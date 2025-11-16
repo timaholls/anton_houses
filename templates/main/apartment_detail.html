@@ -20,17 +20,21 @@
         <div class="apartment-header">
             <div class="apartment-title-section">
                 <h1 class="apartment-title">{{ apartment.rooms }}-комнатная квартира</h1>
-                <div class="apartment-location">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>{{ complex.name }}, {{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}</span>
+                {% if complex.name %}
+                <div class="apartment-complex-name" style="font-size: 1.2rem; font-weight: 700; color: var(--c21-gold); margin-bottom: 8px;">
+                    {{ complex.name }}
                 </div>
+                {% endif %}
+
             </div>
             <div class="apartment-price-section">
                 <div class="apartment-price">
                     {% if apartment.price %}
-                        <span class="price-main">{{ apartment.price }} ₽</span>
-                        {% if apartment.price_per_sqm %}
-                            <span class="price-per-sqm">{{ apartment.price_per_sqm }} ₽/м²</span>
+                        <span class="price-main">{{ apartment.price }}</span>
+                        {% if apartment.price_per_sqm_formatted %}
+                            <span class="price-per-sqm">{{ apartment.price_per_sqm_formatted }} ₽/м²</span>
+                        {% elif apartment.price_per_sqm %}
+                            <span class="price-per-sqm">{{ apartment.price_per_sqm|floatformat:0 }} ₽/м²</span>
                         {% endif %}
                     {% else %}
                         <span class="price-main">Цена по запросу</span>
@@ -164,74 +168,7 @@
                     </div>
                 </div>
 
-                <!-- Детальные характеристики -->
-                <div class="detailed-characteristics">
-                    <h3>Детальные характеристики</h3>
-                    <div class="characteristics-grid-detailed">
-                        {% if apartment.kitchen_area %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Площадь кухни</div>
-                            <div class="characteristic-detail-value">{{ apartment.kitchen_area }} м²</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if apartment.living_area %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Жилая площадь</div>
-                            <div class="characteristic-detail-value">{{ apartment.living_area }} м²</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if apartment.bedroom_area %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Площадь спальни</div>
-                            <div class="characteristic-detail-value">{{ apartment.bedroom_area }} м²</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if apartment.balcony %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Балкон</div>
-                            <div class="characteristic-detail-value">{{ apartment.balcony }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if apartment.loggia %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Лоджия</div>
-                            <div class="characteristic-detail-value">{{ apartment.loggia }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if apartment.view %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Вид из окон</div>
-                            <div class="characteristic-detail-value">{{ apartment.view }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if apartment.windows %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Окна</div>
-                            <div class="characteristic-detail-value">{{ apartment.windows }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if apartment.bathroom %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Санузел</div>
-                            <div class="characteristic-detail-value">{{ apartment.bathroom }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if apartment.furniture %}
-                        <div class="characteristic-detail-item">
-                            <div class="characteristic-detail-label">Мебель</div>
-                            <div class="characteristic-detail-value">{{ apartment.furniture }}</div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+
             </div>
 
             <!-- Блок агента -->
@@ -281,22 +218,24 @@
                 <div class="other-apartment-card">
                     <div class="other-apartment-media">
                         {% if other_apt.photos and other_apt.photos.0 %}
-                            <img src="{{ other_apt.photos.0 }}" alt="{{ other_apt.rooms }}-комнатная квартира" loading="lazy">
+                            <img src="{{ other_apt.photos.0 }}" alt="{% if other_apt.rooms %}{{ other_apt.rooms }}-комнатная квартира{% else %}Квартира{% endif %}" loading="lazy">
                         {% else %}
-                            <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ other_apt.rooms }}-комнатная квартира" loading="lazy">
+                            <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{% if other_apt.rooms %}{{ other_apt.rooms }}-комнатная квартира{% else %}Квартира{% endif %}" loading="lazy">
                         {% endif %}
+                        {% if other_apt.rooms %}
                         <div class="other-apartment-badge">
                             <i class="fas fa-home"></i>
                             <span>{{ other_apt.rooms }}-комнатная</span>
                         </div>
+                        {% endif %}
                     </div>
                     <div class="other-apartment-content">
-                        <h3 class="other-apartment-title">{{ other_apt.rooms }}-комнатная квартира</h3>
+                        <h3 class="other-apartment-title">{% if other_apt.rooms %}{{ other_apt.rooms }}-комнатная квартира{% else %}Квартира{% endif %}</h3>
                         <div class="other-apartment-details">
-                            {% if other_apt.totalArea %}
+                            {% if other_apt.area %}
                             <div class="other-apartment-area">
                                 <i class="fas fa-ruler-combined"></i>
-                                <span>{{ other_apt.totalArea }} м²</span>
+                                <span>{{ other_apt.area }} м²</span>
                             </div>
                             {% endif %}
                             {% if other_apt.floor %}
@@ -308,7 +247,7 @@
                         </div>
                         {% if other_apt.price %}
                         <div class="other-apartment-price">
-                            <span>{{ other_apt.price }} ₽</span>
+                            <span>{{ other_apt.price }}</span>
                         </div>
                         {% endif %}
                         <a href="{% url 'main:apartment_detail' complex.id other_apt.id %}" class="other-apartment-link">
@@ -339,7 +278,7 @@
                 <h4>{{ apartment.rooms }}-комнатная квартира</h4>
                 <p>{{ complex.name }}, {{ apartment.area }} м²</p>
                 {% if apartment.price %}
-                <div class="booking-price">{{ apartment.price }} ₽</div>
+                <div class="booking-price">{{ apartment.price }}</div>
                 {% endif %}
             </div>
             

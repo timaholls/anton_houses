@@ -97,6 +97,10 @@
                     продаж</a>
             </nav>
             <div class="header-right">
+                <a href="{% url 'main:favorites' %}" class="favorites-header-link" title="Избранное">
+                    <i class="far fa-heart"></i>
+                    <span class="favorites-count" id="favorites-count" style="display: none;">0</span>
+                </a>
                 <div class="contact-info">
                     {% if head_office %}
                         {% if head_office and head_office.phone %}
@@ -143,6 +147,10 @@
                 </div>
                 
                 <a href="{% url 'main:offices' %}" class="drawer-link">Офисы продаж</a>
+                <a href="{% url 'main:favorites' %}" class="drawer-link">
+                    <i class="far fa-heart"></i> Избранное
+                    <span class="favorites-count-mobile" id="favorites-count-mobile" style="display: none;"> (0)</span>
+                </a>
             </nav>
             <div class="mobile-drawer-footer">
                 <a class="drawer-phone" href="tel:
@@ -364,6 +372,7 @@
 <script src="{% static 'js/main.js' %}"></script>
 <script src="{% static 'js/anchor-scroll.js' %}"></script>
 <script src="{% static 'js/dropdown-menu.js' %}"></script>
+<script src="{% static 'js/favorites.js' %}"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html> 

@@ -350,6 +350,41 @@ body {
     gap: 24px;
 }
 
+/* Кнопка избранного в шапке */
+.favorites-header-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #333;
+    text-decoration: none;
+    font-size: 18px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.favorites-header-link:hover {
+    background-color: #f5f5f5;
+    color: var(--c21-gold);
+}
+
+.favorites-header-link i {
+    font-size: 20px;
+}
+
+.favorites-count {
+    background-color: var(--c21-gold);
+    color: var(--c21-dark);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.4;
+}
+
 .contact-info {
     display: flex;
     flex-direction: column;
