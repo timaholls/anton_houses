@@ -15,6 +15,10 @@ import requests
 from ..services.mongo_service import get_mongo_connection
 from ..s3_service import s3_client
 from .subscription_api import notify_new_future_project
+from ..resize_img import ImageProcessor
+from io import BytesIO
+import base64
+import logging
 import re
 
 GEOCODE_CACHE = {}
@@ -333,14 +337,14 @@ def save_manual_match(request):
         provided_latitude = data.get('latitude')
         provided_longitude = data.get('longitude')
         
-        # Проверка: должно быть минимум 2 источника (исключаем null)
+        # Проверка: должно быть минимум 1 источник (Avito или DomClick)
         selected_sources = [domrf_id, avito_id, domclick_id]
         selected_count = sum(1 for source_id in selected_sources if source_id and source_id != 'null')
         
-        if selected_count < 2:
+        if selected_count < 1:
             return JsonResponse({
                 'success': False,
-                'error': 'Необходимо выбрать минимум 2 источника для сопоставления'
+                'error': 'Необходимо выбрать хотя бы один источник для сопоставления'
             }, status=400)
         
         db = get_mongo_connection()
@@ -388,7 +392,7 @@ def save_manual_match(request):
                 }, status=400)
         
         # Проверяем, что хотя бы одна запись найдена
-        if not avito_record and not domclick_record:
+        if not domrf_record and not avito_record and not domclick_record:
             return JsonResponse({
                 'success': False,
                 'error': 'Не найдены записи для объединения'
@@ -450,6 +454,16 @@ def save_manual_match(request):
             fallback_address = avito_record.get('development', {}).get('address', '')
         elif domclick_record:
             fallback_address = domclick_record.get('development', {}).get('address', '')
+        elif domrf_record:
+            # Формируем адрес из DomRF
+            domrf_address_parts = []
+            if domrf_record.get('city'):
+                domrf_address_parts.append(domrf_record['city'])
+            if domrf_record.get('district'):
+                domrf_address_parts.append(domrf_record['district'])
+            if domrf_record.get('street'):
+                domrf_address_parts.append(domrf_record['street'])
+            fallback_address = ', '.join(domrf_address_parts)
         parsed_address = parse_address_string(fallback_address)
 
         unified_record = {
@@ -481,7 +495,7 @@ def save_manual_match(request):
             except Exception:
                 unified_record['agent_id'] = None
         
-        # 2. Development из Avito + photos из DomClick
+        # 2. Development из Avito + photos из DomClick (или DomRF)
         if avito_record:
             avito_dev = avito_record.get('development', {})
             unified_record['development'] = {
@@ -493,7 +507,7 @@ def save_manual_match(request):
                 'photos': []  # Будет заполнено из DomClick
             }
             
-            # Добавляем фото ЖК и ход строительства из DomClick
+            # Добавляем фото ЖК и ход строительства из DomClick/ДомРФ
             if domclick_record:
                 domclick_dev = domclick_record.get('development', {})
                 unified_record['development']['photos'] = domclick_dev.get('photos', [])
@@ -502,6 +516,27 @@ def save_manual_match(request):
                 dc_construction = domclick_dev.get('construction_progress') or domclick_record.get('construction_progress')
                 if dc_construction:
                     unified_record['construction_progress'] = dc_construction
+            elif domrf_record:
+                domrf_details = domrf_record.get('object_details', {})
+                gallery_photos = domrf_details.get('gallery_photos', domrf_record.get('gallery_photos', []))
+                if isinstance(gallery_photos, list) and gallery_photos:
+                    unified_record['development']['photos'] = gallery_photos
+                # Ход строительства из DomRF
+                dr_construction = domrf_details.get('construction_progress', {})
+                if dr_construction:
+                    construction_stages = dr_construction.get('construction_stages', [])
+                    if construction_stages:
+                        unified_record['construction_progress'] = {'construction_stages': construction_stages}
+                    else:
+                        construction_photos = dr_construction.get('photos', [])
+                        if construction_photos:
+                            unified_record['construction_progress'] = {
+                                'construction_stages': [{
+                                    'stage': 'Строительство',
+                                    'date': '',
+                                    'photos': construction_photos
+                                }]
+                            }
         
         # 3. Объединяем apartment_types (Avito + фото из DomClick)
         unified_record['apartment_types'] = {}
@@ -587,6 +622,212 @@ def save_manual_match(request):
                         'apartments': combined_apartments
                     }
         
+        # 4. Если есть только Avito (без DomClick) - берем apartment_types из Avito
+        elif avito_record:
+            avito_apt_types = avito_record.get('apartment_types', {})
+            
+            # Маппинг старых названий на новые упрощенные
+            name_mapping = {
+                # Студия
+                'Студия': 'Студия',
+                # 1-комнатные (разные варианты названий из Avito)
+                '1 ком.': '1',
+                '1-комн': '1',
+                '1-комн.': '1',
+                # 2-комнатные
+                '2 ком.': '2',
+                '2': '2',
+                '2-комн': '2',
+                '2-комн.': '2',
+                # 3-комнатные
+                '3': '3',
+                '3-комн': '3',
+                '3-комн.': '3',
+                # 4-комнатные
+                '4': '4',
+                '4-комн': '4',
+                '4-комн.': '4',
+                '4-комн.+': '4',
+                '4-комн+': '4'
+            }
+            
+            processed_types = set()
+            
+            for avito_type_name, avito_type_data in avito_apt_types.items():
+                # Упрощаем название типа
+                simplified_name = name_mapping.get(avito_type_name, avito_type_name)
+                
+                # Пропускаем если уже обработали этот упрощенный тип
+                if simplified_name in processed_types:
+                    continue
+                processed_types.add(simplified_name)
+                
+                # Получаем квартиры из Avito
+                avito_apartments = avito_type_data.get('apartments', [])
+                if not avito_apartments:
+                    continue
+                
+                # Берем данные из Avito
+                combined_apartments = []
+                
+                for avito_apt in avito_apartments:
+                    # Получаем фото из Avito - может быть объектом с размерами или массивом
+                    avito_image = avito_apt.get('image', [])
+                    apartment_photos = []
+                    
+                    if isinstance(avito_image, dict):
+                        # Если image - объект с размерами (например {'128x96': 'url'}), берем все значения
+                        apartment_photos = list(avito_image.values()) if avito_image else []
+                    elif isinstance(avito_image, list):
+                        apartment_photos = avito_image
+                    elif isinstance(avito_image, str) and avito_image:
+                        apartment_photos = [avito_image]
+                    
+                    # Парсим информацию о квартире из Avito
+                    avito_title = avito_apt.get('title', '')
+                    avito_area, avito_floor = parse_apartment_info(avito_title)
+                    
+                    # Берем ВСЕ данные из Avito
+                    combined_apartments.append({
+                        'title': avito_title,  # Title из Avito
+                        'area': str(avito_area) if avito_area else '',  # Площадь как строка
+                        'totalArea': avito_area if avito_area else None,  # Площадь как число
+                        'floor': str(avito_floor) if avito_floor else '',  # Этаж
+                        'price': avito_apt.get('price', ''),  # Цена из Avito
+                        'pricePerSquare': avito_apt.get('pricePerSquare', ''),  # Цена за м² из Avito
+                        'completionDate': avito_apt.get('completionDate', ''),  # Дата сдачи из Avito
+                        'url': avito_apt.get('url', '') or avito_apt.get('urlPath', ''),  # URL из Avito
+                        'image': apartment_photos  # МАССИВ фото из Avito
+                    })
+                
+                # Добавляем в результат все квартиры из Avito
+                if combined_apartments:
+                    unified_record['apartment_types'][simplified_name] = {
+                        'apartments': combined_apartments
+                    }
+
+        # 5. Если есть только DomClick (и, возможно, DomRF)
+        elif domclick_record:
+            domclick_apt_types = domclick_record.get('apartment_types', {})
+            name_mapping = {
+                'Студия': 'Студия',
+                '1 ком.': '1','1-комн': '1','1-комн.': '1',
+                '2 ком.': '2','2': '2','2-комн': '2','2-комн.': '2',
+                '3': '3','3-комн': '3','3-комн.': '3',
+                '4': '4','4-комн': '4','4-комн.': '4','4-комн.+': '4','4-комн+': '4'
+            }
+            processed_types = set()
+            for dc_type_name, dc_type_data in domclick_apt_types.items():
+                simplified_name = name_mapping.get(dc_type_name, dc_type_name)
+                if simplified_name in processed_types:
+                    continue
+                processed_types.add(simplified_name)
+
+                dc_apartments = dc_type_data.get('apartments', []) or []
+                if not dc_apartments:
+                    continue
+
+                combined_apartments = []
+                for dc_apt in dc_apartments:
+                    apartment_photos = dc_apt.get('photos') or dc_apt.get('images') or []
+                    if not apartment_photos:
+                        continue
+                    dc_title = dc_apt.get('title', '')
+                    dc_area, dc_floor = parse_apartment_info(dc_title)
+                    combined_apartments.append({
+                        'title': dc_title,
+                        'area': str(dc_area) if dc_area else '',
+                        'totalArea': dc_area if dc_area else None,
+                        'floor': str(dc_floor) if dc_floor else '',
+                        'price': dc_apt.get('price', ''),
+                        'pricePerSquare': dc_apt.get('pricePerSquare', ''),
+                        'completionDate': dc_apt.get('completionDate', ''),
+                        'url': dc_apt.get('url', '') or dc_apt.get('urlPath', ''),
+                        'image': apartment_photos
+                    })
+
+                if combined_apartments:
+                    unified_record['apartment_types'][simplified_name] = {
+                        'apartments': combined_apartments
+                    }
+        
+        # 5. Если есть только DomRF (без Avito и DomClick) - создаем development из DomRF
+        elif domrf_record and not avito_record and not domclick_record:
+            # Формируем development из DomRF
+            domrf_name = domrf_record.get('objCommercNm') or domrf_record.get('name', 'Без названия')
+            
+            # Формируем price_range из DomRF
+            price_from = domrf_record.get('price_from', '')
+            price_to = domrf_record.get('price_to', '')
+            price_range = ''
+            if price_from and price_to:
+                price_range = f'От {price_from} до {price_to}'
+            elif price_from:
+                price_range = f'От {price_from}'
+            elif price_to:
+                price_range = f'До {price_to}'
+            
+            # Получаем фотографии из DomRF
+            object_details = domrf_record.get('object_details', {})
+            gallery_photos = object_details.get('gallery_photos', domrf_record.get('gallery_photos', []))
+            
+            # Формируем parameters из object_details
+            main_characteristics = object_details.get('main_characteristics', {})
+            parameters = {}
+            if main_characteristics:
+                parameters = main_characteristics.copy()
+            
+            unified_record['development'] = {
+                'name': domrf_name,
+                'address': unified_record['address_full'] or fallback_address,
+                'price_range': price_range,
+                'parameters': parameters,
+                'korpuses': [],  # DomRF не имеет информации о корпусах
+                'photos': gallery_photos if isinstance(gallery_photos, list) else []
+            }
+            
+            # Ход строительства из DomRF
+            construction_progress = object_details.get('construction_progress', {})
+            if construction_progress:
+                # Проверяем новую структуру с этапами
+                construction_stages = construction_progress.get('construction_stages', [])
+                if construction_stages:
+                    unified_record['construction_progress'] = {
+                        'construction_stages': construction_stages
+                    }
+                else:
+                    # Fallback на старую структуру
+                    construction_photos = construction_progress.get('photos', [])
+                    if construction_photos:
+                        unified_record['construction_progress'] = {
+                            'construction_stages': [{
+                                'stage': 'Строительство',
+                                'date': '',
+                                'photos': construction_photos
+                            }]
+                        }
+            
+            # Формируем apartment_types из DomRF (если есть данные)
+            rooms = domrf_record.get('rooms', '')
+            area_from = domrf_record.get('area_from', '')
+            area_to = domrf_record.get('area_to', '')
+            
+            # Если есть информация о комнатах, создаем базовую структуру
+            if rooms:
+                unified_record['apartment_types'] = {}
+                # rooms может быть строкой вида "1,2,3" или списком
+                if isinstance(rooms, str):
+                    room_list = [r.strip() for r in rooms.split(',')]
+                elif isinstance(rooms, list):
+                    room_list = [str(r) for r in rooms]
+                else:
+                    room_list = [str(rooms)]
+                
+                for room_type in room_list:
+                    unified_record['apartment_types'][room_type] = {
+                        'apartments': []
+                    }
+        
         # Сохраняем ссылки на исходные записи для отладки
         unified_record['_source_ids'] = {
             'domrf': str(domrf_record['_id']) if domrf_record else None,
@@ -599,6 +840,12 @@ def save_manual_match(request):
 
         # Помечаем исходники как сопоставленные, чтобы скрывать их из списков
         try:
+            if domrf_record:
+                domrf_col.update_one({'_id': domrf_record['_id']}, {'$set': {
+                    'is_matched': True,
+                    'matched_unified_id': result.inserted_id,
+                    'matched_at': datetime.now()
+                }})
             if avito_record:
                 avito_col.update_one({'_id': avito_record['_id']}, {'$set': {
                     'is_matched': True,
@@ -657,8 +904,8 @@ def preview_manual_match(request):
 
         selected_sources = [domrf_id, avito_id, domclick_id]
         selected_count = sum(1 for source_id in selected_sources if source_id and source_id != 'null')
-        if selected_count < 2:
-            return JsonResponse({'success': False, 'error': 'Необходимо выбрать минимум 2 источника для сопоставления'}, status=400)
+        if selected_count < 1:
+            return JsonResponse({'success': False, 'error': 'Необходимо выбрать хотя бы один источник для сопоставления'}, status=400)
 
         db = get_mongo_connection()
         domrf_col = db['domrf']
@@ -677,7 +924,7 @@ def preview_manual_match(request):
         if domclick_id and domclick_id != 'null':
             domclick_record = domclick_col.find_one({'_id': ObjectId(domclick_id)})
 
-        if not avito_record and not domclick_record:
+        if not domrf_record and not avito_record and not domclick_record:
             return JsonResponse({'success': False, 'error': 'Не найдены записи для объединения'}, status=400)
 
         # Координаты (для предпросмотра — необязательны)
@@ -713,6 +960,16 @@ def preview_manual_match(request):
             fallback_address = avito_record.get('development', {}).get('address', '')
         elif domclick_record:
             fallback_address = domclick_record.get('development', {}).get('address', '')
+        elif domrf_record:
+            # Формируем адрес из DomRF
+            domrf_address_parts = []
+            if domrf_record.get('city'):
+                domrf_address_parts.append(domrf_record['city'])
+            if domrf_record.get('district'):
+                domrf_address_parts.append(domrf_record['district'])
+            if domrf_record.get('street'):
+                domrf_address_parts.append(domrf_record['street'])
+            fallback_address = ', '.join(domrf_address_parts)
         parsed_address = parse_address_string(fallback_address)
 
         fallback_city = ''
@@ -764,6 +1021,64 @@ def preview_manual_match(request):
                 dc_construction = domclick_dev.get('construction_progress') or domclick_record.get('construction_progress')
                 if dc_construction:
                     preview['construction_progress'] = dc_construction
+            elif domrf_record:
+                domrf_details = domrf_record.get('object_details', {})
+                gallery_photos = domrf_details.get('gallery_photos', domrf_record.get('gallery_photos', []))
+                if isinstance(gallery_photos, list) and gallery_photos:
+                    preview['development']['photos'] = gallery_photos
+                dr_construction = domrf_details.get('construction_progress', {})
+                if dr_construction:
+                    construction_stages = dr_construction.get('construction_stages', [])
+                    if construction_stages:
+                        preview['construction_progress'] = {'construction_stages': construction_stages}
+                    else:
+                        construction_photos = dr_construction.get('photos', [])
+                        if construction_photos:
+                            preview['construction_progress'] = {
+                                'construction_stages': [{
+                                    'stage': 'Строительство',
+                                    'date': '',
+                                    'photos': construction_photos
+                                }]
+                            }
+
+        elif domclick_record:
+            domclick_dev = domclick_record.get('development', {})
+            domrf_details = domrf_record.get('object_details', {}) if domrf_record else {}
+            main_characteristics = domrf_details.get('main_characteristics', {}) if domrf_record else {}
+
+            gallery_photos = domclick_dev.get('photos', [])
+            if (not gallery_photos or not isinstance(gallery_photos, list)) and domrf_record:
+                gallery_photos = domrf_details.get('gallery_photos', domrf_record.get('gallery_photos', []))
+
+            price_from = domrf_record.get('price_from', '') if domrf_record else ''
+            price_to = domrf_record.get('price_to', '') if domrf_record else ''
+            price_range = ''
+            if price_from and price_to:
+                price_range = f'От {price_from} до {price_to}'
+            elif price_from:
+                price_range = f'От {price_from}'
+            elif price_to:
+                price_range = f'До {price_to}'
+            else:
+                price_range = domclick_dev.get('price_range', '')
+
+            domrf_name = ''
+            if domrf_record:
+                domrf_name = domrf_record.get('objCommercNm') or domrf_record.get('name', '')
+
+            preview['development'] = {
+                'name': domrf_name or domclick_dev.get('name', '') or domclick_dev.get('complex_name', ''),
+                'address': preview['address_full'] or domclick_dev.get('address', ''),
+                'price_range': price_range,
+                'parameters': main_characteristics or domclick_dev.get('parameters', {}),
+                'korpuses': domclick_dev.get('korpuses', []),
+                'photos': gallery_photos if isinstance(gallery_photos, list) else []
+            }
+
+            dc_construction = domclick_dev.get('construction_progress') or domclick_record.get('construction_progress')
+            if dc_construction:
+                preview['construction_progress'] = dc_construction
 
         preview['apartment_types'] = {}
         if avito_record and domclick_record:
@@ -813,6 +1128,224 @@ def preview_manual_match(request):
                     })
                 if combined_apartments:
                     preview['apartment_types'][simplified_name] = {'apartments': combined_apartments}
+        
+        # Если есть только Avito (без DomClick) - берем apartment_types из Avito
+        elif avito_record:
+            avito_apt_types = avito_record.get('apartment_types', {})
+            
+            name_mapping = {
+                'Студия': 'Студия',
+                '1 ком.': '1', '1-комн': '1', '1-комн.': '1',
+                '2 ком.': '2', '2': '2', '2-комн': '2', '2-комн.': '2',
+                '3': '3', '3-комн': '3', '3-комн.': '3',
+                '4': '4', '4-комн': '4', '4-комн.': '4', '4-комн.+': '4', '4-комн+': '4'
+            }
+            
+            processed = set()
+            
+            for avito_type_name, avito_type_data in avito_apt_types.items():
+                simplified_name = name_mapping.get(avito_type_name, avito_type_name)
+                
+                if simplified_name in processed:
+                    continue
+                processed.add(simplified_name)
+                
+                avito_apartments = avito_type_data.get('apartments', [])
+                if not avito_apartments:
+                    continue
+                
+                combined_apartments = []
+                
+                for avito_apt in avito_apartments:
+                    # Получаем фото из Avito - может быть объектом с размерами или массивом
+                    avito_image = avito_apt.get('image', [])
+                    apartment_photos = []
+                    
+                    if isinstance(avito_image, dict):
+                        apartment_photos = list(avito_image.values()) if avito_image else []
+                    elif isinstance(avito_image, list):
+                        apartment_photos = avito_image
+                    elif isinstance(avito_image, str) and avito_image:
+                        apartment_photos = [avito_image]
+                    
+                    avito_title = avito_apt.get('title', '')
+                    avito_area, avito_floor = parse_apartment_info(avito_title)
+                    
+                    combined_apartments.append({
+                        'title': avito_title,
+                        'area': str(avito_area) if avito_area else '',
+                        'totalArea': avito_area if avito_area else None,
+                        'floor': str(avito_floor) if avito_floor else '',
+                        'price': avito_apt.get('price', ''),
+                        'pricePerSquare': avito_apt.get('pricePerSquare', ''),
+                        'completionDate': avito_apt.get('completionDate', ''),
+                        'url': avito_apt.get('url', '') or avito_apt.get('urlPath', ''),
+                        'image': apartment_photos
+                    })
+                
+                if combined_apartments:
+                    preview['apartment_types'][simplified_name] = {'apartments': combined_apartments}
+
+        # Если есть только DomClick (и возможно DomRF)
+        elif domclick_record:
+            domclick_apt_types = domclick_record.get('apartment_types', {})
+            name_mapping = {
+                'Студия': 'Студия',
+                '1 ком.': '1','1-комн': '1','1-комн.': '1',
+                '2 ком.': '2','2': '2','2-комн': '2','2-комн.': '2',
+                '3': '3','3-комн': '3','3-комн.': '3',
+                '4': '4','4-комн': '4','4-комн.': '4','4-комн.+': '4','4-комн+': '4'
+            }
+            processed = set()
+            for dc_type_name, dc_type_data in domclick_apt_types.items():
+                simplified_name = name_mapping.get(dc_type_name, dc_type_name)
+                if simplified_name in processed:
+                    continue
+                processed.add(simplified_name)
+
+                dc_apartments = dc_type_data.get('apartments', []) or []
+                if not dc_apartments:
+                    continue
+
+                combined_apartments = []
+                for dc_apt in dc_apartments:
+                    apartment_photos = dc_apt.get('photos') or dc_apt.get('images') or []
+                    if not apartment_photos:
+                        continue
+                    dc_title = dc_apt.get('title', '')
+                    dc_area, dc_floor = parse_apartment_info(dc_title)
+                    combined_apartments.append({
+                        'title': dc_title,
+                        'area': str(dc_area) if dc_area else '',
+                        'totalArea': dc_area if dc_area else None,
+                        'floor': str(dc_floor) if dc_floor else '',
+                        'price': dc_apt.get('price', ''),
+                        'pricePerSquare': dc_apt.get('pricePerSquare', ''),
+                        'completionDate': dc_apt.get('completionDate', ''),
+                        'url': dc_apt.get('url', '') or dc_apt.get('urlPath', ''),
+                        'image': apartment_photos
+                    })
+
+                if combined_apartments:
+                    preview['apartment_types'][simplified_name] = {'apartments': combined_apartments}
+        
+        # 2b. Development из DomClick (с параметрами DomRF при наличии)
+        elif domclick_record:
+            domclick_dev = domclick_record.get('development', {})
+            domrf_details = domrf_record.get('object_details', {}) if domrf_record else {}
+            main_characteristics = domrf_details.get('main_characteristics', {}) if domrf_record else {}
+
+            gallery_photos = domclick_dev.get('photos', [])
+            if (not gallery_photos or not isinstance(gallery_photos, list)) and domrf_record:
+                gallery_photos = domrf_details.get('gallery_photos', domrf_record.get('gallery_photos', []))
+
+            # Формируем price_range из DomRF если есть
+            price_from = domrf_record.get('price_from', '') if domrf_record else ''
+            price_to = domrf_record.get('price_to', '') if domrf_record else ''
+            price_range = ''
+            if price_from and price_to:
+                price_range = f'От {price_from} до {price_to}'
+            elif price_from:
+                price_range = f'От {price_from}'
+            elif price_to:
+                price_range = f'До {price_to}'
+            else:
+                price_range = domclick_dev.get('price_range', '')
+
+            domrf_name = ''
+            if domrf_record:
+                domrf_name = domrf_record.get('objCommercNm') or domrf_record.get('name', '')
+
+            preview['development'] = {
+                'name': domrf_name or domclick_dev.get('name', '') or domclick_dev.get('complex_name', ''),
+                'address': preview['address_full'] or domclick_dev.get('address', ''),
+                'price_range': price_range,
+                'parameters': main_characteristics or domclick_dev.get('parameters', {}),
+                'korpuses': domclick_dev.get('korpuses', []),
+                'photos': gallery_photos if isinstance(gallery_photos, list) else []
+            }
+
+            # Ход строительства DomClick
+            dc_construction = domclick_dev.get('construction_progress') or domclick_record.get('construction_progress')
+            if dc_construction:
+                preview['construction_progress'] = dc_construction
+
+        # Если есть только DomRF (без Avito и DomClick) - создаем development из DomRF
+        elif domrf_record and not avito_record and not domclick_record:
+            # Формируем development из DomRF
+            domrf_name = domrf_record.get('objCommercNm') or domrf_record.get('name', 'Без названия')
+            
+            # Формируем price_range из DomRF
+            price_from = domrf_record.get('price_from', '')
+            price_to = domrf_record.get('price_to', '')
+            price_range = ''
+            if price_from and price_to:
+                price_range = f'От {price_from} до {price_to}'
+            elif price_from:
+                price_range = f'От {price_from}'
+            elif price_to:
+                price_range = f'До {price_to}'
+            
+            # Получаем фотографии из DomRF
+            object_details = domrf_record.get('object_details', {})
+            gallery_photos = object_details.get('gallery_photos', domrf_record.get('gallery_photos', []))
+            
+            # Формируем parameters из object_details
+            main_characteristics = object_details.get('main_characteristics', {})
+            parameters = {}
+            if main_characteristics:
+                parameters = main_characteristics.copy()
+            
+            preview['development'] = {
+                'name': domrf_name,
+                'address': preview['address_full'] or fallback_address,
+                'price_range': price_range,
+                'parameters': parameters,
+                'korpuses': [],  # DomRF не имеет информации о корпусах
+                'photos': gallery_photos if isinstance(gallery_photos, list) else []
+            }
+            
+            # Ход строительства из DomRF
+            construction_progress = object_details.get('construction_progress', {})
+            if construction_progress:
+                # Проверяем новую структуру с этапами
+                construction_stages = construction_progress.get('construction_stages', [])
+                if construction_stages:
+                    preview['construction_progress'] = {
+                        'construction_stages': construction_stages
+                    }
+                else:
+                    # Fallback на старую структуру
+                    construction_photos = construction_progress.get('photos', [])
+                    if construction_photos:
+                        preview['construction_progress'] = {
+                            'construction_stages': [{
+                                'stage': 'Строительство',
+                                'date': '',
+                                'photos': construction_photos
+                            }]
+                        }
+            
+            # Формируем apartment_types из DomRF (если есть данные)
+            rooms = domrf_record.get('rooms', '')
+            area_from = domrf_record.get('area_from', '')
+            area_to = domrf_record.get('area_to', '')
+            
+            # Если есть информация о комнатах, создаем базовую структуру
+            if rooms:
+                preview['apartment_types'] = {}
+                # rooms может быть строкой вида "1,2,3" или списком
+                if isinstance(rooms, str):
+                    room_list = [r.strip() for r in rooms.split(',')]
+                elif isinstance(rooms, list):
+                    room_list = [str(r) for r in rooms]
+                else:
+                    room_list = [str(rooms)]
+                
+                for room_type in room_list:
+                    preview['apartment_types'][room_type] = {
+                        'apartments': []
+                    }
 
         preview['_source_ids'] = {
             'domrf': str(domrf_record['_id']) if domrf_record else None,
@@ -1826,6 +2359,74 @@ def unified_update(request, unified_id: str):
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def upload_base64_photo(request):
+    """API: Загрузить base64 фото в S3 через resize_img.py"""
+    try:
+        data = json.loads(request.body)
+        base64_data = data.get('base64', '').strip()
+        photo_type = data.get('type', 'unified')  # unified, secondary, apartment
+        
+        if not base64_data:
+            return JsonResponse({'success': False, 'error': 'Base64 данные не предоставлены'}, status=400)
+        
+        # Проверяем формат base64 (data:image/...;base64,...)
+        if ',' in base64_data:
+            header, base64_data = base64_data.split(',', 1)
+        
+        try:
+            # Декодируем base64
+            image_bytes = base64.b64decode(base64_data)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Ошибка декодирования base64: {str(e)}'}, status=400)
+        
+        # Обрабатываем через resize_img.py
+        logger = logging.getLogger(__name__)
+        processor = ImageProcessor(logger=logger, max_size=(1920, 1920), max_kb=500)
+        
+        try:
+            processed_bytes = processor.process(BytesIO(image_bytes))
+            processed_bytes.seek(0)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Ошибка обработки изображения: {str(e)}'}, status=400)
+        
+        # Генерируем уникальное имя файла
+        timestamp = int(datetime.now().timestamp() * 1000)
+        filename = f"photo-{timestamp}.jpg"
+        
+        # Определяем S3 путь в зависимости от типа
+        if photo_type == 'secondary':
+            slug = data.get('slug', 'secondary')
+            s3_key = f"secondary_complexes/{slug}/{filename}"
+        elif photo_type == 'apartment':
+            unified_id = data.get('unified_id', 'general')
+            room_type = data.get('room_type', 'general')
+            s3_key = f"unified_houses/{unified_id}/apartments/{room_type}/{filename}"
+        else:  # unified / development
+            unified_id = data.get('unified_id', 'general')
+            s3_key = f"unified_houses/{unified_id}/development/{filename}"
+        
+        # Загружаем в S3
+        try:
+            s3_url = s3_client.upload_bytes(processed_bytes.read(), s3_key, 'image/jpeg')
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Ошибка загрузки в S3: {str(e)}'}, status=500)
+        
+        return JsonResponse({
+            'success': True,
+            'url': s3_url,
+            's3_key': s3_key
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Неверный формат JSON'}, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 
 @require_http_methods(["GET"])
 def get_location_options(request):

@@ -87,7 +87,8 @@ from .api.manual_matching_api import (
     update_apartment_selection,
     delete_apartment_selection,
     get_complexes_with_apartments,
-    get_complex_by_id
+    get_complex_by_id,
+    upload_base64_photo
 )
 
 # Импортируем функции из subscription_api
@@ -221,6 +222,7 @@ urlpatterns = [
     path('api/manual-matching/delete-construction-photo/', delete_construction_photo, name='delete_construction_photo'),
     path('api/manual-matching/apartment-stats/<str:domrf_id>/', get_apartment_stats, name='get_apartment_stats'),
     path('api/manual-matching/location-options/', get_location_options, name='get_location_options'),
+    path('api/manual-matching/upload-base64-photo/', upload_base64_photo, name='upload_base64_photo'),
     path('api/client-catalog/apartments/', get_client_catalog_apartments, name='get_client_catalog_apartments'),
     path('api/domrf/create/', domrf_create, name='domrf_create'),
     path('api/not-recommended/', get_not_recommended_objects, name='get_not_recommended_objects'),

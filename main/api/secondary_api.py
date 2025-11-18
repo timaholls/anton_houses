@@ -69,18 +69,41 @@ def secondary_create(request):
         finishing = request.POST.get('finishing') or ''
         description = request.POST.get('description') or ''
 
-        # загрузка файлов в S3
+        # загрузка файлов в S3 через resize_img.py
+        from ..resize_img import ImageProcessor
+        from io import BytesIO
+        import logging
+        
         files = request.FILES.getlist('photos')
         saved_paths = []
+        logger = logging.getLogger(__name__)
+        processor = ImageProcessor(logger=logger, max_size=(1920, 1920), max_kb=500)
+        
         for f in files:
-            filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
-            ext = os.path.splitext(f.name)[1].lower()
-            final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}{ext}"
-            s3_key = f"secondary_complexes/{safe_slug}/{final_name}"
-            # Определяем тип контента
-            content_type = f.content_type if hasattr(f, 'content_type') else 'image/jpeg'
-            s3_url = s3_client.upload_fileobj(f, s3_key, content_type)
-            saved_paths.append(s3_url)
+            try:
+                # Обрабатываем через resize_img.py
+                f.seek(0)  # Сбрасываем позицию файла
+                processed_bytes = processor.process(f)
+                processed_bytes.seek(0)
+                
+                filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
+                final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}.jpg"
+                s3_key = f"secondary_complexes/{safe_slug}/{final_name}"
+                
+                # Загружаем обработанное изображение в S3
+                s3_url = s3_client.upload_bytes(processed_bytes.read(), s3_key, 'image/jpeg')
+                saved_paths.append(s3_url)
+            except Exception as e:
+                logger.error(f"Ошибка обработки фото {f.name}: {e}")
+                # Fallback: загружаем без обработки
+                f.seek(0)
+                filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
+                ext = os.path.splitext(f.name)[1].lower() or '.jpg'
+                final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}{ext}"
+                s3_key = f"secondary_complexes/{safe_slug}/{final_name}"
+                content_type = f.content_type if hasattr(f, 'content_type') else 'image/jpeg'
+                s3_url = s3_client.upload_fileobj(f, s3_key, content_type)
+                saved_paths.append(s3_url)
 
         db = get_mongo_connection()
         col = db['secondary_properties']
@@ -109,7 +132,7 @@ def secondary_create(request):
 
 
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["POST", "PATCH"])
 def secondary_api_toggle(request, secondary_id):
     """API: переключить статус объекта вторичной недвижимости (активен/неактивен)."""
     try:
@@ -167,19 +190,43 @@ def secondary_api_update(request, secondary_id: str):
 
         payload.pop('_id', None)
         
-        # Обработка новых фото
+        # Обработка новых фото через resize_img.py
         new_photos = []
         if request.FILES:
+            from ..resize_img import ImageProcessor
+            from io import BytesIO
+            import logging
+            
             files = request.FILES.getlist('photos')
             slug = doc.get('slug') or slugify(doc.get('name', '')) or f"secondary-{int(datetime.utcnow().timestamp())}"
+            logger = logging.getLogger(__name__)
+            processor = ImageProcessor(logger=logger, max_size=(1920, 1920), max_kb=500)
+            
             for f in files:
-                filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
-                ext = os.path.splitext(f.name)[1].lower()
-                final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}{ext}"
-                s3_key = f"secondary_complexes/{slug}/{final_name}"
-                content_type = f.content_type if hasattr(f, 'content_type') else 'image/jpeg'
-                s3_url = s3_client.upload_fileobj(f, s3_key, content_type)
-                new_photos.append(s3_url)
+                try:
+                    # Обрабатываем через resize_img.py
+                    f.seek(0)
+                    processed_bytes = processor.process(f)
+                    processed_bytes.seek(0)
+                    
+                    filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
+                    final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}.jpg"
+                    s3_key = f"secondary_complexes/{slug}/{final_name}"
+                    
+                    # Загружаем обработанное изображение в S3
+                    s3_url = s3_client.upload_bytes(processed_bytes.read(), s3_key, 'image/jpeg')
+                    new_photos.append(s3_url)
+                except Exception as e:
+                    logger.error(f"Ошибка обработки фото {f.name}: {e}")
+                    # Fallback: загружаем без обработки
+                    f.seek(0)
+                    filename = slugify(os.path.splitext(f.name)[0]) or 'photo'
+                    ext = os.path.splitext(f.name)[1].lower() or '.jpg'
+                    final_name = f"{filename}-{int(datetime.utcnow().timestamp()*1000)}{ext}"
+                    s3_key = f"secondary_complexes/{slug}/{final_name}"
+                    content_type = f.content_type if hasattr(f, 'content_type') else 'image/jpeg'
+                    s3_url = s3_client.upload_fileobj(f, s3_key, content_type)
+                    new_photos.append(s3_url)
         
         # Объединяем существующие фото с новыми
         if new_photos:

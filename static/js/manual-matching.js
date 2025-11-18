@@ -131,9 +131,9 @@ function updateSelectedDisplay() {
         }
     });
     
-    // Включаем/отключаем кнопку сохранения
+    // Включаем/отключаем кнопку сохранения (минимум один источник: DomRF, Avito или DomClick)
     const saveBtn = document.getElementById('saveBtn');
-    const canSave = appState.selected.domrf && (appState.selected.avito || appState.selected.domclick);
+    const canSave = appState.selected.domrf || appState.selected.avito || appState.selected.domclick;
     saveBtn.disabled = !canSave;
 }
 
@@ -154,13 +154,8 @@ function clearSelection() {
 
 // Сохранение сопоставления
 async function saveMatch() {
-    if (!appState.selected.domrf) {
-        showToast('Необходимо выбрать запись из DomRF', 'error');
-        return;
-    }
-    
-    if (!appState.selected.avito && !appState.selected.domclick) {
-        showToast('Необходимо выбрать хотя бы одну запись из Avito или DomClick', 'error');
+    if (!appState.selected.domrf && !appState.selected.avito && !appState.selected.domclick) {
+        showToast('Необходимо выбрать хотя бы одну запись из DomRF, Avito или DomClick', 'error');
         return;
     }
     

@@ -479,6 +479,86 @@ def rebuild_unified_record(unified_record):
                     changes.append(f"  ➖ {apt_type}-комн: удалено {old_count} квартир")
                 else:
                     changes.append(f"  📊 {apt_type}-комн: {old_count} → {new_count} квартир")
+    
+    # Если есть только Avito (без DomClick) - берем apartment_types из Avito
+    elif avito_record:
+        avito_apt_types = avito_record.get('apartment_types', {})
+        
+        # Маппинг старых названий на новые упрощенные
+        name_mapping = {
+            'Студия': 'Студия',
+            '1 ком.': '1', '1-комн': '1', '1-комн.': '1',
+            '2 ком.': '2', '2': '2', '2-комн': '2', '2-комн.': '2',
+            '3': '3', '3-комн': '3', '3-комн.': '3',
+            '4': '4', '4-комн': '4', '4-комн.': '4', '4-комн.+': '4', '4-комн+': '4'
+        }
+        
+        processed_types = set()
+        new_apt_counts = {}
+        
+        for avito_type_name, avito_type_data in avito_apt_types.items():
+            simplified_name = name_mapping.get(avito_type_name, avito_type_name)
+            
+            if simplified_name in processed_types:
+                continue
+            processed_types.add(simplified_name)
+            
+            avito_apartments = avito_type_data.get('apartments', [])
+            if not avito_apartments:
+                continue
+            
+            combined_apartments = []
+            
+            for avito_apt in avito_apartments:
+                # Получаем фото из Avito - может быть объектом с размерами или массивом
+                avito_image = avito_apt.get('image', [])
+                apartment_photos = []
+                
+                if isinstance(avito_image, dict):
+                    apartment_photos = list(avito_image.values()) if avito_image else []
+                elif isinstance(avito_image, list):
+                    apartment_photos = avito_image
+                elif isinstance(avito_image, str) and avito_image:
+                    apartment_photos = [avito_image]
+                
+                avito_title = avito_apt.get('title', '')
+                avito_area, avito_floor = parse_apartment_info(avito_title)
+                
+                combined_apartments.append({
+                    'title': avito_title,
+                    'area': str(avito_area) if avito_area else '',
+                    'totalArea': avito_area if avito_area else None,
+                    'floor': str(avito_floor) if avito_floor else '',
+                    'price': avito_apt.get('price', ''),
+                    'pricePerSquare': avito_apt.get('pricePerSquare', ''),
+                    'completionDate': avito_apt.get('completionDate', ''),
+                    'url': avito_apt.get('url', '') or avito_apt.get('urlPath', ''),
+                    'image': apartment_photos
+                })
+            
+            if combined_apartments:
+                new_record['apartment_types'][simplified_name] = {
+                    'apartments': combined_apartments
+                }
+                new_apt_counts[simplified_name] = len(combined_apartments)
+        
+        # Логируем изменения в количестве квартир
+        total_new_apartments = sum(new_apt_counts.values())
+        if total_old_apartments != total_new_apartments:
+            changes.append(f"🏠 Всего квартир: {total_old_apartments} → {total_new_apartments}")
+        
+        # Детализируем по типам
+        all_types = set(old_apt_counts.keys()) | set(new_apt_counts.keys())
+        for apt_type in sorted(all_types):
+            old_count = old_apt_counts.get(apt_type, 0)
+            new_count = new_apt_counts.get(apt_type, 0)
+            if old_count != new_count:
+                if old_count == 0:
+                    changes.append(f"  ➕ {apt_type}-комн: добавлено {new_count} квартир")
+                elif new_count == 0:
+                    changes.append(f"  ➖ {apt_type}-комн: удалено {old_count} квартир")
+                else:
+                    changes.append(f"  📊 {apt_type}-комн: {old_count} → {new_count} квартир")
 
     # 4. Сохраняем ссылки на исходные записи
     new_record['_source_ids'] = source_ids

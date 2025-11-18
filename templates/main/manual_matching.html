@@ -1919,10 +1919,9 @@
                 }
             });
             
-            // Включаем/отключаем кнопку сохранения
+            // Включаем/отключаем кнопку сохранения (минимум один источник: DomRF, Avito или DomClick)
             const saveBtn = document.getElementById('saveBtn');
-            const selectedCount = Object.values(appState.selected).filter(id => id !== null).length;
-            const canSave = selectedCount >= 2;
+            const canSave = appState.selected.domrf || appState.selected.avito || appState.selected.domclick;
             saveBtn.disabled = !canSave;
         }
 
@@ -1946,8 +1945,10 @@
 
         // Сохранение сопоставления
         async function saveMatch() {
-            const selectedCount = Object.values(appState.selected).filter(id => id !== null).length;
-            if (selectedCount < 2) { showToast('Необходимо выбрать минимум 2 записи для объединения', 'error'); return; }
+            if (!appState.selected.domrf && !appState.selected.avito && !appState.selected.domclick) {
+                showToast('Необходимо выбрать хотя бы одну запись из DomRF, Avito или DomClick', 'error');
+                return;
+            }
             const agentId = await pickAgent();
             if(agentId === null) return;
 
@@ -2069,28 +2070,38 @@
                                                     class="apt-field" data-room-type="${escapeHtml(roomType)}" data-apt-idx="${idx}" data-field="completionDate"
                                                     style="width:100%; padding:6px 8px; background:#1e293b; border:1px solid #475569; border-radius:4px; color:#fff; font-size:12px; margin-top:2px;">
                                             </label>
-                                            ${images.length > 0 ? `
-                                                <div style="margin-top:8px;">
-                                                    <div style="font-size:12px; color:#94a3b8; margin-bottom:6px;">🖼️ Планировки (${images.length}):</div>
-                                                    <div class="apt-images-container" style="display:flex; flex-direction:column; gap:6px;">
-                                                        ${images.map((img, imgIdx) => `
-                                                            <div class="apt-image-wrapper" data-img-idx="${imgIdx}" style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
-                                                                <img src="${img}" alt="Планировка" 
-                                                                    style="width:100%; height:120px; object-fit:cover; display:block;"
-                                                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                                                                <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
-                                                                    Изображение недоступно
-                                                                </div>
-                                                                <button onclick="deletePreviewAptPhoto('${escapeHtml(roomType)}', ${idx}, ${imgIdx})" 
-                                                                    style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
-                                                                    title="Удалить фото">
-                                                                    ✕
-                                                                </button>
-                                                            </div>
-                                                        `).join('')}
+                                            <div style="margin-top:8px;">
+                                                <div class="apt-photos-header" style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:6px;">
+                                                    <div style="font-size:12px; color:#94a3b8;">
+                                                        🖼️ Планировки (<span class="apt-photos-count">${images.length}</span>)
                                                     </div>
+                                                    <button type="button"
+                                                        onclick="addPreviewAptPhoto('${escapeHtml(roomType)}', ${idx})"
+                                                        style="background:#10b981; border:none; color:white; font-size:11px; padding:4px 10px; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                                                        + Добавить фото
+                                                    </button>
                                                 </div>
-                                            ` : '<div style="font-size:11px; color:#6b7280; font-style:italic; margin-top:8px;">Нет фотографий</div>'}
+                                                <div class="apt-images-container" style="display:flex; flex-direction:column; gap:6px;">
+                                                    ${images.map((img, imgIdx) => `
+                                                        <div class="apt-image-wrapper" data-img-idx="${imgIdx}" style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                            <img src="${img}" alt="Планировка" 
+                                                                style="width:100%; height:120px; object-fit:cover; display:block;"
+                                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                            <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                                Изображение недоступно
+                                                            </div>
+                                                            <button onclick="deletePreviewAptPhoto('${escapeHtml(roomType)}', ${idx}, ${imgIdx})" 
+                                                                style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                                title="Удалить фото">
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                                <div class="apt-no-photos" style="font-size:11px; color:#6b7280; font-style:italic; margin-top:8px; ${images.length === 0 ? '' : 'display:none;'}">
+                                                    Нет фотографий
+                                                </div>
+                                            </div>
                                         </div>
                                     `;
                                 }).join('')}
@@ -2101,33 +2112,39 @@
             });
             
             // Генерация HTML для фото ЖК
-            let developmentPhotosHtml = '';
-            if (developmentPhotos.length > 0) {
-                developmentPhotosHtml = `
-                    <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569; margin-bottom:16px;">
-                        <h4 style="color:#10b981; margin-bottom:12px; font-size:16px;">
-                            📸 Фото ЖК (${developmentPhotos.length})
+            let developmentPhotosHtml = `
+                <div style="background:#0f172a; padding:16px; border-radius:8px; border:1px solid #475569; margin-bottom:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+                        <h4 style="color:#10b981; font-size:16px; margin:0;">
+                            📸 Фото ЖК (<span class="dev-photos-count">${developmentPhotos.length}</span>)
                         </h4>
-                        <div class="dev-photos-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
-                            ${developmentPhotos.map((photo, idx) => `
-                                <div class="dev-photo-wrapper" data-photo-idx="${idx}" style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
-                                    <img src="${photo}" alt="Фото ЖК" 
-                                        style="width:100%; height:140px; object-fit:cover; display:block;"
-                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                                    <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
-                                        Изображение недоступно
-                                    </div>
-                                    <button onclick="deletePreviewDevPhoto(${idx})" 
-                                        style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
-                                        title="Удалить фото">
-                                        ✕
-                                    </button>
-                                </div>
-                            `).join('')}
-                        </div>
+                        <button type="button" onclick="addPreviewDevPhoto()" 
+                            style="background:#10b981; border:none; color:white; font-size:12px; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                            + Добавить фото
+                        </button>
                     </div>
-                `;
-            }
+                    <div class="dev-photos-empty" style="font-size:12px; color:#6b7280; font-style:italic; margin-bottom:12px; ${developmentPhotos.length === 0 ? '' : 'display:none;'}">
+                        Нет фото ЖК
+                    </div>
+                    <div class="dev-photos-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+                        ${developmentPhotos.map((photo, idx) => `
+                            <div class="dev-photo-wrapper" data-photo-idx="${idx}" style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                <img src="${photo}" alt="Фото ЖК" 
+                                    style="width:100%; height:140px; object-fit:cover; display:block;"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                    Изображение недоступно
+                                </div>
+                                <button onclick="deletePreviewDevPhoto('${idx}')" 
+                                    style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                    title="Удалить фото">
+                                    ✕
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
             
             // Генерация HTML для хода строительства
             let constructionProgressHtml = '';
@@ -2412,7 +2429,28 @@
                 });
             });
             
-            // Функции удаления для предпросмотра
+            function generatePreviewId(prefix = 'pv') {
+                return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+            }
+
+            function refreshDevPhotosState() {
+                const count = modal.querySelectorAll('.dev-photo-wrapper').length;
+                const countEl = modal.querySelector('.dev-photos-count');
+                if (countEl) countEl.textContent = count;
+                const emptyState = modal.querySelector('.dev-photos-empty');
+                if (emptyState) emptyState.style.display = count ? 'none' : 'block';
+            }
+
+            function refreshApartmentPhotosState(aptCard) {
+                if (!aptCard) return;
+                const count = aptCard.querySelectorAll('.apt-image-wrapper').length;
+                const countEl = aptCard.querySelector('.apt-photos-count');
+                if (countEl) countEl.textContent = count;
+                const emptyState = aptCard.querySelector('.apt-no-photos');
+                if (emptyState) emptyState.style.display = count ? 'none' : 'block';
+            }
+
+            // Функции для управления фотографиями в предпросмотре
             window.deletePreviewApartment = function(roomType, aptIdx) {
                 const roomSection = modal.querySelector(`[data-room-type="${roomType}"]`);
                 const aptCard = roomSection?.querySelector(`[data-apt-idx="${aptIdx}"]`);
@@ -2435,11 +2473,7 @@
                 const imgWrapper = aptCard?.querySelector(`[data-img-idx="${imgIdx}"]`);
                 if (imgWrapper) {
                     imgWrapper.remove();
-                    const remaining = aptCard.querySelectorAll('.apt-image-wrapper').length;
-                    const photoLabel = aptCard.querySelector('.apt-images-container')?.previousElementSibling;
-                    if (photoLabel && remaining > 0) {
-                        photoLabel.textContent = `🖼️ Планировки (${remaining}):`;
-                    }
+                    refreshApartmentPhotosState(aptCard);
                 }
             };
             
@@ -2447,12 +2481,204 @@
                 const photoWrapper = modal.querySelector(`.dev-photo-wrapper[data-photo-idx="${photoIdx}"]`);
                 if (photoWrapper) {
                     photoWrapper.remove();
-                    const remaining = modal.querySelectorAll('.dev-photo-wrapper').length;
-                    const header = modal.querySelector('.dev-photos-container')?.closest('div')?.querySelector('h4');
-                    if (header && remaining > 0) {
-                        header.innerHTML = `📸 Фото ЖК (${remaining})`;
-                    }
+                    refreshDevPhotosState();
                 }
+            };
+
+            window.addPreviewDevPhoto = function() {
+                const container = modal.querySelector('.dev-photos-container');
+                if (!container) return;
+
+                // Создаем скрытый file input
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.multiple = true;
+                fileInput.style.display = 'none';
+                
+                fileInput.addEventListener('change', function(e) {
+                    const files = Array.from(e.target.files);
+                    files.forEach(file => {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                let dataUrl = event.target.result;
+                                
+                                // Сжимаем изображение если оно слишком большое (>1MB)
+                                if (dataUrl.length > 1024 * 1024) {
+                                    const img = new Image();
+                                    img.onload = function() {
+                                        const canvas = document.createElement('canvas');
+                                        const maxWidth = 1920;
+                                        const maxHeight = 1080;
+                                        let width = img.width;
+                                        let height = img.height;
+                                        
+                                        if (width > maxWidth || height > maxHeight) {
+                                            if (width > height) {
+                                                height = height * (maxWidth / width);
+                                                width = maxWidth;
+                                            } else {
+                                                width = width * (maxHeight / height);
+                                                height = maxHeight;
+                                            }
+                                        }
+                                        
+                                        canvas.width = width;
+                                        canvas.height = height;
+                                        const ctx = canvas.getContext('2d');
+                                        ctx.drawImage(img, 0, 0, width, height);
+                                        dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                                        addPhotoToDevContainer(dataUrl);
+                                    };
+                                    img.src = dataUrl;
+                                    return;
+                                }
+                                
+                                addPhotoToDevContainer(dataUrl);
+                            };
+                            
+                            function addPhotoToDevContainer(dataUrl) {
+                                const uniqueId = generatePreviewId('dev');
+                                const wrapper = document.createElement('div');
+                                wrapper.className = 'dev-photo-wrapper';
+                                wrapper.dataset.photoIdx = uniqueId;
+                                wrapper.style.cssText = 'position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;';
+
+                                const img = document.createElement('img');
+                                img.src = dataUrl;
+                                img.alt = 'Фото ЖК';
+                                img.style.cssText = 'width:100%; height:140px; object-fit:cover; display:block;';
+
+                                const fallback = document.createElement('div');
+                                fallback.textContent = 'Изображение недоступно';
+                                fallback.style.cssText = 'display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;';
+                                img.addEventListener('error', () => {
+                                    img.style.display = 'none';
+                                    fallback.style.display = 'block';
+                                });
+
+                                const btn = document.createElement('button');
+                                btn.textContent = '✕';
+                                btn.title = 'Удалить фото';
+                                btn.style.cssText = 'position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);';
+                                btn.addEventListener('click', () => deletePreviewDevPhoto(uniqueId));
+
+                                wrapper.appendChild(img);
+                                wrapper.appendChild(fallback);
+                                wrapper.appendChild(btn);
+                                container.appendChild(wrapper);
+                                refreshDevPhotosState();
+                            }
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                    // Удаляем input после использования
+                    fileInput.remove();
+                });
+                
+                // Добавляем input в body и кликаем по нему
+                document.body.appendChild(fileInput);
+                fileInput.click();
+            };
+
+            window.addPreviewAptPhoto = function(roomType, aptIdx) {
+                const roomSection = modal.querySelector(`[data-room-type="${roomType}"]`);
+                const aptCard = roomSection?.querySelector(`[data-apt-idx="${aptIdx}"]`);
+                const container = aptCard?.querySelector('.apt-images-container');
+                if (!container || !aptCard) return;
+
+                // Создаем скрытый file input
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.multiple = true;
+                fileInput.style.display = 'none';
+                
+                fileInput.addEventListener('change', function(e) {
+                    const files = Array.from(e.target.files);
+                    files.forEach(file => {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                let dataUrl = event.target.result;
+                                
+                                // Сжимаем изображение если оно слишком большое (>1MB)
+                                if (dataUrl.length > 1024 * 1024) {
+                                    const img = new Image();
+                                    img.onload = function() {
+                                        const canvas = document.createElement('canvas');
+                                        const maxWidth = 1920;
+                                        const maxHeight = 1080;
+                                        let width = img.width;
+                                        let height = img.height;
+                                        
+                                        if (width > maxWidth || height > maxHeight) {
+                                            if (width > height) {
+                                                height = height * (maxWidth / width);
+                                                width = maxWidth;
+                                            } else {
+                                                width = width * (maxHeight / height);
+                                                height = maxHeight;
+                                            }
+                                        }
+                                        
+                                        canvas.width = width;
+                                        canvas.height = height;
+                                        const ctx = canvas.getContext('2d');
+                                        ctx.drawImage(img, 0, 0, width, height);
+                                        dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                                        addPhotoToAptContainer(dataUrl);
+                                    };
+                                    img.src = dataUrl;
+                                    return;
+                                }
+                                
+                                addPhotoToAptContainer(dataUrl);
+                            };
+                            
+                            function addPhotoToAptContainer(dataUrl) {
+                                const uniqueId = generatePreviewId('apt');
+                                const wrapper = document.createElement('div');
+                                wrapper.className = 'apt-image-wrapper';
+                                wrapper.dataset.imgIdx = uniqueId;
+                                wrapper.style.cssText = 'position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;';
+
+                                const img = document.createElement('img');
+                                img.src = dataUrl;
+                                img.alt = 'Планировка';
+                                img.style.cssText = 'width:100%; height:120px; object-fit:cover; display:block;';
+
+                                const fallback = document.createElement('div');
+                                fallback.textContent = 'Изображение недоступно';
+                                fallback.style.cssText = 'display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;';
+                                img.addEventListener('error', () => {
+                                    img.style.display = 'none';
+                                    fallback.style.display = 'block';
+                                });
+
+                                const btn = document.createElement('button');
+                                btn.textContent = '✕';
+                                btn.title = 'Удалить фото';
+                                btn.style.cssText = 'position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);';
+                                btn.addEventListener('click', () => deletePreviewAptPhoto(roomType, aptIdx, uniqueId));
+
+                                wrapper.appendChild(img);
+                                wrapper.appendChild(fallback);
+                                wrapper.appendChild(btn);
+                                container.appendChild(wrapper);
+                                refreshApartmentPhotosState(aptCard);
+                            }
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                    // Удаляем input после использования
+                    fileInput.remove();
+                });
+                
+                // Добавляем input в body и кликаем по нему
+                document.body.appendChild(fileInput);
+                fileInput.click();
             };
             
             window.deletePreviewConstructionStage = function(stageIdx) {
@@ -2502,11 +2728,11 @@
                 
                 // Собираем квартиры из DOM (только те, которые остались)
                 const apartmentTypes = {};
-                modal.querySelectorAll('[data-room-type]').forEach(roomSection => {
+                for (const roomSection of modal.querySelectorAll('[data-room-type]')) {
                     const roomType = roomSection.dataset.roomType;
                     const apartments = [];
                     
-                    roomSection.querySelectorAll('.apartment-card').forEach(aptCard => {
+                    for (const aptCard of roomSection.querySelectorAll('.apartment-card')) {
                         const apt = {
                             title: aptCard.querySelector('[data-field="title"]')?.value || '',
                             price: aptCard.querySelector('[data-field="price"]')?.value || '',
@@ -2516,42 +2742,130 @@
                         };
                         
                         // Собираем оставшиеся фото
-                        aptCard.querySelectorAll('.apt-image-wrapper img').forEach(img => {
+                        for (const img of aptCard.querySelectorAll('.apt-image-wrapper img')) {
                             const src = img.getAttribute('src');
-                            if (src) apt.image.push(src);
-                        });
+                            if (src) {
+                                // Проверяем, является ли это base64
+                                if (src.startsWith('data:image/')) {
+                                    // Загружаем в S3
+                                    try {
+                                        const response = await fetch('/api/manual-matching/upload-base64-photo/', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                base64: src,
+                                                type: 'apartment',
+                                                unified_id: selectedMeta.unified_id || 'preview',
+                                                room_type: roomType
+                                            })
+                                        });
+                                        const result = await response.json();
+                                        if (result.success) {
+                                            apt.image.push(result.url);
+                                        } else {
+                                            console.error('Ошибка загрузки фото:', result.error);
+                                            apt.image.push(src); // Оставляем base64 если ошибка
+                                        }
+                                    } catch (e) {
+                                        console.error('Ошибка загрузки фото:', e);
+                                        apt.image.push(src); // Оставляем base64 если ошибка
+                                    }
+                                } else {
+                                    // Уже S3 URL, просто добавляем
+                                    apt.image.push(src);
+                                }
+                            }
+                        }
                         
                         apartments.push(apt);
-                    });
+                    }
                     
                     if (apartments.length > 0) {
                         apartmentTypes[roomType] = { apartments };
                     }
-                });
+                }
                 finalData.apartment_types = apartmentTypes;
                 
                 // Собираем фото ЖК
                 const devPhotos = [];
-                modal.querySelectorAll('.dev-photo-wrapper img').forEach(img => {
+                for (const img of modal.querySelectorAll('.dev-photo-wrapper img')) {
                     const src = img.getAttribute('src');
-                    if (src) devPhotos.push(src);
-                });
+                    if (src) {
+                        // Проверяем, является ли это base64
+                        if (src.startsWith('data:image/')) {
+                            // Загружаем в S3
+                            try {
+                                const response = await fetch('/api/manual-matching/upload-base64-photo/', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        base64: src,
+                                        type: 'unified',
+                                        unified_id: selectedMeta.unified_id || 'preview'
+                                    })
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    devPhotos.push(result.url);
+                                } else {
+                                    console.error('Ошибка загрузки фото ЖК:', result.error);
+                                    devPhotos.push(src); // Оставляем base64 если ошибка
+                                }
+                            } catch (e) {
+                                console.error('Ошибка загрузки фото ЖК:', e);
+                                devPhotos.push(src); // Оставляем base64 если ошибка
+                            }
+                        } else {
+                            // Уже S3 URL, просто добавляем
+                            devPhotos.push(src);
+                        }
+                    }
+                }
                 if (devPhotos.length > 0) {
                     finalData.development_photos = devPhotos;
                 }
                 
                 // Собираем ход строительства
                 const constructionStages = [];
-                modal.querySelectorAll('.construction-stage').forEach(stageEl => {
+                for (const stageEl of modal.querySelectorAll('.construction-stage')) {
                     // Используем data-атрибуты для получения названия и даты
                     const stageName = stageEl.dataset.stageName || stageEl.querySelector('.stage-name')?.textContent?.trim() || 'Этап';
                     const stageDate = stageEl.dataset.stageDate || '';
                     const photos = [];
                     
-                    stageEl.querySelectorAll('.stage-photo-wrapper img').forEach(img => {
+                    for (const img of stageEl.querySelectorAll('.stage-photo-wrapper img')) {
                         const src = img.getAttribute('src');
-                        if (src) photos.push(src);
-                    });
+                        if (src) {
+                            // Проверяем, является ли это base64
+                            if (src.startsWith('data:image/')) {
+                                // Загружаем в S3
+                                try {
+                                    const response = await fetch('/api/manual-matching/upload-base64-photo/', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            base64: src,
+                                            type: 'unified',
+                                            unified_id: selectedMeta.unified_id || 'preview'
+                                        })
+                                    });
+                                    const result = await response.json();
+                                    if (result.success) {
+                                        photos.push(result.url);
+                                    } else {
+                                        console.error('Ошибка загрузки фото хода строительства:', result.error);
+                                        photos.push(src); // Оставляем base64 если ошибка
+                                    }
+                                } catch (e) {
+                                    console.error('Ошибка загрузки фото хода строительства:', e);
+                                    photos.push(src); // Оставляем base64 если ошибка
+                                }
+                            } else {
+                                // Уже S3 URL, просто добавляем
+                                photos.push(src);
+                            }
+                        }
+                    }
                     
                     if (photos.length > 0 || stageName) {
                         constructionStages.push({ 
@@ -2560,7 +2874,7 @@
                             photos 
                         });
                     }
-                });
+                }
                 if (constructionStages.length > 0) {
                     finalData.construction_progress = { construction_stages: constructionStages };
                 }

@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "century21-ufa-mir-v-kvadratah.ru"]
 
@@ -144,3 +144,7 @@ TINYMCE_DEFAULT_CONFIG = {
 
 # Cookie-based sessions (без БД)
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+
+# Увеличенный лимит для загрузки фото через data URL
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB (по умолчанию 2.5 MB)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
