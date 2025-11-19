@@ -11,6 +11,7 @@ import json
 import os
 import time
 import requests
+from dateutil import parser as date_parser
 
 from ..services.mongo_service import get_mongo_connection
 from ..s3_service import s3_client
@@ -1513,122 +1514,250 @@ def delete_record(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_future_project(request):
-    """API: Создать запись в будущих проектах из DomRF"""
+    """API: Создать запись в будущих проектах из DomRF, Avito или DomClick"""
     try:
         data = json.loads(request.body)
-        domrf_id = data.get('domrf_id')
+        source_type = data.get('source_type', 'domrf')
+        source_id = data.get('source_id') or data.get('domrf_id')
         
-        if not domrf_id:
+        if not source_id:
             return JsonResponse({
                 'success': False,
-                'error': 'Не указан ID записи DomRF'
+                'error': 'Не указан ID записи'
             }, status=400)
         
         db = get_mongo_connection()
-        domrf_collection = db['domrf']
         future_collection = db['future_complexes']
         
-        # Получаем запись DomRF
-        try:
-            domrf_record = domrf_collection.find_one({'_id': ObjectId(domrf_id)})
-            if not domrf_record:
+        # Получаем исходную запись в зависимости от типа источника
+        source_record = None
+        collection = None
+        
+        if source_type == 'domrf':
+            collection = db['domrf']
+            try:
+                source_record = collection.find_one({'_id': ObjectId(source_id)})
+                if not source_record:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Запись DomRF не найдена'
+                    }, status=404)
+            except Exception as e:
                 return JsonResponse({
                     'success': False,
-                    'error': 'Запись DomRF не найдена'
-                }, status=404)
-        except Exception as e:
+                    'error': f'Ошибка поиска записи DomRF: {str(e)}'
+                }, status=400)
+        elif source_type == 'avito':
+            collection = db['avito']
+            try:
+                source_record = collection.find_one({'_id': ObjectId(source_id)})
+                if not source_record:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Запись Avito не найдена'
+                    }, status=404)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ошибка поиска записи Avito: {str(e)}'
+                }, status=400)
+        elif source_type == 'domclick':
+            collection = db['domclick']
+            try:
+                source_record = collection.find_one({'_id': ObjectId(source_id)})
+                if not source_record:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Запись DomClick не найдена'
+                    }, status=404)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ошибка поиска записи DomClick: {str(e)}'
+                }, status=400)
+        else:
             return JsonResponse({
                 'success': False,
-                'error': f'Ошибка поиска записи DomRF: {str(e)}'
+                'error': f'Неизвестный тип источника: {source_type}'
             }, status=400)
         
-        # Извлекаем object_details из DomRF записи
-        object_details = domrf_record.get('object_details', {})
+        # Извлекаем данные в зависимости от источника
+        object_details = {}
+        main_characteristics = {}
+        developer_name = ''
+        gallery_photos = []
+        construction_progress_data = {}
+        flats_data = {}
+        
+        if source_type == 'domrf':
+            object_details = source_record.get('object_details', {})
+            main_characteristics = object_details.get('main_characteristics', {})
+            developer_info = source_record.get('developer', {})
+            if isinstance(developer_info, dict):
+                developer_name = developer_info.get('shortName', developer_info.get('fullName', ''))
+            gallery_photos = object_details.get('gallery_photos', source_record.get('gallery_photos', []))
+            construction_progress_data = object_details.get('construction_progress', source_record.get('construction_progress', {}))
+            flats_data = object_details.get('flats_data', source_record.get('flats_data', {}))
+        elif source_type == 'avito':
+            development = source_record.get('development', {})
+            apartment_types = source_record.get('apartment_types', {})
+            # Формируем flats_data из apartment_types
+            for apt_type, apt_data in apartment_types.items():
+                apartments = apt_data.get('apartments', [])
+                if apartments:
+                    flats_data[apt_type] = {
+                        'total_count': len(apartments),
+                        'flats': apartments
+                    }
+            developer_name = development.get('developer', '')
+            gallery_photos = development.get('photos', [])
+            construction_progress_data = development.get('construction_progress', {})
+            main_characteristics = development.get('parameters', {})
+        elif source_type == 'domclick':
+            development = source_record.get('development', {})
+            apartment_types = source_record.get('apartment_types', {})
+            # Формируем flats_data из apartment_types
+            for apt_type, apt_data in apartment_types.items():
+                apartments = apt_data.get('apartments', [])
+                if apartments:
+                    flats_data[apt_type] = {
+                        'total_count': len(apartments),
+                        'flats': apartments
+                    }
+            developer_name = development.get('developer', '')
+            gallery_photos = development.get('photos', [])
+            construction_progress_data = development.get('construction_progress', source_record.get('construction_progress', {}))
+            main_characteristics = development.get('parameters', {})
+        
+        # Определяем значения по умолчанию в зависимости от источника
+        default_name = ''
+        default_description = ''
+        default_city = 'Уфа'
+        default_district = ''
+        default_street = ''
+        
+        if source_type == 'domrf':
+            default_name = source_record.get('objCommercNm', source_record.get('name', 'Без названия'))
+            default_description = source_record.get('description', '')
+            default_city = source_record.get('city', 'Уфа')
+            default_district = source_record.get('district', '')
+            default_street = source_record.get('street', '')
+        elif source_type == 'avito':
+            development = source_record.get('development', {})
+            default_name = development.get('name', source_record.get('name', 'Без названия'))
+            default_description = development.get('description', source_record.get('description', ''))
+            default_city = source_record.get('city', 'Уфа')
+            default_district = source_record.get('district', '')
+            default_street = source_record.get('street', '')
+        elif source_type == 'domclick':
+            development = source_record.get('development', {})
+            default_name = development.get('name', development.get('complex_name', source_record.get('name', 'Без названия')))
+            default_description = development.get('description', source_record.get('description', ''))
+            default_city = source_record.get('city', 'Уфа')
+            default_district = source_record.get('district', '')
+            default_street = source_record.get('street', '')
+        
+        # Определяем дату сдачи - для DomRF используем objReady100PercDt, если не передана из формы
+        delivery_date_value = data.get('delivery_date', '')
+        if not delivery_date_value and source_type == 'domrf':
+            # Берем дату из objReady100PercDt
+            obj_ready_date = source_record.get('objReady100PercDt', '')
+            if obj_ready_date:
+                try:
+                    parsed_date = date_parser.parse(str(obj_ready_date), dayfirst=True)
+                    delivery_date_value = parsed_date.strftime('%Y-%m-%d')
+                except Exception:
+                    pass
+        
+        # Если дата все еще не установлена, используем дефолт
+        if not delivery_date_value:
+            delivery_date_value = '2026-12-31'
         
         # Создаем запись для будущих проектов
         now = datetime.now()
         future_project = {
-            'name': data.get('name', domrf_record.get('objCommercNm', 'Без названия')),
-            'description': data.get('description', domrf_record.get('description', '')),
-            'city': data.get('city', 'Уфа'),
-            'district': data.get('district', domrf_record.get('district', '')),
-            'street': data.get('street', domrf_record.get('street', '')),
-            'delivery_date': datetime.strptime(data.get('delivery_date', '2026-12-31'), '%Y-%m-%d'),
+            'name': data.get('name', default_name),
+            'description': data.get('description', default_description),
+            'city': data.get('city', default_city),
+            'district': data.get('district', default_district),
+            'street': data.get('street', default_street),
+            'delivery_date': datetime.strptime(delivery_date_value, '%Y-%m-%d'),
             'sales_start': datetime.strptime(data.get('sales_start', '2024-01-01'), '%Y-%m-%d') if data.get('sales_start') else None,
-            'house_class': data.get('house_class', ''),
-            'developer': data.get('developer', domrf_record.get('developer', '')),
+            'house_class': data.get('house_class', main_characteristics.get('Класс недвижимости', '') if isinstance(main_characteristics, dict) else ''),
+            'developer': data.get('developer', developer_name),
             'is_active': True,
             'is_featured': False,
             'created_at': now,
             'updated_at': now,
             'images': [],
             'construction_progress': [],
-            'object_details': domrf_record.get('object_details', {}),
-            'latitude': domrf_record.get('latitude'),
-            'longitude': domrf_record.get('longitude'),
-            'source_domrf_id': str(domrf_record['_id']),
-            # Поля из формы (приоритетно) или из DomRF
-            'energy_efficiency': data.get('energy_efficiency', domrf_record.get('energy_efficiency', '')),
-            'floors': data.get('floors', domrf_record.get('floors', '')),
-            'contractors': data.get('contractors', domrf_record.get('contractors', '')),
+            'object_details': object_details if source_type == 'domrf' else {},
+            'latitude': source_record.get('latitude'),
+            'longitude': source_record.get('longitude'),
+            'source_type': source_type,
+            'source_id': str(source_record['_id']),
+            # Поля из формы (приоритетно) или из исходной записи
+            'energy_efficiency': data.get('energy_efficiency', main_characteristics.get('Класс энергоэффективности', '') if isinstance(main_characteristics, dict) else ''),
+            'floors': data.get('floors', main_characteristics.get('Количество этажей', source_record.get('floors', '')) if isinstance(main_characteristics, dict) else source_record.get('floors', '')),
+            'contractors': data.get('contractors', object_details.get('contractors', source_record.get('contractors', '')) if source_type == 'domrf' else ''),
             # Основные характеристики
-            'walls_material': data.get('walls_material', domrf_record.get('walls_material', '')),
-            'decoration_type': data.get('decoration_type', domrf_record.get('decoration_type', '')),
-            'free_planning': data.get('free_planning', domrf_record.get('free_planning', '')),
-            'ceiling_height': data.get('ceiling_height', domrf_record.get('ceiling_height', '')),
-            'living_area': data.get('living_area', domrf_record.get('living_area', '')),
+            'walls_material': data.get('walls_material', main_characteristics.get('Материал стен', source_record.get('walls_material', '')) if isinstance(main_characteristics, dict) else source_record.get('walls_material', '')),
+            'decoration_type': data.get('decoration_type', main_characteristics.get('Тип отделки', source_record.get('decoration_type', '')) if isinstance(main_characteristics, dict) else source_record.get('decoration_type', '')),
+            'free_planning': data.get('free_planning', main_characteristics.get('Свободная планировка', source_record.get('free_planning', '')) if isinstance(main_characteristics, dict) else source_record.get('free_planning', '')),
+            'ceiling_height': data.get('ceiling_height', main_characteristics.get('Высота потолков', source_record.get('ceiling_height', '')) if isinstance(main_characteristics, dict) else source_record.get('ceiling_height', '')),
+            'living_area': data.get('living_area', main_characteristics.get('Жилая площадь', source_record.get('living_area', '')) if isinstance(main_characteristics, dict) else source_record.get('living_area', '')),
             # Благоустройство двора
-            'bicycle_paths': data.get('bicycle_paths', domrf_record.get('bicycle_paths', '')),
+            'bicycle_paths': data.get('bicycle_paths', main_characteristics.get('Велосипедные дорожки', source_record.get('bicycle_paths', '')) if isinstance(main_characteristics, dict) else source_record.get('bicycle_paths', '')),
             'children_playgrounds_count': data.get('children_playgrounds_count', 0),
             'sports_grounds_count': data.get('sports_grounds_count', 0),
             # Доступная среда
-            'ramp_available': data.get('ramp_available', domrf_record.get('ramp', '')),
-            'lowering_platforms_available': data.get('lowering_platforms_available', domrf_record.get('lowering_platforms', '')),
+            'ramp_available': data.get('ramp_available', main_characteristics.get('Наличие пандуса', source_record.get('ramp', '')) if isinstance(main_characteristics, dict) else source_record.get('ramp', '')),
+            'lowering_platforms_available': data.get('lowering_platforms_available', main_characteristics.get('Наличие понижающих площадок', source_record.get('lowering_platforms', '')) if isinstance(main_characteristics, dict) else source_record.get('lowering_platforms', '')),
             # Лифты и подъезды
-            'entrances_count': data.get('entrances_count', domrf_record.get('entrances_count', '')),
+            'entrances_count': data.get('entrances_count', main_characteristics.get('Количество подъездов', source_record.get('entrances_count', '')) if isinstance(main_characteristics, dict) else source_record.get('entrances_count', '')),
             'passenger_elevators_count': data.get('passenger_elevators_count', 0),
             'cargo_elevators_count': data.get('cargo_elevators_count', 0),
-            # Сохраняем фотографии и другие данные из DomRF
-            'gallery_photos': object_details.get('gallery_photos', domrf_record.get('gallery_photos', [])),
-            'construction_progress_data': object_details.get('construction_progress', domrf_record.get('construction_progress', {})),
-            'objPublDt': domrf_record.get('objPublDt', ''),
-            'objId': domrf_record.get('objId', ''),
-            'url': domrf_record.get('url', ''),
-            'address': domrf_record.get('address', ''),
-            'completion_date': domrf_record.get('completion_date', ''),
-            'apartments_count': domrf_record.get('apartments_count', ''),
-            'parking': domrf_record.get('parking', ''),
-            'material': domrf_record.get('material', ''),
-            'finishing': domrf_record.get('finishing', ''),
-            'heating': domrf_record.get('heating', ''),
-            'water_supply': domrf_record.get('water_supply', ''),
-            'sewerage': domrf_record.get('sewerage', ''),
-            'gas_supply': domrf_record.get('gas_supply', ''),
-            'electricity': domrf_record.get('electricity', ''),
-            'ventilation': domrf_record.get('ventilation', ''),
-            'security': domrf_record.get('security', ''),
-            'concierge': domrf_record.get('concierge', ''),
-            'intercom': domrf_record.get('intercom', ''),
-            'video_surveillance': domrf_record.get('video_surveillance', ''),
-            'access_control': domrf_record.get('access_control', ''),
-            'fire_safety': domrf_record.get('fire_safety', ''),
-            'children_playground': domrf_record.get('children_playground', ''),
-            'sports_ground': domrf_record.get('sports_ground', ''),
-            'landscaping': domrf_record.get('landscaping', ''),
-            'underground_parking': domrf_record.get('underground_parking', ''),
-            'ground_parking': domrf_record.get('ground_parking', ''),
-            'guest_parking': domrf_record.get('guest_parking', ''),
-            # Сохраняем всю структуру flats_data для статистики квартир (может быть в object_details или в корне)
-            'flats_data': domrf_record.get('object_details', {}).get('flats_data', domrf_record.get('flats_data', {}))
+            # Сохраняем фотографии и другие данные из формы (приоритет) или из исходной записи
+            'gallery_photos': data.get('gallery_photos', gallery_photos),
+            'construction_progress_data': data.get('construction_progress', construction_progress_data),
+            'flats_data': data.get('flats_data', flats_data),
+            # Дополнительные поля (только для DomRF)
+            'objPublDt': source_record.get('objPublDt', '') if source_type == 'domrf' else '',
+            'objId': source_record.get('objId', '') if source_type == 'domrf' else '',
+            'url': source_record.get('url', ''),
+            'address': source_record.get('address', ''),
+            'completion_date': source_record.get('completion_date', ''),
+            'apartments_count': source_record.get('apartments_count', ''),
+            'parking': source_record.get('parking', ''),
+            'material': source_record.get('material', ''),
+            'finishing': source_record.get('finishing', ''),
+            'heating': source_record.get('heating', ''),
+            'water_supply': source_record.get('water_supply', ''),
+            'sewerage': source_record.get('sewerage', ''),
+            'gas_supply': source_record.get('gas_supply', ''),
+            'electricity': source_record.get('electricity', ''),
+            'ventilation': source_record.get('ventilation', ''),
+            'security': source_record.get('security', ''),
+            'concierge': source_record.get('concierge', ''),
+            'intercom': source_record.get('intercom', ''),
+            'video_surveillance': source_record.get('video_surveillance', ''),
+            'access_control': source_record.get('access_control', ''),
+            'fire_safety': source_record.get('fire_safety', ''),
+            'children_playground': source_record.get('children_playground', ''),
+            'sports_ground': source_record.get('sports_ground', ''),
+            'landscaping': source_record.get('landscaping', ''),
+            'underground_parking': source_record.get('underground_parking', ''),
+            'ground_parking': source_record.get('ground_parking', ''),
+            'guest_parking': source_record.get('guest_parking', '')
         }
         
         # Вставляем в коллекцию будущих проектов
         try:
             result = future_collection.insert_one(future_project)
             if result.inserted_id:
-                # Помечаем запись в DomRF как обработанную (не удаляем!)
-                domrf_collection.update_one(
-                    {'_id': ObjectId(domrf_id)},
+                # Помечаем исходную запись как обработанную (не удаляем!)
+                collection.update_one(
+                    {'_id': ObjectId(source_id)},
                     {'$set': {'is_processed': True, 'processed_at': now, 'future_project_id': str(result.inserted_id)}}
                 )
                 
@@ -1784,6 +1913,20 @@ def update_future_project(request, project_id):
         elif 'sales_start' in data and not data.get('sales_start'):
             update_data['sales_start'] = None
         
+        # Обрабатываем фото ЖК
+        if 'gallery_photos' in data:
+            update_data['gallery_photos'] = data.get('gallery_photos', [])
+            # Также сохраняем в images для совместимости
+            update_data['images'] = data.get('gallery_photos', [])
+        
+        # Обрабатываем ход строительства
+        if 'construction_progress' in data:
+            construction_progress = data.get('construction_progress', {})
+            if isinstance(construction_progress, dict):
+                update_data['construction_progress'] = construction_progress
+            else:
+                update_data['construction_progress'] = {}
+        
         # Обновляем проект
         result = collection.update_one(
             {'_id': ObjectId(project_id)},
@@ -1800,6 +1943,393 @@ def update_future_project(request, project_id):
                 'success': False,
                 'error': 'Не удалось обновить проект'
             }, status=500)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def preview_future_project(request):
+    """API: Предпросмотр будущего проекта без сохранения"""
+    try:
+        data = json.loads(request.body)
+        domrf_id = data.get('domrf_id')
+        avito_id = data.get('avito_id')
+        domclick_id = data.get('domclick_id')
+        
+        # Определяем источник
+        source_type = None
+        source_id = None
+        if domrf_id:
+            source_type = 'domrf'
+            source_id = domrf_id
+        elif avito_id:
+            source_type = 'avito'
+            source_id = avito_id
+        elif domclick_id:
+            source_type = 'domclick'
+            source_id = domclick_id
+        
+        if not source_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Не указан ID записи (domrf_id, avito_id или domclick_id)'
+            }, status=400)
+        
+        db = get_mongo_connection()
+        preview = {}
+        
+        if source_type == 'domrf':
+            collection = db['domrf']
+            try:
+                record = collection.find_one({'_id': ObjectId(source_id)})
+                if not record:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Запись DomRF не найдена'
+                    }, status=404)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ошибка поиска записи DomRF: {str(e)}'
+                }, status=400)
+            
+            # Извлекаем object_details из DomRF записи
+            object_details = record.get('object_details', {})
+            main_characteristics = object_details.get('main_characteristics', {})
+            
+            # Извлекаем данные из объекта developer
+            developer_info = record.get('developer', {})
+            developer_name = ''
+            if isinstance(developer_info, dict):
+                developer_name = developer_info.get('shortName', developer_info.get('fullName', ''))
+            
+            # Извлекаем фотографии
+            gallery_photos = object_details.get('gallery_photos', record.get('gallery_photos', []))
+            
+            # Ход строительства
+            construction_progress = object_details.get('construction_progress', {})
+            construction_stages = []
+            if construction_progress and isinstance(construction_progress, dict):
+                construction_stages = construction_progress.get('construction_stages', [])
+                if not construction_stages:
+                    construction_photos = construction_progress.get('photos', [])
+                    if construction_photos:
+                        construction_stages = [{
+                            'stage': 'Строительство',
+                            'date': '',
+                            'photos': construction_photos
+                        }]
+            
+            # Извлекаем даты из DomRF - используем только objReady100PercDt для срока сдачи
+            delivery_date_str = record.get('objReady100PercDt', '')
+            sales_start_str = main_characteristics.get('Старт продаж', '') or object_details.get('sales_start', '') or record.get('sales_start', '')
+            
+            # Пытаемся преобразовать даты
+            delivery_date = None
+            sales_start = None
+            try:
+                if delivery_date_str:
+                    delivery_date = date_parser.parse(str(delivery_date_str), dayfirst=True)
+                if sales_start_str:
+                    sales_start = date_parser.parse(str(sales_start_str), dayfirst=True)
+            except Exception:
+                pass
+            
+            # Формируем предпросмотр
+            preview = {
+                'name': record.get('objCommercNm', record.get('name', 'Без названия')),
+                'description': record.get('description', ''),
+                'city': record.get('city', 'Уфа'),
+                'district': record.get('district', ''),
+                'street': record.get('street', ''),
+                'delivery_date': delivery_date.strftime('%Y-%m-%d') if delivery_date else '',
+                'sales_start': sales_start.strftime('%Y-%m-%d') if sales_start else '',
+                'house_class': main_characteristics.get('Класс недвижимости', record.get('house_class', '')),
+                'developer': developer_name,
+                'latitude': record.get('latitude'),
+                'longitude': record.get('longitude'),
+                'gallery_photos': gallery_photos if isinstance(gallery_photos, list) else [],
+                'construction_progress': {'construction_stages': construction_stages} if construction_stages else {},
+                'flats_data': object_details.get('flats_data', record.get('flats_data', {})),
+                # Дополнительные поля
+                'energy_efficiency': object_details.get('energy_efficiency', record.get('energy_efficiency', '')),
+                'floors': main_characteristics.get('Количество этажей', record.get('floors', '')),
+                'contractors': object_details.get('contractors', record.get('contractors', '')),
+                # Основные характеристики
+                'walls_material': main_characteristics.get('Материал стен', record.get('walls_material', '')),
+                'decoration_type': main_characteristics.get('Тип отделки', record.get('decoration_type', '')),
+                'free_planning': main_characteristics.get('Свободная планировка', record.get('free_planning', '')),
+                'ceiling_height': main_characteristics.get('Высота потолков', record.get('ceiling_height', '')),
+                'living_area': main_characteristics.get('Жилая площадь', record.get('living_area', '')),
+                # Благоустройство двора
+                'bicycle_paths': record.get('bicycle_paths', ''),
+                'children_playgrounds_count': record.get('children_playgrounds_count', 0),
+                'sports_grounds_count': record.get('sports_grounds_count', 0),
+                # Доступная среда
+                'ramp_available': record.get('ramp', ''),
+                'lowering_platforms_available': record.get('lowering_platforms', ''),
+                # Лифты и подъезды
+                'entrances_count': record.get('entrances_count', ''),
+                'passenger_elevators_count': record.get('passenger_elevators_count', 0),
+                'cargo_elevators_count': record.get('cargo_elevators_count', 0),
+            }
+        
+        elif source_type == 'avito':
+            collection = db['avito']
+            try:
+                record = collection.find_one({'_id': ObjectId(source_id)})
+                if not record:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Запись Avito не найдена'
+                    }, status=404)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ошибка поиска записи Avito: {str(e)}'
+                }, status=400)
+            
+            # Извлекаем данные из Avito
+            development = record.get('development', {})
+            apartment_types = record.get('apartment_types', {})
+            
+            # Логируем структуру записи для отладки
+            logger = logging.getLogger(__name__)
+            logger.info(f"📦 Структура записи Avito ID {source_id}:")
+            logger.info(f"  - development: {list(development.keys()) if isinstance(development, dict) else 'не словарь'}")
+            logger.info(f"  - record keys: {list(record.keys())[:20]}...")
+            
+            # Получаем адрес из различных источников
+            latitude = record.get('latitude')
+            longitude = record.get('longitude')
+            geocoded_address = {}
+            if latitude and longitude:
+                geocoded_address = fetch_address_from_coords(latitude, longitude)
+            
+            # Парсим адрес из development.address или полей записи
+            fallback_address = development.get('address', record.get('address', ''))
+            parsed_address = parse_address_string(fallback_address)
+            
+            city = record.get('city') or (geocoded_address or {}).get('city') or parsed_address.get('city') or 'Уфа'
+            district = record.get('district') or (geocoded_address or {}).get('district') or parsed_address.get('district') or ''
+            street = record.get('street') or (geocoded_address or {}).get('street') or parsed_address.get('street') or ''
+            
+            # Формируем flats_data из apartment_types
+            flats_data = {}
+            for apt_type, apt_data in apartment_types.items():
+                apartments = apt_data.get('apartments', [])
+                if apartments:
+                    flats_data[apt_type] = {
+                        'total_count': len(apartments),
+                        'flats': apartments
+                    }
+            
+            # Преобразуем construction_progress в нужный формат
+            construction_progress = development.get('construction_progress', {})
+            construction_stages = []
+            if construction_progress:
+                if isinstance(construction_progress, dict):
+                    if construction_progress.get('construction_stages'):
+                        construction_stages = construction_progress['construction_stages']
+                    elif construction_progress.get('photos'):
+                        construction_stages = [{
+                            'stage': 'Строительство',
+                            'date': '',
+                            'photos': construction_progress['photos']
+                        }]
+            
+            # Извлекаем параметры из development.parameters
+            parameters = development.get('parameters', {})
+            if not isinstance(parameters, dict):
+                parameters = {}
+            
+            # Логируем параметры для отладки
+            logger.info(f"  - parameters keys: {list(parameters.keys()) if parameters else 'пусто'}")
+            logger.info(f"  - parameters sample: {dict(list(parameters.items())[:5]) if parameters else 'нет'}")
+            
+            # Также проверяем параметры в корне записи или development
+            if not parameters:
+                parameters = record.get('parameters', {})
+            
+            # Извлекаем даты из параметров
+            delivery_date_str = parameters.get('Срок сдачи', '') or record.get('delivery_date', '')
+            sales_start_str = parameters.get('Старт продаж', '') or record.get('sales_start', '')
+            
+            # Пытаемся преобразовать даты
+            delivery_date = None
+            sales_start = None
+            try:
+                if delivery_date_str:
+                    delivery_date = date_parser.parse(str(delivery_date_str), dayfirst=True)
+                if sales_start_str:
+                    sales_start = date_parser.parse(str(sales_start_str), dayfirst=True)
+            except Exception as e:
+                logger.warning(f"Ошибка парсинга дат: {e}")
+            
+            # Извлекаем все параметры с fallback на корень записи
+            def get_param(key, default=''):
+                """Получить параметр из development.parameters, development или record"""
+                return (parameters.get(key) or 
+                       development.get(key) or 
+                       record.get(key) or 
+                       default)
+            
+            preview = {
+                'name': development.get('name', record.get('name', 'Без названия')),
+                'description': development.get('description', record.get('description', '')),
+                'city': city,
+                'district': district,
+                'street': street,
+                'delivery_date': delivery_date.strftime('%Y-%m-%d') if delivery_date else '',
+                'sales_start': sales_start.strftime('%Y-%m-%d') if sales_start else '',
+                'house_class': get_param('Класс недвижимости') or get_param('house_class') or get_param('Класс'),
+                'developer': development.get('developer', record.get('developer', '')),
+                'latitude': latitude,
+                'longitude': longitude,
+                'gallery_photos': development.get('photos', []),
+                'construction_progress': {'construction_stages': construction_stages} if construction_stages else {},
+                'flats_data': flats_data,
+                # Параметры из development.parameters с fallback
+                'energy_efficiency': get_param('Класс энергоэффективности'),
+                'floors': get_param('Количество этажей') or get_param('floors'),
+                'walls_material': get_param('Материал стен'),
+                'decoration_type': get_param('Тип отделки'),
+                'free_planning': get_param('Свободная планировка'),
+                'ceiling_height': get_param('Высота потолков'),
+                'living_area': get_param('Жилая площадь'),
+                'bicycle_paths': get_param('Велосипедные дорожки'),
+                'children_playgrounds_count': 0,
+                'sports_grounds_count': 0,
+                'ramp_available': get_param('Наличие пандуса'),
+                'lowering_platforms_available': get_param('Наличие понижающих площадок'),
+                'entrances_count': get_param('Количество подъездов'),
+                'passenger_elevators_count': 0,
+                'cargo_elevators_count': 0,
+            }
+        
+        elif source_type == 'domclick':
+            collection = db['domclick']
+            try:
+                record = collection.find_one({'_id': ObjectId(source_id)})
+                if not record:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Запись DomClick не найдена'
+                    }, status=404)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ошибка поиска записи DomClick: {str(e)}'
+                }, status=400)
+            
+            # Извлекаем данные из DomClick
+            development = record.get('development', {})
+            apartment_types = record.get('apartment_types', {})
+            
+            # Получаем адрес из различных источников
+            latitude = record.get('latitude')
+            longitude = record.get('longitude')
+            geocoded_address = {}
+            if latitude and longitude:
+                geocoded_address = fetch_address_from_coords(latitude, longitude)
+            
+            # Парсим адрес из development.address или полей записи
+            fallback_address = development.get('address', record.get('address', ''))
+            parsed_address = parse_address_string(fallback_address)
+            
+            city = record.get('city') or (geocoded_address or {}).get('city') or parsed_address.get('city') or 'Уфа'
+            district = record.get('district') or (geocoded_address or {}).get('district') or parsed_address.get('district') or ''
+            street = record.get('street') or (geocoded_address or {}).get('street') or parsed_address.get('street') or ''
+            
+            # Формируем flats_data из apartment_types
+            flats_data = {}
+            for apt_type, apt_data in apartment_types.items():
+                apartments = apt_data.get('apartments', [])
+                if apartments:
+                    flats_data[apt_type] = {
+                        'total_count': len(apartments),
+                        'flats': apartments
+                    }
+            
+            # Преобразуем construction_progress в нужный формат
+            construction_progress = development.get('construction_progress', record.get('construction_progress', {}))
+            construction_stages = []
+            if construction_progress:
+                if isinstance(construction_progress, dict):
+                    if construction_progress.get('construction_stages'):
+                        construction_stages = construction_progress['construction_stages']
+                    elif construction_progress.get('photos'):
+                        construction_stages = [{
+                            'stage': 'Строительство',
+                            'date': '',
+                            'photos': construction_progress['photos']
+                        }]
+            
+            # Извлекаем даты из параметров
+            parameters = development.get('parameters', {})
+            delivery_date_str = parameters.get('Срок сдачи', '') or record.get('delivery_date', '')
+            sales_start_str = parameters.get('Старт продаж', '') or record.get('sales_start', '')
+            
+            # Пытаемся преобразовать даты
+            delivery_date = None
+            sales_start = None
+            try:
+                if delivery_date_str:
+                    delivery_date = date_parser.parse(str(delivery_date_str), dayfirst=True)
+                if sales_start_str:
+                    sales_start = date_parser.parse(str(sales_start_str), dayfirst=True)
+            except Exception:
+                pass
+            
+            preview = {
+                'name': development.get('name', development.get('complex_name', record.get('name', 'Без названия'))),
+                'description': development.get('description', record.get('description', '')),
+                'city': city,
+                'district': district,
+                'street': street,
+                'delivery_date': delivery_date.strftime('%Y-%m-%d') if delivery_date else '',
+                'sales_start': sales_start.strftime('%Y-%m-%d') if sales_start else '',
+                'house_class': parameters.get('Класс недвижимости', ''),
+                'developer': development.get('developer', ''),
+                'latitude': latitude,
+                'longitude': longitude,
+                'gallery_photos': development.get('photos', []),
+                'construction_progress': {'construction_stages': construction_stages} if construction_stages else {},
+                'flats_data': flats_data,
+                # Параметры из development
+                'energy_efficiency': parameters.get('Класс энергоэффективности', ''),
+                'floors': parameters.get('Количество этажей', ''),
+                'walls_material': parameters.get('Материал стен', ''),
+                'decoration_type': parameters.get('Тип отделки', ''),
+                'free_planning': parameters.get('Свободная планировка', ''),
+                'ceiling_height': parameters.get('Высота потолков', ''),
+                'living_area': parameters.get('Жилая площадь', ''),
+                'bicycle_paths': parameters.get('Велосипедные дорожки', ''),
+                'children_playgrounds_count': 0,
+                'sports_grounds_count': 0,
+                'ramp_available': parameters.get('Наличие пандуса', ''),
+                'lowering_platforms_available': parameters.get('Наличие понижающих площадок', ''),
+                'entrances_count': parameters.get('Количество подъездов', ''),
+                'passenger_elevators_count': 0,
+                'cargo_elevators_count': 0,
+            }
+        
+        # Добавляем debug информацию в ответ (временно для отладки)
+        preview['_debug'] = {
+            'source_type': source_type,
+            'parameters_keys': list(parameters.keys()) if parameters else [],
+            'development_keys': list(development.keys()) if isinstance(development, dict) else [],
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': preview
+        })
         
     except Exception as e:
         return JsonResponse({

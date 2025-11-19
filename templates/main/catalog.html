@@ -1171,6 +1171,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Обработка нажатия на кнопку "Поиск" - закрываем мобильное окно фильтров
+    const searchButton = filtersForm ? filtersForm.querySelector('button[type="submit"]') : null;
+    if (searchButton) {
+        searchButton.addEventListener('click', function(e) {
+            // Закрываем мобильное окно фильтров только при явном нажатии на кнопку "Поиск"
+            const sheet = document.getElementById('filters-sheet');
+            const backdrop = document.getElementById('filters-backdrop');
+            if (sheet && sheet.classList.contains('open')) {
+                // Небольшая задержка, чтобы форма успела отправиться
+                setTimeout(function() {
+                    sheet.classList.remove('open');
+                    if (backdrop) backdrop.classList.remove('open');
+                    document.body.style.overflow = '';
+                }, 100);
+            }
+        });
+    }
+    
     // Обработка выбора города
     const citySelect = document.getElementById('city');
     const districtGroup = document.getElementById('district-group');

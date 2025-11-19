@@ -325,8 +325,8 @@
                 <h3 class="category-title">Статистика квартир</h3>
                 <div class="apartment-stats-container">
                     {% for apt_type, apt_data in complex.flats_data.items %}
-                        {% if apt_data.flats %}
-                            {% with total_count=apt_data.total_count|default:apt_data.flats|length %}
+                        {% with total_count=apt_data.total_count|default:0 min_area=apt_data.min_area max_area=apt_data.max_area %}
+                        {% if total_count > 0 or min_area or max_area %}
                             <div class="apartment-type-stat">
                                 <div class="apartment-type-info">
                                     {% if apt_type == 'oneRoom' %}
@@ -342,19 +342,22 @@
                                     {% endif %}
                                     <div class="apartment-type-count">{{ total_count }} {% if total_count == 1 %}квартира{% elif total_count > 1 and total_count < 5 %}квартиры{% else %}квартир{% endif %}</div>
                                     <div class="apartment-type-details">
-                                        {% with areas=apt_data.flats|slice:":10" %}
-                                            {% for flat in areas %}
-                                                {% if flat.totalArea %}
-                                                    {% if forloop.first %}{{ flat.totalArea }}{% elif forloop.last %}{{ flat.totalArea }}{% endif %}
-                                                    {% if not forloop.first and not forloop.last %}...{% endif %}
-                                                {% endif %}
-                                            {% endfor %}
-                                        {% endwith %}
+                                        {% if min_area and max_area %}
+                                            {% if min_area == max_area %}
+                                                {{ min_area }} м²
+                                            {% else %}
+                                                от {{ min_area }} до {{ max_area }} м²
+                                            {% endif %}
+                                        {% elif min_area %}
+                                            {{ min_area }} м²
+                                        {% elif max_area %}
+                                            {{ max_area }} м²
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
-                            {% endwith %}
                         {% endif %}
+                        {% endwith %}
                     {% endfor %}
                 </div>
             </div>
@@ -695,9 +698,145 @@
 
 .complex-description {
     color: #444;
-    line-height: 1.6;
+    line-height: 1.8;
     margin-bottom: 32px;
-    font-size: 16px;
+    font-size: 17px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+.complex-description p {
+    margin: 0 0 1.2em 0;
+    text-align: justify;
+    hyphens: auto;
+}
+
+.complex-description p:first-child {
+    margin-top: 0;
+}
+
+.complex-description p:last-child {
+    margin-bottom: 0;
+}
+
+.complex-description strong,
+.complex-description b {
+    font-weight: 700;
+    color: var(--c21-dark);
+}
+
+.complex-description em,
+.complex-description i {
+    font-style: italic;
+    color: #555;
+}
+
+.complex-description ul,
+.complex-description ol {
+    margin: 1.2em 0;
+    padding-left: 1.8em;
+    line-height: 1.8;
+}
+
+.complex-description li {
+    margin: 0.6em 0;
+    color: #444;
+}
+
+.complex-description ul {
+    list-style-type: disc;
+}
+
+.complex-description ol {
+    list-style-type: decimal;
+}
+
+.complex-description a {
+    color: var(--c21-gold);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.complex-description a:hover {
+    color: var(--c21-gold-dark);
+    border-bottom-color: var(--c21-gold);
+}
+
+.complex-description h1,
+.complex-description h2,
+.complex-description h3,
+.complex-description h4 {
+    color: var(--c21-dark);
+    font-weight: 700;
+    margin: 1.5em 0 0.8em 0;
+    line-height: 1.3;
+}
+
+.complex-description h1 {
+    font-size: 1.8em;
+}
+
+.complex-description h2 {
+    font-size: 1.5em;
+}
+
+.complex-description h3 {
+    font-size: 1.3em;
+}
+
+.complex-description h4 {
+    font-size: 1.1em;
+}
+
+.complex-description blockquote {
+    margin: 1.5em 0;
+    padding: 1em 1.5em;
+    border-left: 4px solid var(--c21-gold);
+    background: #f8f9fa;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: #555;
+}
+
+.complex-description code {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #e83e8c;
+}
+
+.complex-description pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 1.2em;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1.5em 0;
+    font-size: 0.9em;
+    line-height: 1.6;
+}
+
+.complex-description pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+}
+
+.complex-description hr {
+    border: none;
+    border-top: 2px solid #e9ecef;
+    margin: 2em 0;
+}
+
+.complex-description img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1.5em 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .complex-characteristics h3 {

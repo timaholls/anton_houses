@@ -1694,8 +1694,8 @@
                         </div>
                     </div>
                     <div class="record-actions">
-                        ${source === 'domrf' ? `
-                            <button class="future-project-btn" onclick="openFutureProjectModal('${item._id}', '${escapeHtml(item.name)}')" title="Перенести в будущие проекты">
+                        ${source === 'domrf' || source === 'avito' || source === 'domclick' ? `
+                            <button class="future-project-btn" onclick="openFutureProjectModal('${source}', '${item._id}', '${escapeHtml(item.name)}')" title="Перенести в будущие проекты">
                                 🏗️
                             </button>
                         ` : ''}
@@ -4890,6 +4890,94 @@
                                         <label for="editProjectDescription">Описание</label>
                                         <textarea id="editProjectDescription" class="form-input" rows="4" placeholder="Описание проекта...">${escapeHtml(project.description || '')}</textarea>
                                     </div>
+                                    
+                                    <!-- Фото ЖК -->
+                                    <div class="form-group">
+                                        <label>Фото ЖК</label>
+                                        <div style="margin-bottom:12px;">
+                                            <button type="button" onclick="addEditFutureProjectGalleryPhoto()" 
+                                                style="background:#10b981; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:14px;">
+                                                ➕ Добавить фото
+                                            </button>
+                                            <span id="editGalleryPhotosCount" style="margin-left:12px; color:#94a3b8; font-size:14px;">
+                                                (${project.gallery_photos?.length || project.images?.length || 0} фото)
+                                            </span>
+                                        </div>
+                                        <div class="dev-photos-container" id="editGalleryPhotosContainer" 
+                                            style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; margin-top:12px;">
+                                            ${(project.gallery_photos || project.images || []).map((photo, idx) => {
+                                                const uniqueId = `edit-gallery-${Date.now()}-${idx}`;
+                                                return `
+                                                    <div class="dev-photo-wrapper" data-photo-idx="${uniqueId}" 
+                                                        style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                        <img src="${photo}" alt="Фото ЖК" loading="lazy" 
+                                                            style="width:100%; height:140px; object-fit:cover; display:block;"
+                                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                        <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                            Изображение недоступно
+                                                        </div>
+                                                        <button onclick="deleteEditFutureProjectGalleryPhoto('${uniqueId}')" 
+                                                            style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                            title="Удалить фото">✕</button>
+                                                    </div>
+                                                `;
+                                            }).join('') || '<div class="dev-photos-empty" style="grid-column:1/-1; text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет фото ЖК</div>'}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Фото хода строительства -->
+                                    <div class="form-group">
+                                        <label>Фото хода строительства</label>
+                                        <div id="editConstructionStagesContainer">
+                                            ${project.construction_progress?.construction_stages && project.construction_progress.construction_stages.length > 0 ? 
+                                                project.construction_progress.construction_stages.map((stage, stageIdx) => {
+                                                    const stagePhotos = stage.photos || [];
+                                                    return `
+                                                        <div class="construction-stage" data-stage-idx="${stageIdx}" style="margin-bottom:20px; padding:16px; background:#0f172a; border-radius:8px; border:1px solid #475569;">
+                                                            <div style="margin-bottom:12px;">
+                                                                <label style="display:block; color:#10b981; font-weight:600; margin-bottom:6px;">
+                                                                    Этап: <input type="text" value="${escapeHtml(stage.stage || 'Строительство')}" 
+                                                                        class="edit-stage-name-input" data-stage-idx="${stageIdx}"
+                                                                        style="background:#334155; border:1px solid #475569; border-radius:4px; padding:6px 10px; color:#fff; font-size:14px; width:auto; min-width:200px;">
+                                                                </label>
+                                                                <button type="button" onclick="addEditFutureProjectConstructionPhoto(${stageIdx})" 
+                                                                    style="background:#10b981; color:white; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:13px; margin-top:6px;">
+                                                                    ➕ Добавить фото
+                                                                </button>
+                                                            </div>
+                                                            <div class="edit-stage-photos-container" data-stage-idx="${stageIdx}" 
+                                                                style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;">
+                                                                ${stagePhotos.map((photo, photoIdx) => {
+                                                                    const uniqueId = `edit-construction-${stageIdx}-${Date.now()}-${photoIdx}`;
+                                                                    return `
+                                                                        <div class="edit-stage-photo-wrapper" data-photo-idx="${uniqueId}" 
+                                                                            style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                                            <img src="${photo}" alt="Ход строительства" loading="lazy" 
+                                                                                style="width:100%; height:140px; object-fit:cover; display:block;"
+                                                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                            <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                                                Изображение недоступно
+                                                                            </div>
+                                                                            <button onclick="deleteEditFutureProjectConstructionPhoto('${uniqueId}')" 
+                                                                                style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                                                title="Удалить фото">✕</button>
+                                                                        </div>
+                                                                    `;
+                                                                }).join('')}
+                                                            </div>
+                                                        </div>
+                                                    `;
+                                                }).join('') : 
+                                                '<div class="no-photos" style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет данных о ходе строительства</div>'
+                                            }
+                                        </div>
+                                        <div style="margin-top:12px;">
+                                            <button type="button" onclick="addEditFutureProjectConstructionStage()" 
+                                                style="background:#3b82f6; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:14px;">
+                                                ➕ Добавить этап строительства
+                                            </button>
+                                        </div>
+                                    </div>
                                 </form>
                             </div>
                             <div class="modal-footer">
@@ -4946,6 +5034,96 @@
 
         // Сохранение изменений будущего проекта
         async function saveFutureProjectEdit(projectId) {
+            const modal = document.getElementById('editFutureProjectModal');
+            if (!modal) return;
+
+            // Собираем фото ЖК
+            const galleryPhotos = [];
+            for (const img of modal.querySelectorAll('#editGalleryPhotosContainer .dev-photo-wrapper img')) {
+                const src = img.getAttribute('src');
+                if (src) {
+                    if (src.startsWith('data:image/')) {
+                        // Загружаем в S3
+                        try {
+                            const response = await fetch('/api/manual-matching/upload-base64-photo/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    base64: src,
+                                    type: 'future_project',
+                                    unified_id: 'future_project',
+                                    room_type: 'gallery'
+                                })
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                galleryPhotos.push(result.url);
+                            } else {
+                                console.error('Ошибка загрузки фото ЖК:', result.error);
+                                galleryPhotos.push(src); // Оставляем base64 если ошибка
+                            }
+                        } catch (e) {
+                            console.error('Ошибка загрузки фото ЖК:', e);
+                            galleryPhotos.push(src); // Оставляем base64 если ошибка
+                        }
+                    } else {
+                        // Уже S3 URL, просто добавляем
+                        galleryPhotos.push(src);
+                    }
+                }
+            }
+
+            // Собираем ход строительства
+            const constructionStages = [];
+            for (const stageEl of modal.querySelectorAll('.construction-stage')) {
+                const stageIdx = stageEl.dataset.stageIdx;
+                const stageNameInput = stageEl.querySelector(`.edit-stage-name-input[data-stage-idx="${stageIdx}"]`);
+                const stageName = stageNameInput?.value || 'Строительство';
+                const photos = [];
+                
+                for (const img of stageEl.querySelectorAll('.edit-stage-photo-wrapper img')) {
+                    const src = img.getAttribute('src');
+                    if (src) {
+                        if (src.startsWith('data:image/')) {
+                            // Загружаем в S3
+                            try {
+                                const response = await fetch('/api/manual-matching/upload-base64-photo/', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        base64: src,
+                                        type: 'future_project',
+                                        unified_id: 'future_project',
+                                        room_type: 'construction'
+                                    })
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    photos.push(result.url);
+                                } else {
+                                    console.error('Ошибка загрузки фото хода строительства:', result.error);
+                                    photos.push(src); // Оставляем base64 если ошибка
+                                }
+                            } catch (e) {
+                                console.error('Ошибка загрузки фото хода строительства:', e);
+                                photos.push(src); // Оставляем base64 если ошибка
+                            }
+                        } else {
+                            // Уже S3 URL, просто добавляем
+                            photos.push(src);
+                        }
+                    }
+                }
+                
+                if (photos.length > 0 || stageName) {
+                    constructionStages.push({
+                        stage: stageName,
+                        date: '',
+                        photos: photos
+                    });
+                }
+            }
+            
             const formData = {
                 name: document.getElementById('editProjectName').value,
                 city: document.getElementById('editProjectCity').value,
@@ -4955,7 +5133,9 @@
                 sales_start: document.getElementById('editProjectSalesStart').value,
                 house_class: document.getElementById('editProjectHouseClass').value,
                 developer: document.getElementById('editProjectDeveloper').value,
-                description: document.getElementById('editProjectDescription').value
+                description: document.getElementById('editProjectDescription').value,
+                gallery_photos: galleryPhotos,
+                construction_progress: constructionStages.length > 0 ? { construction_stages: constructionStages } : {}
             };
             
             // Валидация
@@ -5338,7 +5518,7 @@
         }
 
         // Модальное окно для будущих проектов
-        async function openFutureProjectModal(domrfId, domrfName) {
+        async function openFutureProjectModal(sourceType, sourceId, sourceName) {
             
             // Проверяем, есть ли уже открытое модальное окно
             const existingModal = document.getElementById('futureProjectModal');
@@ -5346,15 +5526,57 @@
                 existingModal.remove();
             }
             
-            // Получаем данные DomRF записи для заполнения полей
-            let domrfData = {};
+            // Получаем предпросмотр будущего проекта
+            let previewData = {};
             try {
-                const response = await fetch(`/api/manual-matching/domrf-data/${domrfId}/`);
+                const requestBody = {};
+                if (sourceType === 'domrf') {
+                    requestBody.domrf_id = sourceId;
+                } else if (sourceType === 'avito') {
+                    requestBody.avito_id = sourceId;
+                } else if (sourceType === 'domclick') {
+                    requestBody.domclick_id = sourceId;
+                }
+                
+                const response = await fetch('/api/manual-matching/preview-future-project/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(requestBody)
+                });
                 const result = await response.json();
                 if (result.success) {
-                    domrfData = result.data;}
+                    previewData = result.data;
+                    console.log('📦 Получены данные предпросмотра:', previewData);
+                    if (previewData._debug) {
+                        console.log('🔍 Debug информация:', previewData._debug);
+                        console.log('📋 Доступные ключи в parameters:', previewData._debug.parameters_keys);
+                        console.log('📋 Доступные ключи в development:', previewData._debug.development_keys);
+                    }
+                } else {
+                    showToast(`Ошибка загрузки предпросмотра: ${result.error}`, 'error');
+                    console.error('❌ Ошибка API предпросмотра:', result.error);
+                    return;
+                }
             } catch (error) {
-                console.warn('⚠️ Не удалось получить данные DomRF:', error);
+                console.error('Ошибка загрузки предпросмотра:', error);
+                showToast('Ошибка подключения к серверу', 'error');
+                return;
+            }
+            
+            // Получаем данные записи для заполнения полей (fallback) - только для DomRF
+            let domrfData = {};
+            if (sourceType === 'domrf') {
+                try {
+                    const response = await fetch(`/api/manual-matching/domrf-data/${sourceId}/`);
+                    const result = await response.json();
+                    if (result.success) {
+                        domrfData = result.data;}
+                } catch (error) {
+                    console.warn('⚠️ Не удалось получить данные DomRF:', error);
+                }
             }
             
             // Создаем модальное окно
@@ -5367,60 +5589,60 @@
                         </div>
                         <div class="modal-body">
                             <p style="margin-bottom: 20px; color: var(--text-secondary);">
-                                Заполните информацию о будущем проекте. Запись будет перенесена из DomRF в коллекцию будущих проектов.
+                                Заполните информацию о будущем проекте. Запись будет перенесена из ${sourceType === 'domrf' ? 'DomRF' : sourceType === 'avito' ? 'Avito' : 'DomClick'} в коллекцию будущих проектов.
                             </p>
                             <form id="futureProjectForm">
                                 <div class="form-group">
                                     <label for="projectName">Название проекта *</label>
-                                    <input type="text" id="projectName" class="form-input" value="${domrfData.name || domrfName}" required>
+                                    <input type="text" id="projectName" class="form-input" value="${previewData.name || domrfData.name || sourceName}" required>
                                 </div>
                                 
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="projectCity">Город *</label>
-                                        <input type="text" id="projectCity" class="form-input" value="${domrfData.city || 'Уфа'}" required>
+                                        <input type="text" id="projectCity" class="form-input" value="${previewData.city || domrfData.city || 'Уфа'}" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="projectDistrict">Район</label>
-                                        <input type="text" id="projectDistrict" class="form-input" value="${domrfData.district || ''}" placeholder="Например: Советский">
+                                        <input type="text" id="projectDistrict" class="form-input" value="${previewData.district || domrfData.district || ''}" placeholder="Например: Советский">
                                     </div>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="projectStreet">Улица</label>
-                                    <input type="text" id="projectStreet" class="form-input" value="${domrfData.street || ''}" placeholder="Например: ул. Ленина, д. 1">
+                                    <input type="text" id="projectStreet" class="form-input" value="${previewData.street || domrfData.street || ''}" placeholder="Например: ул. Ленина, д. 1">
                                 </div>
                                 
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="projectDeliveryDate">Срок сдачи *</label>
-                                        <input type="date" id="projectDeliveryDate" class="form-input" required>
+                                        <input type="date" id="projectDeliveryDate" class="form-input" value="${previewData.delivery_date || domrfData.delivery_date || ''}" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="projectSalesStart">Старт продаж</label>
-                                        <input type="date" id="projectSalesStart" class="form-input" placeholder="Дата начала продаж">
+                                        <input type="date" id="projectSalesStart" class="form-input" value="${previewData.sales_start || domrfData.sales_start || ''}" placeholder="Дата начала продаж">
                                     </div>
                                 </div>
                                 
-                                <div class="form-group">
-                                    <label for="projectHouseClass">Класс дома</label>
-                                    <select id="projectHouseClass" class="form-input">
-                                        <option value="">Выберите класс</option>
-                                        <option value="Эконом" ${domrfData.house_class === 'Эконом' ? 'selected' : ''}>Эконом</option>
-                                        <option value="Комфорт" ${domrfData.house_class === 'Комфорт' ? 'selected' : ''}>Комфорт</option>
-                                        <option value="Бизнес" ${domrfData.house_class === 'Бизнес' ? 'selected' : ''}>Бизнес</option>
-                                        <option value="Элит" ${domrfData.house_class === 'Элит' ? 'selected' : ''}>Элит</option>
-                                    </select>
-                                </div>
+                                    <div class="form-group">
+                                        <label for="projectHouseClass">Класс дома</label>
+                                        <select id="projectHouseClass" class="form-input">
+                                            <option value="">Выберите класс</option>
+                                            <option value="Эконом" ${(previewData.house_class || domrfData.house_class) === 'Эконом' ? 'selected' : ''}>Эконом</option>
+                                            <option value="Комфорт" ${(previewData.house_class || domrfData.house_class) === 'Комфорт' ? 'selected' : ''}>Комфорт</option>
+                                            <option value="Бизнес" ${(previewData.house_class || domrfData.house_class) === 'Бизнес' ? 'selected' : ''}>Бизнес</option>
+                                            <option value="Элит" ${(previewData.house_class || domrfData.house_class) === 'Элит' ? 'selected' : ''}>Элит</option>
+                                        </select>
+                                    </div>
                                 
                                 <div class="form-group">
                                     <label for="projectDeveloper">Застройщик</label>
-                                    <input type="text" id="projectDeveloper" class="form-input" value="${domrfData.developer || ''}" placeholder="Название застройщика">
+                                    <input type="text" id="projectDeveloper" class="form-input" value="${previewData.developer || domrfData.developer || ''}" placeholder="Название застройщика">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="projectDescription">Описание</label>
-                                    <textarea id="projectDescription" class="form-input" rows="4" placeholder="Описание проекта...">${domrfData.description || ''}</textarea>
+                                    <textarea id="projectDescription" class="form-input" rows="4" placeholder="Описание проекта...">${previewData.description || domrfData.description || ''}</textarea>
                                 </div>
                                 
                                 <!-- Дополнительные характеристики -->
@@ -5429,24 +5651,24 @@
                                         <label for="projectEnergyEfficiency">Класс энергоэффективности</label>
                                         <select id="projectEnergyEfficiency" class="form-input">
                                             <option value="">Выберите класс</option>
-                                            <option value="A++" ${domrfData.energy_efficiency === 'A++' ? 'selected' : ''}>A++</option>
-                                            <option value="A+" ${domrfData.energy_efficiency === 'A+' ? 'selected' : ''}>A+</option>
-                                            <option value="A" ${domrfData.energy_efficiency === 'A' ? 'selected' : ''}>A</option>
-                                            <option value="B" ${domrfData.energy_efficiency === 'B' ? 'selected' : ''}>B</option>
-                                            <option value="C" ${domrfData.energy_efficiency === 'C' ? 'selected' : ''}>C</option>
-                                            <option value="D" ${domrfData.energy_efficiency === 'D' ? 'selected' : ''}>D</option>
-                                            <option value="E" ${domrfData.energy_efficiency === 'E' ? 'selected' : ''}>E</option>
+                                            <option value="A++" ${(previewData.energy_efficiency || domrfData.energy_efficiency) === 'A++' ? 'selected' : ''}>A++</option>
+                                            <option value="A+" ${(previewData.energy_efficiency || domrfData.energy_efficiency) === 'A+' ? 'selected' : ''}>A+</option>
+                                            <option value="A" ${(previewData.energy_efficiency || domrfData.energy_efficiency) === 'A' ? 'selected' : ''}>A</option>
+                                            <option value="B" ${(previewData.energy_efficiency || domrfData.energy_efficiency) === 'B' ? 'selected' : ''}>B</option>
+                                            <option value="C" ${(previewData.energy_efficiency || domrfData.energy_efficiency) === 'C' ? 'selected' : ''}>C</option>
+                                            <option value="D" ${(previewData.energy_efficiency || domrfData.energy_efficiency) === 'D' ? 'selected' : ''}>D</option>
+                                            <option value="E" ${(previewData.energy_efficiency || domrfData.energy_efficiency) === 'E' ? 'selected' : ''}>E</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
                                         <label for="projectFloors">Этажность</label>
-                                        <input type="number" id="projectFloors" class="form-input" value="${domrfData.floors || ''}" placeholder="Например: 18">
+                                        <input type="number" id="projectFloors" class="form-input" value="${previewData.floors || domrfData.floors || ''}" placeholder="Например: 18">
                                     </div>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="projectContractors">Подрядчики</label>
-                                    <input type="text" id="projectContractors" class="form-input" value="${domrfData.contractors || ''}" placeholder="Например: ООО АСБ (ИНН: 0275922105)">
+                                    <input type="text" id="projectContractors" class="form-input" value="${previewData.contractors || domrfData.contractors || ''}" placeholder="Например: ООО АСБ (ИНН: 0275922105)">
                                 </div>
                                 
                                 <!-- Основные характеристики -->
@@ -5455,28 +5677,28 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="projectWallsMaterial">Материал стен</label>
-                                        <input type="text" id="projectWallsMaterial" class="form-input" value="${domrfData.walls_material || ''}" placeholder="Например: Монолит-кирпич">
+                                        <input type="text" id="projectWallsMaterial" class="form-input" value="${previewData.walls_material || domrfData.walls_material || ''}" placeholder="Например: Монолит-кирпич">
                                     </div>
                                     <div class="form-group">
                                         <label for="projectDecorationType">Тип отделки</label>
-                                        <input type="text" id="projectDecorationType" class="form-input" value="${domrfData.decoration_type || ''}" placeholder="Например: 1 вариант">
+                                        <input type="text" id="projectDecorationType" class="form-input" value="${previewData.decoration_type || domrfData.decoration_type || ''}" placeholder="Например: 1 вариант">
                                     </div>
                                 </div>
                                 
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="projectFreePlanning">Свободная планировка</label>
-                                        <input type="text" id="projectFreePlanning" class="form-input" value="${domrfData.free_planning || ''}" placeholder="Есть/Нет">
+                                        <input type="text" id="projectFreePlanning" class="form-input" value="${previewData.free_planning || domrfData.free_planning || ''}" placeholder="Есть/Нет">
                                     </div>
                                     <div class="form-group">
                                         <label for="projectCeilingHeight">Высота потолков (м)</label>
-                                        <input type="text" id="projectCeilingHeight" class="form-input" value="${domrfData.ceiling_height || ''}" placeholder="Например: 3">
+                                        <input type="text" id="projectCeilingHeight" class="form-input" value="${previewData.ceiling_height || domrfData.ceiling_height || ''}" placeholder="Например: 3">
                                     </div>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="projectLivingArea">Жилая площадь (м²)</label>
-                                    <input type="text" id="projectLivingArea" class="form-input" value="${domrfData.living_area || ''}" placeholder="Например: 21 831">
+                                    <input type="text" id="projectLivingArea" class="form-input" value="${previewData.living_area || domrfData.living_area || ''}" placeholder="Например: 21 831">
                                 </div>
                                 
                                 <!-- Благоустройство двора -->
@@ -5485,17 +5707,17 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="projectBicyclePaths">Велосипедные дорожки</label>
-                                        <input type="text" id="projectBicyclePaths" class="form-input" value="${domrfData.bicycle_paths_available || ''}" placeholder="Есть/Нет">
+                                        <input type="text" id="projectBicyclePaths" class="form-input" value="${previewData.bicycle_paths || domrfData.bicycle_paths_available || ''}" placeholder="Есть/Нет">
                                     </div>
                                     <div class="form-group">
                                         <label for="projectChildrenPlaygrounds">Количество детских площадок</label>
-                                        <input type="number" id="projectChildrenPlaygrounds" class="form-input" min="0" value="${domrfData.children_playgrounds_count || ''}" placeholder="0">
+                                        <input type="number" id="projectChildrenPlaygrounds" class="form-input" min="0" value="${previewData.children_playgrounds_count || domrfData.children_playgrounds_count || ''}" placeholder="0">
                                     </div>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="projectSportsGrounds">Количество спортивных площадок</label>
-                                    <input type="number" id="projectSportsGrounds" class="form-input" min="0" value="${domrfData.sports_grounds_count || ''}" placeholder="0">
+                                    <input type="number" id="projectSportsGrounds" class="form-input" min="0" value="${previewData.sports_grounds_count || domrfData.sports_grounds_count || ''}" placeholder="0">
                                 </div>
                                 
                                 <!-- Доступная среда -->
@@ -5504,11 +5726,11 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="projectRamp">Наличие пандуса</label>
-                                        <input type="text" id="projectRamp" class="form-input" value="${domrfData.ramp_available || ''}" placeholder="Есть/Нет">
+                                        <input type="text" id="projectRamp" class="form-input" value="${previewData.ramp_available || domrfData.ramp_available || ''}" placeholder="Есть/Нет">
                                     </div>
                                     <div class="form-group">
                                         <label for="projectLoweringPlatforms">Наличие понижающих площадок</label>
-                                        <input type="text" id="projectLoweringPlatforms" class="form-input" value="${domrfData.lowering_platforms_available || ''}" placeholder="Есть/Нет">
+                                        <input type="text" id="projectLoweringPlatforms" class="form-input" value="${previewData.lowering_platforms_available || domrfData.lowering_platforms_available || ''}" placeholder="Есть/Нет">
                                     </div>
                                 </div>
                                 
@@ -5518,17 +5740,17 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="projectEntrancesCount">Количество подъездов</label>
-                                        <input type="number" id="projectEntrancesCount" class="form-input" min="0" value="${domrfData.entrances_count_detail || ''}" placeholder="0">
+                                        <input type="number" id="projectEntrancesCount" class="form-input" min="0" value="${previewData.entrances_count || domrfData.entrances_count_detail || ''}" placeholder="0">
                                     </div>
                                     <div class="form-group">
                                         <label for="projectPassengerElevators">Количество пассажирских лифтов</label>
-                                        <input type="number" id="projectPassengerElevators" class="form-input" min="0" value="${domrfData.passenger_elevators_count || ''}" placeholder="0">
+                                        <input type="number" id="projectPassengerElevators" class="form-input" min="0" value="${previewData.passenger_elevators_count || domrfData.passenger_elevators_count || ''}" placeholder="0">
                                     </div>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="projectCargoElevators">Количество грузовых лифтов</label>
-                                    <input type="number" id="projectCargoElevators" class="form-input" min="0" value="${domrfData.cargo_elevators_count || ''}" placeholder="0">
+                                    <input type="number" id="projectCargoElevators" class="form-input" min="0" value="${previewData.cargo_elevators_count || domrfData.cargo_elevators_count || ''}" placeholder="0">
                                 </div>
                                 
                                 <!-- Статистика квартир -->
@@ -5542,47 +5764,98 @@
                                 <!-- Фото ЖК -->
                                 <div class="form-group">
                                     <label>Фото ЖК</label>
-                                    <div class="photo-tiles-container">
-                                        <div class="existing-photos-tiles" id="galleryPhotosTiles">
-                                            ${domrfData.gallery_photos && domrfData.gallery_photos.length > 0 ? 
-                                                domrfData.gallery_photos.map((photo, index) => `
-                                                    <div class="photo-tile" data-photo-path="${photo}">
-                                                        <img src="${photo}" alt="Фото ЖК" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
-                                                        <button class="photo-delete-btn" onclick="deleteGalleryPhoto('${photo}')" title="Удалить фото">
-                                                            <i class="fas fa-times"></i>
-                                                        </button>
+                                    <div style="margin-bottom:12px;">
+                                        <button type="button" onclick="addFutureProjectGalleryPhoto()" 
+                                            style="background:#10b981; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:14px;">
+                                            ➕ Добавить фото
+                                        </button>
+                                        <span id="galleryPhotosCount" style="margin-left:12px; color:#94a3b8; font-size:14px;">
+                                            (${previewData.gallery_photos?.length || 0} фото)
+                                        </span>
+                                    </div>
+                                    <div class="dev-photos-container" id="galleryPhotosContainer" 
+                                        style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; margin-top:12px;">
+                                        ${previewData.gallery_photos && previewData.gallery_photos.length > 0 ? 
+                                            previewData.gallery_photos.map((photo, idx) => {
+                                                const uniqueId = `gallery-${Date.now()}-${idx}`;
+                                                return `
+                                                    <div class="dev-photo-wrapper" data-photo-idx="${uniqueId}" 
+                                                        style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                        <img src="${photo}" alt="Фото ЖК" loading="lazy" 
+                                                            style="width:100%; height:140px; object-fit:cover; display:block;"
+                                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                        <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                            Изображение недоступно
+                                                        </div>
+                                                        <button onclick="deleteFutureProjectGalleryPhoto('${uniqueId}')" 
+                                                            style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                            title="Удалить фото">✕</button>
                                                     </div>
-                                                `).join('') : 
-                                                '<div class="no-photos">Фотографии не найдены</div>'
-                                            }
-                                        </div>
+                                                `;
+                                            }).join('') : 
+                                            '<div class="dev-photos-empty" style="grid-column:1/-1; text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет фото ЖК</div>'
+                                        }
                                     </div>
                                 </div>
                                 
                                 <!-- Фото хода строительства -->
                                 <div class="form-group">
                                     <label>Фото хода строительства</label>
-                                    <div class="photo-tiles-container">
-                                        <div class="existing-photos-tiles" id="constructionPhotosTiles">
-                                            ${domrfData.construction_photos && domrfData.construction_photos.length > 0 ? 
-                                                domrfData.construction_photos.map((photo, index) => `
-                                                    <div class="photo-tile" data-photo-path="${photo}">
-                                                        <img src="${photo}" alt="Ход строительства" loading="lazy" onerror="this.src='{{ PLACEHOLDER_IMAGE_URL }}'">
-                                                        <button class="photo-delete-btn" onclick="deleteConstructionPhoto('${photo}')" title="Удалить фото">
-                                                            <i class="fas fa-times"></i>
-                                                        </button>
+                                    <div id="constructionStagesContainer">
+                                        ${previewData.construction_progress?.construction_stages && previewData.construction_progress.construction_stages.length > 0 ? 
+                                            previewData.construction_progress.construction_stages.map((stage, stageIdx) => {
+                                                const stagePhotos = stage.photos || [];
+                                                return `
+                                                    <div class="construction-stage" data-stage-idx="${stageIdx}" style="margin-bottom:20px; padding:16px; background:#0f172a; border-radius:8px; border:1px solid #475569;">
+                                                        <div style="margin-bottom:12px;">
+                                                            <label style="display:block; color:#10b981; font-weight:600; margin-bottom:6px;">
+                                                                Этап: <input type="text" value="${escapeHtml(stage.stage || 'Строительство')}" 
+                                                                    class="stage-name-input" data-stage-idx="${stageIdx}"
+                                                                    style="background:#334155; border:1px solid #475569; border-radius:4px; padding:6px 10px; color:#fff; font-size:14px; width:auto; min-width:200px;">
+                                                            </label>
+                                                            <button type="button" onclick="addFutureProjectConstructionPhoto(${stageIdx})" 
+                                                                style="background:#10b981; color:white; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:13px; margin-top:6px;">
+                                                                ➕ Добавить фото
+                                                            </button>
+                                                        </div>
+                                                        <div class="stage-photos-container" data-stage-idx="${stageIdx}" 
+                                                            style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;">
+                                                            ${stagePhotos.map((photo, photoIdx) => {
+                                                                const uniqueId = `construction-${stageIdx}-${Date.now()}-${photoIdx}`;
+                                                                return `
+                                                                    <div class="stage-photo-wrapper" data-photo-idx="${uniqueId}" 
+                                                                        style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
+                                                                        <img src="${photo}" alt="Ход строительства" loading="lazy" 
+                                                                            style="width:100%; height:140px; object-fit:cover; display:block;"
+                                                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                        <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
+                                                                            Изображение недоступно
+                                                                        </div>
+                                                                        <button onclick="deleteFutureProjectConstructionPhoto('${uniqueId}')" 
+                                                                            style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);"
+                                                                            title="Удалить фото">✕</button>
+                                                                    </div>
+                                                                `;
+                                                            }).join('')}
+                                                        </div>
                                                     </div>
-                                                `).join('') : 
-                                                '<div class="no-photos">Фотографии хода строительства не найдены</div>'
-                                            }
-                                        </div>
+                                                `;
+                                            }).join('') : 
+                                            '<div class="no-photos" style="text-align:center; color:#6b7280; font-style:italic; padding:40px;">Нет данных о ходе строительства</div>'
+                                        }
+                                    </div>
+                                    <div style="margin-top:12px;">
+                                        <button type="button" onclick="addFutureProjectConstructionStage()" 
+                                            style="background:#3b82f6; color:white; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:14px;">
+                                            ➕ Добавить этап строительства
+                                        </button>
                                     </div>
                                 </div>
                             </form>
                         </div>
                         <div class="modal-footer">
                             <button class="btn btn-secondary" onclick="closeFutureProjectModal()">Отмена</button>
-                            <button class="btn btn-success" onclick="saveFutureProject('${domrfId}')">💾 Сохранить проект</button>
+                            <button class="btn btn-success" onclick="saveFutureProject('${sourceType}', '${sourceId}')">💾 Сохранить проект</button>
                         </div>
                     </div>
                 </div>
@@ -5611,16 +5884,84 @@
                 console.error('❌ Не удалось найти модальное окно в DOM');
             }
             
-            // Устанавливаем дату по умолчанию (через год)
+            // Заполняем поля данными из previewData
             setTimeout(() => {
+                console.log('🔍 Заполняем поля модального окна данными:', previewData);
+                
+                // Заполняем основные поля
+                const setValue = (id, value, defaultValue = '') => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        const finalValue = value !== undefined && value !== null && value !== '' ? value : defaultValue;
+                        el.value = finalValue;
+                        console.log(`✅ Поле ${id} заполнено значением:`, finalValue);
+                    } else {
+                        console.warn(`⚠️ Поле ${id} не найдено`);
+                    }
+                };
+                
+                const setSelectValue = (id, value) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        if (value) {
+                            el.value = value;
+                            console.log(`✅ Селект ${id} установлен на:`, value);
+                        } else {
+                            console.log(`ℹ️ Селект ${id} не имеет значения для установки`);
+                        }
+                    } else {
+                        console.warn(`⚠️ Селект ${id} не найден`);
+                    }
+                };
+                
+                // Основные поля
+                setValue('projectName', previewData.name || domrfData.name || sourceName);
+                setValue('projectCity', previewData.city || domrfData.city || 'Уфа');
+                setValue('projectDistrict', previewData.district || domrfData.district || '');
+                setValue('projectStreet', previewData.street || domrfData.street || '');
+                setValue('projectDeveloper', previewData.developer || domrfData.developer || '');
+                setValue('projectDescription', previewData.description || domrfData.description || '');
+                
+                // Даты
+                setValue('projectDeliveryDate', previewData.delivery_date || domrfData.delivery_date || '');
+                setValue('projectSalesStart', previewData.sales_start || domrfData.sales_start || '');
+                
+                // Если дата не установлена, устанавливаем по умолчанию (через год)
                 const dateInput = document.getElementById('projectDeliveryDate');
-                if (dateInput) {
+                if (dateInput && !dateInput.value) {
                     const nextYear = new Date();
                     nextYear.setFullYear(nextYear.getFullYear() + 1);
                     dateInput.value = nextYear.toISOString().split('T')[0];
-                } else {
-                    console.error('❌ Поле projectDeliveryDate не найдено');
                 }
+                
+                // Селекты
+                setSelectValue('projectHouseClass', previewData.house_class || domrfData.house_class || '');
+                setSelectValue('projectEnergyEfficiency', previewData.energy_efficiency || domrfData.energy_efficiency || '');
+                
+                // Числовые поля
+                setValue('projectFloors', previewData.floors || domrfData.floors || '');
+                setValue('projectContractors', previewData.contractors || domrfData.contractors || '');
+                
+                // Основные характеристики
+                setValue('projectWallsMaterial', previewData.walls_material || domrfData.walls_material || '');
+                setValue('projectDecorationType', previewData.decoration_type || domrfData.decoration_type || '');
+                setValue('projectFreePlanning', previewData.free_planning || domrfData.free_planning || '');
+                setValue('projectCeilingHeight', previewData.ceiling_height || domrfData.ceiling_height || '');
+                setValue('projectLivingArea', previewData.living_area || domrfData.living_area || '');
+                
+                // Благоустройство двора
+                setValue('projectBicyclePaths', previewData.bicycle_paths || domrfData.bicycle_paths_available || domrfData.bicycle_paths || '');
+                setValue('projectChildrenPlaygrounds', previewData.children_playgrounds_count || domrfData.children_playgrounds_count || 0);
+                setValue('projectSportsGrounds', previewData.sports_grounds_count || domrfData.sports_grounds_count || 0);
+                
+                // Доступная среда
+                setValue('projectRamp', previewData.ramp_available || domrfData.ramp_available || domrfData.ramp || '');
+                setValue('projectLoweringPlatforms', previewData.lowering_platforms_available || domrfData.lowering_platforms_available || domrfData.lowering_platforms || '');
+                
+                // Лифты и подъезды
+                setValue('projectEntrancesCount', previewData.entrances_count || domrfData.entrances_count_detail || domrfData.entrances_count || '');
+                setValue('projectPassengerElevators', previewData.passenger_elevators_count || domrfData.passenger_elevators_count || 0);
+                setValue('projectCargoElevators', previewData.cargo_elevators_count || domrfData.cargo_elevators_count || 0);
                 
                 // Добавляем обработчик для загрузки изображений
                 const imageInput = document.getElementById('projectImages');
@@ -5628,8 +5969,45 @@
                     imageInput.addEventListener('change', handleImageUpload);
                 }
                 
-                // Загружаем статистику квартир
-                loadApartmentStats(domrfId);
+                // Загружаем статистику квартир только для DomRF
+                if (sourceType === 'domrf') {
+                    loadApartmentStats(sourceId);
+                } else {
+                    // Для других источников заполняем статистику из previewData
+                    const apartmentStatsContainer = document.getElementById('apartmentStats');
+                    if (apartmentStatsContainer && previewData.flats_data) {
+                        const flatsData = previewData.flats_data;
+                        let statsHtml = '';
+                        for (const [aptType, aptData] of Object.entries(flatsData)) {
+                            const totalCount = aptData.total_count || 0;
+                            const minArea = aptData.min_area;
+                            const maxArea = aptData.max_area;
+                            if (totalCount > 0 || minArea || maxArea) {
+                                let areaText = '';
+                                if (minArea && maxArea) {
+                                    if (minArea === maxArea) {
+                                        areaText = `${minArea} м²`;
+                                    } else {
+                                        areaText = `от ${minArea} до ${maxArea} м²`;
+                                    }
+                                } else if (minArea) {
+                                    areaText = `${minArea} м²`;
+                                } else if (maxArea) {
+                                    areaText = `${maxArea} м²`;
+                                }
+                                statsHtml += `
+                                    <div style="padding:12px; background:#1e293b; border-radius:6px; margin-bottom:8px;">
+                                        <div style="font-weight:600; color:#10b981; margin-bottom:4px;">${aptType}</div>
+                                        <div style="color:#94a3b8; font-size:14px;">
+                                            ${totalCount} ${totalCount === 1 ? 'квартира' : totalCount < 5 ? 'квартиры' : 'квартир'}${areaText ? ` • ${areaText}` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                        apartmentStatsContainer.innerHTML = statsHtml || '<div style="color:#6b7280; font-style:italic; text-align:center; padding:20px;">Нет данных о квартирах</div>';
+                    }
+                }
             }, 100);
         }
 
@@ -5790,9 +6168,639 @@
             }
         }
 
-        async function saveFutureProject(domrfId) {// Собираем данные из формы
+        // Функции для управления фото в предпросмотре будущего проекта
+        function generateFutureProjectId(prefix = 'fp') {
+            return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        }
+
+        function refreshFutureProjectGalleryPhotos() {
+            const modal = document.getElementById('futureProjectModal');
+            if (!modal) return;
+            const count = modal.querySelectorAll('#galleryPhotosContainer .dev-photo-wrapper').length;
+            const countEl = modal.querySelector('#galleryPhotosCount');
+            if (countEl) countEl.textContent = `(${count} фото)`;
+            const emptyState = modal.querySelector('#galleryPhotosContainer .dev-photos-empty');
+            if (emptyState) emptyState.style.display = count ? 'none' : 'block';
+        }
+
+        window.addFutureProjectGalleryPhoto = function() {
+            const modal = document.getElementById('futureProjectModal');
+            const container = modal?.querySelector('#galleryPhotosContainer');
+            if (!container) return;
+
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.multiple = true;
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', function(e) {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            let dataUrl = event.target.result;
+                            
+                            // Сжимаем изображение если оно слишком большое (>1MB)
+                            if (dataUrl.length > 1024 * 1024) {
+                                const img = new Image();
+                                img.onload = function() {
+                                    const canvas = document.createElement('canvas');
+                                    const maxWidth = 1920;
+                                    const maxHeight = 1080;
+                                    let width = img.width;
+                                    let height = img.height;
+                                    
+                                    if (width > maxWidth || height > maxHeight) {
+                                        if (width > height) {
+                                            height = height * (maxWidth / width);
+                                            width = maxWidth;
+                                        } else {
+                                            width = width * (maxHeight / height);
+                                            height = maxHeight;
+                                        }
+                                    }
+                                    
+                                    canvas.width = width;
+                                    canvas.height = height;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, width, height);
+                                    dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                                    addFutureProjectGalleryPhotoToContainer(dataUrl);
+                                };
+                                img.src = dataUrl;
+                                return;
+                            }
+                            
+                            addFutureProjectGalleryPhotoToContainer(dataUrl);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                fileInput.remove();
+            });
+            
+            document.body.appendChild(fileInput);
+            fileInput.click();
+        };
+
+        function addFutureProjectGalleryPhotoToContainer(dataUrl) {
+            const modal = document.getElementById('futureProjectModal');
+            const container = modal?.querySelector('#galleryPhotosContainer');
+            if (!container) return;
+
+            const uniqueId = generateFutureProjectId('gallery');
+            const emptyState = container.querySelector('.dev-photos-empty');
+            if (emptyState) emptyState.remove();
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'dev-photo-wrapper';
+            wrapper.dataset.photoIdx = uniqueId;
+            wrapper.style.cssText = 'position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;';
+
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'Фото ЖК';
+            img.style.cssText = 'width:100%; height:140px; object-fit:cover; display:block;';
+
+            const fallback = document.createElement('div');
+            fallback.textContent = 'Изображение недоступно';
+            fallback.style.cssText = 'display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;';
+            img.addEventListener('error', () => {
+                img.style.display = 'none';
+                fallback.style.display = 'block';
+            });
+
+            const btn = document.createElement('button');
+            btn.textContent = '✕';
+            btn.title = 'Удалить фото';
+            btn.style.cssText = 'position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);';
+            btn.addEventListener('click', () => deleteFutureProjectGalleryPhoto(uniqueId));
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(fallback);
+            wrapper.appendChild(btn);
+            container.appendChild(wrapper);
+            refreshFutureProjectGalleryPhotos();
+        }
+
+        window.deleteFutureProjectGalleryPhoto = function(photoIdx) {
+            const modal = document.getElementById('futureProjectModal');
+            const photoWrapper = modal?.querySelector(`.dev-photo-wrapper[data-photo-idx="${photoIdx}"]`);
+            if (photoWrapper) {
+                photoWrapper.remove();
+                refreshFutureProjectGalleryPhotos();
+            }
+        };
+
+        window.addFutureProjectConstructionPhoto = function(stageIdx) {
+            const modal = document.getElementById('futureProjectModal');
+            const container = modal?.querySelector(`.stage-photos-container[data-stage-idx="${stageIdx}"]`);
+            if (!container) return;
+
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.multiple = true;
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', function(e) {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            let dataUrl = event.target.result;
+                            
+                            if (dataUrl.length > 1024 * 1024) {
+                                const img = new Image();
+                                img.onload = function() {
+                                    const canvas = document.createElement('canvas');
+                                    const maxWidth = 1920;
+                                    const maxHeight = 1080;
+                                    let width = img.width;
+                                    let height = img.height;
+                                    
+                                    if (width > maxWidth || height > maxHeight) {
+                                        if (width > height) {
+                                            height = height * (maxWidth / width);
+                                            width = maxWidth;
+                                        } else {
+                                            width = width * (maxHeight / height);
+                                            height = maxHeight;
+                                        }
+                                    }
+                                    
+                                    canvas.width = width;
+                                    canvas.height = height;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, width, height);
+                                    dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                                    addFutureProjectConstructionPhotoToContainer(dataUrl, stageIdx);
+                                };
+                                img.src = dataUrl;
+                                return;
+                            }
+                            
+                            addFutureProjectConstructionPhotoToContainer(dataUrl, stageIdx);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                fileInput.remove();
+            });
+            
+            document.body.appendChild(fileInput);
+            fileInput.click();
+        };
+
+        function addFutureProjectConstructionPhotoToContainer(dataUrl, stageIdx) {
+            const modal = document.getElementById('futureProjectModal');
+            const container = modal?.querySelector(`.stage-photos-container[data-stage-idx="${stageIdx}"]`);
+            if (!container) return;
+
+            const uniqueId = generateFutureProjectId(`construction-${stageIdx}`);
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'stage-photo-wrapper';
+            wrapper.dataset.photoIdx = uniqueId;
+            wrapper.style.cssText = 'position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;';
+
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'Ход строительства';
+            img.style.cssText = 'width:100%; height:140px; object-fit:cover; display:block;';
+
+            const fallback = document.createElement('div');
+            fallback.textContent = 'Изображение недоступно';
+            fallback.style.cssText = 'display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;';
+            img.addEventListener('error', () => {
+                img.style.display = 'none';
+                fallback.style.display = 'block';
+            });
+
+            const btn = document.createElement('button');
+            btn.textContent = '✕';
+            btn.title = 'Удалить фото';
+            btn.style.cssText = 'position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);';
+            btn.addEventListener('click', () => deleteFutureProjectConstructionPhoto(uniqueId));
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(fallback);
+            wrapper.appendChild(btn);
+            container.appendChild(wrapper);
+        }
+
+        window.deleteFutureProjectConstructionPhoto = function(photoIdx) {
+            const modal = document.getElementById('futureProjectModal');
+            const photoWrapper = modal?.querySelector(`.stage-photo-wrapper[data-photo-idx="${photoIdx}"]`);
+            if (photoWrapper) {
+                photoWrapper.remove();
+            }
+        };
+
+        // Функции для управления фото в режиме редактирования будущего проекта
+        window.addEditFutureProjectGalleryPhoto = function() {
+            const modal = document.getElementById('editFutureProjectModal');
+            const container = modal?.querySelector('#editGalleryPhotosContainer');
+            if (!container) return;
+
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.multiple = true;
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', function(e) {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            let dataUrl = event.target.result;
+                            
+                            // Сжимаем изображение если оно слишком большое (>1MB)
+                            if (dataUrl.length > 1024 * 1024) {
+                                const img = new Image();
+                                img.onload = function() {
+                                    const canvas = document.createElement('canvas');
+                                    const maxWidth = 1920;
+                                    const maxHeight = 1080;
+                                    let width = img.width;
+                                    let height = img.height;
+                                    
+                                    if (width > maxWidth || height > maxHeight) {
+                                        if (width > height) {
+                                            height = height * (maxWidth / width);
+                                            width = maxWidth;
+                                        } else {
+                                            width = width * (maxHeight / height);
+                                            height = maxHeight;
+                                        }
+                                    }
+                                    
+                                    canvas.width = width;
+                                    canvas.height = height;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, width, height);
+                                    dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                                    addEditFutureProjectGalleryPhotoToContainer(dataUrl);
+                                };
+                                img.src = dataUrl;
+                                return;
+                            }
+                            
+                            addEditFutureProjectGalleryPhotoToContainer(dataUrl);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                fileInput.remove();
+            });
+            
+            document.body.appendChild(fileInput);
+            fileInput.click();
+        };
+
+        function addEditFutureProjectGalleryPhotoToContainer(dataUrl) {
+            const modal = document.getElementById('editFutureProjectModal');
+            const container = modal?.querySelector('#editGalleryPhotosContainer');
+            if (!container) return;
+
+            const uniqueId = generateFutureProjectId('edit-gallery');
+            const emptyState = container.querySelector('.dev-photos-empty');
+            if (emptyState) emptyState.remove();
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'dev-photo-wrapper';
+            wrapper.dataset.photoIdx = uniqueId;
+            wrapper.style.cssText = 'position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;';
+
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'Фото ЖК';
+            img.style.cssText = 'width:100%; height:140px; object-fit:cover; display:block;';
+
+            const fallback = document.createElement('div');
+            fallback.textContent = 'Изображение недоступно';
+            fallback.style.cssText = 'display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;';
+            img.addEventListener('error', () => {
+                img.style.display = 'none';
+                fallback.style.display = 'block';
+            });
+
+            const btn = document.createElement('button');
+            btn.textContent = '✕';
+            btn.title = 'Удалить фото';
+            btn.style.cssText = 'position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);';
+            btn.addEventListener('click', () => deleteEditFutureProjectGalleryPhoto(uniqueId));
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(fallback);
+            wrapper.appendChild(btn);
+            container.appendChild(wrapper);
+            refreshEditFutureProjectGalleryPhotos();
+        }
+
+        function refreshEditFutureProjectGalleryPhotos() {
+            const modal = document.getElementById('editFutureProjectModal');
+            if (!modal) return;
+            const count = modal.querySelectorAll('#editGalleryPhotosContainer .dev-photo-wrapper').length;
+            const countEl = modal.querySelector('#editGalleryPhotosCount');
+            if (countEl) countEl.textContent = `(${count} фото)`;
+            const emptyState = modal.querySelector('#editGalleryPhotosContainer .dev-photos-empty');
+            if (emptyState) emptyState.style.display = count ? 'none' : 'block';
+        }
+
+        window.deleteEditFutureProjectGalleryPhoto = function(photoIdx) {
+            const modal = document.getElementById('editFutureProjectModal');
+            const photoWrapper = modal?.querySelector(`.dev-photo-wrapper[data-photo-idx="${photoIdx}"]`);
+            if (photoWrapper) {
+                photoWrapper.remove();
+                refreshEditFutureProjectGalleryPhotos();
+            }
+        };
+
+        window.addEditFutureProjectConstructionPhoto = function(stageIdx) {
+            const modal = document.getElementById('editFutureProjectModal');
+            const container = modal?.querySelector(`.edit-stage-photos-container[data-stage-idx="${stageIdx}"]`);
+            if (!container) return;
+
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.multiple = true;
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', function(e) {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            let dataUrl = event.target.result;
+                            
+                            if (dataUrl.length > 1024 * 1024) {
+                                const img = new Image();
+                                img.onload = function() {
+                                    const canvas = document.createElement('canvas');
+                                    const maxWidth = 1920;
+                                    const maxHeight = 1080;
+                                    let width = img.width;
+                                    let height = img.height;
+                                    
+                                    if (width > maxWidth || height > maxHeight) {
+                                        if (width > height) {
+                                            height = height * (maxWidth / width);
+                                            width = maxWidth;
+                                        } else {
+                                            width = width * (maxHeight / height);
+                                            height = maxHeight;
+                                        }
+                                    }
+                                    
+                                    canvas.width = width;
+                                    canvas.height = height;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, width, height);
+                                    dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                                    addEditFutureProjectConstructionPhotoToContainer(dataUrl, stageIdx);
+                                };
+                                img.src = dataUrl;
+                                return;
+                            }
+                            
+                            addEditFutureProjectConstructionPhotoToContainer(dataUrl, stageIdx);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                fileInput.remove();
+            });
+            
+            document.body.appendChild(fileInput);
+            fileInput.click();
+        };
+
+        function addEditFutureProjectConstructionPhotoToContainer(dataUrl, stageIdx) {
+            const modal = document.getElementById('editFutureProjectModal');
+            const container = modal?.querySelector(`.edit-stage-photos-container[data-stage-idx="${stageIdx}"]`);
+            if (!container) return;
+
+            const uniqueId = generateFutureProjectId(`edit-construction-${stageIdx}`);
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'edit-stage-photo-wrapper';
+            wrapper.dataset.photoIdx = uniqueId;
+            wrapper.style.cssText = 'position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;';
+
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'Ход строительства';
+            img.style.cssText = 'width:100%; height:140px; object-fit:cover; display:block;';
+
+            const fallback = document.createElement('div');
+            fallback.textContent = 'Изображение недоступно';
+            fallback.style.cssText = 'display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;';
+            img.addEventListener('error', () => {
+                img.style.display = 'none';
+                fallback.style.display = 'block';
+            });
+
+            const btn = document.createElement('button');
+            btn.textContent = '✕';
+            btn.title = 'Удалить фото';
+            btn.style.cssText = 'position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.3);';
+            btn.addEventListener('click', () => deleteEditFutureProjectConstructionPhoto(uniqueId));
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(fallback);
+            wrapper.appendChild(btn);
+            container.appendChild(wrapper);
+        }
+
+        window.deleteEditFutureProjectConstructionPhoto = function(photoIdx) {
+            const modal = document.getElementById('editFutureProjectModal');
+            const photoWrapper = modal?.querySelector(`.edit-stage-photo-wrapper[data-photo-idx="${photoIdx}"]`);
+            if (photoWrapper) {
+                photoWrapper.remove();
+            }
+        };
+
+        window.addEditFutureProjectConstructionStage = function() {
+            const modal = document.getElementById('editFutureProjectModal');
+            const container = modal?.querySelector('#editConstructionStagesContainer');
+            if (!container) return;
+            
+            const noPhotos = container.querySelector('.no-photos');
+            if (noPhotos) noPhotos.remove();
+            
+            const existingStages = container.querySelectorAll('.construction-stage');
+            const stageIdx = existingStages.length;
+            
+            const stageDiv = document.createElement('div');
+            stageDiv.className = 'construction-stage';
+            stageDiv.dataset.stageIdx = stageIdx;
+            stageDiv.style.cssText = 'margin-bottom:20px; padding:16px; background:#0f172a; border-radius:8px; border:1px solid #475569;';
+            stageDiv.innerHTML = `
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; color:#10b981; font-weight:600; margin-bottom:6px;">
+                        Этап: <input type="text" value="Строительство" 
+                            class="edit-stage-name-input" data-stage-idx="${stageIdx}"
+                            style="background:#334155; border:1px solid #475569; border-radius:4px; padding:6px 10px; color:#fff; font-size:14px; width:auto; min-width:200px;">
+                    </label>
+                    <button type="button" onclick="addEditFutureProjectConstructionPhoto(${stageIdx})" 
+                        style="background:#10b981; color:white; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:13px; margin-top:6px;">
+                        ➕ Добавить фото
+                    </button>
+                </div>
+                <div class="edit-stage-photos-container" data-stage-idx="${stageIdx}" 
+                    style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;">
+                </div>
+            `;
+            
+            container.appendChild(stageDiv);
+        };
+
+        window.addFutureProjectConstructionStage = function() {
+            const modal = document.getElementById('futureProjectModal');
+            const container = modal?.querySelector('#constructionStagesContainer');
+            if (!container) {
+                const noPhotos = modal?.querySelector('#constructionStagesContainer .no-photos');
+                if (noPhotos) noPhotos.remove();
+            }
+            
+            if (!container) {
+                const formGroup = modal?.querySelector('.form-group:has(#constructionStagesContainer)');
+                if (!formGroup) return;
+                container = document.createElement('div');
+                container.id = 'constructionStagesContainer';
+                formGroup.insertBefore(container, formGroup.querySelector('div:last-child'));
+            }
+
+            const stageIdx = container.querySelectorAll('.construction-stage').length;
+            
+            const stageDiv = document.createElement('div');
+            stageDiv.className = 'construction-stage';
+            stageDiv.dataset.stageIdx = stageIdx;
+            stageDiv.style.cssText = 'margin-bottom:20px; padding:16px; background:#0f172a; border-radius:8px; border:1px solid #475569;';
+            
+            stageDiv.innerHTML = `
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; color:#10b981; font-weight:600; margin-bottom:6px;">
+                        Этап: <input type="text" value="Строительство" 
+                            class="stage-name-input" data-stage-idx="${stageIdx}"
+                            style="background:#334155; border:1px solid #475569; border-radius:4px; padding:6px 10px; color:#fff; font-size:14px; width:auto; min-width:200px;">
+                    </label>
+                    <button type="button" onclick="addFutureProjectConstructionPhoto(${stageIdx})" 
+                        style="background:#10b981; color:white; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:13px; margin-top:6px;">
+                        ➕ Добавить фото
+                    </button>
+                </div>
+                <div class="stage-photos-container" data-stage-idx="${stageIdx}" 
+                    style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;">
+                </div>
+            `;
+            
+            container.appendChild(stageDiv);
+        };
+
+        async function saveFutureProject(sourceType, sourceId) {
+            const modal = document.getElementById('futureProjectModal');
+            if (!modal) return;
+
+            // Собираем фото ЖК
+            const galleryPhotos = [];
+            for (const img of modal.querySelectorAll('#galleryPhotosContainer .dev-photo-wrapper img')) {
+                const src = img.getAttribute('src');
+                if (src) {
+                    if (src.startsWith('data:image/')) {
+                        // Загружаем в S3
+                        try {
+                            const response = await fetch('/api/manual-matching/upload-base64-photo/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    base64: src,
+                                    type: 'future_project',
+                                    unified_id: 'future_project',
+                                    room_type: 'gallery'
+                                })
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                galleryPhotos.push(result.url);
+                            } else {
+                                console.error('Ошибка загрузки фото ЖК:', result.error);
+                                galleryPhotos.push(src); // Оставляем base64 если ошибка
+                            }
+                        } catch (e) {
+                            console.error('Ошибка загрузки фото ЖК:', e);
+                            galleryPhotos.push(src); // Оставляем base64 если ошибка
+                        }
+                    } else {
+                        // Уже S3 URL, просто добавляем
+                        galleryPhotos.push(src);
+                    }
+                }
+            }
+
+            // Собираем ход строительства
+            const constructionStages = [];
+            for (const stageEl of modal.querySelectorAll('.construction-stage')) {
+                const stageIdx = stageEl.dataset.stageIdx;
+                const stageNameInput = stageEl.querySelector(`.stage-name-input[data-stage-idx="${stageIdx}"]`);
+                const stageName = stageNameInput?.value || 'Строительство';
+                const photos = [];
+                
+                for (const img of stageEl.querySelectorAll('.stage-photo-wrapper img')) {
+                    const src = img.getAttribute('src');
+                    if (src) {
+                        if (src.startsWith('data:image/')) {
+                            // Загружаем в S3
+                            try {
+                                const response = await fetch('/api/manual-matching/upload-base64-photo/', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        base64: src,
+                                        type: 'future_project',
+                                        unified_id: 'future_project',
+                                        room_type: 'construction'
+                                    })
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    photos.push(result.url);
+                                } else {
+                                    console.error('Ошибка загрузки фото хода строительства:', result.error);
+                                    photos.push(src); // Оставляем base64 если ошибка
+                                }
+                            } catch (e) {
+                                console.error('Ошибка загрузки фото хода строительства:', e);
+                                photos.push(src); // Оставляем base64 если ошибка
+                            }
+                        } else {
+                            // Уже S3 URL, просто добавляем
+                            photos.push(src);
+                        }
+                    }
+                }
+                
+                if (photos.length > 0 || stageName) {
+                    constructionStages.push({
+                        stage: stageName,
+                        date: '',
+                        photos: photos
+                    });
+                }
+            }
+
+            // Собираем данные из формы
             const formData = {
-                domrf_id: domrfId,
+                source_type: sourceType,
+                source_id: sourceId,
                 name: document.getElementById('projectName').value,
                 city: document.getElementById('projectCity').value,
                 district: document.getElementById('projectDistrict').value,
@@ -5821,7 +6829,10 @@
                 // Лифты и подъезды
                 entrances_count: parseInt(document.getElementById('projectEntrancesCount').value) || 0,
                 passenger_elevators_count: parseInt(document.getElementById('projectPassengerElevators').value) || 0,
-                cargo_elevators_count: parseInt(document.getElementById('projectCargoElevators').value) || 0
+                cargo_elevators_count: parseInt(document.getElementById('projectCargoElevators').value) || 0,
+                // Фото
+                gallery_photos: galleryPhotos,
+                construction_progress: constructionStages.length > 0 ? { construction_stages: constructionStages } : {}
             };
             
             // Валидация

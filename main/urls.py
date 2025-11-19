@@ -36,7 +36,7 @@ from .views import (
     districts_api, streets_api, article_view_api,
     # Manual Matching API
     get_unmatched_records, save_manual_match, get_unified_records,
-    preview_manual_match,
+    preview_manual_match, preview_future_project,
     unified_delete, unified_get, unified_update, toggle_featured,
     domrf_create, delete_record, get_future_projects, create_future_project,
     get_domrf_data, delete_photo, get_apartment_stats, get_client_catalog_apartments,
@@ -214,6 +214,7 @@ urlpatterns = [
     path('api/manual-matching/future-projects/', get_future_projects, name='get_future_projects'),
     path('api/manual-matching/future-projects/<str:project_id>/', get_future_project, name='get_future_project'),
     path('api/manual-matching/future-projects/<str:project_id>/update/', update_future_project, name='update_future_project'),
+    path('api/manual-matching/preview-future-project/', preview_future_project, name='preview_future_project'),
     path('api/manual-matching/create-future-project/', create_future_project, name='create_future_project'),
     path('api/manual-matching/domrf-data/<str:domrf_id>/', get_domrf_data, name='get_domrf_data'),
     path('api/manual-matching/delete-photo/', delete_photo, name='delete_photo'),

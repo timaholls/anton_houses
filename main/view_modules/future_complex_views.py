@@ -87,6 +87,38 @@ def future_complex_detail(request, complex_id):
     except Exception:
         agent = None
 
+    # Обрабатываем flats_data для статистики квартир
+    flats_data = complex.get('flats_data', {})
+    if flats_data:
+        for apt_type, apt_data in flats_data.items():
+            if isinstance(apt_data, dict):
+                flats = apt_data.get('flats', [])
+                total_count = apt_data.get('total_count', len(flats) if flats else 0)
+                
+                # Вычисляем min/max площадь из всех квартир
+                areas = []
+                if flats:
+                    for flat in flats:
+                        if isinstance(flat, dict):
+                            total_area = flat.get('totalArea') or flat.get('total_area') or flat.get('area')
+                            if total_area:
+                                try:
+                                    areas.append(float(total_area))
+                                except (ValueError, TypeError):
+                                    pass
+                
+                if areas:
+                    min_area = round(min(areas), 1)
+                    max_area = round(max(areas), 1)
+                    apt_data['min_area'] = min_area
+                    apt_data['max_area'] = max_area
+                else:
+                    apt_data['min_area'] = None
+                    apt_data['max_area'] = None
+                
+                # Убеждаемся что total_count есть
+                apt_data['total_count'] = total_count
+
     # Получаем другие будущие ЖК для блока "Другие проекты"
     other_complexes = get_future_complexes_from_mongo(limit=6)
 
