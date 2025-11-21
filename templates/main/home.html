@@ -200,7 +200,13 @@
         /* Карусель акций */
         .offers-carousel-container{position:relative;margin:0 auto;max-width:1200px}
         .offers-carousel{display:flex;border-radius:16px;position:relative}
-        .offer-slide{flex:0 0 33.333%;min-width:0;padding:0 8px}
+        
+        /* На десктопе показываем все 3 слайда */
+        .offer-slide{flex:0 0 33.333%;min-width:0;padding:0 8px;display:block}
+        .offer-slide:nth-child(1),
+        .offer-slide:nth-child(2),
+        .offer-slide:nth-child(3){display:block}
+        
         .offer-card{width:100%;display:grid;grid-template-columns:140px 1fr;gap:12px;background:#fff;border:1px solid #efe7ce;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.08);transition:box-shadow .3s ease, transform .3s ease, border-color .3s ease, opacity .3s ease;text-decoration:none;color:inherit;height:180px;opacity:1}
         .offer-card:hover{box-shadow:0 12px 28px rgba(0,0,0,.15);transform:translateY(-3px);border-color:var(--c21-gold)}
         .offer-card.fade-out{opacity:0;transform:scale(0.95)}
@@ -222,7 +228,7 @@
         .carousel-dot.active{background:var(--c21-gold);transform:scale(1.2)}
         .carousel-dot:hover{background:var(--c21-gold);opacity:.7}
         
-        /* Кнопки навигации влево-вправо */
+        /* Кнопки навигации влево-вправо (скрыты на десктопе) */
         .offers-nav-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all 0.3s ease;z-index:10;opacity:0.9}
         .offers-nav-btn:hover{background:var(--c21-gold);color:var(--c21-dark);opacity:1;transform:translateY(-50%) scale(1.1)}
         .offers-nav-btn:active{transform:translateY(-50%) scale(0.95)}
@@ -230,12 +236,13 @@
         .offers-next-btn{right:10px}
         .offers-nav-btn.hidden{display:none !important}
         
-        /* Показываем кнопки навигации на мобильных */
+        /* МОБИЛЬНАЯ ВЕРСИЯ: показываем кнопки навигации и только 1 слайд */
         @media (max-width: 768px){
             .offers-nav-btn{display:flex}
             .offer-slide{flex:0 0 100%;padding:0 8px}
+            /* На мобильных скрываем 2-й и 3-й слайды */
             .offer-slide:nth-child(2),
-            .offer-slide:nth-child(3){display:none}
+            .offer-slide:nth-child(3){display:none !important}
             .offers-carousel{overflow:visible;scroll-snap-type:none;-webkit-overflow-scrolling:touch}
             .offers-carousel::-webkit-scrollbar{display:none}
             .offers-carousel-container{padding:0 12px;position:relative}

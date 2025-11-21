@@ -18,10 +18,11 @@
 
         <div class="filters" style="display:flex; gap:12px; margin-bottom:20px;">
             <form method="get" style="display:flex; gap:12px; flex-wrap:wrap;">
-                <select name="city" class="input" style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
+                <select name="city" class="input"
+                    style="padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;">
                     <option value="">Все города</option>
                     {% for c in cities %}
-                        <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
+                    <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
                     {% endfor %}
                 </select>
                 <button type="submit" class="category-btn"><i class="fas fa-filter"></i> Фильтр</button>
@@ -29,33 +30,92 @@
         </div>
 
         <style>
-        /* Уменьшаем шрифт названий офисов и убираем переносы */
-        .articles-section .card-title{font-size:20px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        @media (max-width: 900px){
-            .articles-section .card-title{font-size:18px!important}
-        }
+            /* Уменьшаем шрифт названий офисов и убираем переносы */
+            .articles-section .card-title {
+                font-size: 20px !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis
+            }
+
+            @media (max-width: 900px) {
+                .articles-section .card-title {
+                    font-size: 18px !important
+                }
+            }
+
+            /* УЛУЧШЕННЫЕ СТИЛИ ДЛЯ АДРЕСА ОФИСА */
+            .office-location-highlight {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: linear-gradient(135deg, #faf7ee 0%, #ffffff 100%);
+                border: 1.5px solid #efe7ce;
+                padding: 10px 12px;
+                border-radius: 10px;
+                margin-top: 10px;
+                transition: all 0.3s ease;
+            }
+
+            .office-location-highlight:hover {
+                background: linear-gradient(135deg, #ffffff 0%, #faf7ee 100%);
+                border-color: var(--c21-gold);
+                box-shadow: 0 4px 12px rgba(190, 175, 135, 0.2);
+            }
+
+            .office-location-highlight i {
+                color: var(--c21-gold);
+                font-size: 18px;
+                flex-shrink: 0;
+            }
+
+            .office-location-highlight span {
+                font-size: 15px;
+                font-weight: 700;
+                color: #252526;
+                line-height: 1.4;
+            }
+
+            .office-schedule-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 8px;
+                color: #666;
+            }
+
+            .office-schedule-info i {
+                color: var(--c21-gold);
+                font-size: 14px;
+            }
+
+            .office-schedule-info span {
+                font-size: 14px;
+                font-weight: 500;
+            }
         </style>
 
         <div class="catalog-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
             {% for office in offices %}
-            <a href="{% url 'main:office_detail' office.slug %}" class="property-card" style="text-decoration:none; color:inherit;">
+            <a href="{% url 'main:office_detail' office.slug %}" class="property-card"
+                style="text-decoration:none; color:inherit;">
                 <div class="card-image" style="height:200px;">
                     {% if office.main_image %}
-                        <img src="{{ office.main_image }}" alt="{{ office.name }}">
+                    <img src="{{ office.main_image }}" alt="{{ office.name }}">
                     {% else %}
-                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ office.name }}">
+                    <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ office.name }}">
                     {% endif %}
                 </div>
                 <div class="card-content">
                     <div class="card-header">
                         <h3 class="card-title">{{ office.name|safe }}</h3>
                     </div>
-                    <div class="card-location" style="margin-top:8px;">
+                    <div class="office-location-highlight">
                         <i class="fas fa-location-dot"></i>
                         <span>{{ office.city }}, {{ office.address }}</span>
                     </div>
                     {% if office.schedule %}
-                    <div class="card-location" style="margin-top:6px;">
+                    <div class="office-schedule-info">
                         <i class="fas fa-clock"></i>
                         <span>{{ office.schedule }}</span>
                     </div>
@@ -72,15 +132,15 @@
         {% if page_obj.paginator.num_pages > 1 %}
         <div class="pagination" style="display:flex; gap:8px; justify-content:center; margin-top:24px;">
             {% if page_obj.has_previous %}
-                <a class="nav-link" href="?page={{ page_obj.previous_page_number }}">Назад</a>
+            <a class="nav-link" href="?page={{ page_obj.previous_page_number }}">Назад</a>
             {% endif %}
             <span class="nav-link active">Стр. {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-                <a class="nav-link" href="?page={{ page_obj.next_page_number }}">Вперед</a>
+            <a class="nav-link" href="?page={{ page_obj.next_page_number }}">Вперед</a>
             {% endif %}
         </div>
         {% endif %}
     </section>
 
 </div>
-{% endblock %} 
+{% endblock %}

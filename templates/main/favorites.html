@@ -214,17 +214,44 @@ function loadFavorites() {
     
     // Загружаем данные о квартирах
     const apartmentPromises = favorites.apartments.map(fullId => {
-        const [complexId, apartmentId] = fullId.split('_');
+        const parts = fullId.split('_');
+        if (parts.length < 2) {
+            console.warn('Некорректный формат ID квартиры:', fullId);
+            return Promise.resolve(null);
+        }
+        
+        // ID может быть в формате "complexId_apartmentId" или "complexId_type_index"
+        const complexId = parts[0];
+        const apartmentId = parts.slice(1).join('_'); // Остальные части - это ID квартиры
+        
         return fetch(`/api/complex/${complexId}/`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    console.warn(`Ошибка загрузки ЖК ${complexId}:`, res.status);
+                    return null;
+                }
+                return res.json();
+            })
             .then(result => {
-                if (!result.success) return null;
+                if (!result || !result.success) {
+                    console.warn('ЖК не найден или ошибка:', result);
+                    return null;
+                }
                 const complexData = result;
                 // Находим квартиру в данных ЖК
                 const apartment = findApartmentInComplex(complexData, apartmentId);
+                if (!apartment) {
+                    console.warn(`Квартира ${apartmentId} не найдена в ЖК ${complexId}`, {
+                        apartmentTypes: Object.keys(complexData.apartment_types || {}),
+                        apartmentId: apartmentId
+                    });
+                }
                 return apartment ? { type: 'apartment', complexId, apartmentId, complexData, apartment } : null;
             })
-            .catch(() => null);
+            .catch(err => {
+                console.error('Ошибка загрузки квартиры:', err);
+                return null;
+            });
     });
     
     Promise.all([...complexPromises, ...apartmentPromises]).then(results => {
@@ -234,23 +261,62 @@ function loadFavorites() {
 }
 
 function findApartmentInComplex(complexData, apartmentId) {
+    if (!complexData || !apartmentId) return null;
+    
     // Ищем квартиру в apartment_types
     const apartmentTypes = complexData.apartment_types || {};
+    
+    // Проверяем разные форматы ID квартиры
+    // Формат может быть: "1_0" (type_index), "68f08089b02e8b1ca002f26b_1_0", или просто "_id"
+    const apartmentIdStr = String(apartmentId);
+    const complexIdStr = String(complexData.id || '');
+    
+    // Если ID содержит подчеркивания, разбиваем на части
+    const parts = apartmentIdStr.split('_');
+    let searchType = null;
+    let searchIndex = null;
+    
+    if (parts.length >= 2) {
+        // Последние две части могут быть тип и индекс
+        searchIndex = parseInt(parts[parts.length - 1], 10);
+        searchType = parts[parts.length - 2];
+    }
+    
     for (const aptType in apartmentTypes) {
         const apartments = apartmentTypes[aptType].apartments || [];
         for (let idx = 0; idx < apartments.length; idx++) {
             const apt = apartments[idx];
+            
             // Проверяем разные форматы ID
-            const aptId = apt._id || `${complexData.id}_${aptType}_${idx}`;
-            const fullId = `${complexData.id}_${apartmentId}`;
-            if (String(aptId) === String(apartmentId) || 
-                String(aptId) === fullId || 
-                String(aptId).endsWith(`_${apartmentId}`) ||
-                `${complexData.id}_${aptType}_${idx}` === apartmentId) {
+            const aptId = apt._id ? String(apt._id) : null;
+            const generatedId = `${complexIdStr}_${aptType}_${idx}`;
+            const typeIndexId = `${aptType}_${idx}`;
+            
+            // Сравниваем с разными вариантами ID
+            if (aptId && (aptId === apartmentIdStr || aptId === apartmentIdStr || aptId.endsWith(apartmentIdStr))) {
+                return apt;
+            }
+            
+            if (generatedId === apartmentIdStr || generatedId.endsWith(`_${apartmentIdStr}`)) {
+                return apt;
+            }
+            
+            if (typeIndexId === apartmentIdStr) {
+                return apt;
+            }
+            
+            // Если ID разбит на части, проверяем по типу и индексу
+            if (searchType && searchIndex !== null && searchType === aptType && searchIndex === idx) {
+                return apt;
+            }
+            
+            // Проверяем, совпадает ли только индекс (если тип не указан)
+            if (searchIndex !== null && searchIndex === idx && !searchType) {
                 return apt;
             }
         }
     }
+    
     return null;
 }
 
@@ -282,17 +348,44 @@ function renderFavoriteCard(item) {
         const apt = item.apartment;
         const complex = item.complexData;
         const complexName = complex.name || 'Жилой комплекс';
-        const image = (apt.image && Array.isArray(apt.image) && apt.image.length > 0) ? apt.image[0] : 
-                     (apt.image && typeof apt.image === 'string') ? apt.image : 
-                     '/static/images/placeholder.png';
-        const title = apt.title || 'Квартира';
+        
+        // Получаем изображение квартиры
+        let image = '/static/images/placeholder.png';
+        if (apt.photos && Array.isArray(apt.photos) && apt.photos.length > 0) {
+            image = apt.photos[0];
+        } else if (apt.layout_photos && Array.isArray(apt.layout_photos) && apt.layout_photos.length > 0) {
+            image = apt.layout_photos[0];
+        } else if (apt.image) {
+            if (Array.isArray(apt.image) && apt.image.length > 0) {
+                image = apt.image[0];
+            } else if (typeof apt.image === 'string') {
+                image = apt.image;
+            }
+        }
+        
+        // Формируем заголовок
+        let title = apt.title || '';
+        if (!title && apt.rooms) {
+            title = `${apt.rooms}-комнатная квартира`;
+        } else if (!title) {
+            title = 'Квартира';
+        }
+        
+        // Получаем цену
         const price = apt.price || '';
+        
+        // Формируем площадь
+        let areaText = '';
+        if (apt.area) {
+            areaText = `${apt.area} м²`;
+        }
         
         return `
             <div class="favorite-card" onclick="window.location.href='/apartment/${item.complexId}/${item.apartmentId}/'">
-                <img src="${image}" alt="${title}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
+                <img src="${image}" alt="${escapeHtml(title)}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
                 <div class="favorite-card-content">
                     <h3 class="favorite-card-title">${escapeHtml(title)}</h3>
+                    ${areaText ? `<div style="color: #666; font-size: 14px; margin-bottom: 8px;">${escapeHtml(areaText)}</div>` : ''}
                     <div class="favorite-card-location">
                         <i class="fas fa-map-marker-alt"></i>
                         <span>${escapeHtml(complexName)}</span>

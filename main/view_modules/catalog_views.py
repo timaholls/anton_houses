@@ -359,7 +359,27 @@ def detail(request, complex_id):
                                 apt_id = f"{complex_id}_{apt_type_str}_{apt_index}"
                             
                             formatted_price = format_currency(apt.get('price', ''))
-                            formatted_price_per_sqm = format_currency_per_sqm(apt.get('pricePerSquare', ''))
+                            
+                            # Получаем цену за м²
+                            price_per_sqm_raw = apt.get('pricePerSquare', '') or apt.get('pricePerSqm', '')
+                            
+                            # Если цена за м² не указана, но есть цена и площадь, вычисляем
+                            if not price_per_sqm_raw:
+                                price_raw = apt.get('price', '')
+                                area_raw = area
+                                if price_raw and area_raw:
+                                    try:
+                                        price_str = str(price_raw).replace(' ', '').replace(',', '.').replace('₽', '').replace('руб', '').strip()
+                                        area_str = str(area_raw).replace(',', '.').strip()
+                                        if price_str and area_str:
+                                            price_num = float(price_str)
+                                            area_num = float(area_str)
+                                            if area_num > 0:
+                                                price_per_sqm_raw = price_num / area_num
+                                    except (ValueError, TypeError, ZeroDivisionError):
+                                        pass
+                            
+                            formatted_price_per_sqm = format_currency_per_sqm(price_per_sqm_raw)
 
                             apartment_variants.append({
                                 'id': str(apt_id),  # Добавляем ID квартиры
@@ -465,7 +485,27 @@ def detail(request, complex_id):
                                 break
                         
                         formatted_price = format_currency(apt.get('price', ''))
-                        formatted_price_per_sqm = format_currency_per_sqm(apt.get('pricePerSquare', ''))
+                        
+                        # Получаем цену за м²
+                        price_per_sqm_raw = apt.get('pricePerSquare', '') or apt.get('pricePerSqm', '')
+                        
+                        # Если цена за м² не указана, но есть цена и площадь, вычисляем
+                        if not price_per_sqm_raw:
+                            price_raw = apt.get('price', '')
+                            area_raw = area
+                            if price_raw and area_raw:
+                                try:
+                                    price_str = str(price_raw).replace(' ', '').replace(',', '.').replace('₽', '').replace('руб', '').strip()
+                                    area_str = str(area_raw).replace(',', '.').strip()
+                                    if price_str and area_str:
+                                        price_num = float(price_str)
+                                        area_num = float(area_str)
+                                        if area_num > 0:
+                                            price_per_sqm_raw = price_num / area_num
+                                except (ValueError, TypeError, ZeroDivisionError):
+                                    pass
+                        
+                        formatted_price_per_sqm = format_currency_per_sqm(price_per_sqm_raw)
 
                         apartment_variants.append({
                             'id': str(apt_id),  # Добавляем ID квартиры

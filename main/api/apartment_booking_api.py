@@ -30,19 +30,19 @@ def book_apartment(request):
             return JsonResponse({
                 'success': False, 
                 'error': 'ID квартиры и ЖК обязательны'
-            }, status=400)
+            })
         
         if not client_name:
             return JsonResponse({
                 'success': False, 
                 'error': 'Имя клиента обязательно'
-            }, status=400)
+            })
         
         if not client_phone:
             return JsonResponse({
                 'success': False, 
                 'error': 'Телефон клиента обязателен'
-            }, status=400)
+            })
         
         # Валидация телефона (простая проверка)
         phone_digits = ''.join(filter(str.isdigit, client_phone))
@@ -50,7 +50,7 @@ def book_apartment(request):
             return JsonResponse({
                 'success': False, 
                 'error': 'Некорректный номер телефона'
-            }, status=400)
+            })
         
         db = get_mongo_connection()
         
@@ -62,7 +62,7 @@ def book_apartment(request):
             return JsonResponse({
                 'success': False, 
                 'error': 'ЖК не найден'
-            }, status=404)
+            })
         
         # Отладочная информация о структуре данных
         # print(f"Ключи в complex_data: {list(complex_data.keys())}")
@@ -93,11 +93,12 @@ def book_apartment(request):
                 apt_apartments = apt_data.get('apartments', [])
                 # print(f"Тип {apt_type}: {len(apt_apartments)} квартир")
                 
-                for apt in apt_apartments:
-                    # Генерируем уникальный ID если его нет
+                # Используем enumerate для правильной генерации ID (как в apartment_views.py)
+                for apt_index, apt in enumerate(apt_apartments):
+                    # Генерируем уникальный ID если его нет (формат: {complex_id}_{apt_type}_{apt_index})
                     apt_id = apt.get('_id')
                     if not apt_id:
-                        apt_id = f"{apt_type}_{len(apartments)}"
+                        apt_id = f"{complex_id}_{apt_type}_{apt_index}"
                     
                     apt['id'] = str(apt_id)
                     apt['type'] = apt_type
@@ -128,12 +129,39 @@ def book_apartment(request):
         
         # Если apartment_id содержит подчеркивание, это сгенерированный ID
         if '_' in apartment_id:
-            # Разбираем сгенерированный ID: {type}_{index}
-            try:
-                apt_type, index_str = apartment_id.split('_', 1)
-                apartment_index = int(index_str)
-                
-                # Ищем квартиру по типу и индексу
+            # Проверяем формат ID: может быть {complex_id}_{type}_{index} или {type}_{index}
+            apt_id_parts = apartment_id.split('_')
+            
+            # Если ID начинается с complex_id (24 символа), убираем его
+            if len(apt_id_parts) >= 3 and len(apt_id_parts[0]) == 24:
+                # Формат: {complex_id}_{type}_{index}
+                # Проверяем, что первый элемент совпадает с complex_id
+                if apt_id_parts[0] == str(complex_id):
+                    apt_type = apt_id_parts[1]
+                    try:
+                        apartment_index = int(apt_id_parts[2])
+                    except (ValueError, IndexError):
+                        apt_type = None
+                        apartment_index = None
+                else:
+                    # Не совпадает с complex_id, пробуем как {type}_{index}
+                    apt_type = apt_id_parts[0]
+                    try:
+                        apartment_index = int(apt_id_parts[1])
+                    except (ValueError, IndexError):
+                        apt_type = None
+                        apartment_index = None
+            else:
+                # Формат: {type}_{index}
+                try:
+                    apt_type = apt_id_parts[0]
+                    apartment_index = int(apt_id_parts[1])
+                except (ValueError, IndexError):
+                    apt_type = None
+                    apartment_index = None
+            
+            # Ищем квартиру по типу и индексу
+            if apt_type is not None and apartment_index is not None:
                 current_index = 0
                 for apt in apartments:
                     if apt.get('type') == apt_type:
@@ -141,12 +169,10 @@ def book_apartment(request):
                             apartment_data = apt
                             break
                         current_index += 1
-            except (ValueError, IndexError):
-                pass
         else:
-            # Обычный поиск по _id
+            # Обычный поиск по _id или id
             for apt in apartments:
-                if str(apt.get('_id')) == str(apartment_id):
+                if str(apt.get('id')) == str(apartment_id) or str(apt.get('_id')) == str(apartment_id):
                     apartment_data = apt
                     break
         
@@ -154,7 +180,7 @@ def book_apartment(request):
             return JsonResponse({
                 'success': False, 
                 'error': 'Квартира не найдена'
-            }, status=404)
+            })
         
         # Получаем информацию об агенте
         agent_data = None
@@ -228,13 +254,13 @@ def book_apartment(request):
             return JsonResponse({
                 'success': False,
                 'error': 'Не удалось создать бронирование'
-            }, status=500)
+            })
         
     except Exception as e:
         return JsonResponse({
             'success': False,
             'error': str(e)
-        }, status=500)
+        })
 
 
 @require_http_methods(["GET"])

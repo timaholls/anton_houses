@@ -239,6 +239,21 @@ window.toggleComplexFavoriteHandler = function(complexId, button) {
     }
 };
 
+// Глобальная функция для обработки клика на кнопку избранного квартиры
+window.toggleApartmentFavoriteHandler = function(complexId, apartmentId, button) {
+    const isFavorite = toggleApartmentFavorite(complexId, apartmentId);
+    updateFavoriteIcon(button, isFavorite);
+    
+    // Показываем уведомление
+    if (typeof showFavoriteNotification === 'function') {
+        if (isFavorite) {
+            showFavoriteNotification('Квартира добавлена в избранное');
+        } else {
+            showFavoriteNotification('Квартира удалена из избранного');
+        }
+    }
+};
+
 // Инициализация при загрузке DOM
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initFavorites);

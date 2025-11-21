@@ -7,7 +7,7 @@
     <section class="articles-section">
         <div class="articles-header">
             <h1 class="section-title">{{ office.name|safe }}</h1>
-            <p class="section-subtitle">{{ office.city }}, {{ office.address }}</p>
+            <p class="section-subtitle">Наш офис в городе {{ office.city }}</p>
         </div>
 
         <div class="breadcrumbs">
@@ -21,25 +21,25 @@
         <div class="property-card" style="margin-bottom:24px;">
             <div class="card-image" style="height:360px;">
                 {% if office.main_image %}
-                    <img src="{{ office.main_image }}" alt="{{ office.name }}">
+                <img src="{{ office.main_image }}" alt="{{ office.name }}">
                 {% else %}
-                    <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ office.name }}">
+                <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ office.name }}">
                 {% endif %}
             </div>
-            <div class="card-content">
-                <div class="card-location">
+            <div class="card-content office-details-content">
+                <div class="office-info-item">
                     <i class="fas fa-location-dot"></i>
                     <span class="office-info-strong">{{ office.city }}, {{ office.address }}</span>
                 </div>
-                <div class="card-location" style="margin-top:10px;">
+                <div class="office-info-item">
                     <i class="fas fa-clock"></i>
                     <span class="office-info-strong">{{ office.schedule|default:"График работы уточняйте по телефону" }}</span>
                 </div>
-                <div class="card-location" style="margin-top:10px;">
+                <div class="office-info-item">
                     <i class="fas fa-phone"></i>
                     <a class="office-info-strong" href="tel:{{ office.phone|default:''|cut:' '|cut:'-'|cut:'('|cut:')' }}">{{ office.phone|default:"—" }}</a>
                 </div>
-                <div class="card-location" style="margin-top:10px;">
+                <div class="office-info-item">
                     <i class="fas fa-envelope"></i>
                     <a class="office-info-strong" href="mailto:{{ office.email|default:'' }}">{{ office.email|default:"—" }}</a>
                 </div>
@@ -53,9 +53,9 @@
         <div class="office-map-section" style="margin: 24px 0;">
             <div class="section-header" style="text-align:center; margin-bottom:16px;">
                 <h2 class="section-title">Карта расположения офиса</h2>
-                <p class="section-subtitle">{{ office.city }}, {{ office.address }}</p>
             </div>
-            <div class="map-wrapper" style="border-radius:14px; overflow:hidden; border:1px solid #e8e8e8; box-shadow:0 8px 28px rgba(0,0,0,.08);">
+            <div class="map-wrapper"
+                style="border-radius:14px; overflow:hidden; border:1px solid #e8e8e8; box-shadow:0 8px 28px rgba(0,0,0,.08);">
                 <div id="branch-office-map" style="width:100%; height:420px;"></div>
             </div>
         </div>
@@ -66,16 +66,17 @@
             <div class="section-header">
                 <h2 class="section-title">Сотрудники офиса</h2>
             </div>
-            
+
             <!-- Сотрудники -->
-            <div class="catalog-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 24px; justify-items: center;">
+            <div class="catalog-grid"
+                style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 24px; justify-items: center;">
                 {% for employee in employees %}
                 <div class="property-card employee-card">
                     <div class="card-image" style="height:200px;">
                         {% if employee.images and employee.images.0 %}
-                            <img src="{{ employee.images.0 }}" alt="{{ employee.full_name }}">
+                        <img src="{{ employee.images.0 }}" alt="{{ employee.full_name }}">
                         {% else %}
-                            <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ employee.full_name }}">
+                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ employee.full_name }}">
                         {% endif %}
                     </div>
                     <div class="card-content">
@@ -99,13 +100,17 @@
                         </div>
                         {% endif %}
                         <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
-                            <a href="{% url 'main:employee_detail' employee.id %}" class="btn btn-primary btn-small" style="width:100%; text-align:center; justify-content:center;">
+                            <a href="{% url 'main:employee_detail' employee.id %}" class="btn btn-primary btn-small"
+                                style="width:100%; text-align:center; justify-content:center;">
                                 Подробнее об агенте
                             </a>
-                            <a href="{% url 'main:office_detail' employee.branch_slug %}" class="btn btn-secondary btn-small" style="width:100%; text-align:center; justify-content:center;">
+                            <a href="{% url 'main:office_detail' employee.branch_slug %}"
+                                class="btn btn-secondary btn-small"
+                                style="width:100%; text-align:center; justify-content:center;">
                                 Посмотреть филиал
                             </a>
-                            <a href="{% url 'main:agent_properties' employee.id %}" class="btn btn-outline btn-small" style="width:100%; text-align:center; justify-content:center;">
+                            <a href="{% url 'main:agent_properties' employee.id %}" class="btn btn-outline btn-small"
+                                style="width:100%; text-align:center; justify-content:center;">
                                 Объекты агента
                             </a>
                         </div>
@@ -120,86 +125,135 @@
 </div>
 
 <style>
-/* Стили для карточек сотрудников (как в team.html) */
-.employee-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    max-width: 350px;
-    width: 100%;
-}
+    /* Стили для карточек сотрудников */
+    .employee-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        max-width: 350px;
+        width: 100%;
+    }
 
-/* Усиленная видимость информации офиса */
-.card-content { padding: 16px; }
-.card-location { 
-    display:flex; align-items:center; gap:12px;
-    background:#ffffff; border:1px solid var(--c21-light); 
-    padding:12px 14px; border-radius:10px; color:var(--c21-dark);
-}
-.card-location i { color: var(--c21-gold); font-size: 18px; width: 20px; }
-.office-info-strong { font-size: 18px; font-weight: 700; color: var(--c21-dark); text-decoration:none; }
-.office-info-strong:hover { color: var(--c21-gold); }
+    .employee-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
 
-.employee-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
+    /* УЛУЧШЕННЫЕ СТИЛИ ДЛЯ ИНФОРМАЦИИ ОФИСА */
+    .office-details-content {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
 
-.btn-primary {
-    background: linear-gradient(135deg, #BEAF87 0%, #A89A6F 100%);
-    border: none;
-    color: #252526;
-    text-decoration: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: inline-block;
-    box-shadow: 0 2px 8px rgba(190,175,135,0.3);
-}
+    .office-info-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: linear-gradient(135deg, #faf7ee 0%, #ffffff 100%);
+        border: 1.5px solid #efe7ce;
+        padding: 14px 16px;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(190, 175, 135, 0.1);
+    }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #A89A6F 0%, #BEAF87 100%);
-}
+    .office-info-item:hover {
+        background: linear-gradient(135deg, #ffffff 0%, #faf7ee 100%);
+        border-color: var(--c21-gold);
+        box-shadow: 0 4px 12px rgba(190, 175, 135, 0.2);
+        transform: translateX(4px);
+    }
 
-.btn-primary.btn-small {
-    padding: 6px 12px;
-    font-size: 12px;
-}
+    .office-info-item i {
+        color: var(--c21-gold);
+        font-size: 20px;
+        width: 24px;
+        text-align: center;
+        flex-shrink: 0;
+    }
 
-.article-footer {
-    margin-top: 12px;
-}
+    .office-info-strong {
+        font-size: 16px;
+        font-weight: 700;
+        color: #252526;
+        text-decoration: none;
+        line-height: 1.4;
+    }
 
-.article-views {
-    color: #666;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-}
+    .office-info-strong:hover {
+        color: var(--c21-gold);
+    }
+
+    /* Кнопки */
+    .btn-primary {
+        background: linear-gradient(135deg, #BEAF87 0%, #A89A6F 100%);
+        border: none;
+        color: #252526;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-block;
+        box-shadow: 0 2px 8px rgba(190, 175, 135, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #A89A6F 0%, #BEAF87 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(190, 175, 135, 0.4);
+    }
+
+    .btn-primary.btn-small {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    /* Адаптивность */
+    @media (max-width: 768px) {
+        .office-details-content {
+            padding: 16px;
+            gap: 10px;
+        }
+
+        .office-info-item {
+            padding: 12px 14px;
+        }
+
+        .office-info-item i {
+            font-size: 18px;
+            width: 20px;
+        }
+
+        .office-info-strong {
+            font-size: 15px;
+        }
+    }
 </style>
 
 {% if office.latitude and office.longitude %}
 <script>
-// Инициализация карты филиала
-(function(){
-    function initBranchMap(){
-        var el = document.getElementById('branch-office-map');
-        if (!el) return;
-        if (typeof L === 'undefined') { setTimeout(initBranchMap, 200); return; }
-        try {
-            var coords = [{{ office.latitude }}, {{ office.longitude }}];
-            var map = L.map('branch-office-map', { attributionControl: false, zoomControl: true, scrollWheelZoom: true });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
-            map.setView(coords, 15);
-            var marker = L.marker(coords).addTo(map);
-            marker.bindPopup(`<div style="text-align:center;padding:6px 0;">
-                <strong>{{ office.name|escape }}</strong><br/>
-                <span>{{ office.city }}, {{ office.address }}</span>
-            </div>`);
-        } catch(e){ console.error('Ошибка инициализации карты офиса:', e); }
+    // Инициализация карты филиала
+    (function () {
+        function initBranchMap() {
+            var el = document.getElementById('branch-office-map');
+            if (!el) return;
+            if (typeof L === 'undefined') { setTimeout(initBranchMap, 200); return; }
+            try {
+                var coords = [{{ office.latitude }}, {{ office.longitude }}];
+                var map = L.map('branch-office-map', { attributionControl: false, zoomControl: true, scrollWheelZoom: true });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+                map.setView(coords, 15);
+                var marker = L.marker(coords).addTo(map);
+                marker.bindPopup(`<div style="text-align:center;padding:6px 0;">
+                    <strong>{{ office.name|escapejs }}</strong><br/>
+                    <span>{{ office.city }}, {{ office.address }}</span>
+                </div>`);
+            } catch (e) { console.error('Ошибка инициализации карты офиса:', e); }
     }
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(initBranchMap, 100); });
-})();
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(initBranchMap, 100); });
+}) ();
 </script>
 {% endif %}
-{% endblock %} 
+{% endblock %}

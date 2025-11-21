@@ -134,21 +134,41 @@ def apartment_detail(request, complex_id, apartment_id):
                             if floor_match:
                                 floor = f"{floor_match.group(1)}/{floor_match.group(2)}"
                     
+                    # Вычисляем цену за м², если она не указана
+                    price = apt.get('price', '')
+                    total_area = apt.get('totalArea', '') or apt.get('area', '')
+                    price_per_sqm = apt.get('pricePerSqm', '') or apt.get('pricePerSquare', '')
+                    
+                    # Если цена за м² не указана, но есть цена и площадь, вычисляем
+                    if not price_per_sqm and price and total_area:
+                        try:
+                            # Извлекаем числовое значение цены
+                            price_str = str(price).replace(' ', '').replace(',', '.').replace('₽', '').replace('руб', '').strip()
+                            area_str = str(total_area).replace(',', '.').strip()
+                            if price_str and area_str:
+                                price_num = float(price_str)
+                                area_num = float(area_str)
+                                if area_num > 0:
+                                    price_per_sqm = price_num / area_num
+                        except (ValueError, TypeError, ZeroDivisionError):
+                            pass
+                    
                     apartments.append({
                         'id': str(apt_id),  # Добавляем ID квартиры
                         'type': apt_type,
                         'title': title,
-                        'price': apt.get('price', ''),
-                        'price_per_square': apt.get('pricePerSquare', ''),
+                        'price': price,
+                        'price_per_square': price_per_sqm,
+                        'pricePerSqm': price_per_sqm,
                         'completion_date': apt.get('completionDate', ''),
                         'image': layout_photos[0] if layout_photos else '',  # Первое фото для превью
                         'url': apt.get('url', ''),
                         'layout_photos': layout_photos,  # Все фото для галереи
                         '_id': apt.get('_id'),  # Сохраняем оригинальный _id
                         'rooms': rooms,
-                        'totalArea': apt.get('totalArea', '') or apt.get('area', ''),
+                        'totalArea': total_area,
+                        'area': total_area,
                         'floor': floor,
-                        'pricePerSqm': apt.get('pricePerSqm', ''),
                         'layout': apt.get('layout', ''),
                         'balcony': apt.get('balcony', ''),
                         'loggia': apt.get('loggia', ''),
@@ -225,7 +245,7 @@ def apartment_detail(request, complex_id, apartment_id):
                 except (ValueError, IndexError):
                     apt_type = None
             
-            # Ищем квартиру по типу и индексу
+            # Ищем квартиру по типу и индексу в сформированном списке apartments
             if apt_type is not None and apartment_index is not None:
                 current_index = 0
                 for apt in apartments:
@@ -235,11 +255,95 @@ def apartment_detail(request, complex_id, apartment_id):
                             break
                         current_index += 1
         else:
-            # Обычный поиск по _id
+            # Обычный поиск по _id или id
             for apt in apartments:
-                if str(apt.get('id')) == str(apartment_id) or str(apt.get('_id')) == str(apartment_id):
+                apt_id = apt.get('id') or apt.get('_id')
+                if apt_id and (str(apt_id) == str(apartment_id)):
                     apartment_data = apt
                     break
+        
+        if not apartment_data:
+            # Если не нашли в сформированном списке, пробуем найти напрямую в apartment_types
+            if 'apartment_types' in complex_data:
+                apartment_types_data = complex_data.get('apartment_types', {})
+                if '_' in apartment_id:
+                    apt_id_parts = apartment_id.split('_')
+                    if len(apt_id_parts) >= 2:
+                        # Пробуем найти по типу и индексу напрямую в исходных данных
+                        try:
+                            apt_type = apt_id_parts[-2] if len(apt_id_parts) >= 2 else apt_id_parts[0]
+                            apt_index = int(apt_id_parts[-1])
+                            if apt_type in apartment_types_data:
+                                apt_list = apartment_types_data[apt_type].get('apartments', [])
+                                if apt_index < len(apt_list):
+                                    apt = apt_list[apt_index]
+                                    # Формируем данные квартиры так же, как при первом проходе
+                                    layout_photos = apt.get('image', [])
+                                    if isinstance(layout_photos, str):
+                                        layout_photos = [layout_photos] if layout_photos else []
+                                    
+                                    title = apt.get('title', '')
+                                    rooms = apt.get('rooms', '')
+                                    if title and not rooms:
+                                        if '-комн' in title:
+                                            rooms = title.split('-комн')[0].strip()
+                                    
+                                    floor = apt.get('floor', '')
+                                    if title and not floor:
+                                        floor_range_match = re.search(r'(\d+)-(\d+)\s*этаж', title)
+                                        if floor_range_match:
+                                            floor = f"{floor_range_match.group(1)}-{floor_range_match.group(2)}"
+                                    
+                                    price = apt.get('price', '')
+                                    total_area = apt.get('totalArea', '') or apt.get('area', '')
+                                    price_per_sqm = apt.get('pricePerSqm', '') or apt.get('pricePerSquare', '')
+                                    
+                                    if not price_per_sqm and price and total_area:
+                                        try:
+                                            price_str = str(price).replace(' ', '').replace(',', '.').replace('₽', '').replace('руб', '').strip()
+                                            area_str = str(total_area).replace(',', '.').strip()
+                                            if price_str and area_str:
+                                                price_num = float(price_str)
+                                                area_num = float(area_str)
+                                                if area_num > 0:
+                                                    price_per_sqm = price_num / area_num
+                                        except (ValueError, TypeError, ZeroDivisionError):
+                                            pass
+                                    
+                                    apartment_data = {
+                                        'id': str(apartment_id),
+                                        'type': apt_type,
+                                        'title': title,
+                                        'price': price,
+                                        'price_per_square': price_per_sqm,
+                                        'pricePerSqm': price_per_sqm,
+                                        'completion_date': apt.get('completionDate', ''),
+                                        'image': layout_photos[0] if layout_photos else '',
+                                        'url': apt.get('url', ''),
+                                        'layout_photos': layout_photos,
+                                        '_id': apt.get('_id'),
+                                        'rooms': rooms,
+                                        'totalArea': total_area,
+                                        'area': total_area,
+                                        'floor': floor,
+                                        'layout': apt.get('layout', ''),
+                                        'balcony': apt.get('balcony', ''),
+                                        'loggia': apt.get('loggia', ''),
+                                        'view': apt.get('view', ''),
+                                        'condition': apt.get('condition', ''),
+                                        'furniture': apt.get('furniture', ''),
+                                        'ceilingHeight': apt.get('ceilingHeight', ''),
+                                        'windows': apt.get('windows', ''),
+                                        'bathroom': apt.get('bathroom', ''),
+                                        'kitchenArea': apt.get('kitchenArea', ''),
+                                        'livingArea': apt.get('livingArea', ''),
+                                        'bedroomArea': apt.get('bedroomArea', ''),
+                                        'photos': apt.get('photos', []),
+                                        'description': apt.get('description', ''),
+                                        'features': apt.get('features', [])
+                                    }
+                        except (ValueError, IndexError, KeyError):
+                            pass
         
         if not apartment_data:
             raise Http404("Квартира не найдена")
@@ -381,19 +485,45 @@ def apartment_detail(request, complex_id, apartment_id):
         # Проверяем разные варианты имен полей (из базы и из нашего списка)
         price_per_sqm_raw = (apartment_data.get('pricePerSquare', '') or 
                              apartment_data.get('pricePerSqm', '') or
-                             apartment_data.get('price_per_square', ''))
+                             apartment_data.get('price_per_square', '') or
+                             apartment_data.get('price_per_sqm', ''))
+        
+        # Если price_per_sqm не найден, но есть цена и площадь, вычисляем
+        if not price_per_sqm_raw:
+            price_raw = apartment_data.get('price', '')
+            area_raw = apartment_data.get('area') or apartment_data.get('totalArea', '')
+            if price_raw and area_raw:
+                try:
+                    price_str = str(price_raw).replace(' ', '').replace(',', '.').replace('₽', '').replace('руб', '').strip()
+                    area_str = str(area_raw).replace(',', '.').strip()
+                    if price_str and area_str:
+                        price_num = float(price_str)
+                        area_num = float(area_str)
+                        if area_num > 0:
+                            price_per_sqm_raw = price_num / area_num
+                except (ValueError, TypeError, ZeroDivisionError):
+                    pass
+        
         price_per_sqm = None
         price_per_sqm_formatted = ''
         if price_per_sqm_raw:
             try:
-                # Преобразуем строку в число (убираем пробелы, заменяем запятую на точку)
-                price_per_sqm_str = str(price_per_sqm_raw).replace(',', '.').replace(' ', '')
-                price_per_sqm = float(price_per_sqm_str)
-                # Форматируем с разделителями тысяч
-                price_per_sqm_formatted = f"{price_per_sqm:,.0f}".replace(',', ' ')
-            except (ValueError, TypeError):
+                # Если это уже число, используем его напрямую
+                if isinstance(price_per_sqm_raw, (int, float)):
+                    price_per_sqm = float(price_per_sqm_raw)
+                else:
+                    # Преобразуем строку в число (убираем пробелы, заменяем запятую на точку)
+                    price_per_sqm_str = str(price_per_sqm_raw).replace(',', '.').replace(' ', '').replace('₽', '').replace('руб', '').strip()
+                    if price_per_sqm_str:
+                        price_per_sqm = float(price_per_sqm_str)
+                
+                if price_per_sqm:
+                    # Форматируем с разделителями тысяч
+                    price_per_sqm_formatted = f"{price_per_sqm:,.0f}".replace(',', ' ')
+            except (ValueError, TypeError) as e:
                 price_per_sqm = None
                 price_per_sqm_formatted = ''
+                print(f"Ошибка форматирования price_per_sqm: {e}, значение: {price_per_sqm_raw}, тип: {type(price_per_sqm_raw)}")
         
         # Получаем срок сдачи (проверяем разные варианты имен полей)
         completion_date = (apartment_data.get('completionDate', '') or 

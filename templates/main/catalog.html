@@ -1,195 +1,237 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if landing and landing.meta_title %}{{ landing.meta_title }}{% elif page_title %}{{ page_title }} — CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
+{% block title %}{% if landing and landing.meta_title %}{{ landing.meta_title }}{% elif page_title %}{{ page_title }} —
+CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
-/* Специальные правки страницы каталога ЖК (без адаптива) */
-.catalog-section ~ .feedback-wrapper { margin-top: 100px !important; padding: 120px 0 250px 0 !important; }
-.catalog-section ~ .feedback-wrapper .feedback-container { margin-bottom: 200px !important; }
-.catalog-section ~ .footer-transition { padding-top: 200px !important; }
-.catalog-section ~ .footer-transition .deco-logo.on-dark { top: 40px !important; z-index: 200 !important; }
-.catalog-section ~ .footer .footer-content { margin-top: 120px !important; }
-.catalog-section { margin-bottom: 30px !important; }
-.catalog-grid { margin-bottom: 30px !important; display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 24px !important; }
-.pagination-container { margin-top: 30px !important; margin-bottom: 50px !important; }
+    /* Специальные правки страницы каталога ЖК (без адаптива) */
+    .catalog-section~.feedback-wrapper {
+        margin-top: 100px !important;
+        padding: 120px 0 250px 0 !important;
+    }
 
-/* Галерея фото в карточках */
-.compact-card-image-gallery {
-  position: relative;
-  width: 100%;
-  height: 240px;
-  overflow: hidden;
-  border-radius: 12px 12px 0 0;
-}
+    .catalog-section~.feedback-wrapper .feedback-container {
+        margin-bottom: 200px !important;
+    }
 
-.compact-card-image-gallery .gallery-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: opacity 0.3s ease;
-}
+    .catalog-section~.footer-transition {
+        padding-top: 200px !important;
+    }
 
-.gallery-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  z-index: 10;
-  opacity: 0;
-}
+    .catalog-section~.footer-transition .deco-logo.on-dark {
+        top: 40px !important;
+        z-index: 200 !important;
+    }
 
-.compact-card-image-gallery:hover .gallery-nav {
-  opacity: 1;
-}
+    .catalog-section~.footer .footer-content {
+        margin-top: 120px !important;
+    }
 
-.gallery-nav:hover {
-  background: rgba(0, 0, 0, 0.8);
-  transform: translateY(-50%) scale(1.1);
-}
+    .catalog-section {
+        margin-bottom: 30px !important;
+    }
 
-.gallery-prev {
-  left: 10px;
-}
+    .catalog-grid {
+        margin-bottom: 30px !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 24px !important;
+    }
 
-.gallery-next {
-  right: 10px;
-}
+    .pagination-container {
+        margin-top: 30px !important;
+        margin-bottom: 50px !important;
+    }
 
-.gallery-dots {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-  z-index: 10;
-}
+    /* Галерея фото в карточках */
+    .compact-card-image-gallery {
+        position: relative;
+        width: 100%;
+        height: 240px;
+        overflow: hidden;
+        border-radius: 12px 12px 0 0;
+    }
 
-.gallery-dots .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
+    .compact-card-image-gallery .gallery-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: opacity 0.3s ease;
+    }
 
-.gallery-dots .dot.active {
-  background: rgba(255, 255, 255, 1);
-  width: 24px;
-  border-radius: 4px;
-}
+    .gallery-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 10;
+        opacity: 0;
+    }
 
-.gallery-dots .dot:hover {
-  background: rgba(255, 255, 255, 0.8);
-}
+    .compact-card-image-gallery:hover .gallery-nav {
+        opacity: 1;
+    }
 
-/* Исправление проблемы с длинными названиями улиц */
-.filter-select {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+    .gallery-nav:hover {
+        background: rgba(0, 0, 0, 0.8);
+        transform: translateY(-50%) scale(1.1);
+    }
 
-.filter-select option {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+    .gallery-prev {
+        left: 10px;
+    }
 
-/* Стили для поля поиска ЖК */
-.complex-search-input {
-    transition: all 0.3s ease;
-}
+    .gallery-next {
+        right: 10px;
+    }
 
-.complex-search-input:focus {
-    outline: none;
-    border-color: #d4a574 !important;
-    box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
-}
+    .gallery-dots {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+        z-index: 10;
+    }
 
-.complex-search-input::placeholder {
-    color: #9ca3af;
-}
+    .gallery-dots .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
 
-.complex-filter-item {
-    transition: opacity 0.2s ease;
-}
+    .gallery-dots .dot.active {
+        background: rgba(255, 255, 255, 1);
+        width: 24px;
+        border-radius: 4px;
+    }
 
-.complex-filter-item[style*="display: none"] {
-    display: none !important;
-}
+    .gallery-dots .dot:hover {
+        background: rgba(255, 255, 255, 0.8);
+    }
 
-/* Ограничиваем ширину полей фильтров */
-.filters-row-grid .filter-group {
-    min-width: 0; /* Позволяет flex/grid элементам сжиматься */
-    max-width: 100%;
-}
+    /* Исправление проблемы с длинными названиями улиц */
+    .filter-select {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-/* Мобильная версия: одна карточка в ряд */
-@media (max-width: 768px){
-  .catalog-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
-  .compact-card-image-gallery { height: 200px; }
-  .gallery-nav { opacity: 1; width: 32px; height: 32px; }
-}
+    .filter-select option {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-/* Кнопка избранного на карточках */
-.favorite-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
+    /* Стили для поля поиска ЖК */
+    .complex-search-input {
+        transition: all 0.3s ease;
+    }
 
-.favorite-btn:hover {
-  background: rgba(255, 255, 255, 1);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
+    .complex-search-input:focus {
+        outline: none;
+        border-color: #d4a574 !important;
+        box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+    }
 
-.favorite-btn i {
-  font-size: 18px;
-  color: #666;
-  transition: all 0.2s ease;
-}
+    .complex-search-input::placeholder {
+        color: #9ca3af;
+    }
 
-.favorite-btn.favorite-active i,
-.favorite-btn:hover i {
-  color: #e74c3c;
-}
+    .complex-filter-item {
+        transition: opacity 0.2s ease;
+    }
 
-.favorite-btn.favorite-active i {
-  color: #e74c3c;
-}
+    .complex-filter-item[style*="display: none"] {
+        display: none !important;
+    }
 
-.favorite-btn.favorite-active {
-  background: rgba(231, 76, 60, 0.1);
-}
+    /* Ограничиваем ширину полей фильтров */
+    .filters-row-grid .filter-group {
+        min-width: 0;
+        /* Позволяет flex/grid элементам сжиматься */
+        max-width: 100%;
+    }
+
+    /* Мобильная версия: одна карточка в ряд */
+    @media (max-width: 768px) {
+        .catalog-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+        }
+
+        .compact-card-image-gallery {
+            height: 200px;
+        }
+
+        .gallery-nav {
+            opacity: 1;
+            width: 32px;
+            height: 32px;
+        }
+    }
+
+    /* Кнопка избранного на карточках */
+    .favorite-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .favorite-btn:hover {
+        background: rgba(255, 255, 255, 1);
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .favorite-btn i {
+        font-size: 18px;
+        color: #666;
+        transition: all 0.2s ease;
+    }
+
+    .favorite-btn.favorite-active i,
+    .favorite-btn:hover i {
+        color: #e74c3c;
+    }
+
+    .favorite-btn.favorite-active i {
+        color: #e74c3c;
+    }
+
+    .favorite-btn.favorite-active {
+        background: rgba(231, 76, 60, 0.1);
+    }
 </style>
 {% endblock %}
 
@@ -208,27 +250,35 @@
 <div class="container">
     <section class="catalog-section">
         <div class="catalog-header">
-            <h1 class="section-title">{% if page_title %}{{ page_title }}{% else %}Каталог жилых комплексов{% endif %}</h1>
-            <p class="section-subtitle">{% if page_description %}{{ page_description }}{% else %}Все доступные предложения{% endif %}</p>
+            <h1 class="section-title">{% if page_title %}{{ page_title }}{% else %}Каталог жилых комплексов{% endif %}
+            </h1>
+            <p class="section-subtitle">{% if page_description %}{{ page_description }}{% else %}Все доступные
+                предложения{% endif %}</p>
 
             <div class="catalog-tabs">
-                <a href="{% url 'main:newbuild_index' %}" class="catalog-tab {% if dataset_type == 'newbuild' %}active{% endif %}">Новостройки</a>
-                <a href="{% url 'main:secondary_index' %}" class="catalog-tab alt {% if dataset_type == 'secondary' %}active{% endif %}">Вторичная недвижимость</a>
+                <a href="{% url 'main:newbuild_index' %}"
+                    class="catalog-tab {% if dataset_type == 'newbuild' %}active{% endif %}">Новостройки</a>
+                <a href="{% url 'main:secondary_index' %}"
+                    class="catalog-tab alt {% if dataset_type == 'secondary' %}active{% endif %}">Вторичная
+                    недвижимость</a>
             </div>
             {% if landing_categories %}
             <div class="catalog-categories">
                 {% for lc in landing_categories %}
-                    <a href="{% url 'main:catalog_landing' lc.slug %}" class="catalog-category{% if landing and landing.slug == lc.slug %} active{% endif %}">{{ lc.name }}</a>
+                <a href="{% url 'main:catalog_landing' lc.slug %}"
+                    class="catalog-category{% if landing and landing.slug == lc.slug %} active{% endif %}">{{ lc.name
+                    }}</a>
                 {% endfor %}
             </div>
             {% endif %}
         </div>
-        
+
         <!-- Хлебные крошки -->
         <div class="breadcrumbs">
             <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
             <span class="breadcrumb-separator">•</span>
-            <span class="breadcrumb-current">{% if dataset_type == 'secondary' %}Вторичная недвижимость{% else %}Каталог ЖК{% endif %}</span>
+            <span class="breadcrumb-current">{% if dataset_type == 'secondary' %}Вторичная недвижимость{% else %}Каталог
+                ЖК{% endif %}</span>
         </div>
 
         <!-- Мобильная кнопка открытия фильтра -->
@@ -248,9 +298,9 @@
                         <select name="city" id="city" class="filter-select">
                             <option value="">Любой</option>
                             {% for city_name in cities %}
-                                <option value="{{ city_name }}" {% if filters.city == city_name %}selected{% endif %}>
-                                    {{ city_name }}
-                                </option>
+                            <option value="{{ city_name }}" {% if filters.city == city_name %}selected{% endif %}>
+                                {{ city_name }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -260,9 +310,9 @@
                         <select name="district" id="district" class="filter-select">
                             <option value="">Любой</option>
                             {% for district_name in districts %}
-                                <option value="{{ district_name }}" {% if filters.district == district_name %}selected{% endif %}>
-                                    {{ district_name }}
-                                </option>
+                            <option value="{{ district_name }}" {% if filters.district == district_name %}selected{% endif %}>
+                                {{ district_name }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -272,9 +322,9 @@
                         <select name="street" id="street" class="filter-select">
                             <option value="">Любая</option>
                             {% for street_name in streets %}
-                                <option value="{{ street_name }}" {% if filters.street == street_name %}selected{% endif %}>
-                                    {{ street_name }}
-                                </option>
+                            <option value="{{ street_name }}" {% if filters.street == street_name %}selected{% endif %}>
+                                {{ street_name }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -288,14 +338,18 @@
                                 <span class="range-value">до <strong id="area-to-display">399</strong></span>
                             </div>
                             <div class="range-slider">
-                                <input type="range" id="area-from-slider" class="range-slider-input" min="30" max="500" step="1" value="60">
-                                <input type="range" id="area-to-slider" class="range-slider-input" min="30" max="500" step="1" value="399">
+                                <input type="range" id="area-from-slider" class="range-slider-input" min="30" max="500"
+                                    step="1" value="60">
+                                <input type="range" id="area-to-slider" class="range-slider-input" min="30" max="500"
+                                    step="1" value="399">
                                 <div class="range-track">
                                     <div class="range-fill area-fill"></div>
                                 </div>
                             </div>
-                            <input type="hidden" name="area_from" id="area-from-hidden" value="{{ filters.area_from|default:'' }}">
-                            <input type="hidden" name="area_to" id="area-to-hidden" value="{{ filters.area_to|default:'' }}">
+                            <input type="hidden" name="area_from" id="area-from-hidden"
+                                value="{{ filters.area_from|default:'' }}">
+                            <input type="hidden" name="area_to" id="area-to-hidden"
+                                value="{{ filters.area_to|default:'' }}">
                         </div>
                     </div>
 
@@ -308,14 +362,18 @@
                                 <span class="range-value">до <strong id="price-to-display">100.0</strong> млн</span>
                             </div>
                             <div class="range-slider">
-                                <input type="range" id="price-from-slider" class="range-slider-input" min="1" max="100" step="0.1" value="1.0">
-                                <input type="range" id="price-to-slider" class="range-slider-input" min="1" max="100" step="0.1" value="100.0">
+                                <input type="range" id="price-from-slider" class="range-slider-input" min="1" max="100"
+                                    step="0.1" value="1.0">
+                                <input type="range" id="price-to-slider" class="range-slider-input" min="1" max="100"
+                                    step="0.1" value="100.0">
                                 <div class="range-track">
                                     <div class="range-fill price-fill"></div>
                                 </div>
                             </div>
-                            <input type="hidden" name="price_from" id="price-from-hidden" value="{{ filters.price_from|default:'' }}">
-                            <input type="hidden" name="price_to" id="price-to-hidden" value="{{ filters.price_to|default:'' }}">
+                            <input type="hidden" name="price_from" id="price-from-hidden"
+                                value="{{ filters.price_from|default:'' }}">
+                            <input type="hidden" name="price_to" id="price-to-hidden"
+                                value="{{ filters.price_to|default:'' }}">
                         </div>
                     </div>
 
@@ -335,67 +393,72 @@
                     <div class="filter-group">
                         <label>Укажите количество комнат</label>
                         <div class="button-filter">
-                            <button type="button" class="filter-btn" data-value="" data-active="{% if not filters.rooms %}true{% else %}false{% endif %}">
+                            <button type="button" class="filter-btn" data-value=""
+                                data-active="{% if not filters.rooms %}true{% else %}false{% endif %}">
                                 Любое
                             </button>
                             {% for value, label in rooms_choices %}
-                            <button type="button" class="filter-btn" data-value="{{ value }}" data-active="{% if filters.rooms == value %}true{% else %}false{% endif %}">
+                            <button type="button" class="filter-btn" data-value="{{ value }}" data-active="false">
                                 {{ label }}
                             </button>
                             {% endfor %}
                         </div>
                         <input type="hidden" name="rooms" id="rooms-hidden" value="{{ filters.rooms|default:'' }}">
                     </div>
-                    
+
                     <div class="filter-group">
                         <label>Специальные предложения</label>
                         <div class="button-filter">
-                            <button type="button" class="filter-btn" data-value="" data-active="{% if not filters.has_offers %}true{% else %}false{% endif %}">
+                            <button type="button" class="filter-btn" data-value=""
+                                data-active="{% if not filters.has_offers %}true{% else %}false{% endif %}">
                                 Любое
                             </button>
-                            <button type="button" class="filter-btn" data-value="true" data-active="{% if filters.has_offers %}true{% else %}false{% endif %}">
+                            <button type="button" class="filter-btn" data-value="true"
+                                data-active="{% if filters.has_offers %}true{% else %}false{% endif %}">
                                 Скидки
                             </button>
                         </div>
-                        <input type="hidden" name="has_offers" id="has_offers-hidden" value="{{ filters.has_offers|default:'' }}">
+                        <input type="hidden" name="has_offers" id="has_offers-hidden"
+                            value="{{ filters.has_offers|default:'' }}">
                     </div>
                     {% endif %}
-                    
+
                     <!-- Фильтр по названиям ЖК (только для новостроек, не для вторички) -->
                     {% if dataset_type != 'secondary' %}
                     <div class="filter-group" style="grid-column: 1 / -1;">
                         <label>Жилые комплексы</label>
-                        <input type="text" 
-                               id="complex-search-input" 
-                               class="complex-search-input" 
-                               placeholder="Поиск ЖК по названию..."
-                               style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: #fff; color: #374151; box-sizing: border-box;">
-                        <div class="complexes-filter-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+                        <input type="text" id="complex-search-input" class="complex-search-input"
+                            placeholder="Поиск ЖК по названию..."
+                            style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: #fff; color: #374151; box-sizing: border-box;">
+                        <div class="complexes-filter-container"
+                            style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
                             {% for complex in complexes_list %}
-                            <label class="complex-filter-item" style="display: flex; align-items: center; padding: 6px 0; cursor: pointer;" data-complex-name="{{ complex.name|lower }}">
-                                <input type="checkbox" name="complexes" value="{{ complex.id }}" 
-                                       class="complex-checkbox" 
-                                       data-complex-id="{{ complex.id }}"
-                                       style="margin-right: 8px; width: 16px; height: 16px; cursor: pointer;">
+                            <label class="complex-filter-item"
+                                style="display: flex; align-items: center; padding: 6px 0; cursor: pointer;"
+                                data-complex-name="{{ complex.name|lower }}">
+                                <input type="checkbox" name="complexes" value="{{ complex.id }}"
+                                    class="complex-checkbox" data-complex-id="{{ complex.id }}"
+                                    style="margin-right: 8px; width: 16px; height: 16px; cursor: pointer;">
                                 <span class="complex-name" style="font-size: 14px; color: #374151;">{{ complex.name }}</span>
                             </label>
                             {% empty %}
                             <div style="padding: 12px; text-align: center; color: #9ca3af;">ЖК не найдены</div>
                             {% endfor %}
                         </div>
-                        <input type="hidden" name="complexes" id="complexes-hidden" value="{{ filters.complexes|default:'' }}">
+                        <input type="hidden" name="complexes" id="complexes-hidden"
+                            value="{{ filters.complexes|default:'' }}">
                     </div>
                     {% endif %}
-                    
+
                     <!-- Фильтр по ипотечным программам -->
                     <div class="filter-group">
                         <label for="mortgage_program">Ипотечная программа</label>
                         <select name="mortgage_program" id="mortgage_program" class="filter-select">
                             <option value="">Любая</option>
                             {% for program in mortgage_programs %}
-                                <option value="{{ program.id }}" {% if filters.mortgage_program == program.id %}selected{% endif %}>
-                                    {{ program.name }}{% if program.is_individual %} (индивидуальная){% endif %}
-                                </option>
+                            <option value="{{ program.id }}" {% if filters.mortgage_program == program.id %}selected{% endif %}>
+                                {{ program.name }}{% if program.is_individual %} (индивидуальная){% endif %}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -406,12 +469,13 @@
                         <i class="fas fa-search"></i>
                         Поиск
                     </button>
-                    
+
                     <div class="results-count">
                         Найдено 0 домов
                     </div>
-                    
-                    <a href="{% if dataset_type == 'secondary' %}{% url 'main:secondary_index' %}{% else %}{% url 'main:catalog' %}{% endif %}" class="clear-filters" id="clear-filters">
+
+                    <a href="{% if dataset_type == 'secondary' %}{% url 'main:secondary_index' %}{% else %}{% url 'main:catalog' %}{% endif %}"
+                        class="clear-filters" id="clear-filters">
                         <i class="fas fa-times"></i>
                         Очистить фильтр
                     </a>
@@ -445,7 +509,7 @@
                 </div>
                 <input type="hidden" name="sort" id="sort-hidden" value="{{ filters.sort|default:'price_asc' }}">
             </div>
-            
+
             <div class="view-toggle-right">
                 <button type="button" class="view-btn active" data-view="map">Картой</button>
                 <button type="button" class="view-btn" data-view="list">Списком</button>
@@ -460,7 +524,9 @@
         {% endif %}
 
         <div class="catalog-content">
-            <div id="map" style="width: 100%; height: 520px; display:block; border-radius:12px; overflow:hidden; margin-bottom:24px;"></div>
+            <div id="map"
+                style="width: 100%; height: 520px; display:block; border-radius:12px; overflow:hidden; margin-bottom:24px;">
+            </div>
             <div class="catalog-grid" id="catalog-grid">
                 <!-- Карточки загружаются через API -->
             </div>
@@ -471,130 +537,188 @@
             <div class="pagination-info"></div>
             <div class="pagination-controls"></div>
         </div>
-        
+
 
     </section>
-    
+
 </div>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
-.catalog-tabs { margin-top: 12px; display: flex; gap: 16px; justify-content: center; }
-.catalog-tab { padding: 8px 16px; border-radius: 999px; background: var(--c21-light); color: var(--c21-dark); text-decoration: none; font-weight: 600; }
-.catalog-tab.active { background: var(--c21-dark); color: var(--c21-gold); }
-.catalog-tab.alt { background: var(--c21-light); color: var(--c21-dark); }
-.catalog-tab.alt.active { background: var(--c21-dark); color: var(--c21-gold); }
-.catalog-categories { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.catalog-category { padding: 6px 12px; border: 1px solid var(--c21-mid); border-radius: 999px; text-decoration: none; color: var(--c21-dark); font-weight: 600; }
-.catalog-category.active, .catalog-category:hover { border-color: var(--c21-gold); color: var(--c21-gold); }
-.filter-chip { display:inline-block; padding:8px 14px; background: var(--c21-light); color: var(--c21-dark); border-radius: 999px; text-decoration: none; font-weight:600; }
-.filter-chip.active, .filter-chip:hover { background: var(--c21-dark); color: var(--c21-gold); }
+    .catalog-tabs {
+        margin-top: 12px;
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+    }
 
-/* Стили для звездочек рейтинга */
-.rating-stars {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
+    .catalog-tab {
+        padding: 8px 16px;
+        border-radius: 999px;
+        background: var(--c21-light);
+        color: var(--c21-dark);
+        text-decoration: none;
+        font-weight: 600;
+    }
 
-.rating-stars .star {
-    font-size: 14px;
-    line-height: 1;
-}
+    .catalog-tab.active {
+        background: var(--c21-dark);
+        color: var(--c21-gold);
+    }
 
-.rating-stars .star.filled {
-    color: #fbbf24;
-}
+    .catalog-tab.alt {
+        background: var(--c21-light);
+        color: var(--c21-dark);
+    }
 
-.rating-stars .star.empty {
-    color: #d1d5db;
-}
+    .catalog-tab.alt.active {
+        background: var(--c21-dark);
+        color: var(--c21-gold);
+    }
 
-.rating-stars .rating-text {
-    margin-left: 4px;
-    font-size: 12px;
-    color: #6b7280;
-}
+    .catalog-categories {
+        margin-top: 16px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .catalog-category {
+        padding: 6px 12px;
+        border: 1px solid var(--c21-mid);
+        border-radius: 999px;
+        text-decoration: none;
+        color: var(--c21-dark);
+        font-weight: 600;
+    }
+
+    .catalog-category.active,
+    .catalog-category:hover {
+        border-color: var(--c21-gold);
+        color: var(--c21-gold);
+    }
+
+    .filter-chip {
+        display: inline-block;
+        padding: 8px 14px;
+        background: var(--c21-light);
+        color: var(--c21-dark);
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .filter-chip.active,
+    .filter-chip:hover {
+        background: var(--c21-dark);
+        color: var(--c21-gold);
+    }
+
+    /* Стили для звездочек рейтинга */
+    .rating-stars {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .rating-stars .star {
+        font-size: 14px;
+        line-height: 1;
+    }
+
+    .rating-stars .star.filled {
+        color: #fbbf24;
+    }
+
+    .rating-stars .star.empty {
+        color: #d1d5db;
+    }
+
+    .rating-stars .rating-text {
+        margin-left: 4px;
+        font-size: 12px;
+        color: #6b7280;
+    }
 </style>
 
 <script>
-// Глобальные функции - должны быть определены первой
-window.renderItems = function(data){
-  const grid = document.getElementById('catalog-grid');
-  const resultsCount = document.querySelector('.results-count');
-  const isSecondary = '{{ dataset_type }}' === 'secondary';
-  
-  // Для вторичной недвижимости всегда показываем списком, для новостроек - карту + список
-  const currentView = isSecondary ? 'list' : 'map';
-  
-  // Всегда рендерим и карту и список для новостроек
-  if (!isSecondary) {
-    // Новостройки: рендерим и карту и список
-    if (typeof renderMapPoints === 'function') {
-      const mapPoints = data.map_points || data.complexes || [];
-      renderMapPoints(mapPoints, false);
-    }
-    
-    const list = data.complexes || [];
-    if (!list.length) {
-      grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
-    } else {
-      // Используем полноценный рендер с компактными карточками
-      if (typeof updateCatalog === 'function') {
-        updateCatalog(data);
-      }
-    }
-  } else {
-    // Вторичка: только список
-    if (currentView === 'map') {
-      if (typeof renderMapPoints === 'function') {
-        renderMapPoints(data.items||[], true);
-      }
-    }
-    
-    if (!data.items || !data.items.length) {
-      grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
-    } else {
-      grid.innerHTML = data.items.map(item => {
-        // Отладочная информация (можно убрать в продакшене)// Формируем массив фото
-        let photos = [];
-        if (item.photos && item.photos.length > 0) {
-          photos = item.photos.map(photo => {
-            // Если фото уже содержит полный путь, используем как есть
-            if (photo.startsWith('/media/') || photo.startsWith('http')) {
-              return photo;
+    // Глобальные функции - должны быть определены первой
+    window.renderItems = function (data) {
+        const grid = document.getElementById('catalog-grid');
+        const resultsCount = document.querySelector('.results-count');
+        const isSecondary = '{{ dataset_type }}' === 'secondary';
+
+        // Для вторичной недвижимости всегда показываем списком, для новостроек - карту + список
+        const currentView = isSecondary ? 'list' : 'map';
+
+        // Всегда рендерим и карту и список для новостроек
+        if (!isSecondary) {
+            // Новостройки: рендерим и карту и список
+            if (typeof renderMapPoints === 'function') {
+                const mapPoints = data.map_points || data.complexes || [];
+                renderMapPoints(mapPoints, false);
             }
-            // Иначе добавляем префикс /media/
-            return `/media/${photo}`;
-          });
-        } else {
-          // Проверяем image_url и формируем правильный путь
-          let fallbackImage = '/media/gallery/placeholders.png';
-          if (item.image_url) {
-            if (item.image_url.startsWith('/media/') || item.image_url.startsWith('http')) {
-              fallbackImage = item.image_url;
+
+            const list = data.complexes || [];
+            if (!list.length) {
+                grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
             } else {
-              fallbackImage = `/media/${item.image_url}`;
+                // Используем полноценный рендер с компактными карточками
+                if (typeof updateCatalog === 'function') {
+                    updateCatalog(data);
+                }
             }
-          }
-          photos = [fallbackImage];
-        }
-        
-        // Генерируем HTML для галереи
-        const galleryHtml = photos.map((photo, i) => 
-          `<img src="${photo}" alt="${item.name}" class="gallery-image ${i === 0 ? 'active' : ''}" style="display: ${i === 0 ? 'block' : 'none'};">`
-        ).join('');
-        
-        // Для вторички не добавляем класс рейтинга (у вторички нет рейтинга)
-        const cardClasses = 'property-card-compact';
-        return `
+        } else {
+            // Вторичка: только список
+            if (currentView === 'map') {
+                if (typeof renderMapPoints === 'function') {
+                    renderMapPoints(data.items || [], true);
+                }
+            }
+
+            if (!data.items || !data.items.length) {
+                grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p></div>';
+            } else {
+                grid.innerHTML = data.items.map(item => {
+                    // Отладочная информация (можно убрать в продакшене)// Формируем массив фото
+                    let photos = [];
+                    if (item.photos && item.photos.length > 0) {
+                        photos = item.photos.map(photo => {
+                            // Если фото уже содержит полный путь, используем как есть
+                            if (photo.startsWith('/media/') || photo.startsWith('http')) {
+                                return photo;
+                            }
+                            // Иначе добавляем префикс /media/
+                            return `/media/${photo}`;
+                        });
+                    } else {
+                        // Проверяем image_url и формируем правильный путь
+                        let fallbackImage = '/media/gallery/placeholders.png';
+                        if (item.image_url) {
+                            if (item.image_url.startsWith('/media/') || item.image_url.startsWith('http')) {
+                                fallbackImage = item.image_url;
+                            } else {
+                                fallbackImage = `/media/${item.image_url}`;
+                            }
+                        }
+                        photos = [fallbackImage];
+                    }
+
+                    // Генерируем HTML для галереи
+                    const galleryHtml = photos.map((photo, i) =>
+                        `<img src="${photo}" alt="${item.name}" class="gallery-image ${i === 0 ? 'active' : ''}" style="display: ${i === 0 ? 'block' : 'none'};">`
+                    ).join('');
+
+                    // Для вторички не добавляем класс рейтинга (у вторички нет рейтинга)
+                    const cardClasses = 'property-card-compact';
+                    return `
         <div class="${cardClasses}" data-complex-id="${item.id}">
           <div class="compact-card-image-gallery" onclick="window.location.href='/secondary/${item.id}/'" style="cursor: pointer;">
             ${galleryHtml}
-            <button class="favorite-btn" data-favorite-complex-id="${item.id}" onclick="event.stopPropagation(); toggleComplexFavoriteHandler('${item.id}', this)" title="Добавить в избранное">
-              <i class="far fa-heart"></i>
-            </button>
             ${photos.length > 1 ? `
               <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
                 <i class="fas fa-chevron-left"></i>
@@ -628,175 +752,172 @@ window.renderItems = function(data){
             </div>
           </div>
         </div>`;
-      }).join('');
-    }
-  }
-  // Обновляем пагинацию под список
-  if (typeof updatePagination === 'function') {
-    updatePagination(data);
-  }
-  if (resultsCount) {
-    const total = (typeof data.total_count !== 'undefined') ? data.total_count : (data.total_count ?? data.total ?? 0);
-    if (total) resultsCount.textContent = `Найдено ${total} домов`;
-  }
-}
-
-// Глобальная функция applyFilters
-window.applyFilters = function() {
-    // Собираем данные формы
-    const formData = new FormData(document.getElementById('filters-form'));
-    const params = new URLSearchParams();
-    
-    // Добавляем параметры фильтров
-    for (let [key, value] of formData.entries()) {
-        if (value) {
-            params.append(key, value);
+                }).join('');
+            }
+        }
+        // Обновляем пагинацию под список
+        if (typeof updatePagination === 'function') {
+            updatePagination(data);
+        }
+        if (resultsCount) {
+            const total = (typeof data.total_count !== 'undefined') ? data.total_count : (data.total_count ?? data.total ?? 0);
+            if (total) resultsCount.textContent = `Найдено ${total} домов`;
         }
     }
-    
-    // Показываем индикатор загрузки
-    const grid = document.getElementById('catalog-grid');
-    grid.innerHTML = '<div class="loading">Поиск...</div>';
-    
-    // Определяем правильный API URL в зависимости от типа данных
-    const isSecondary = '{{ dataset_type }}' === 'secondary';
-    const apiUrl = isSecondary ? '/api/secondary/list/' : '/api/catalog/';
-    
-    // Загружаем данные через API с фильтрами
-    fetch(`${apiUrl}?${params.toString()}`)
-        .then(response => response.json())
-        .then(data => {
-            window.currentPage = 1;
-            if (isSecondary) {
-                renderItems(data);
-            } else {
-                updateCatalog(data);
-                updatePagination(data);
-                updateResultsCount(data.total_count);
-            }
-            
-            // Показываем заголовок результатов поиска
-            const searchResults = document.querySelector('.search-results');
-            if (!searchResults) {
-                const resultsDiv = document.createElement('div');
-                resultsDiv.className = 'search-results';
-                resultsDiv.innerHTML = '<h3 class="search-title">Результаты поиска</h3>';
-                grid.parentNode.insertBefore(resultsDiv, grid);
-            }
-            
-            // Обновляем URL без параметров
-            const baseUrl = isSecondary ? '/secondary/' : '/catalog/';
-            window.history.pushState({}, '', baseUrl);
-        })
-        .catch(error => {
-            console.error('Ошибка поиска:', error);
-            grid.innerHTML = '<div class="error">Ошибка поиска</div>';
-        });
-}
 
-// Глобальная функция loadPage
-window.loadPage = function(page) {
-    if (page === window.currentPage) return;
-    
-    // Собираем текущие фильтры
-    const formData = new FormData(document.getElementById('filters-form'));
-    const params = new URLSearchParams();
-    
-    // Добавляем параметры фильтров
-    for (let [key, value] of formData.entries()) {
-        if (value) {
-            params.append(key, value);
+    // Глобальная функция applyFilters
+    window.applyFilters = function () {
+        // Собираем данные формы
+        const formData = new FormData(document.getElementById('filters-form'));
+        const params = new URLSearchParams();
+
+        // Добавляем параметры фильтров
+        for (let [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
         }
-    }
-    
-    // Добавляем номер страницы
-    params.append('page', page);
-    
-    // Показываем индикатор загрузки
-    const grid = document.getElementById('catalog-grid');
-    grid.innerHTML = '<div class="loading">Загрузка...</div>';
-    
-    // Определяем правильный API URL в зависимости от типа данных
-    const isSecondary = '{{ dataset_type }}' === 'secondary';
-    const apiUrl = isSecondary ? '/api/secondary/list/' : '/api/catalog/';
-    
-    // Загружаем данные через API
-    fetch(`${apiUrl}?${params.toString()}`)
-        .then(response => response.json())
-        .then(data => {
-            window.currentPage = data.current_page;
-            if (isSecondary) {
-                renderItems(data);
-            } else {
-                updateCatalog(data);
-                updatePagination(data);
-                updateResultsCount(data.total_count);
-            }
-            // Обновляем URL без параметров
-            const baseUrl = isSecondary ? '/secondary/' : '/catalog/';
-            window.history.pushState({}, '', baseUrl);
-        })
-        .catch(error => {
-            console.error('Ошибка загрузки:', error);
-            grid.innerHTML = '<div class="error">Ошибка загрузки данных</div>';
-        });
-}
 
-// Глобальная функция updateCatalog
-window.updateCatalog = function(data) {
-    const grid = document.getElementById('catalog-grid');
-    
-    if (data.complexes.length === 0) {
-        grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p><p>Попробуйте изменить параметры поиска</p></div>';
-        return;
-    }
-    
-    let html = '';
-    data.complexes.forEach((complex, index) => {
-        // Создаем массив фото из photos или используем старые поля
-        let photos = [];
-        if (complex.photos && complex.photos.length > 0) {
-            photos = complex.photos.map(photo => {
-                // Если фото уже содержит полный URL, используем как есть
-                if (photo.startsWith('http')) {
-                    return photo;
+        // Показываем индикатор загрузки
+        const grid = document.getElementById('catalog-grid');
+        grid.innerHTML = '<div class="loading">Поиск...</div>';
+
+        // Определяем правильный API URL в зависимости от типа данных
+        const isSecondary = '{{ dataset_type }}' === 'secondary';
+        const apiUrl = isSecondary ? '/api/secondary/list/' : '/api/catalog/';
+
+        // Загружаем данные через API с фильтрами
+        fetch(`${apiUrl}?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                window.currentPage = 1;
+                if (isSecondary) {
+                    renderItems(data);
+                } else {
+                    updateCatalog(data);
+                    updatePagination(data);
+                    updateResultsCount(data.total_count);
                 }
-                // Иначе добавляем префикс /media/
-                return `/media/${photo}`;
+
+                // Показываем заголовок результатов поиска
+                const searchResults = document.querySelector('.search-results');
+                if (!searchResults) {
+                    const resultsDiv = document.createElement('div');
+                    resultsDiv.className = 'search-results';
+                    resultsDiv.innerHTML = '<h3 class="search-title">Результаты поиска</h3>';
+                    grid.parentNode.insertBefore(resultsDiv, grid);
+                }
+
+                // Обновляем URL без параметров
+                const baseUrl = isSecondary ? '/secondary/' : '/catalog/';
+                window.history.pushState({}, '', baseUrl);
+            })
+            .catch(error => {
+                console.error('Ошибка поиска:', error);
+                grid.innerHTML = '<div class="error">Ошибка поиска</div>';
             });
-        } else {
-            const img1 = complex.image_url || '/media/gallery/placeholders.png';
-            const img2 = complex.image_2_url;
-            const img3 = complex.image_3_url;
-            const img4 = complex.image_4_url;
-            photos = [img1, img2, img3, img4].filter(p => p);
+    }
+
+    // Глобальная функция loadPage
+    window.loadPage = function (page) {
+        if (page === window.currentPage) return;
+
+        // Собираем текущие фильтры
+        const formData = new FormData(document.getElementById('filters-form'));
+        const params = new URLSearchParams();
+
+        // Добавляем параметры фильтров
+        for (let [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
         }
-        
-        // Генерируем HTML для галереи
-        const galleryHtml = photos.map((photo, i) => 
-            `<img src="${photo}" alt="${complex.name}" class="gallery-image ${i === 0 ? 'active' : ''}" style="display: ${i === 0 ? 'block' : 'none'};">`
-        ).join('');
-        
-        // Добавляем класс рейтинга для обводки
-        const rating = complex.rating || 0;
-        let ratingClass = '';
-        if (rating >= 5) {
-            ratingClass = 'rating-5';
-        } else if (rating >= 4) {
-            ratingClass = 'rating-4';
-        } else if (rating >= 1) {
-            ratingClass = 'rating-3';
+
+        // Добавляем номер страницы
+        params.append('page', page);
+
+        // Показываем индикатор загрузки
+        const grid = document.getElementById('catalog-grid');
+        grid.innerHTML = '<div class="loading">Загрузка...</div>';
+
+        // Определяем правильный API URL в зависимости от типа данных
+        const isSecondary = '{{ dataset_type }}' === 'secondary';
+        const apiUrl = isSecondary ? '/api/secondary/list/' : '/api/catalog/';
+
+        // Загружаем данные через API
+        fetch(`${apiUrl}?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                window.currentPage = data.current_page;
+                if (isSecondary) {
+                    renderItems(data);
+                } else {
+                    updateCatalog(data);
+                    updatePagination(data);
+                    updateResultsCount(data.total_count);
+                }
+                // Обновляем URL без параметров
+                const baseUrl = isSecondary ? '/secondary/' : '/catalog/';
+                window.history.pushState({}, '', baseUrl);
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки:', error);
+                grid.innerHTML = '<div class="error">Ошибка загрузки данных</div>';
+            });
+    }
+
+    // Глобальная функция updateCatalog
+    window.updateCatalog = function (data) {
+        const grid = document.getElementById('catalog-grid');
+
+        if (data.complexes.length === 0) {
+            grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p><p>Попробуйте изменить параметры поиска</p></div>';
+            return;
         }
-        
-        const cardClasses = `property-card-compact ${ratingClass}`;
-        
-        html += `
+
+        let html = '';
+        data.complexes.forEach((complex, index) => {
+            // Создаем массив фото из photos или используем старые поля
+            let photos = [];
+            if (complex.photos && complex.photos.length > 0) {
+                photos = complex.photos.map(photo => {
+                    // Если фото уже содержит полный URL, используем как есть
+                    if (photo.startsWith('http')) {
+                        return photo;
+                    }
+                    // Иначе добавляем префикс /media/
+                    return `/media/${photo}`;
+                });
+            } else {
+                const img1 = complex.image_url || '/media/gallery/placeholders.png';
+                const img2 = complex.image_2_url;
+                const img3 = complex.image_3_url;
+                const img4 = complex.image_4_url;
+                photos = [img1, img2, img3, img4].filter(p => p);
+            }
+
+            // Генерируем HTML для галереи
+            const galleryHtml = photos.map((photo, i) =>
+                `<img src="${photo}" alt="${complex.name}" class="gallery-image ${i === 0 ? 'active' : ''}" style="display: ${i === 0 ? 'block' : 'none'};">`
+            ).join('');
+
+            // Добавляем класс рейтинга для обводки
+            const rating = complex.rating || 0;
+            let ratingClass = '';
+            if (rating >= 5) {
+                ratingClass = 'rating-5';
+            } else if (rating >= 4) {
+                ratingClass = 'rating-4';
+            } else if (rating >= 1) {
+                ratingClass = 'rating-3';
+            }
+
+            const cardClasses = `property-card-compact ${ratingClass}`;
+
+            html += `
             <div class="${cardClasses}" data-complex-id="${complex.id}">
                 <div class="compact-card-image-gallery" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
                     ${galleryHtml}
-                    <button class="favorite-btn" data-favorite-complex-id="${complex.id}" onclick="event.stopPropagation(); toggleComplexFavoriteHandler('${complex.id}', this)" title="Добавить в избранное">
-                      <i class="far fa-heart"></i>
-                    </button>
                     ${photos.length > 1 ? `
                         <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
                             <i class="fas fa-chevron-left"></i>
@@ -834,7 +955,7 @@ window.updateCatalog = function(data) {
                             <div class="compact-detail-item rating-item">
                                 <i class="fas fa-star"></i>
                                 <span class="rating-stars">
-                                    ${'★'.repeat(complex.rating)}${'☆'.repeat(5-complex.rating)}
+                                    ${'★'.repeat(complex.rating)}${'☆'.repeat(5 - complex.rating)}
                                     <span class="rating-text">(${complex.rating}/5)</span>
                                 </span>
                             </div>
@@ -847,757 +968,838 @@ window.updateCatalog = function(data) {
                 </div>
             </div>
         `;
-    });
-    
-    grid.innerHTML = html;
-}
+        });
 
-// Глобальная функция updateResultsCount
-window.updateResultsCount = function(count) {
-    const resultsCount = document.querySelector('.results-count');
-    if (resultsCount) {
-        resultsCount.textContent = `Найдено ${count} домов`;
+        grid.innerHTML = html;
     }
-}
 
-// Функции для галереи фото
-window.changeImage = function(button, direction) {
-    const gallery = button.parentElement;
-    const images = gallery.querySelectorAll('.gallery-image');
-    const dots = gallery.querySelectorAll('.dot');
-    let currentIndex = 0;
-    
-    // Находим текущий индекс
-    images.forEach((img, i) => {
-        if (img.style.display === 'block') {
-            currentIndex = i;
+    // Глобальная функция updateResultsCount
+    window.updateResultsCount = function (count) {
+        const resultsCount = document.querySelector('.results-count');
+        if (resultsCount) {
+            resultsCount.textContent = `Найдено ${count} домов`;
         }
-    });
-    
-    // Вычисляем новый индекс
-    let newIndex = currentIndex + direction;
-    if (newIndex < 0) newIndex = images.length - 1;
-    if (newIndex >= images.length) newIndex = 0;
-    
-    // Переключаем изображения
-    images[currentIndex].style.display = 'none';
-    images[newIndex].style.display = 'block';
-    
-    // Переключаем точки
-    dots[currentIndex].classList.remove('active');
-    dots[newIndex].classList.add('active');
-}
+    }
 
-window.setImage = function(dot, index) {
-    const gallery = dot.parentElement.parentElement;
-    const images = gallery.querySelectorAll('.gallery-image');
-    const dots = gallery.querySelectorAll('.dot');
-    
-    // Скрываем все изображения
-    images.forEach(img => img.style.display = 'none');
-    // Показываем выбранное
-    images[index].style.display = 'block';
-    
-    // Обновляем точки
-    dots.forEach(d => d.classList.remove('active'));
-    dots[index].classList.add('active');
-}
+    // Функции для галереи фото
+    window.changeImage = function (button, direction) {
+        const gallery = button.parentElement;
+        const images = gallery.querySelectorAll('.gallery-image');
+        const dots = gallery.querySelectorAll('.dot');
+        let currentIndex = 0;
 
-// Глобальная функция updatePagination
-window.updatePagination = function(data) {
-    const container = document.querySelector('.pagination-container');
-    if (!container) return;
-    
-    // Показываем контейнер пагинации
-    container.style.display = 'block';
-    
-    const info = container.querySelector('.pagination-info');
-    const controls = container.querySelector('.pagination-controls');
-    
-    info.textContent = `Страница ${data.current_page} из ${data.total_pages}`;
-    
-    let controlsHtml = '';
-    
-    if (data.has_previous) {
-        controlsHtml += `
+        // Находим текущий индекс
+        images.forEach((img, i) => {
+            if (img.style.display === 'block') {
+                currentIndex = i;
+            }
+        });
+
+        // Вычисляем новый индекс
+        let newIndex = currentIndex + direction;
+        if (newIndex < 0) newIndex = images.length - 1;
+        if (newIndex >= images.length) newIndex = 0;
+
+        // Переключаем изображения
+        images[currentIndex].style.display = 'none';
+        images[newIndex].style.display = 'block';
+
+        // Переключаем точки
+        dots[currentIndex].classList.remove('active');
+        dots[newIndex].classList.add('active');
+    }
+
+    window.setImage = function (dot, index) {
+        const gallery = dot.parentElement.parentElement;
+        const images = gallery.querySelectorAll('.gallery-image');
+        const dots = gallery.querySelectorAll('.dot');
+
+        // Скрываем все изображения
+        images.forEach(img => img.style.display = 'none');
+        // Показываем выбранное
+        images[index].style.display = 'block';
+
+        // Обновляем точки
+        dots.forEach(d => d.classList.remove('active'));
+        dots[index].classList.add('active');
+    }
+
+    // Глобальная функция updatePagination
+    window.updatePagination = function (data) {
+        const container = document.querySelector('.pagination-container');
+        if (!container) return;
+
+        // Показываем контейнер пагинации
+        container.style.display = 'block';
+
+        const info = container.querySelector('.pagination-info');
+        const controls = container.querySelector('.pagination-controls');
+
+        info.textContent = `Страница ${data.current_page} из ${data.total_pages}`;
+
+        let controlsHtml = '';
+
+        if (data.has_previous) {
+            controlsHtml += `
             <button class="pagination-btn" onclick="loadPage(${data.current_page - 1})">
                 <i class="fas fa-chevron-left"></i> Назад
             </button>
         `;
-    }
-    
-    controlsHtml += '<div class="pagination-numbers">';
-    for (let i = 1; i <= data.total_pages; i++) {
-        if (i === data.current_page) {
-            controlsHtml += `<span class="pagination-number active">${i}</span>`;
-        } else if (i > data.current_page - 3 && i < data.current_page + 3) {
-            controlsHtml += `<button class="pagination-number" onclick="loadPage(${i})">${i}</button>`;
         }
-    }
-    controlsHtml += '</div>';
-    
-    if (data.has_next) {
-        controlsHtml += `
+
+        controlsHtml += '<div class="pagination-numbers">';
+        for (let i = 1; i <= data.total_pages; i++) {
+            if (i === data.current_page) {
+                controlsHtml += `<span class="pagination-number active">${i}</span>`;
+            } else if (i > data.current_page - 3 && i < data.current_page + 3) {
+                controlsHtml += `<button class="pagination-number" onclick="loadPage(${i})">${i}</button>`;
+            }
+        }
+        controlsHtml += '</div>';
+
+        if (data.has_next) {
+            controlsHtml += `
             <button class="pagination-btn" onclick="loadPage(${data.current_page + 1})">
                 Вперед <i class="fas fa-chevron-right"></i>
             </button>
         `;
-    }
-    
-    controls.innerHTML = controlsHtml;
-}
+        }
 
-// Глобальная функция initImageCarousel
-window.initImageCarousel = function() {
-    const propertyCards = document.querySelectorAll('.property-card-large');
-    
-    propertyCards.forEach(card => {
-        const mainImage = card.querySelector('.main-image img');
-        const thumbnails = card.querySelectorAll('.thumbnail');
-        const imageCounter = card.querySelector('.image-counter');
-        const prevBtn = card.querySelector('.nav-btn.prev');
-        const nextBtn = card.querySelector('.nav-btn.next');
-        
-        let currentImageIndex = 0;
-        const totalImages = thumbnails.length;
-        
-        // Функция для обновления главного изображения
-        function updateMainImage(index) {
-            const thumbnail = thumbnails[index];
-            const thumbnailImg = thumbnail.querySelector('img');
-            
-            if (thumbnailImg) {
-                mainImage.src = thumbnailImg.src;
-                mainImage.alt = thumbnailImg.alt;
-                
-                // Обновляем счетчик
-                imageCounter.textContent = `${index + 1} из ${totalImages}`;
-                
-                // Обновляем активную миниатюру
-                thumbnails.forEach((thumb, i) => {
-                    thumb.classList.toggle('active', i === index);
-                });
-                
-                currentImageIndex = index;
+        controls.innerHTML = controlsHtml;
+    }
+
+    // Глобальная функция initImageCarousel
+    window.initImageCarousel = function () {
+        const propertyCards = document.querySelectorAll('.property-card-large');
+
+        propertyCards.forEach(card => {
+            const mainImage = card.querySelector('.main-image img');
+            const thumbnails = card.querySelectorAll('.thumbnail');
+            const imageCounter = card.querySelector('.image-counter');
+            const prevBtn = card.querySelector('.nav-btn.prev');
+            const nextBtn = card.querySelector('.nav-btn.next');
+
+            let currentImageIndex = 0;
+            const totalImages = thumbnails.length;
+
+            // Функция для обновления главного изображения
+            function updateMainImage(index) {
+                const thumbnail = thumbnails[index];
+                const thumbnailImg = thumbnail.querySelector('img');
+
+                if (thumbnailImg) {
+                    mainImage.src = thumbnailImg.src;
+                    mainImage.alt = thumbnailImg.alt;
+
+                    // Обновляем счетчик
+                    imageCounter.textContent = `${index + 1} из ${totalImages}`;
+
+                    // Обновляем активную миниатюру
+                    thumbnails.forEach((thumb, i) => {
+                        thumb.classList.toggle('active', i === index);
+                    });
+
+                    currentImageIndex = index;
+                }
             }
-        }
-        
-        // Обработчики кликов по миниатюрам
-        thumbnails.forEach((thumbnail, index) => {
-            thumbnail.addEventListener('click', function(e) {
-                e.stopPropagation(); // Предотвращаем всплытие события
-                updateMainImage(index);
+
+            // Обработчики кликов по миниатюрам
+            thumbnails.forEach((thumbnail, index) => {
+                thumbnail.addEventListener('click', function (e) {
+                    e.stopPropagation(); // Предотвращаем всплытие события
+                    updateMainImage(index);
+                });
             });
-        });
-        
-        // Обработчики для кнопок навигации
-        if (prevBtn) {
-            prevBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const newIndex = currentImageIndex > 0 ? currentImageIndex - 1 : totalImages - 1;
-                updateMainImage(newIndex);
-            });
-        }
-        
-        if (nextBtn) {
-            nextBtn.addEventListener('click', function(e) {
+
+            // Обработчики для кнопок навигации
+            if (prevBtn) {
+                prevBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const newIndex = currentImageIndex > 0 ? currentImageIndex - 1 : totalImages - 1;
+                    updateMainImage(newIndex);
+                });
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
+                    updateMainImage(newIndex);
+                });
+            }
+
+            // Обработчик клика по главному изображению для перехода к следующему
+            mainImage.addEventListener('click', function (e) {
                 e.stopPropagation();
                 const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
                 updateMainImage(newIndex);
             });
+        });
+    }
+
+    // Инициализация глобальных переменных
+    window.currentPage = 1;
+
+    // Глобальная функция fetchData
+    window.fetchData = async function () {
+        const form = document.getElementById('filters-form');
+        const grid = document.getElementById('catalog-grid');
+        const isSecondary = '{{ dataset_type }}' === 'secondary';
+        const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+
+        if (!form || !grid) return;
+        if ((localStorage.getItem('catalog_view') || 'list') !== 'map') {
+            grid.innerHTML = '<div class="loading">Поиск...</div>';
         }
-        
-        // Обработчик клика по главному изображению для перехода к следующему
-        mainImage.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const newIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
-            updateMainImage(newIndex);
-        });
-    });
-}
-
-// Инициализация глобальных переменных
-window.currentPage = 1;
-
-// Глобальная функция fetchData
-window.fetchData = async function(){
-  const form = document.getElementById('filters-form');
-  const grid = document.getElementById('catalog-grid');
-  const isSecondary = '{{ dataset_type }}' === 'secondary';
-  const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
-  
-  if (!form || !grid) return;
-  if ((localStorage.getItem('catalog_view')||'list') !== 'map') {
-    grid.innerHTML = '<div class="loading">Поиск...</div>';
-  }
-  const qs = window.serialize();
-  // Отменяем предыдущий запрос и помечаем текущий как последний
-  try {
-    if (window.activeController) { window.activeController.abort(); }
-    const controller = new AbortController();
-    window.activeController = controller;
-    const requestId = ++window.latestRequestId;
-    const res = await fetch(apiUrl + (qs ? ('?' + qs) : ''), { signal: controller.signal });
-    const data = await res.json();
-    // Если это не самый свежий ответ — игнорируем
-    if (requestId !== window.latestRequestId) return;
-    renderItems(data);
-  } catch(e){
-    // Игнорируем AbortError - это нормальная отмена запроса
-    if (e.name === 'AbortError') {
-      return;
+        const qs = window.serialize();
+        // Отменяем предыдущий запрос и помечаем текущий как последний
+        try {
+            if (window.activeController) { window.activeController.abort(); }
+            const controller = new AbortController();
+            window.activeController = controller;
+            const requestId = ++window.latestRequestId;
+            const res = await fetch(apiUrl + (qs ? ('?' + qs) : ''), { signal: controller.signal });
+            const data = await res.json();
+            // Если это не самый свежий ответ — игнорируем
+            if (requestId !== window.latestRequestId) return;
+            renderItems(data);
+        } catch (e) {
+            // Игнорируем AbortError - это нормальная отмена запроса
+            if (e.name === 'AbortError') {
+                return;
+            }
+            if (grid) grid.innerHTML = '<div class="error">Ошибка загрузки</div>';
+            console.error(e);
+        }
     }
-    if (grid) grid.innerHTML = '<div class="error">Ошибка загрузки</div>';
-    console.error(e);
-  }
-}
 
-// Глобальная функция initMap
-window.initMap = function(){
-  const mapEl = document.getElementById('map');
-  if (!mapEl) return;
-  
-  window.map = L.map('map', { attributionControl: false });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(window.map);
-  window.markersLayer = L.layerGroup().addTo(window.map);
-  window.map.setView([54.7388, 55.9721], 11); // Уфа по умолчанию
-}
+    // Глобальная функция initMap
+    window.initMap = function () {
+        const mapEl = document.getElementById('map');
+        if (!mapEl) return;
 
-// Глобальная функция serialize
-window.serialize = function() {
-  const form = document.getElementById('filters-form');
-  if (!form) return '';
-  
-  const fd = new FormData(form);
-  const params = new URLSearchParams();
-  
-  // Собираем все параметры, исключая чекбоксы complexes (они обрабатываются через скрытое поле)
-  for (const [k, v] of fd.entries()) {
-    if (k !== 'complexes' && v !== '') {
-      params.append(k, v);
+        window.map = L.map('map', { attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(window.map);
+        window.markersLayer = L.layerGroup().addTo(window.map);
+        window.map.setView([54.7388, 55.9721], 11); // Уфа по умолчанию
     }
-  }
-  
-  // Добавляем complexes из скрытого поля
-  const complexesHidden = document.getElementById('complexes-hidden');
-  if (complexesHidden && complexesHidden.value) {
-    params.set('complexes', complexesHidden.value);
-  }
-  
-  const sort = document.getElementById('sort-hidden');
-  if (sort && sort.value) params.set('sort', sort.value);
-  return params.toString();
-}
 
-// Глобальная функция renderMapPoints
-window.renderMapPoints = function(list, isSec){
-  if (!window.map) return;
-  window.markersLayer.clearLayers();
-  const bounds = [];
-  list.forEach(item => {
-    const lat = item.lat, lng = item.lng;
-    if (lat && lng) {
-      const marker = L.marker([lat, lng]).addTo(window.markersLayer);
-      const price = item.price_range || item.price_display || 'Цена по запросу';
-      const link = isSec ? `/secondary/${item.id}/` : `/complex/${item.id}/`;
-      marker.bindPopup(`<b>${item.name}</b><br/>${price}<br/><a href="${link}">Подробнее</a>`);
-      bounds.push([lat, lng]);
+    // Глобальная функция serialize
+    window.serialize = function () {
+        const form = document.getElementById('filters-form');
+        if (!form) return '';
+
+        const fd = new FormData(form);
+        const params = new URLSearchParams();
+
+        // Собираем все параметры, исключая чекбоксы complexes (они обрабатываются через скрытое поле)
+        for (const [k, v] of fd.entries()) {
+            if (k !== 'complexes' && v !== '') {
+                params.append(k, v);
+            }
+        }
+
+        // Добавляем complexes из скрытого поля
+        const complexesHidden = document.getElementById('complexes-hidden');
+        if (complexesHidden && complexesHidden.value) {
+            params.set('complexes', complexesHidden.value);
+        }
+
+        const sort = document.getElementById('sort-hidden');
+        if (sort && sort.value) params.set('sort', sort.value);
+        return params.toString();
     }
-  });
-  if (bounds.length) window.map.fitBounds(bounds, { padding:[20,20] });
-}
 
-// Глобальная функция setView
-window.setView = function(view){
-  const grid = document.getElementById('catalog-grid');
-  const mapEl = document.getElementById('map');
-  const toggleBtns = document.querySelectorAll('.view-btn');
-  const isSecondary = '{{ dataset_type }}' === 'secondary';
-  
-  // Не позволяем переключиться на карту для вторичной недвижимости
-  if (isSecondary && view === 'map') {
-    return;
-  }
-  
-  toggleBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-view')===view));
-  
-  // Всегда показываем оба элемента, но меняем порядок
-  if (view === 'map') {
-    // Карта сверху, список снизу
-    mapEl.style.display = 'block';
-    mapEl.style.order = '1';
-    grid.style.display = 'block';
-    grid.style.order = '2';
-    if (!window.map) initMap();
-    fetchData();
-  } else {
-    // Список сверху, карта снизу (или скрыта для вторички)
-    if (isSecondary) {
-      mapEl.style.display = 'none';
-      grid.style.display = 'block';
-    } else {
-      mapEl.style.display = 'block';
-      mapEl.style.order = '2';
-      grid.style.display = 'block';
-      grid.style.order = '1';
-    }
-    fetchData();
-  }
-  
-  // Сохраняем в localStorage только для новостроек
-  if (!isSecondary) {
-    localStorage.setItem('catalog_view', view);
-  }
-}
-
-// Инициализация глобальных переменных для AJAX
-window.activeController = null;
-window.latestRequestId = 0;
-window.map = null;
-window.markersLayer = null;
-
-// Range Slider функциональность
-document.addEventListener('DOMContentLoaded', function() {
-    // Инициализация range sliders
-    initRangeSlider('area-from-slider', 'area-to-slider', 'area-from-display', 'area-to-display', 'area-from-hidden', 'area-to-hidden', 'area-fill');
-    initRangeSlider('price-from-slider', 'price-to-slider', 'price-from-display', 'price-to-display', 'price-from-hidden', 'price-to-hidden', 'price-fill');
-    
-    // Обработка отправки формы фильтров (для всех типов недвижимости)
-    const filtersForm = document.getElementById('filters-form');
-    if (filtersForm) {
-        filtersForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            applyFilters();
-        });
-    }
-    
-    // Обработка нажатия на кнопку "Поиск" - закрываем мобильное окно фильтров
-    const searchButton = filtersForm ? filtersForm.querySelector('button[type="submit"]') : null;
-    if (searchButton) {
-        searchButton.addEventListener('click', function(e) {
-            // Закрываем мобильное окно фильтров только при явном нажатии на кнопку "Поиск"
-            const sheet = document.getElementById('filters-sheet');
-            const backdrop = document.getElementById('filters-backdrop');
-            if (sheet && sheet.classList.contains('open')) {
-                // Небольшая задержка, чтобы форма успела отправиться
-                setTimeout(function() {
-                    sheet.classList.remove('open');
-                    if (backdrop) backdrop.classList.remove('open');
-                    document.body.style.overflow = '';
-                }, 100);
+    // Глобальная функция renderMapPoints
+    window.renderMapPoints = function (list, isSec) {
+        if (!window.map) return;
+        window.markersLayer.clearLayers();
+        const bounds = [];
+        list.forEach(item => {
+            const lat = item.lat, lng = item.lng;
+            if (lat && lng) {
+                const marker = L.marker([lat, lng]).addTo(window.markersLayer);
+                const price = item.price_range || item.price_display || 'Цена по запросу';
+                const link = isSec ? `/secondary/${item.id}/` : `/complex/${item.id}/`;
+                marker.bindPopup(`<b>${item.name}</b><br/>${price}<br/><a href="${link}">Подробнее</a>`);
+                bounds.push([lat, lng]);
             }
         });
+        if (bounds.length) window.map.fitBounds(bounds, { padding: [20, 20] });
     }
-    
-    // Обработка выбора города
-    const citySelect = document.getElementById('city');
-    const districtGroup = document.getElementById('district-group');
-    const streetGroup = document.getElementById('street-group');
-    const districtSelect = document.getElementById('district');
-    const streetSelect = document.getElementById('street');
-    
-    // Инициализация: загружаем районы и улицы, если город уже выбран
-    if (citySelect.value) {
-        const selectedCity = citySelect.value;
-        const selectedDistrict = districtSelect.value;
-        
-        // Загружаем районы
-        fetch(`/api/districts/?city=${selectedCity}`)
-            .then(response => response.json())
-            .then(data => {
-                districtSelect.innerHTML = '<option value="">Любой</option>';
-                data.districts.forEach(district => {
-                    const selected = district === selectedDistrict ? 'selected' : '';
-                    districtSelect.innerHTML += `<option value="${district}" ${selected}>${district}</option>`;
-                });
-                districtGroup.classList.remove('hidden');
-            });
-        
-        // Загружаем улицы
-        let url = `/api/streets/?city=${selectedCity}`;
-        if (selectedDistrict) {
-            url += `&district=${selectedDistrict}`;
+
+    // Глобальная функция setView
+    window.setView = function (view) {
+        const grid = document.getElementById('catalog-grid');
+        const mapEl = document.getElementById('map');
+        const toggleBtns = document.querySelectorAll('.view-btn');
+        const isSecondary = '{{ dataset_type }}' === 'secondary';
+
+        // Не позволяем переключиться на карту для вторичной недвижимости
+        if (isSecondary && view === 'map') {
+            return;
         }
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                const selectedStreet = streetSelect.value;
-                streetSelect.innerHTML = '<option value="">Любая</option>';
-                data.streets.forEach(street => {
-                    const selected = street === selectedStreet ? 'selected' : '';
-                    streetSelect.innerHTML += `<option value="${street}" ${selected}>${street}</option>`;
-                });
-                streetGroup.classList.remove('hidden');
-            });
+
+        toggleBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-view') === view));
+
+        // Всегда показываем оба элемента, но меняем порядок
+        if (view === 'map') {
+            // Карта сверху, список снизу
+            mapEl.style.display = 'block';
+            mapEl.style.order = '1';
+            grid.style.display = 'block';
+            grid.style.order = '2';
+            if (!window.map) initMap();
+            fetchData();
+        } else {
+            // Список сверху, карта снизу (или скрыта для вторички)
+            if (isSecondary) {
+                mapEl.style.display = 'none';
+                grid.style.display = 'block';
+            } else {
+                mapEl.style.display = 'block';
+                mapEl.style.order = '2';
+                grid.style.display = 'block';
+                grid.style.order = '1';
+            }
+            fetchData();
+        }
+
+        // Сохраняем в localStorage только для новостроек
+        if (!isSecondary) {
+            localStorage.setItem('catalog_view', view);
+        }
     }
-    
-    citySelect.addEventListener('change', function() {
-        const selectedCity = this.value;
-        
-        if (selectedCity) {
-            // Загружаем районы для выбранного города
+
+    // Инициализация глобальных переменных для AJAX
+    window.activeController = null;
+    window.latestRequestId = 0;
+    window.map = null;
+    window.markersLayer = null;
+
+    // Range Slider функциональность
+    document.addEventListener('DOMContentLoaded', function () {
+        // Инициализация range sliders
+        initRangeSlider('area-from-slider', 'area-to-slider', 'area-from-display', 'area-to-display', 'area-from-hidden', 'area-to-hidden', 'area-fill');
+        initRangeSlider('price-from-slider', 'price-to-slider', 'price-from-display', 'price-to-display', 'price-from-hidden', 'price-to-hidden', 'price-fill');
+
+        // Обработка отправки формы фильтров (для всех типов недвижимости)
+        const filtersForm = document.getElementById('filters-form');
+        if (filtersForm) {
+            filtersForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                applyFilters();
+            });
+        }
+
+        // Обработка нажатия на кнопку "Поиск" - закрываем мобильное окно фильтров
+        const searchButton = filtersForm ? filtersForm.querySelector('button[type="submit"]') : null;
+        if (searchButton) {
+            searchButton.addEventListener('click', function (e) {
+                // Закрываем мобильное окно фильтров только при явном нажатии на кнопку "Поиск"
+                const sheet = document.getElementById('filters-sheet');
+                const backdrop = document.getElementById('filters-backdrop');
+                if (sheet && sheet.classList.contains('open')) {
+                    // Небольшая задержка, чтобы форма успела отправиться
+                    setTimeout(function () {
+                        sheet.classList.remove('open');
+                        if (backdrop) backdrop.classList.remove('open');
+                        document.body.style.overflow = '';
+                    }, 100);
+                }
+            });
+        }
+
+        // Обработка выбора города
+        const citySelect = document.getElementById('city');
+        const districtGroup = document.getElementById('district-group');
+        const streetGroup = document.getElementById('street-group');
+        const districtSelect = document.getElementById('district');
+        const streetSelect = document.getElementById('street');
+
+        // Инициализация: загружаем районы и улицы, если город уже выбран
+        if (citySelect.value) {
+            const selectedCity = citySelect.value;
+            const selectedDistrict = districtSelect.value;
+
+            // Загружаем районы
             fetch(`/api/districts/?city=${selectedCity}`)
                 .then(response => response.json())
                 .then(data => {
                     districtSelect.innerHTML = '<option value="">Любой</option>';
                     data.districts.forEach(district => {
-                        districtSelect.innerHTML += `<option value="${district}">${district}</option>`;
+                        const selected = district === selectedDistrict ? 'selected' : '';
+                        districtSelect.innerHTML += `<option value="${district}" ${selected}>${district}</option>`;
                     });
-                    
-                    // Показываем группу районов
                     districtGroup.classList.remove('hidden');
                 });
-            
-            // Загружаем улицы для выбранного города
-            fetch(`/api/streets/?city=${selectedCity}`)
-                .then(response => response.json())
-                .then(data => {
-                    streetSelect.innerHTML = '<option value="">Любая</option>';
-                    data.streets.forEach(street => {
-                        streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
-                    });
-                    
-                    // Показываем группу улиц
-                    streetGroup.classList.remove('hidden');
-                });
-            
-            // Автоматически запускаем поиск после выбора города
-            const form = document.getElementById('filters-form');
-            if (form) {
-                form.dispatchEvent(new Event('submit', { cancelable: true }));
-            }
-        } else {
-            // Сбрасываем значения
-            districtSelect.innerHTML = '<option value="">Любой</option>';
-            streetSelect.innerHTML = '<option value="">Любая</option>';
-            
-            // Скрываем группы через CSS класс
-            districtGroup.classList.add('hidden');
-            streetGroup.classList.add('hidden');
-        }
-    });
-    
-    // Обработчик изменения района - обновляем улицы
-    districtSelect.addEventListener('change', function() {
-        const selectedCity = citySelect.value;
-        const selectedDistrict = this.value;
-        
-        if (selectedCity) {
-            // Загружаем улицы для выбранного города и района
+
+            // Загружаем улицы
             let url = `/api/streets/?city=${selectedCity}`;
             if (selectedDistrict) {
                 url += `&district=${selectedDistrict}`;
             }
-            
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
+                    const selectedStreet = streetSelect.value;
                     streetSelect.innerHTML = '<option value="">Любая</option>';
                     data.streets.forEach(street => {
-                        streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
+                        const selected = street === selectedStreet ? 'selected' : '';
+                        streetSelect.innerHTML += `<option value="${street}" ${selected}>${street}</option>`;
                     });
+                    streetGroup.classList.remove('hidden');
                 });
-            
-            // Автоматически запускаем поиск после выбора района
-            const form = document.getElementById('filters-form');
-            if (form) {
-                form.dispatchEvent(new Event('submit', { cancelable: true }));
-            }
         }
-    });
-    
-    // Обработчик изменения улицы - автоматически запускаем поиск
-    streetSelect.addEventListener('change', function() {
-        const form = document.getElementById('filters-form');
-        if (form) {
-            form.dispatchEvent(new Event('submit', { cancelable: true }));
-        }
-    });
-    
 
-    
-    // Обработка кнопок фильтра количества комнат и скидок
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    const roomsHidden = document.getElementById('rooms-hidden');
-    const hasOffersHidden = document.getElementById('has_offers-hidden');
-    
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const parentGroup = this.closest('.filter-group');
-            const groupBtns = parentGroup.querySelectorAll('.filter-btn');
-            const hiddenField = parentGroup.querySelector('input[type="hidden"]');
-            
-            // Убираем активное состояние у всех кнопок в группе
-            groupBtns.forEach(b => {
-                b.setAttribute('data-active', 'false');
-                b.classList.remove('active');
-            });
-            
-            // Устанавливаем активное состояние для нажатой кнопки
-            this.setAttribute('data-active', 'true');
-            this.classList.add('active');
-            
-            // Обновляем соответствующее скрытое поле
-            if (hiddenField) {
-                hiddenField.value = this.getAttribute('data-value');
+        citySelect.addEventListener('change', function () {
+            const selectedCity = this.value;
+
+            if (selectedCity) {
+                // Загружаем районы для выбранного города
+                fetch(`/api/districts/?city=${selectedCity}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        districtSelect.innerHTML = '<option value="">Любой</option>';
+                        data.districts.forEach(district => {
+                            districtSelect.innerHTML += `<option value="${district}">${district}</option>`;
+                        });
+
+                        // Показываем группу районов
+                        districtGroup.classList.remove('hidden');
+                    });
+
+                // Загружаем улицы для выбранного города
+                fetch(`/api/streets/?city=${selectedCity}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        streetSelect.innerHTML = '<option value="">Любая</option>';
+                        data.streets.forEach(street => {
+                            streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
+                        });
+
+                        // Показываем группу улиц
+                        streetGroup.classList.remove('hidden');
+                    });
+
+                // Автоматически запускаем поиск после выбора города
+                const form = document.getElementById('filters-form');
+                if (form) {
+                    form.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            } else {
+                // Сбрасываем значения
+                districtSelect.innerHTML = '<option value="">Любой</option>';
+                streetSelect.innerHTML = '<option value="">Любая</option>';
+
+                // Скрываем группы через CSS класс
+                districtGroup.classList.add('hidden');
+                streetGroup.classList.add('hidden');
             }
-            
-            // Мгновенный запуск поиска без перезагрузки страницы
+        });
+
+        // Обработчик изменения района - обновляем улицы
+        districtSelect.addEventListener('change', function () {
+            const selectedCity = citySelect.value;
+            const selectedDistrict = this.value;
+
+            if (selectedCity) {
+                // Загружаем улицы для выбранного города и района
+                let url = `/api/streets/?city=${selectedCity}`;
+                if (selectedDistrict) {
+                    url += `&district=${selectedDistrict}`;
+                }
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        streetSelect.innerHTML = '<option value="">Любая</option>';
+                        data.streets.forEach(street => {
+                            streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
+                        });
+                    });
+
+                // Автоматически запускаем поиск после выбора района
+                const form = document.getElementById('filters-form');
+                if (form) {
+                    form.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            }
+        });
+
+        // Обработчик изменения улицы - автоматически запускаем поиск
+        streetSelect.addEventListener('change', function () {
             const form = document.getElementById('filters-form');
             if (form) {
                 form.dispatchEvent(new Event('submit', { cancelable: true }));
             }
         });
-    });
-    
-    // Обработка сортировки
-    const sortingActive = document.getElementById('sorting-active');
-    const sortingOptions = document.getElementById('sorting-options');
-    const sortingDropdown = document.querySelector('.sorting-dropdown');
-    const sortHidden = document.getElementById('sort-hidden');
-    const sortingText = document.getElementById('sorting-text');
-    
-    sortingActive.addEventListener('click', function() {
-        sortingDropdown.classList.toggle('active');
-        sortingOptions.classList.toggle('active');
-    });
-    
-    // Закрытие сортировки при клике вне её
-    document.addEventListener('click', function(e) {
-        if (!sortingDropdown.contains(e.target)) {
-            sortingDropdown.classList.remove('active');
-            sortingOptions.classList.remove('active');
+
+
+
+        // Обработка кнопок фильтра количества комнат и скидок
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const roomsHidden = document.getElementById('rooms-hidden');
+        const hasOffersHidden = document.getElementById('has_offers-hidden');
+
+        // Инициализация состояния кнопок комнат при загрузке страницы
+        if (roomsHidden && roomsHidden.value) {
+            const selectedRooms = roomsHidden.value.split(',').filter(v => v.trim() !== '');
+            const roomsGroup = roomsHidden.closest('.filter-group');
+            if (roomsGroup && selectedRooms.length > 0) {
+                const roomsBtns = roomsGroup.querySelectorAll('.filter-btn');
+                roomsBtns.forEach(btn => {
+                    const btnValue = btn.getAttribute('data-value');
+                    if (btnValue === '') {
+                        // Кнопка "Любое" - неактивна, если выбраны конкретные комнаты
+                        btn.setAttribute('data-active', 'false');
+                        btn.classList.remove('active');
+                    } else if (selectedRooms.includes(btnValue)) {
+                        // Кнопка выбрана
+                        btn.setAttribute('data-active', 'true');
+                        btn.classList.add('active');
+                    } else {
+                        // Кнопка не выбрана
+                        btn.setAttribute('data-active', 'false');
+                        btn.classList.remove('active');
+                    }
+                });
+            }
         }
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const parentGroup = this.closest('.filter-group');
+                const groupBtns = parentGroup.querySelectorAll('.filter-btn');
+                const hiddenField = parentGroup.querySelector('input[type="hidden"]');
+                const isRoomsFilter = hiddenField && hiddenField.id === 'rooms-hidden';
+
+                const clickedValue = this.getAttribute('data-value');
+                const isCurrentlyActive = this.getAttribute('data-active') === 'true';
+
+                if (isRoomsFilter) {
+                    // Множественный выбор для фильтра комнат
+                    if (clickedValue === '') {
+                        // Кнопка "Любое" - сбрасываем все выборы
+                        groupBtns.forEach(b => {
+                            b.setAttribute('data-active', 'false');
+                            b.classList.remove('active');
+                        });
+                        this.setAttribute('data-active', 'true');
+                        this.classList.add('active');
+                        hiddenField.value = '';
+                    } else {
+                        // Обычная кнопка комнат - toggle
+                        if (isCurrentlyActive) {
+                            // Убираем из выбора
+                            this.setAttribute('data-active', 'false');
+                            this.classList.remove('active');
+                        } else {
+                            // Добавляем в выбор
+                            this.setAttribute('data-active', 'true');
+                            this.classList.add('active');
+                            // Убираем активность с кнопки "Любое"
+                            groupBtns.forEach(b => {
+                                if (b.getAttribute('data-value') === '') {
+                                    b.setAttribute('data-active', 'false');
+                                    b.classList.remove('active');
+                                }
+                            });
+                        }
+
+                        // Собираем все выбранные значения
+                        const selectedValues = [];
+                        groupBtns.forEach(b => {
+                            if (b.getAttribute('data-value') !== '' && b.getAttribute('data-active') === 'true') {
+                                selectedValues.push(b.getAttribute('data-value'));
+                            }
+                        });
+
+                        // Если ничего не выбрано, активируем кнопку "Любое"
+                        if (selectedValues.length === 0) {
+                            groupBtns.forEach(b => {
+                                if (b.getAttribute('data-value') === '') {
+                                    b.setAttribute('data-active', 'true');
+                                    b.classList.add('active');
+                                }
+                            });
+                            hiddenField.value = '';
+                        } else {
+                            // Обновляем скрытое поле
+                            hiddenField.value = selectedValues.join(',');
+                        }
+                    }
+                } else {
+                    // Одиночный выбор для других фильтров (скидки и т.д.)
+                    groupBtns.forEach(b => {
+                        b.setAttribute('data-active', 'false');
+                        b.classList.remove('active');
+                    });
+
+                    this.setAttribute('data-active', 'true');
+                    this.classList.add('active');
+
+                    if (hiddenField) {
+                        hiddenField.value = clickedValue;
+                    }
+                }
+
+                // Мгновенный запуск поиска без перезагрузки страницы
+                const form = document.getElementById('filters-form');
+                if (form) {
+                    form.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            });
+        });
+
+        // Обработка сортировки
+        const sortingActive = document.getElementById('sorting-active');
+        const sortingOptions = document.getElementById('sorting-options');
+        const sortingDropdown = document.querySelector('.sorting-dropdown');
+        const sortHidden = document.getElementById('sort-hidden');
+        const sortingText = document.getElementById('sorting-text');
+
+        sortingActive.addEventListener('click', function () {
+            sortingDropdown.classList.toggle('active');
+            sortingOptions.classList.toggle('active');
+        });
+
+        // Закрытие сортировки при клике вне её
+        document.addEventListener('click', function (e) {
+            if (!sortingDropdown.contains(e.target)) {
+                sortingDropdown.classList.remove('active');
+                sortingOptions.classList.remove('active');
+            }
+        });
+
+        // Обработка выбора сортировки
+        const sortingOptionBtns = document.querySelectorAll('.sorting-option');
+        sortingOptionBtns.forEach(option => {
+            option.addEventListener('click', function () {
+                const sortValue = this.getAttribute('data-sort');
+                const sortText = this.querySelector('span').textContent;
+
+                // Обновляем скрытое поле
+                sortHidden.value = sortValue;
+
+                // Обновляем текст в активной кнопке
+                sortingText.textContent = sortText;
+
+                // Убираем активное состояние у всех опций
+                sortingOptionBtns.forEach(o => o.classList.remove('active'));
+
+                // Устанавливаем активное состояние для выбранной опции
+                this.classList.add('active');
+
+                // Закрываем dropdown
+                sortingDropdown.classList.remove('active');
+                sortingOptions.classList.remove('active');
+
+                // Автоматически выполняем поиск с новой сортировкой
+                window.fetchData();
+            });
+        });
+
+        // Обработка кликов по display полям для ручного ввода
+        document.querySelectorAll('.range-display').forEach(display => {
+            display.addEventListener('click', function () {
+                const container = this.closest('.range-container');
+                const fromDisplay = container.querySelector('.range-value strong:first-of-type');
+                const toDisplay = container.querySelector('.range-value strong:last-of-type');
+
+                // Создаем временные input поля для ручного ввода
+                const fromInput = document.createElement('input');
+                fromInput.type = 'number';
+                fromInput.className = 'temp-input';
+                fromInput.value = fromDisplay.textContent;
+                fromInput.style.cssText = 'width: 50px; padding: 3px; border: 1px solid #0066cc; border-radius: 3px; margin-right: 6px; font-size: 12px;';
+
+                const toInput = document.createElement('input');
+                toInput.type = 'number';
+                toInput.className = 'temp-input';
+                toInput.value = toDisplay.textContent;
+                toInput.style.cssText = 'width: 50px; padding: 3px; border: 1px solid #0066cc; border-radius: 3px; margin-left: 6px; font-size: 12px;';
+
+                // Заменяем display на input поля
+                fromDisplay.parentNode.replaceChild(fromInput, fromDisplay);
+                toDisplay.parentNode.replaceChild(toInput, toDisplay);
+
+                // Фокус на первое поле
+                fromInput.focus();
+
+                // Обработка завершения ввода
+                function finishInput() {
+                    const fromValue = parseFloat(fromInput.value) || 0;
+                    const toValue = parseFloat(toInput.value) || 0;
+
+                    // Восстанавливаем display
+                    fromDisplay.textContent = fromValue;
+                    toDisplay.textContent = toValue;
+
+                    fromInput.parentNode.replaceChild(fromDisplay, fromInput);
+                    toInput.parentNode.replaceChild(toDisplay, toInput);
+
+                    // Обновляем slider значения
+                    const fromSlider = container.querySelector('input[type="range"]:first-of-type');
+                    const toSlider = container.querySelector('input[type="range"]:last-of-type');
+                    const fromHidden = container.querySelector('input[type="hidden"]:first-of-type');
+                    const toHidden = container.querySelector('input[type="hidden"]:last-of-type');
+
+                    fromSlider.value = fromValue;
+                    toSlider.value = toValue;
+                    fromHidden.value = fromValue;
+                    toHidden.value = toValue;
+
+                    // Обновляем fill
+                    updateRangeFill(fromSlider, toSlider, container.querySelector('.range-fill'));
+                }
+
+                // Обработчики событий
+                fromInput.addEventListener('blur', finishInput);
+                toInput.addEventListener('blur', finishInput);
+                fromInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') finishInput();
+                });
+                toInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') finishInput();
+                });
+            });
+        });
     });
-    
-    // Обработка выбора сортировки
-    const sortingOptionBtns = document.querySelectorAll('.sorting-option');
-    sortingOptionBtns.forEach(option => {
-        option.addEventListener('click', function() {
-            const sortValue = this.getAttribute('data-sort');
-            const sortText = this.querySelector('span').textContent;
-            
-            // Обновляем скрытое поле
-            sortHidden.value = sortValue;
-            
-            // Обновляем текст в активной кнопке
-            sortingText.textContent = sortText;
-            
-            // Убираем активное состояние у всех опций
-            sortingOptionBtns.forEach(o => o.classList.remove('active'));
-            
-            // Устанавливаем активное состояние для выбранной опции
-            this.classList.add('active');
-            
-            // Закрываем dropdown
-            sortingDropdown.classList.remove('active');
-            sortingOptions.classList.remove('active');
-            
-            // Автоматически выполняем поиск с новой сортировкой
+
+    function initRangeSlider(fromSliderId, toSliderId, fromDisplayId, toDisplayId, fromHiddenId, toHiddenId, fillId) {
+        const fromSlider = document.getElementById(fromSliderId);
+        const toSlider = document.getElementById(toSliderId);
+        const fromDisplay = document.getElementById(fromDisplayId);
+        const toDisplay = document.getElementById(toDisplayId);
+        const fromHidden = document.getElementById(fromHiddenId);
+        const toHidden = document.getElementById(toHiddenId);
+        const fill = document.querySelector('.' + fillId);
+
+        if (!fromSlider || !toSlider) return;
+
+        // Устанавливаем начальные значения (пустые значения не применяем как фильтр)
+        if (fromHidden.value !== '' && toHidden.value !== '') {
+            fromSlider.value = fromHidden.value;
+            toSlider.value = toHidden.value;
+        } else {
+            fromSlider.value = fromSlider.min;
+            toSlider.value = toSlider.max;
+        }
+        fromDisplay.textContent = fromSlider.value;
+        toDisplay.textContent = toSlider.value;
+
+        // Обновляем fill при загрузке
+        updateRangeFill(fromSlider, toSlider, fill);
+
+        // Обработчики событий
+        fromSlider.addEventListener('input', function () {
+            const fromValue = parseInt(this.value);
+            const toValue = parseInt(toSlider.value);
+
+            if (fromValue > toValue) {
+                this.value = toValue;
+                fromValue = toValue;
+            }
+
+            fromDisplay.textContent = fromValue;
+            fromHidden.value = fromValue;
+            updateRangeFill(fromSlider, toSlider, fill);
+
+            // Автоматически выполняем поиск при изменении слайдера
             window.fetchData();
         });
-    });
-    
-    // Обработка кликов по display полям для ручного ввода
-    document.querySelectorAll('.range-display').forEach(display => {
-        display.addEventListener('click', function() {
-            const container = this.closest('.range-container');
-            const fromDisplay = container.querySelector('.range-value strong:first-of-type');
-            const toDisplay = container.querySelector('.range-value strong:last-of-type');
-            
-            // Создаем временные input поля для ручного ввода
-            const fromInput = document.createElement('input');
-            fromInput.type = 'number';
-            fromInput.className = 'temp-input';
-            fromInput.value = fromDisplay.textContent;
-            fromInput.style.cssText = 'width: 50px; padding: 3px; border: 1px solid #0066cc; border-radius: 3px; margin-right: 6px; font-size: 12px;';
-            
-            const toInput = document.createElement('input');
-            toInput.type = 'number';
-            toInput.className = 'temp-input';
-            toInput.value = toDisplay.textContent;
-            toInput.style.cssText = 'width: 50px; padding: 3px; border: 1px solid #0066cc; border-radius: 3px; margin-left: 6px; font-size: 12px;';
-            
-            // Заменяем display на input поля
-            fromDisplay.parentNode.replaceChild(fromInput, fromDisplay);
-            toDisplay.parentNode.replaceChild(toInput, toDisplay);
-            
-            // Фокус на первое поле
-            fromInput.focus();
-            
-            // Обработка завершения ввода
-            function finishInput() {
-                const fromValue = parseFloat(fromInput.value) || 0;
-                const toValue = parseFloat(toInput.value) || 0;
-                
-                // Восстанавливаем display
-                fromDisplay.textContent = fromValue;
-                toDisplay.textContent = toValue;
-                
-                fromInput.parentNode.replaceChild(fromDisplay, fromInput);
-                toInput.parentNode.replaceChild(toDisplay, toInput);
-                
-                // Обновляем slider значения
-                const fromSlider = container.querySelector('input[type="range"]:first-of-type');
-                const toSlider = container.querySelector('input[type="range"]:last-of-type');
-                const fromHidden = container.querySelector('input[type="hidden"]:first-of-type');
-                const toHidden = container.querySelector('input[type="hidden"]:last-of-type');
-                
-                fromSlider.value = fromValue;
-                toSlider.value = toValue;
-                fromHidden.value = fromValue;
-                toHidden.value = toValue;
-                
-                // Обновляем fill
-                updateRangeFill(fromSlider, toSlider, container.querySelector('.range-fill'));
+
+        toSlider.addEventListener('input', function () {
+            const fromValue = parseInt(fromSlider.value);
+            const toValue = parseInt(this.value);
+
+            if (toValue < fromValue) {
+                this.value = fromValue;
+                toValue = fromValue;
             }
-            
-            // Обработчики событий
-            fromInput.addEventListener('blur', finishInput);
-            toInput.addEventListener('blur', finishInput);
-            fromInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') finishInput();
-            });
-            toInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') finishInput();
-            });
+
+            toDisplay.textContent = toValue;
+            toHidden.value = toValue;
+            updateRangeFill(fromSlider, toSlider, fill);
+
+            // Автоматически выполняем поиск при изменении слайдера
+            window.fetchData();
         });
-    });
-});
-
-function initRangeSlider(fromSliderId, toSliderId, fromDisplayId, toDisplayId, fromHiddenId, toHiddenId, fillId) {
-    const fromSlider = document.getElementById(fromSliderId);
-    const toSlider = document.getElementById(toSliderId);
-    const fromDisplay = document.getElementById(fromDisplayId);
-    const toDisplay = document.getElementById(toDisplayId);
-    const fromHidden = document.getElementById(fromHiddenId);
-    const toHidden = document.getElementById(toHiddenId);
-    const fill = document.querySelector('.' + fillId);
-    
-    if (!fromSlider || !toSlider) return;
-    
-    // Устанавливаем начальные значения (пустые значения не применяем как фильтр)
-    if (fromHidden.value !== '' && toHidden.value !== '') {
-        fromSlider.value = fromHidden.value;
-        toSlider.value = toHidden.value;
-    } else {
-        fromSlider.value = fromSlider.min;
-        toSlider.value = toSlider.max;
     }
-    fromDisplay.textContent = fromSlider.value;
-    toDisplay.textContent = toSlider.value;
 
-    // Обновляем fill при загрузке
-    updateRangeFill(fromSlider, toSlider, fill);
-    
-    // Обработчики событий
-    fromSlider.addEventListener('input', function() {
-        const fromValue = parseInt(this.value);
-        const toValue = parseInt(toSlider.value);
-        
-        if (fromValue > toValue) {
-            this.value = toValue;
-            fromValue = toValue;
-        }
-        
-        fromDisplay.textContent = fromValue;
-        fromHidden.value = fromValue;
-        updateRangeFill(fromSlider, toSlider, fill);
-        
-        // Автоматически выполняем поиск при изменении слайдера
-        window.fetchData();
-    });
-    
-    toSlider.addEventListener('input', function() {
+    function updateRangeFill(fromSlider, toSlider, fill) {
+        if (!fill) return;
+
         const fromValue = parseInt(fromSlider.value);
-        const toValue = parseInt(this.value);
-        
-        if (toValue < fromValue) {
-            this.value = fromValue;
-            toValue = fromValue;
+        const toValue = parseInt(toSlider.value);
+        const min = parseInt(fromSlider.min);
+        const max = parseInt(fromSlider.max);
+
+        const fromPercent = ((fromValue - min) / (max - min)) * 100;
+        const toPercent = ((toValue - min) / (max - min)) * 100;
+
+        // Учитываем отступы в 10px с каждой стороны
+        const adjustedFromPercent = fromPercent * 0.8 + 10; // 80% от ширины + 10px отступ
+        const adjustedToPercent = toPercent * 0.8 + 10;
+
+        fill.style.left = adjustedFromPercent + '%';
+        fill.style.width = (adjustedToPercent - adjustedFromPercent) + '%';
+    }
+
+
+
+    // Обработка чипов категорий вторички (выбор без авто-перехода)
+    (function () {
+        const chipBtns = document.querySelectorAll('.filter-chip-btn');
+        const stypeHidden = document.getElementById('stype-hidden');
+        if (!chipBtns.length || !stypeHidden) return;
+        chipBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                chipBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                stypeHidden.value = this.getAttribute('data-value');
+                // Мгновенный запуск поиска
+                const form = document.getElementById('filters-form');
+                if (form) form.dispatchEvent(new Event('submit', { cancelable: true }));
+            });
+            // Инициализация активного состояния из скрытого поля
+            if (btn.getAttribute('data-value') === (stypeHidden.value || '')) {
+                btn.classList.add('active');
+            }
+        });
+    })();
+
+    // Эффект тени для sticky шапки при прокрутке
+    window.addEventListener('scroll', function () {
+        const header = document.querySelector('.main-header');
+        if (window.scrollY > 10) {
+            header.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+        } else {
+            header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
         }
-        
-        toDisplay.textContent = toValue;
-        toHidden.value = toValue;
-        updateRangeFill(fromSlider, toSlider, fill);
-        
-        // Автоматически выполняем поиск при изменении слайдера
-        window.fetchData();
     });
-}
-
-function updateRangeFill(fromSlider, toSlider, fill) {
-    if (!fill) return;
-    
-    const fromValue = parseInt(fromSlider.value);
-    const toValue = parseInt(toSlider.value);
-    const min = parseInt(fromSlider.min);
-    const max = parseInt(fromSlider.max);
-    
-    const fromPercent = ((fromValue - min) / (max - min)) * 100;
-    const toPercent = ((toValue - min) / (max - min)) * 100;
-    
-    // Учитываем отступы в 10px с каждой стороны
-    const adjustedFromPercent = fromPercent * 0.8 + 10; // 80% от ширины + 10px отступ
-    const adjustedToPercent = toPercent * 0.8 + 10;
-    
-    fill.style.left = adjustedFromPercent + '%';
-    fill.style.width = (adjustedToPercent - adjustedFromPercent) + '%';
-}
 
 
 
-// Обработка чипов категорий вторички (выбор без авто-перехода)
-(function(){
-  const chipBtns = document.querySelectorAll('.filter-chip-btn');
-  const stypeHidden = document.getElementById('stype-hidden');
-  if (!chipBtns.length || !stypeHidden) return;
-  chipBtns.forEach(btn => {
-    btn.addEventListener('click', function(){
-      chipBtns.forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      stypeHidden.value = this.getAttribute('data-value');
-      // Мгновенный запуск поиска
-      const form = document.getElementById('filters-form');
-      if (form) form.dispatchEvent(new Event('submit', { cancelable: true }));
-    });
-    // Инициализация активного состояния из скрытого поля
-    if (btn.getAttribute('data-value') === (stypeHidden.value || '')) {
-      btn.classList.add('active');
+    // Обработчики для избранного
+    function toggleComplexFavoriteHandler(complexId, button) {
+        const isFavorite = toggleComplexFavorite(complexId);
+        updateFavoriteIcon(button, isFavorite);
+
+        // Показываем уведомление
+        if (isFavorite) {
+            showFavoriteNotification('Добавлено в избранное');
+        } else {
+            showFavoriteNotification('Удалено из избранного');
+        }
     }
-  });
-})();
 
-// Эффект тени для sticky шапки при прокрутке
-window.addEventListener('scroll', function() {
-    const header = document.querySelector('.main-header');
-    if (window.scrollY > 10) {
-        header.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-    } else {
-        header.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
-    }
-});
-
-
-
-// Обработчики для избранного
-function toggleComplexFavoriteHandler(complexId, button) {
-  const isFavorite = toggleComplexFavorite(complexId);
-  updateFavoriteIcon(button, isFavorite);
-  
-  // Показываем уведомление
-  if (isFavorite) {
-    showFavoriteNotification('Добавлено в избранное');
-  } else {
-    showFavoriteNotification('Удалено из избранного');
-  }
-}
-
-// Функция показа уведомления об избранном (глобальная)
-window.showFavoriteNotification = function(message) {
-  // Создаем временное уведомление
-  const notification = document.createElement('div');
-  notification.style.cssText = `
+    // Функция показа уведомления об избранном (глобальная)
+    window.showFavoriteNotification = function (message) {
+        // Создаем временное уведомление
+        const notification = document.createElement('div');
+        notification.style.cssText = `
     position: fixed;
     top: 80px;
     right: 20px;
@@ -1610,20 +1812,20 @@ window.showFavoriteNotification = function(message) {
     font-weight: 600;
     animation: slideInRight 0.3s ease;
   `;
-  notification.textContent = message;
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.style.animation = 'slideOutRight 0.3s ease';
-    setTimeout(() => notification.remove(), 300);
-  }, 2000);
-};
+        notification.textContent = message;
+        document.body.appendChild(notification);
 
-// Добавляем анимации для уведомлений
-if (!document.getElementById('favorite-notification-styles')) {
-  const style = document.createElement('style');
-  style.id = 'favorite-notification-styles';
-  style.textContent = `
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 2000);
+    };
+
+    // Добавляем анимации для уведомлений
+    if (!document.getElementById('favorite-notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'favorite-notification-styles';
+        style.textContent = `
     @keyframes slideInRight {
       from {
         transform: translateX(100%);
@@ -1645,482 +1847,482 @@ if (!document.getElementById('favorite-notification-styles')) {
       }
     }
   `;
-  document.head.appendChild(style);
-}
-
-// Инициализация карусели изображений при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    initImageCarousel();
-});
-
-// AJAX-загрузка без изменения URL
-(function(){
-  const form = document.getElementById('filters-form');
-  const grid = document.getElementById('catalog-grid');
-  const resultsCount = document.querySelector('.results-count');
-  const isSecondary = '{{ dataset_type }}' === 'secondary';
-  const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
-  const mapEl = document.getElementById('map');
-  let map, markersLayer;
-  let activeController = null;
-  let latestRequestId = 0;
-
-  // View toggle
-  const toggleBtns = document.querySelectorAll('.view-btn');
-  const savedView = localStorage.getItem('catalog_view') || 'list';
-  
-  // Отключаем кнопку карты для вторичной недвижимости
-  if (isSecondary) {
-    const mapBtn = document.querySelector('.view-btn[data-view="map"]');
-    if (mapBtn) {
-      mapBtn.disabled = true;
-      mapBtn.style.opacity = '0.5';
-      mapBtn.style.cursor = 'not-allowed';
-      mapBtn.title = 'Карта недоступна для вторичной недвижимости';
-    }
-  }
-  
-
-  toggleBtns.forEach(b=>b.addEventListener('click', ()=>{
-    // Не обрабатываем клик по кнопке карты для вторичной недвижимости
-    if (isSecondary && b.getAttribute('data-view') === 'map') {
-      return;
-    }
-    setView(b.getAttribute('data-view'));
-  }));
-  
-  // Инициализация вида по умолчанию
-  // Принудительно устанавливаем вид "списком" для вторичной недвижимости
-  if (isSecondary) {
-    setView('list');
-  } else {
-    // По умолчанию показываем карту для новостроек
-    setView('map');
-    localStorage.setItem('catalog_view', 'map');
-  }
-
-
-
-  if (form && !form.dataset.ajaxBound) {
-    form.addEventListener('submit', function(e){ e.preventDefault(); window.fetchData(); });
-    form.dataset.ajaxBound = '1';
-  }
-
-  document.getElementById('clear-filters')?.addEventListener('click', function(e){
-    e.preventDefault();
-    // reset native form controls
-    form.reset();
-
-    // reset area range
-    const afs = document.getElementById('area-from-slider');
-    const ats = document.getElementById('area-to-slider');
-    const afd = document.getElementById('area-from-display');
-    const atd = document.getElementById('area-to-display');
-    const afh = document.getElementById('area-from-hidden');
-    const ath = document.getElementById('area-to-hidden');
-    if (afs && ats && afd && atd && afh && ath) {
-      afs.value = afs.min;
-      ats.value = ats.max;
-      afd.textContent = afs.min;
-      atd.textContent = ats.max;
-      afh.value = '';
-      ath.value = '';
-      updateRangeFill(afs, ats, document.querySelector('.area-fill'));
+        document.head.appendChild(style);
     }
 
-    // reset price range
-    const pfs = document.getElementById('price-from-slider');
-    const pts = document.getElementById('price-to-slider');
-    const pfd = document.getElementById('price-from-display');
-    const ptd = document.getElementById('price-to-display');
-    const pfh = document.getElementById('price-from-hidden');
-    const pth = document.getElementById('price-to-hidden');
-    if (pfs && pts && pfd && ptd && pfh && pth) {
-      pfs.value = pfs.min;
-      pts.value = pts.max;
-      pfd.textContent = pfs.min;
-      ptd.textContent = pts.max;
-      pfh.value = '';
-      pth.value = '';
-      updateRangeFill(pfs, pts, document.querySelector('.price-fill'));
-    }
+    // Инициализация карусели изображений при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function () {
+        initImageCarousel();
+    });
 
-    // reset rooms filter (newbuild)
-    const roomsHidden = document.getElementById('rooms-hidden');
-    if (roomsHidden) roomsHidden.value = '';
-    const hasOffersHidden = document.getElementById('has_offers-hidden');
-    if (hasOffersHidden) hasOffersHidden.value = '';
-    
-    // reset all filter buttons
-    const allFilterBtns = document.querySelectorAll('.filter-btn');
-    if (allFilterBtns && allFilterBtns.length) {
-      allFilterBtns.forEach(b => { 
-        b.setAttribute('data-active','false'); 
-        b.classList.remove('active'); 
-      });
-      
-      // activate "Any" buttons
-      const anyBtns = Array.from(allFilterBtns).filter(b => (b.getAttribute('data-value') || '') === '');
-      anyBtns.forEach(btn => {
-        btn.setAttribute('data-active','true'); 
-        btn.classList.add('active');
-      });
-    }
+    // AJAX-загрузка без изменения URL
+    (function () {
+        const form = document.getElementById('filters-form');
+        const grid = document.getElementById('catalog-grid');
+        const resultsCount = document.querySelector('.results-count');
+        const isSecondary = '{{ dataset_type }}' === 'secondary';
+        const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+        const mapEl = document.getElementById('map');
+        let map, markersLayer;
+        let activeController = null;
+        let latestRequestId = 0;
 
-    // reset secondary type chips
-    const stypeHidden = document.getElementById('stype-hidden');
-    if (stypeHidden) stypeHidden.value = '';
-    const chipBtns = document.querySelectorAll('.filter-chip-btn');
-    if (chipBtns && chipBtns.length) {
-      chipBtns.forEach(b => b.classList.remove('active'));
-      const allChip = Array.from(chipBtns).find(b => (b.getAttribute('data-value') || '') === '');
-      if (allChip) allChip.classList.add('active');
-    }
+        // View toggle
+        const toggleBtns = document.querySelectorAll('.view-btn');
+        const savedView = localStorage.getItem('catalog_view') || 'list';
 
-    // reset sorting
-    const sortHidden = document.getElementById('sort-hidden');
-    const sortingText = document.getElementById('sorting-text');
-    if (sortHidden) sortHidden.value = 'price_asc';
-    if (sortingText) sortingText.textContent = 'Дешевле';
-    document.querySelectorAll('.sorting-option').forEach(o => o.classList.toggle('active', o.getAttribute('data-sort') === 'price_asc'));
-
-    // reset complexes checkboxes
-    const complexesCheckboxes = document.querySelectorAll('.complex-checkbox');
-    const complexesHidden = document.getElementById('complexes-hidden');
-    const complexSearchInput = document.getElementById('complex-search-input');
-    if (complexesCheckboxes) {
-      complexesCheckboxes.forEach(cb => cb.checked = false);
-    }
-    if (complexesHidden) complexesHidden.value = '';
-    // Очистка поля поиска ЖК и показ всех элементов
-    if (complexSearchInput) {
-      complexSearchInput.value = '';
-      // Показываем все элементы списка
-      const complexFilterItems = document.querySelectorAll('.complex-filter-item');
-      complexFilterItems.forEach(item => {
-        item.style.display = 'flex';
-      });
-      // Скрываем сообщение "не найдено"
-      const container = document.querySelector('.complexes-filter-container');
-      const noResultsMsg = container ? container.querySelector('.no-results-message') : null;
-      if (noResultsMsg) {
-        noResultsMsg.style.display = 'none';
-      }
-    }
-
-    // fetch with cleared filters
-    window.fetchData();
-  });
-
-  // Обработка чекбоксов ЖК будет инициализирована в DOMContentLoaded
-})();
-
-// Мгновенный сабмит при выборe фильтров — обрабатывается AJAX-слоем
-
-// Современные анимации для фильтров
-document.addEventListener('DOMContentLoaded', function() {
-    // Инициализация чекбоксов ЖК
-    const complexesCheckboxes = document.querySelectorAll('.complex-checkbox');
-    const complexesHidden = document.getElementById('complexes-hidden');
-    const complexSearchInput = document.getElementById('complex-search-input');
-    const complexFilterItems = document.querySelectorAll('.complex-filter-item');
-    
-    function updateComplexesHidden() {
-        const selected = Array.from(complexesCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
-        if (complexesHidden) {
-            complexesHidden.value = selected.join(',');
+        // Отключаем кнопку карты для вторичной недвижимости
+        if (isSecondary) {
+            const mapBtn = document.querySelector('.view-btn[data-view="map"]');
+            if (mapBtn) {
+                mapBtn.disabled = true;
+                mapBtn.style.opacity = '0.5';
+                mapBtn.style.cursor = 'not-allowed';
+                mapBtn.title = 'Карта недоступна для вторичной недвижимости';
+            }
         }
-    }
 
-    // Функция фильтрации списка ЖК по поисковому запросу
-    function filterComplexes(searchText) {
-        const searchLower = searchText.toLowerCase().trim();
-        let visibleCount = 0;
-        
-        complexFilterItems.forEach(item => {
-            const complexName = item.getAttribute('data-complex-name') || '';
-            const shouldShow = !searchLower || complexName.includes(searchLower);
-            
-            if (shouldShow) {
-                item.style.display = 'flex';
-                visibleCount++;
-            } else {
-                item.style.display = 'none';
+
+        toggleBtns.forEach(b => b.addEventListener('click', () => {
+            // Не обрабатываем клик по кнопке карты для вторичной недвижимости
+            if (isSecondary && b.getAttribute('data-view') === 'map') {
+                return;
             }
-        });
-        
-        // Показываем сообщение, если ничего не найдено
-        const container = document.querySelector('.complexes-filter-container');
-        let noResultsMsg = container.querySelector('.no-results-message');
-        
-        if (searchLower && visibleCount === 0) {
-            if (!noResultsMsg) {
-                noResultsMsg = document.createElement('div');
-                noResultsMsg.className = 'no-results-message';
-                noResultsMsg.style.cssText = 'padding: 12px; text-align: center; color: #9ca3af; font-size: 14px;';
-                noResultsMsg.textContent = 'ЖК не найдены';
-                container.appendChild(noResultsMsg);
-            }
-            noResultsMsg.style.display = 'block';
-        } else if (noResultsMsg) {
-            noResultsMsg.style.display = 'none';
+            setView(b.getAttribute('data-view'));
+        }));
+
+        // Инициализация вида по умолчанию
+        // Принудительно устанавливаем вид "списком" для вторичной недвижимости
+        if (isSecondary) {
+            setView('list');
+        } else {
+            // По умолчанию показываем карту для новостроек
+            setView('map');
+            localStorage.setItem('catalog_view', 'map');
         }
-    }
 
-    // Обработчик поиска ЖК
-    if (complexSearchInput) {
-        complexSearchInput.addEventListener('input', function(e) {
-            filterComplexes(e.target.value);
-        });
-        
-        // Очистка поиска при нажатии Escape
-        complexSearchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                e.target.value = '';
-                filterComplexes('');
-                e.target.blur();
+
+
+        if (form && !form.dataset.ajaxBound) {
+            form.addEventListener('submit', function (e) { e.preventDefault(); window.fetchData(); });
+            form.dataset.ajaxBound = '1';
+        }
+
+        document.getElementById('clear-filters')?.addEventListener('click', function (e) {
+            e.preventDefault();
+            // reset native form controls
+            form.reset();
+
+            // reset area range
+            const afs = document.getElementById('area-from-slider');
+            const ats = document.getElementById('area-to-slider');
+            const afd = document.getElementById('area-from-display');
+            const atd = document.getElementById('area-to-display');
+            const afh = document.getElementById('area-from-hidden');
+            const ath = document.getElementById('area-to-hidden');
+            if (afs && ats && afd && atd && afh && ath) {
+                afs.value = afs.min;
+                ats.value = ats.max;
+                afd.textContent = afs.min;
+                atd.textContent = ats.max;
+                afh.value = '';
+                ath.value = '';
+                updateRangeFill(afs, ats, document.querySelector('.area-fill'));
             }
-        });
-    }
 
-    complexesCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            updateComplexesHidden();
+            // reset price range
+            const pfs = document.getElementById('price-from-slider');
+            const pts = document.getElementById('price-to-slider');
+            const pfd = document.getElementById('price-from-display');
+            const ptd = document.getElementById('price-to-display');
+            const pfh = document.getElementById('price-from-hidden');
+            const pth = document.getElementById('price-to-hidden');
+            if (pfs && pts && pfd && ptd && pfh && pth) {
+                pfs.value = pfs.min;
+                pts.value = pts.max;
+                pfd.textContent = pfs.min;
+                ptd.textContent = pts.max;
+                pfh.value = '';
+                pth.value = '';
+                updateRangeFill(pfs, pts, document.querySelector('.price-fill'));
+            }
+
+            // reset rooms filter (newbuild)
+            const roomsHidden = document.getElementById('rooms-hidden');
+            if (roomsHidden) roomsHidden.value = '';
+            const hasOffersHidden = document.getElementById('has_offers-hidden');
+            if (hasOffersHidden) hasOffersHidden.value = '';
+
+            // reset all filter buttons
+            const allFilterBtns = document.querySelectorAll('.filter-btn');
+            if (allFilterBtns && allFilterBtns.length) {
+                allFilterBtns.forEach(b => {
+                    b.setAttribute('data-active', 'false');
+                    b.classList.remove('active');
+                });
+
+                // activate "Any" buttons
+                const anyBtns = Array.from(allFilterBtns).filter(b => (b.getAttribute('data-value') || '') === '');
+                anyBtns.forEach(btn => {
+                    btn.setAttribute('data-active', 'true');
+                    btn.classList.add('active');
+                });
+            }
+
+            // reset secondary type chips
+            const stypeHidden = document.getElementById('stype-hidden');
+            if (stypeHidden) stypeHidden.value = '';
+            const chipBtns = document.querySelectorAll('.filter-chip-btn');
+            if (chipBtns && chipBtns.length) {
+                chipBtns.forEach(b => b.classList.remove('active'));
+                const allChip = Array.from(chipBtns).find(b => (b.getAttribute('data-value') || '') === '');
+                if (allChip) allChip.classList.add('active');
+            }
+
+            // reset sorting
+            const sortHidden = document.getElementById('sort-hidden');
+            const sortingText = document.getElementById('sorting-text');
+            if (sortHidden) sortHidden.value = 'price_asc';
+            if (sortingText) sortingText.textContent = 'Дешевле';
+            document.querySelectorAll('.sorting-option').forEach(o => o.classList.toggle('active', o.getAttribute('data-sort') === 'price_asc'));
+
+            // reset complexes checkboxes
+            const complexesCheckboxes = document.querySelectorAll('.complex-checkbox');
+            const complexesHidden = document.getElementById('complexes-hidden');
+            const complexSearchInput = document.getElementById('complex-search-input');
+            if (complexesCheckboxes) {
+                complexesCheckboxes.forEach(cb => cb.checked = false);
+            }
+            if (complexesHidden) complexesHidden.value = '';
+            // Очистка поля поиска ЖК и показ всех элементов
+            if (complexSearchInput) {
+                complexSearchInput.value = '';
+                // Показываем все элементы списка
+                const complexFilterItems = document.querySelectorAll('.complex-filter-item');
+                complexFilterItems.forEach(item => {
+                    item.style.display = 'flex';
+                });
+                // Скрываем сообщение "не найдено"
+                const container = document.querySelector('.complexes-filter-container');
+                const noResultsMsg = container ? container.querySelector('.no-results-message') : null;
+                if (noResultsMsg) {
+                    noResultsMsg.style.display = 'none';
+                }
+            }
+
+            // fetch with cleared filters
             window.fetchData();
         });
-    });
 
-    // Инициализация выбранных ЖК из URL параметров или фильтров
-    const urlParams = new URLSearchParams(window.location.search);
-    const selectedComplexes = urlParams.get('complexes') || (complexesHidden ? complexesHidden.value : '');
-    if (selectedComplexes && complexesCheckboxes.length) {
-        const selectedIds = selectedComplexes.split(',').map(id => id.trim()).filter(id => id);
-        complexesCheckboxes.forEach(cb => {
-            if (selectedIds.includes(cb.value)) {
-                cb.checked = true;
+        // Обработка чекбоксов ЖК будет инициализирована в DOMContentLoaded
+    })();
+
+    // Мгновенный сабмит при выборe фильтров — обрабатывается AJAX-слоем
+
+    // Современные анимации для фильтров
+    document.addEventListener('DOMContentLoaded', function () {
+        // Инициализация чекбоксов ЖК
+        const complexesCheckboxes = document.querySelectorAll('.complex-checkbox');
+        const complexesHidden = document.getElementById('complexes-hidden');
+        const complexSearchInput = document.getElementById('complex-search-input');
+        const complexFilterItems = document.querySelectorAll('.complex-filter-item');
+
+        function updateComplexesHidden() {
+            const selected = Array.from(complexesCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            if (complexesHidden) {
+                complexesHidden.value = selected.join(',');
             }
-        });
-        updateComplexesHidden();
-    }
-    
-    // Анимация появления фильтров
-    const filterGroups = document.querySelectorAll('.filter-group');
-    filterGroups.forEach((group, index) => {
-        group.style.opacity = '0';
-        group.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            group.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-            group.style.opacity = '1';
-            group.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-    
-    // Анимация для кнопок фильтра
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    filterBtns.forEach(btn => {
-        btn.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px) scale(1.02)';
-        });
-        
-        btn.addEventListener('mouseleave', function() {
-            if (!this.getAttribute('data-active') === 'true') {
-                this.style.transform = 'translateY(0) scale(1)';
-            }
-        });
-    });
-    
-    // Анимация для select элементов
-    const filterSelects = document.querySelectorAll('.filter-select');
-    filterSelects.forEach(select => {
-        select.addEventListener('focus', function() {
-            this.parentElement.style.transform = 'translateY(-2px)';
-        });
-        
-        select.addEventListener('blur', function() {
-            this.parentElement.style.transform = 'translateY(0)';
-        });
-        
-        // Автоматически выполняем поиск при изменении select
-        select.addEventListener('change', function() {
-            window.fetchData();
-        });
-    });
-    
-    // Анимация для range sliders
-    const rangeSliders = document.querySelectorAll('.range-slider-input');
-    rangeSliders.forEach(slider => {
-        slider.addEventListener('input', function() {
-            const container = this.closest('.range-container');
-            container.style.transform = 'translateY(-1px) scale(1.01)';
-            
-            setTimeout(() => {
-                container.style.transform = 'translateY(0) scale(1)';
-            }, 150);
-        });
-    });
-    
-    // Анимация для кнопки очистки фильтров
-    const clearFiltersBtn = document.querySelector('.clear-filters');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px) scale(1.02)';
-        });
-        
-        clearFiltersBtn.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
-        });
-    }
-    
-    // Анимация для сортировки
-    const sortingActive = document.querySelector('.sorting-active');
-    if (sortingActive) {
-        sortingActive.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px) scale(1.01)';
-        });
-        
-        sortingActive.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
-        });
-    }
-    
-    // Плавная анимация для результатов поиска
-    const resultsCount = document.querySelector('.results-count');
-    if (resultsCount) {
-        resultsCount.style.opacity = '0';
-        resultsCount.style.transform = 'translateY(10px)';
-        
-        setTimeout(() => {
-            resultsCount.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
-            resultsCount.style.opacity = '1';
-            resultsCount.style.transform = 'translateY(0)';
-        }, 500);
-    }
-    
-    // Анимация для секции фильтров при скролле
-    const filtersSection = document.querySelector('.filters-section');
-    if (filtersSection) {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
+        }
+
+        // Функция фильтрации списка ЖК по поисковому запросу
+        function filterComplexes(searchText) {
+            const searchLower = searchText.toLowerCase().trim();
+            let visibleCount = 0;
+
+            complexFilterItems.forEach(item => {
+                const complexName = item.getAttribute('data-complex-name') || '';
+                const shouldShow = !searchLower || complexName.includes(searchLower);
+
+                if (shouldShow) {
+                    item.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
                 }
             });
-        }, { threshold: 0.1 });
-        
-        filtersSection.style.opacity = '0';
-        filtersSection.style.transform = 'translateY(30px)';
-        filtersSection.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
-        
-        observer.observe(filtersSection);
-    }
 
-    // Управление мобильным bottom-sheet фильтром
-    const openBtn = document.getElementById('mobile-filter-open');
-    const closeBtn = document.getElementById('mobile-filter-close');
-    const sheet = document.getElementById('filters-sheet');
-    const backdrop = document.getElementById('filters-backdrop');
-    function openSheet(){ if(sheet){ sheet.classList.add('open'); } if(backdrop){ backdrop.classList.add('open'); } document.body.style.overflow='hidden'; }
-    function closeSheet(){ if(sheet){ sheet.classList.remove('open'); } if(backdrop){ backdrop.classList.remove('open'); } document.body.style.overflow=''; }
-    if (openBtn) openBtn.addEventListener('click', openSheet);
-    if (closeBtn) closeBtn.addEventListener('click', closeSheet);
-    if (backdrop) backdrop.addEventListener('click', closeSheet);
-    
-    // Принудительная инициализация для всех типов
-    const isSecondary = '{{ dataset_type }}' === 'secondary';
-    const mapEl = document.getElementById('map');
-    const grid = document.getElementById('catalog-grid');
-    
-    if (mapEl && grid) {
-        if (!isSecondary) {
-            // Новостройки: карта сверху, список снизу
-            mapEl.style.display = 'block';
-            mapEl.style.order = '1';
-            grid.style.display = 'block';
-            grid.style.order = '2';
-            
-            // Инициализируем карту если еще не инициализирована
-            if (!window.map && typeof initMap === 'function') {
-                initMap();
-            }
-            
-            // Загружаем данные для карты и списка
-            if (typeof fetchData === 'function') {
-                fetchData();
-            }
-            
-            // Устанавливаем активную кнопку "Картой"
-            const mapBtn = document.querySelector('.view-btn[data-view="map"]');
-            const listBtn = document.querySelector('.view-btn[data-view="list"]');
-            if (mapBtn && listBtn) {
-                mapBtn.classList.add('active');
-                listBtn.classList.remove('active');
-            }
-        } else {
-            // Вторичка: только список, карта скрыта
-            mapEl.style.display = 'none';
-            grid.style.display = 'block';
-            
-            // Загружаем данные для вторичной недвижимости
-            if (typeof fetchData === 'function') {
-                fetchData();
-            }
-            
-            // Устанавливаем активную кнопку "Списком"
-            const mapBtn = document.querySelector('.view-btn[data-view="map"]');
-            const listBtn = document.querySelector('.view-btn[data-view="list"]');
-            if (mapBtn && listBtn) {
-                listBtn.classList.add('active');
-                mapBtn.classList.remove('active');
+            // Показываем сообщение, если ничего не найдено
+            const container = document.querySelector('.complexes-filter-container');
+            let noResultsMsg = container.querySelector('.no-results-message');
+
+            if (searchLower && visibleCount === 0) {
+                if (!noResultsMsg) {
+                    noResultsMsg = document.createElement('div');
+                    noResultsMsg.className = 'no-results-message';
+                    noResultsMsg.style.cssText = 'padding: 12px; text-align: center; color: #9ca3af; font-size: 14px;';
+                    noResultsMsg.textContent = 'ЖК не найдены';
+                    container.appendChild(noResultsMsg);
+                }
+                noResultsMsg.style.display = 'block';
+            } else if (noResultsMsg) {
+                noResultsMsg.style.display = 'none';
             }
         }
-    }
-});
 
-// Функции для галереи изображений
-window.changeImage = function(button, direction) {
-    const gallery = button.parentElement;
-    const images = gallery.querySelectorAll('.gallery-image');
-    const dots = gallery.querySelectorAll('.dot');
-    let currentIndex = 0;
-    
-    // Находим текущий индекс
-    images.forEach((img, i) => {
-        if (img.style.display === 'block') {
-            currentIndex = i;
+        // Обработчик поиска ЖК
+        if (complexSearchInput) {
+            complexSearchInput.addEventListener('input', function (e) {
+                filterComplexes(e.target.value);
+            });
+
+            // Очистка поиска при нажатии Escape
+            complexSearchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    e.target.value = '';
+                    filterComplexes('');
+                    e.target.blur();
+                }
+            });
+        }
+
+        complexesCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                updateComplexesHidden();
+                window.fetchData();
+            });
+        });
+
+        // Инициализация выбранных ЖК из URL параметров или фильтров
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedComplexes = urlParams.get('complexes') || (complexesHidden ? complexesHidden.value : '');
+        if (selectedComplexes && complexesCheckboxes.length) {
+            const selectedIds = selectedComplexes.split(',').map(id => id.trim()).filter(id => id);
+            complexesCheckboxes.forEach(cb => {
+                if (selectedIds.includes(cb.value)) {
+                    cb.checked = true;
+                }
+            });
+            updateComplexesHidden();
+        }
+
+        // Анимация появления фильтров
+        const filterGroups = document.querySelectorAll('.filter-group');
+        filterGroups.forEach((group, index) => {
+            group.style.opacity = '0';
+            group.style.transform = 'translateY(20px)';
+
+            setTimeout(() => {
+                group.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                group.style.opacity = '1';
+                group.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+
+        // Анимация для кнопок фильтра
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('mouseenter', function () {
+                this.style.transform = 'translateY(-3px) scale(1.02)';
+            });
+
+            btn.addEventListener('mouseleave', function () {
+                if (!this.getAttribute('data-active') === 'true') {
+                    this.style.transform = 'translateY(0) scale(1)';
+                }
+            });
+        });
+
+        // Анимация для select элементов
+        const filterSelects = document.querySelectorAll('.filter-select');
+        filterSelects.forEach(select => {
+            select.addEventListener('focus', function () {
+                this.parentElement.style.transform = 'translateY(-2px)';
+            });
+
+            select.addEventListener('blur', function () {
+                this.parentElement.style.transform = 'translateY(0)';
+            });
+
+            // Автоматически выполняем поиск при изменении select
+            select.addEventListener('change', function () {
+                window.fetchData();
+            });
+        });
+
+        // Анимация для range sliders
+        const rangeSliders = document.querySelectorAll('.range-slider-input');
+        rangeSliders.forEach(slider => {
+            slider.addEventListener('input', function () {
+                const container = this.closest('.range-container');
+                container.style.transform = 'translateY(-1px) scale(1.01)';
+
+                setTimeout(() => {
+                    container.style.transform = 'translateY(0) scale(1)';
+                }, 150);
+            });
+        });
+
+        // Анимация для кнопки очистки фильтров
+        const clearFiltersBtn = document.querySelector('.clear-filters');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('mouseenter', function () {
+                this.style.transform = 'translateY(-3px) scale(1.02)';
+            });
+
+            clearFiltersBtn.addEventListener('mouseleave', function () {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        }
+
+        // Анимация для сортировки
+        const sortingActive = document.querySelector('.sorting-active');
+        if (sortingActive) {
+            sortingActive.addEventListener('mouseenter', function () {
+                this.style.transform = 'translateY(-2px) scale(1.01)';
+            });
+
+            sortingActive.addEventListener('mouseleave', function () {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        }
+
+        // Плавная анимация для результатов поиска
+        const resultsCount = document.querySelector('.results-count');
+        if (resultsCount) {
+            resultsCount.style.opacity = '0';
+            resultsCount.style.transform = 'translateY(10px)';
+
+            setTimeout(() => {
+                resultsCount.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                resultsCount.style.opacity = '1';
+                resultsCount.style.transform = 'translateY(0)';
+            }, 500);
+        }
+
+        // Анимация для секции фильтров при скролле
+        const filtersSection = document.querySelector('.filters-section');
+        if (filtersSection) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            filtersSection.style.opacity = '0';
+            filtersSection.style.transform = 'translateY(30px)';
+            filtersSection.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+
+            observer.observe(filtersSection);
+        }
+
+        // Управление мобильным bottom-sheet фильтром
+        const openBtn = document.getElementById('mobile-filter-open');
+        const closeBtn = document.getElementById('mobile-filter-close');
+        const sheet = document.getElementById('filters-sheet');
+        const backdrop = document.getElementById('filters-backdrop');
+        function openSheet() { if (sheet) { sheet.classList.add('open'); } if (backdrop) { backdrop.classList.add('open'); } document.body.style.overflow = 'hidden'; }
+        function closeSheet() { if (sheet) { sheet.classList.remove('open'); } if (backdrop) { backdrop.classList.remove('open'); } document.body.style.overflow = ''; }
+        if (openBtn) openBtn.addEventListener('click', openSheet);
+        if (closeBtn) closeBtn.addEventListener('click', closeSheet);
+        if (backdrop) backdrop.addEventListener('click', closeSheet);
+
+        // Принудительная инициализация для всех типов
+        const isSecondary = '{{ dataset_type }}' === 'secondary';
+        const mapEl = document.getElementById('map');
+        const grid = document.getElementById('catalog-grid');
+
+        if (mapEl && grid) {
+            if (!isSecondary) {
+                // Новостройки: карта сверху, список снизу
+                mapEl.style.display = 'block';
+                mapEl.style.order = '1';
+                grid.style.display = 'block';
+                grid.style.order = '2';
+
+                // Инициализируем карту если еще не инициализирована
+                if (!window.map && typeof initMap === 'function') {
+                    initMap();
+                }
+
+                // Загружаем данные для карты и списка
+                if (typeof fetchData === 'function') {
+                    fetchData();
+                }
+
+                // Устанавливаем активную кнопку "Картой"
+                const mapBtn = document.querySelector('.view-btn[data-view="map"]');
+                const listBtn = document.querySelector('.view-btn[data-view="list"]');
+                if (mapBtn && listBtn) {
+                    mapBtn.classList.add('active');
+                    listBtn.classList.remove('active');
+                }
+            } else {
+                // Вторичка: только список, карта скрыта
+                mapEl.style.display = 'none';
+                grid.style.display = 'block';
+
+                // Загружаем данные для вторичной недвижимости
+                if (typeof fetchData === 'function') {
+                    fetchData();
+                }
+
+                // Устанавливаем активную кнопку "Списком"
+                const mapBtn = document.querySelector('.view-btn[data-view="map"]');
+                const listBtn = document.querySelector('.view-btn[data-view="list"]');
+                if (mapBtn && listBtn) {
+                    listBtn.classList.add('active');
+                    mapBtn.classList.remove('active');
+                }
+            }
         }
     });
-    
-    // Вычисляем новый индекс
-    let newIndex = currentIndex + direction;
-    if (newIndex < 0) newIndex = images.length - 1;
-    if (newIndex >= images.length) newIndex = 0;
-    
-    // Переключаем изображения
-    images[currentIndex].style.display = 'none';
-    images[newIndex].style.display = 'block';
-    
-    // Переключаем точки
-    dots[currentIndex].classList.remove('active');
-    dots[newIndex].classList.add('active');
-}
 
-window.setImage = function(dot, index) {
-    const gallery = dot.parentElement.parentElement;
-    const images = gallery.querySelectorAll('.gallery-image');
-    const dots = gallery.querySelectorAll('.dot');
-    
-    // Скрываем все изображения
-    images.forEach(img => img.style.display = 'none');
-    // Показываем выбранное
-    images[index].style.display = 'block';
-    
-    // Обновляем точки
-    dots.forEach(d => d.classList.remove('active'));
-    dots[index].classList.add('active');
-}
+    // Функции для галереи изображений
+    window.changeImage = function (button, direction) {
+        const gallery = button.parentElement;
+        const images = gallery.querySelectorAll('.gallery-image');
+        const dots = gallery.querySelectorAll('.dot');
+        let currentIndex = 0;
+
+        // Находим текущий индекс
+        images.forEach((img, i) => {
+            if (img.style.display === 'block') {
+                currentIndex = i;
+            }
+        });
+
+        // Вычисляем новый индекс
+        let newIndex = currentIndex + direction;
+        if (newIndex < 0) newIndex = images.length - 1;
+        if (newIndex >= images.length) newIndex = 0;
+
+        // Переключаем изображения
+        images[currentIndex].style.display = 'none';
+        images[newIndex].style.display = 'block';
+
+        // Переключаем точки
+        dots[currentIndex].classList.remove('active');
+        dots[newIndex].classList.add('active');
+    }
+
+    window.setImage = function (dot, index) {
+        const gallery = dot.parentElement.parentElement;
+        const images = gallery.querySelectorAll('.gallery-image');
+        const dots = gallery.querySelectorAll('.dot');
+
+        // Скрываем все изображения
+        images.forEach(img => img.style.display = 'none');
+        // Показываем выбранное
+        images[index].style.display = 'block';
+
+        // Обновляем точки
+        dots.forEach(d => d.classList.remove('active'));
+        dots[index].classList.add('active');
+    }
 </script>
-{% endblock %} 
+{% endblock %}

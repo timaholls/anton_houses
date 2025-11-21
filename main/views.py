@@ -370,23 +370,26 @@ def catalog_api(request):
                 if record['_id'] not in complexes_with_offers:
                     continue
             
-            # Фильтр по комнатам
+            # Фильтр по комнатам (поддержка множественного выбора через запятую)
             if rooms:
-                apartment_types = {}
-                if 'development' in record and 'avito' not in record:
-                    # Новая структура
-                    apartment_types = record.get('apartment_types', {})
-                else:
-                    # Старая структура
-                    apartment_types = record.get('avito', {}).get('apartment_types', {})
-                
-                has_matching_rooms = False
-                for apt_type, apt_data in apartment_types.items():
-                    if apt_type == rooms:
-                        has_matching_rooms = True
-                        break
-                if not has_matching_rooms:
-                    continue
+                # Разбиваем строку на список значений (поддержка множественного выбора)
+                selected_rooms = [r.strip() for r in rooms.split(',') if r.strip()]
+                if selected_rooms:
+                    apartment_types = {}
+                    if 'development' in record and 'avito' not in record:
+                        # Новая структура
+                        apartment_types = record.get('apartment_types', {})
+                    else:
+                        # Старая структура
+                        apartment_types = record.get('avito', {}).get('apartment_types', {})
+                    
+                    has_matching_rooms = False
+                    for apt_type, apt_data in apartment_types.items():
+                        if apt_type in selected_rooms:
+                            has_matching_rooms = True
+                            break
+                    if not has_matching_rooms:
+                        continue
             
             # Фильтр по цене
             price_range = ''
