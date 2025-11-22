@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load main_extras %}
 
 {% block title %}CENTURY 21 - Главная{% endblock %}
 
@@ -602,8 +603,7 @@
         .home-grid{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:18px}
         
         /* Карточка */
-        .home-property-card{background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:transform .2s ease, box-shadow .2s ease}
-        .home-property-card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(0,0,0,.12)}
+        .home-property-card{background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 8px 24px rgba(0,0,0,.06)}
         /* Ровные превью */
         .home-card-image{position:relative;aspect-ratio:16/10;overflow:hidden}
         .home-card-image img{width:100%;height:100%;object-fit:cover;display:block}
@@ -626,7 +626,7 @@
         
         /* Галерея изображений для карточек ЖК */
         .home-card-image-gallery{position:relative;aspect-ratio:16/10;overflow:hidden}
-        .home-card-image-gallery .gallery-image{width:100%;height:100%;object-fit:cover;display:block;transition:opacity 0.3s ease}
+        .home-card-image-gallery .gallery-image{width:100%;height:100%;object-fit:cover;display:block}
         .gallery-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s ease;z-index:10;opacity:0}
         .home-card-image-gallery:hover .gallery-nav{opacity:1}
         .gallery-nav:hover{background:rgba(0,0,0,0.8);transform:translateY(-50%) scale(1.1)}
@@ -641,7 +641,7 @@
         <div class="home-grid">
             {% for complex in complexes %}
             <div class="home-property-card"> 
-                <div class="home-card-image-gallery" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
+                <div class="home-card-image-gallery" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer; position: relative;">
                     {% if complex.development.photos %}
                         {% for photo in complex.development.photos %}
                             <img class="gallery-image" src="{{ photo }}" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw" style="{% if not forloop.first %}display: none;{% endif %}">
@@ -661,6 +661,16 @@
                         {% endif %}
                     {% else %}
                         <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async">
+                    {% endif %}
+                    {% if complex.development.parameters %}
+                        {% with completion_date=complex.development.parameters|get_item:'Срок сдачи' %}
+                            {% if completion_date %}
+                                <div class="future-complex-badge">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span>Сдача: {{ completion_date }}</span>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
                     {% endif %}
                 </div>
                 
@@ -1304,6 +1314,11 @@ window.setImage = function(dot, index) {
 
 .contact-item a:hover {
     color: var(--c21-gold);
+}
+
+.contact-item span {
+    color: var(--c21-dark);
+    font-weight: 600;
 }
 
 .map-wrapper {

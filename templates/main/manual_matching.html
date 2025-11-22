@@ -4931,6 +4931,24 @@
 
                 const project = result.data;
 
+                // Обрабатываем ход строительства (может быть в разных форматах)
+                let constructionProgress = [];
+                if (project.construction_progress) {
+                    if (Array.isArray(project.construction_progress)) {
+                        // Если это уже массив
+                        constructionProgress = project.construction_progress;
+                    } else if (project.construction_progress.construction_stages && Array.isArray(project.construction_progress.construction_stages)) {
+                        // Если это объект с полем construction_stages
+                        constructionProgress = project.construction_progress.construction_stages;
+                    } else if (project.construction_progress.photos && Array.isArray(project.construction_progress.photos)) {
+                        // Если это объект только с полем photos (без этапов) - создаем один этап
+                        constructionProgress = [{
+                            stage: 'Ход строительства',
+                            photos: project.construction_progress.photos
+                        }];
+                    }
+                }
+
                 // Создаем модальное окно редактирования
                 const modalHtml = `
                     <div class="modal" id="editFutureProjectModal" onclick="if(event.target === this) closeEditFutureProjectModal();">
@@ -5007,7 +5025,7 @@
                                             </span>
                                         </div>
                                         <div class="dev-photos-container" id="editGalleryPhotosContainer" 
-                                            style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; margin-top:12px;">
+                                            style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px; margin-top:12px;">
                                             ${(project.gallery_photos || project.images || []).map((photo, idx) => {
                     const uniqueId = `edit-gallery-${Date.now()}-${idx}`;
                     return `
@@ -5032,8 +5050,8 @@
                                     <div class="form-group">
                                         <label>Фото хода строительства</label>
                                         <div id="editConstructionStagesContainer">
-                                            ${project.construction_progress?.construction_stages && project.construction_progress.construction_stages.length > 0 ?
-                        project.construction_progress.construction_stages.map((stage, stageIdx) => {
+                                            ${constructionProgress && constructionProgress.length > 0 ?
+                        constructionProgress.map((stage, stageIdx) => {
                             const stagePhotos = stage.photos || [];
                             return `
                                                         <div class="construction-stage" data-stage-idx="${stageIdx}" style="margin-bottom:20px; padding:16px; background:#0f172a; border-radius:8px; border:1px solid #475569;">
@@ -5043,20 +5061,22 @@
                                                                         class="edit-stage-name-input" data-stage-idx="${stageIdx}"
                                                                         style="background:#334155; border:1px solid #475569; border-radius:4px; padding:6px 10px; color:#fff; font-size:14px; width:auto; min-width:200px;">
                                                                 </label>
+                                                                ${stage.date ? `<div style="font-size:12px; color:#94a3b8; margin-bottom:8px;">📅 ${escapeHtml(stage.date)}</div>` : ''}
                                                                 <button type="button" onclick="addEditFutureProjectConstructionPhoto(${stageIdx})" 
                                                                     style="background:#10b981; color:white; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:13px; margin-top:6px;">
                                                                     ➕ Добавить фото
                                                                 </button>
                                                             </div>
+                                                            ${stagePhotos.length > 0 ? `
                                                             <div class="edit-stage-photos-container" data-stage-idx="${stageIdx}" 
-                                                                style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;">
+                                                                style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; margin-top:8px;">
                                                                 ${stagePhotos.map((photo, photoIdx) => {
                                 const uniqueId = `edit-construction-${stageIdx}-${Date.now()}-${photoIdx}`;
                                 return `
                                                                         <div class="edit-stage-photo-wrapper" data-photo-idx="${uniqueId}" 
                                                                             style="position:relative; border-radius:6px; overflow:hidden; border:1px solid #475569;">
                                                                             <img src="${photo}" alt="Ход строительства" loading="lazy" 
-                                                                                style="width:100%; height:140px; object-fit:cover; display:block;"
+                                                                                style="width:100%; height:120px; object-fit:cover; display:block;"
                                                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                                                             <div style="display:none; padding:20px; text-align:center; background:#1e293b; color:#6b7280; font-size:11px;">
                                                                                 Изображение недоступно
@@ -5068,6 +5088,7 @@
                                                                     `;
                             }).join('')}
                                                             </div>
+                                                            ` : '<div style="font-size:11px; color:#6b7280; font-style:italic; margin-top:8px;">Нет фотографий</div>'}
                                                         </div>
                                                     `;
                         }).join('') :
@@ -5154,7 +5175,7 @@
                                 body: JSON.stringify({
                                     base64: src,
                                     type: 'future_project',
-                                    unified_id: 'future_project',
+                                    project_id: projectId,
                                     room_type: 'gallery'
                                 })
                             });
@@ -5196,7 +5217,7 @@
                                     body: JSON.stringify({
                                         base64: src,
                                         type: 'future_project',
-                                        unified_id: 'future_project',
+                                        project_id: projectId,
                                         room_type: 'construction'
                                     })
                                 });
@@ -6814,6 +6835,9 @@
             const modal = document.getElementById('futureProjectModal');
             if (!modal) return;
 
+            // Временный ID для загрузки фото (до создания проекта)
+            const tempProjectId = `temp-${sourceId || Date.now()}`;
+
             // Собираем фото ЖК
             const galleryPhotos = [];
             for (const img of modal.querySelectorAll('#galleryPhotosContainer .dev-photo-wrapper img')) {
@@ -6828,7 +6852,7 @@
                                 body: JSON.stringify({
                                     base64: src,
                                     type: 'future_project',
-                                    unified_id: 'future_project',
+                                    project_id: tempProjectId,
                                     room_type: 'gallery'
                                 })
                             });
@@ -6870,7 +6894,7 @@
                                     body: JSON.stringify({
                                         base64: src,
                                         type: 'future_project',
-                                        unified_id: 'future_project',
+                                        project_id: tempProjectId,
                                         room_type: 'construction'
                                     })
                                 });

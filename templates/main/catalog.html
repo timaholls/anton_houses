@@ -450,14 +450,14 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
                     </div>
                     {% endif %}
 
-                    <!-- Фильтр по ипотечным программам -->
+                    <!-- Фильтр по сроку сдачи -->
                     <div class="filter-group">
-                        <label for="mortgage_program">Ипотечная программа</label>
-                        <select name="mortgage_program" id="mortgage_program" class="filter-select">
-                            <option value="">Любая</option>
-                            {% for program in mortgage_programs %}
-                            <option value="{{ program.id }}" {% if filters.mortgage_program == program.id %}selected{% endif %}>
-                                {{ program.name }}{% if program.is_individual %} (индивидуальная){% endif %}
+                        <label for="delivery_quarter">Срок сдачи</label>
+                        <select name="delivery_quarter" id="delivery_quarter" class="filter-select">
+                            <option value="">Любой срок</option>
+                            {% for quarter in delivery_quarters %}
+                            <option value="{{ quarter.value }}" {% if filters.delivery_quarter == quarter.value %}selected{% endif %}>
+                                {{ quarter.label }}
                             </option>
                             {% endfor %}
                         </select>
@@ -916,8 +916,14 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
 
             html += `
             <div class="${cardClasses}" data-complex-id="${complex.id}">
-                <div class="compact-card-image-gallery" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer;">
+                <div class="compact-card-image-gallery" onclick="window.location.href='/complex/${complex.id}/'" style="cursor: pointer; position: relative;">
                     ${galleryHtml}
+                    ${complex.completion_date ? `
+                        <div class="future-complex-badge">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Сдача: ${complex.completion_date}</span>
+                        </div>
+                    ` : ''}
                     ${photos.length > 1 ? `
                         <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
                             <i class="fas fa-chevron-left"></i>
@@ -939,12 +945,6 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
                             <span>${complex.address || complex.city || 'Уфа'}</span>
                         </div>
                         <div class="compact-card-details">
-                            ${complex.completion_date ? `
-                            <div class="compact-detail-item">
-                                <i class="fas fa-calendar"></i>
-                                <span>${complex.completion_date}</span>
-                            </div>
-                            ` : ''}
                             ${complex.total_apartments ? `
                             <div class="compact-detail-item apartments-item">
                                 <i class="fas fa-home"></i>

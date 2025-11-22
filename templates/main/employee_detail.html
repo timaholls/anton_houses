@@ -86,6 +86,19 @@
                         </a>
                         {% endif %}
                     </div>
+
+                    {% if employee.phone %}
+                    <div class="employee-action-buttons">
+                        <a href="tel:{{ employee.phone }}" class="primary-action-btn call-action">
+                            <i class="fas fa-phone"></i>
+                            <span>Позвонить</span>
+                        </a>
+                        <a href="https://wa.me/{% with phone=employee.phone|cut:' '|cut:'-'|cut:'('|cut:')'|cut:'+' %}{% if phone|slice:':1' == '8' %}7{{ phone|slice:'1:' }}{% elif phone|slice:':1' == '7' %}{{ phone }}{% else %}7{{ phone }}{% endif %}{% endwith %}" target="_blank" rel="noopener noreferrer" class="primary-action-btn whatsapp-action">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>Написать</span>
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -133,7 +146,9 @@
                 </div>
                 <div class="section-content">
                     {% firstof employee.bio employee.description as about_text %}
-                    {{ about_text|safe }}
+                    <div class="formatted-text">
+                        {{ about_text|safe }}
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -144,7 +159,9 @@
                     <h2><i class="fas fa-trophy"></i> Достижения</h2>
                 </div>
                 <div class="section-content">
-                    {{ employee.achievements|safe }}
+                    <div class="formatted-text">
+                        {{ employee.achievements|safe }}
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -156,7 +173,9 @@
                 </div>
                 <div class="section-content">
                     {% firstof employee.specialization employee.specializations as spec_text %}
-                    <p>{{ spec_text }}</p>
+                    <div class="formatted-text">
+                        {{ spec_text|safe }}
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -495,6 +514,52 @@
     gap: 0.75rem;
 }
 
+.employee-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 1rem;
+}
+
+.primary-action-btn {
+    flex: 1;
+    min-width: 220px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    color: #fff;
+}
+
+.primary-action-btn i {
+    font-size: 1rem;
+}
+
+.call-action {
+    background: #10b981;
+}
+
+.call-action:hover {
+    background: #059669;
+    box-shadow: 0 8px 18px rgba(5,150,105,0.4);
+}
+
+.whatsapp-action {
+    background: #25D366;
+}
+
+.whatsapp-action:hover {
+    background: #128C7E;
+    box-shadow: 0 8px 18px rgba(18,140,126,0.4);
+}
+
 .contact-btn {
     display: flex;
     align-items: center;
@@ -574,6 +639,17 @@
     margin-bottom: 1rem;
     line-height: 1.6;
     color: #333;
+}
+
+.formatted-text {
+    line-height: 1.8;
+    font-size: 1rem;
+    color: #2f3640;
+    white-space: pre-line;
+}
+
+.formatted-text p {
+    margin-bottom: 1rem;
 }
 
 /* Видео */
@@ -932,6 +1008,14 @@
     .employee-photo-container {
         max-width: 250px;
         margin: 0 auto;
+    }
+    
+    .employee-action-buttons {
+        flex-direction: column;
+    }
+
+    .primary-action-btn {
+        min-width: 100%;
     }
     
     .employee-name {

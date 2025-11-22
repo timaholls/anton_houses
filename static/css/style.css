@@ -78,6 +78,17 @@ body {
 
 .main-header .container {
     display: block;
+    max-width: 100%;
+    width: 100%;
+    padding: 0 32px;
+}
+
+.header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
 }
 
 /* Левая часть шапки */
@@ -90,21 +101,32 @@ body {
 /* Общая строка шапки на десктопе: бургер | логотип | меню | контакты */
 @media (min-width: 769px) {
     .header-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
+        justify-content: center;
+        gap: 32px;
     }
 
-    /* Размещаем меню по центру, контакты справа */
-    .header-row .main-nav {
-        flex: 1 1 auto;
+    /* Левая часть - логотип */
+    .header-left {
         display: flex;
+        align-items: center;
         justify-content: center;
     }
 
+    /* Центрируем меню */
+    .header-row .main-nav {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        width: auto;
+    }
+
+    /* Правая часть - контакты */
     .header-right {
-        margin-left: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 0;
     }
 }
 
@@ -751,41 +773,11 @@ body {
     flex-shrink: 0;
     width: 380px;
     position: relative;
-    transform: perspective(1000px) rotateY(-5deg);
-    transition: transform 0.3s ease;
     margin-left: 40px;
 }
 
-.about-image:hover {
-    transform: perspective(1000px) rotateY(0deg);
-}
-
 .about-image::before {
-    content: '';
-    position: absolute;
-    top: -20px;
-    left: 0px;
-    right: 40px;
-    bottom: 20px;
-    background: linear-gradient(45deg, #BEAF87, #A19276, #f8f9fa, #ffffff);
-    background-size: 400% 400%;
-    border-radius: 24px;
-    z-index: -1;
-    opacity: 0.4;
-    transition: all 0.3s ease;
-    animation: gradientShift 3s ease infinite;
-}
-
-.about-image:hover::before {
-    opacity: 0.6;
-    transform: translate(10px, 10px);
-    animation: gradientShift 1s ease infinite;
-}
-
-@keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    display: none;
 }
 
 .about-image img {
@@ -794,14 +786,7 @@ body {
     object-fit: cover;
     border-radius: 24px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-    filter: brightness(1.05) contrast(1.1);
     margin-left: 20px;
-}
-
-.about-image:hover img {
-    transform: translateY(-10px);
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
 }
 
 .about-text {
@@ -1369,8 +1354,9 @@ body {
     position: relative;
     width: 100%;
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    padding: 0 0 160px 0;
+    padding: 0 0 240px 0;
     margin: 0;
+    margin-bottom: 0;
     z-index: 300;
     clear: both;
     display: block;
@@ -1757,7 +1743,7 @@ body {
 /* Адаптивность для формы обратной связи */
 @media (max-width: 1200px) {
     .feedback-wrapper {
-        padding: 50px 0;
+        padding: 50px 0 200px 0;
     }
     
     .feedback-section {
@@ -1777,7 +1763,7 @@ body {
 
 @media (max-width: 768px) {
     .feedback-wrapper {
-        padding: 24px 0 56px 0;
+        padding: 24px 0 120px 0;
     }
     
     .footer-transition {
@@ -1841,7 +1827,7 @@ body {
 
 @media (max-width: 600px) {
     .feedback-wrapper {
-        padding: 20px 0 44px 0;
+        padding: 20px 0 100px 0;
     }
     
     .feedback-section {
@@ -2698,13 +2684,7 @@ body {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
     cursor: pointer;
-}
-
-.home-property-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 /* Изображение карточки */
@@ -2719,11 +2699,6 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.home-property-card:hover .home-card-image img {
-    transform: scale(1.05);
 }
 
 
@@ -3268,7 +3243,7 @@ body {
 
 /* Десктоп: возвращаем большие отступы формы и перехода к футеру */
 @media (min-width: 992px) {
-    .feedback-wrapper { padding: 60px 0 180px; }
+    .feedback-wrapper { padding: 60px 0 240px; }
     .footer-transition { padding-top: 120px; }
 }
 @media (max-width: 480px) {
@@ -3326,6 +3301,18 @@ body {
 }
 
 @media (max-width: 768px) {
+    .header-right .address,
+    .contact-info .address,
+    .header-right .address-link,
+    .contact-info .address-link {
+        white-space: normal !important;
+        word-wrap: break-word;
+        word-break: break-word;
+        text-align: right;
+        line-height: 1.3;
+        display: inline-block;
+    }
+    
     .header-top-left,
     .header-top-right {
         gap: 16px;
@@ -3415,6 +3402,10 @@ body {
     
     .address {
         font-size: 12px;
+        white-space: normal;
+        word-wrap: break-word;
+        text-align: right;
+        line-height: 1.3;
     }
     
     .main-nav {
@@ -3438,6 +3429,19 @@ body {
 }
 
 @media (max-width: 480px) {
+    .header-right .address,
+    .contact-info .address,
+    .header-right .address-link,
+    .contact-info .address-link {
+        white-space: normal !important;
+        word-wrap: break-word;
+        word-break: break-word;
+        text-align: right;
+        line-height: 1.3;
+        max-width: 150px;
+        display: inline-block;
+    }
+    
     .container {
         padding: 0 16px;
     }
@@ -3724,6 +3728,65 @@ body {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+/* Плашка с датой сдачи на изображении */
+.future-complex-badge {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    z-index: 2;
+    background: #28a745;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    font-size: 11px;
+    box-shadow: 0 4px 10px rgba(40,167,69,.35);
+}
+
+.future-complex-badge i {
+    font-size: 11px;
+}
+
+/* Бейдж старта продаж - зеленый наверху */
+.future-complex-badge.sales-start-badge {
+    top: 8px;
+    background: #28a745;
+    box-shadow: 0 4px 10px rgba(40,167,69,.35);
+}
+
+.compact-detail-item.completion-item {
+    width: 100%;
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.completion-badge {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--c21-gold);
+    font-weight: 600;
+}
+
+.completion-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #e2e8f0;
+}
+
+.completion-value i {
+    color: var(--c21-gold);
+    font-size: 12px;
 }
 
 /* Специальные стили для карточек ипотеки */
@@ -5961,7 +6024,7 @@ body {
 
 @media (max-width: 480px) {
     .feedback-wrapper {
-        padding: 25px 0;
+        padding: 25px 0 100px 0;
     }
     
     .footer-transition {
@@ -6647,6 +6710,7 @@ a:hover { color: var(--c21-gold); }
     bottom: 30px;
     right: 30px;
     z-index: 9999;
+    transform: translateY(calc(-100% - 10px));
 }
 
 .chat-button {
@@ -6693,6 +6757,7 @@ a:hover { color: var(--c21-gold); }
     .chat-button-container {
         bottom: 20px;
         right: 20px;
+        transform: translateY(calc(-100% - 10px));
     }
     
     .chat-button {
@@ -6706,6 +6771,10 @@ a:hover { color: var(--c21-gold); }
 }
 
 @media (max-width: 480px) {
+    .chat-button-container {
+        transform: translateY(calc(-100% - 8px));
+    }
+    
     .chat-button {
         padding: 12px 16px;
         gap: 8px;
@@ -6716,10 +6785,104 @@ a:hover { color: var(--c21-gold); }
     }
 }
 
+/* Кнопка избранного */
+.favorites-button-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9998;
+}
+
+.favorites-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, var(--c21-gold), var(--c21-gold-dark));
+    color: var(--c21-dark);
+    border: none;
+    border-radius: 50px;
+    padding: 16px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(190, 175, 135, 0.4);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    position: relative;
+}
+
+.favorites-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(190, 175, 135, 0.5);
+    text-decoration: none;
+    color: var(--c21-dark);
+}
+
+.favorites-button i {
+    font-size: 20px;
+}
+
+.favorites-text {
+    white-space: nowrap;
+}
+
+.favorites-badge {
+    background: var(--c21-dark);
+    color: var(--c21-gold);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    margin-left: -4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .favorites-button-container {
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .favorites-button {
+        padding: 14px 20px;
+        font-size: 14px;
+    }
+    
+    .favorites-button i {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .favorites-button-container {
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .favorites-button {
+        padding: 12px 16px;
+        gap: 8px;
+    }
+    
+    .favorites-text {
+        font-size: 13px;
+    }
+    
+    .favorites-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 11px;
+    }
+}
+
 /* Виджет чата в углу */
 .chat-modal {
     position: fixed;
-    bottom: 90px;
+    bottom: 180px;
     right: 30px;
     z-index: 2000;
     display: none;
@@ -6905,9 +7068,94 @@ a:hover { color: var(--c21-gold); }
     font-style: italic;
 }
 
+/* Стили для сообщений пользователя */
+.user-message {
+    justify-content: flex-end;
+}
+
+.user-message .message-content {
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    padding: 12px 16px;
+    border-radius: 18px;
+    max-width: 80%;
+}
+
+.user-message .message-text {
+    color: var(--c21-dark);
+    margin: 0;
+}
+
+/* Стили для input полей в чате */
+.chat-input-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.chat-inline-input,
+.chat-inline-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--c21-gold);
+    border-radius: 12px;
+    font-size: 14px;
+    outline: none;
+    background: #fff;
+    color: var(--c21-dark);
+    transition: border-color 0.2s ease;
+}
+
+.chat-inline-input:focus,
+.chat-inline-textarea:focus {
+    border-color: var(--c21-gold-dark);
+}
+
+.chat-inline-textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.chat-send-inline-btn {
+    background: var(--c21-gold);
+    color: var(--c21-dark);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.chat-send-inline-btn:hover {
+    background: var(--c21-gold-dark);
+    transform: translateY(-1px);
+}
+
+.chat-send-inline-btn i {
+    font-size: 14px;
+}
+
+.user-message-input {
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.user-message-input .message-content {
+    max-width: 100%;
+    width: 100%;
+}
+
 @media (max-width: 768px) {
     .chat-modal {
-        bottom: 80px;
+        bottom: 110px;
         right: 20px;
     }
     
@@ -6918,7 +7166,7 @@ a:hover { color: var(--c21-gold); }
 
 @media (max-width: 480px) {
     .chat-modal {
-        bottom: 80px;
+        bottom: 110px;
         right: 10px;
         left: 10px;
     }
@@ -7341,48 +7589,20 @@ a:hover { color: var(--c21-gold); }
     .calculator-settings {
         border-right: none;
         border-bottom: 1px solid rgba(190, 175, 135, 0.1);
+        order: -1; /* Калькулятор идет первым */
     }
     
     .calculator-results {
-        order: -1;
+        order: 0; /* Результаты идут вторыми */
     }
 }
 
 @media (max-width: 768px) {
     .mortgage-calculator {
-        margin: 20px 0;
-        border-radius: 16px;
+        margin: 16px 0;
+        border-radius: 12px;
     }
     
-    .calculator-settings,
-    .calculator-results {
-        padding: 20px;
-    }
-    
-    .calculator-title {
-        font-size: 18px;
-    }
-    
-    .settings-form {
-        gap: 16px;
-    }
-    
-    .form-input,
-    .form-select {
-        padding: 10px 12px;
-        font-size: 14px;
-    }
-    
-    .result-value {
-        font-size: 15px;
-    }
-    
-    .main-result .result-value {
-        font-size: 20px;
-    }
-}
-
-@media (max-width: 480px) {
     .calculator-settings,
     .calculator-results {
         padding: 16px;
@@ -7390,22 +7610,20 @@ a:hover { color: var(--c21-gold); }
     
     .calculator-title {
         font-size: 16px;
-        flex-direction: column;
-        gap: 6px;
+    }
+    
+    .results-title {
+        font-size: 15px;
     }
     
     .settings-form {
-        gap: 14px;
+        gap: 12px;
     }
     
     .form-input,
     .form-select {
         padding: 8px 10px;
         font-size: 13px;
-    }
-    
-    .form-input-small {
-        width: 65px;
     }
     
     .result-value {
@@ -7417,8 +7635,462 @@ a:hover { color: var(--c21-gold); }
     }
     
     .bank-logos-img {
-        height: 28px;
+        height: 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .calculator-settings,
+    .calculator-results {
+        padding: 12px;
+    }
+    
+    .calculator-title {
+        font-size: 14px;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .results-title {
+        font-size: 14px;
+    }
+    
+    .settings-form {
+        gap: 10px;
+    }
+    
+    .form-input,
+    .form-select {
+        padding: 7px 9px;
+        font-size: 12px;
+    }
+    
+    .form-input-small {
+        width: 60px;
+    }
+    
+    .result-value {
+        font-size: 12px;
+    }
+    
+    .main-result .result-value {
+        font-size: 16px;
+    }
+    
+    .bank-logos-img {
+        height: 24px;
+    }
+    
+    .result-item {
+        padding: 8px 0;
+    }
+    
+    .main-result {
+        padding: 12px;
     }
 }
 
 /* Каталог: подсветки карточек */
+
+/* =============================
+   Модальное окно подписки
+   ============================= */
+
+/* Overlay (фон модального окна) */
+.subscription-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(37, 37, 38, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    padding: 20px;
+}
+
+.subscription-modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* Модальное окно */
+.subscription-modal {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(190, 175, 135, 0.2);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+    border: 2px solid rgba(190, 175, 135, 0.3);
+}
+
+.subscription-modal-overlay.active .subscription-modal {
+    transform: scale(1) translateY(0);
+}
+
+/* Кнопка закрытия */
+.subscription-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(37, 37, 38, 0.1);
+    border: none;
+    color: var(--c21-dark);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.subscription-modal-close:hover {
+    background: rgba(37, 37, 38, 0.2);
+    transform: rotate(90deg);
+}
+
+/* Контент модального окна */
+.subscription-modal-content {
+    padding: 40px 32px;
+    position: relative;
+}
+
+/* Заголовок */
+.subscription-modal-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.subscription-modal-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(190, 175, 135, 0.3);
+}
+
+.subscription-modal-icon i {
+    font-size: 36px;
+    color: var(--c21-dark);
+}
+
+.subscription-modal-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--c21-dark);
+    margin: 0 0 12px 0;
+    line-height: 1.2;
+}
+
+.subscription-modal-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Преимущества подписки */
+.subscription-benefits {
+    background: linear-gradient(135deg, rgba(190, 175, 135, 0.05) 0%, rgba(190, 175, 135, 0.02) 100%);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 32px;
+    border: 1px solid rgba(190, 175, 135, 0.2);
+}
+
+.subscription-benefit-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 15px;
+    color: var(--c21-dark);
+    font-weight: 500;
+}
+
+.subscription-benefit-item:last-child {
+    margin-bottom: 0;
+}
+
+.subscription-benefit-item i {
+    color: var(--c21-gold);
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* Форма */
+.subscription-modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.subscription-modal-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.subscription-modal-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.subscription-modal-form-group label {
+    color: var(--c21-dark);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.subscription-modal-form-group input {
+    padding: 14px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--c21-dark);
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    font-family: inherit;
+}
+
+.subscription-modal-form-group input::placeholder {
+    color: #999;
+}
+
+.subscription-modal-form-group input:focus {
+    outline: none;
+    border-color: var(--c21-gold);
+    box-shadow: 0 0 0 3px rgba(190, 175, 135, 0.2);
+}
+
+/* Чекбоксы */
+.subscription-modal-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 8px 0;
+}
+
+.subscription-modal-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.subscription-modal-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--c21-gold);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.subscription-modal-checkbox label {
+    color: var(--c21-dark);
+    font-size: 14px;
+    cursor: pointer;
+    margin: 0;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Кнопка подписки */
+.subscription-modal-button {
+    background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+    color: var(--c21-dark);
+    border: none;
+    padding: 18px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(190, 175, 135, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.subscription-modal-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(190, 175, 135, 0.4);
+}
+
+.subscription-modal-button:active {
+    transform: translateY(0);
+}
+
+.subscription-modal-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.subscription-modal-button i {
+    font-size: 16px;
+}
+
+/* Сообщения */
+.subscription-modal-message {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: none;
+    text-align: center;
+    font-size: 14px;
+}
+
+.subscription-modal-message.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    display: block;
+}
+
+.subscription-modal-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    display: block;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+    .subscription-modal {
+        max-width: 100%;
+        border-radius: 20px;
+        max-height: 95vh;
+    }
+    
+    .subscription-modal-content {
+        padding: 32px 24px;
+    }
+    
+    .subscription-modal-icon {
+        width: 70px;
+        height: 70px;
+        margin-bottom: 16px;
+    }
+    
+    .subscription-modal-icon i {
+        font-size: 32px;
+    }
+    
+    .subscription-modal-title {
+        font-size: 24px;
+    }
+    
+    .subscription-modal-subtitle {
+        font-size: 15px;
+    }
+    
+    .subscription-benefits {
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    
+    .subscription-benefit-item {
+        font-size: 14px;
+        margin-bottom: 14px;
+    }
+    
+    .subscription-benefit-item i {
+        font-size: 16px;
+    }
+    
+    .subscription-modal-form-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .subscription-modal-button {
+        padding: 16px 24px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .subscription-modal-overlay {
+        padding: 10px;
+    }
+    
+    .subscription-modal {
+        border-radius: 16px;
+    }
+    
+    .subscription-modal-content {
+        padding: 28px 20px;
+    }
+    
+    .subscription-modal-close {
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+    
+    .subscription-modal-icon {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 12px;
+    }
+    
+    .subscription-modal-icon i {
+        font-size: 28px;
+    }
+    
+    .subscription-modal-title {
+        font-size: 22px;
+    }
+    
+    .subscription-modal-subtitle {
+        font-size: 14px;
+    }
+    
+    .subscription-benefits {
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+    
+    .subscription-benefit-item {
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+    
+    .subscription-modal-form-group input {
+        padding: 12px 14px;
+        font-size: 15px;
+    }
+    
+    .subscription-modal-button {
+        padding: 14px 20px;
+        font-size: 14px;
+    }
+}

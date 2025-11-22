@@ -89,21 +89,22 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Закрытие чата по клику вне окна
+        // Закрытие чата по клику вне окна (но не при клике внутри чата)
         document.addEventListener('click', function(e) {
-            if (!chatModal.contains(e.target) && !chatButton.contains(e.target)) {
-                chatModal.classList.remove('active');
+            // Не закрываем, если клик был внутри модального окна чата
+            if (chatModal.contains(e.target) || chatButton.contains(e.target)) {
+                return;
             }
+            // Не закрываем, если это клик по кнопкам или input внутри чата
+            if (e.target.closest('.quick-action-btn') || 
+                e.target.closest('.chat-input-inline') ||
+                e.target.closest('.user-message-input')) {
+                return;
+            }
+            chatModal.classList.remove('active');
         });
         
-        // Обработчики кнопок быстрых действий (пока заглушки)
-        const quickActionBtns = document.querySelectorAll('.quick-action-btn');
-        quickActionBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const action = this.getAttribute('data-action');
-                // Здесь будет функционал для каждой кнопки
-            });
-        });
+        // Обработчики кнопок быстрых действий теперь в chat-bot.js
     }
 
     // Mobile off-canvas menu

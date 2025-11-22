@@ -159,6 +159,161 @@
         font-size: 2rem;
     }
 }
+
+/* Кнопка поделиться */
+.share-favorites-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--c21-gold), var(--c21-gold-dark));
+    color: var(--c21-dark);
+    border: none;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(190, 175, 135, 0.3);
+    transition: all 0.3s ease;
+}
+
+.share-favorites-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(190, 175, 135, 0.4);
+}
+
+.share-favorites-btn i {
+    font-size: 18px;
+}
+
+/* Модальное окно поделиться */
+.share-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.share-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    z-index: 10001;
+}
+
+.share-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.share-modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--c21-dark);
+}
+
+.share-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #666;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.share-modal-close:hover {
+    background: #f8f9fa;
+    color: var(--c21-dark);
+}
+
+.share-modal-body {
+    padding: 24px;
+}
+
+.share-link-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.share-link-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #f8f9fa;
+    color: var(--c21-dark);
+}
+
+.share-link-input:focus {
+    outline: none;
+    border-color: var(--c21-gold);
+}
+
+.copy-link-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--c21-gold), var(--c21-gold-dark));
+    color: var(--c21-dark);
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.copy-link-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(190, 175, 135, 0.3);
+}
+
+.copy-success-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: #d4edda;
+    color: #155724;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.copy-success-message i {
+    color: #28a745;
+}
 </style>
 {% endblock %}
 
@@ -166,8 +321,16 @@
 <div class="container">
     <div class="favorites-page">
         <div class="favorites-header">
-            <h1>Избранное</h1>
-            <p>Ваши сохраненные объекты недвижимости</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <h1>Избранное</h1>
+                    <p>Ваши сохраненные объекты недвижимости</p>
+                </div>
+                <button id="share-favorites-btn" class="share-favorites-btn" style="display: none;">
+                    <i class="fas fa-share-alt"></i>
+                    <span>Поделиться</span>
+                </button>
+            </div>
         </div>
         
         <div id="favorites-empty" class="favorites-empty" style="display: none;">
@@ -183,6 +346,33 @@
     </div>
 </div>
 
+<!-- Модальное окно для поделиться -->
+<div id="share-modal" class="share-modal" style="display: none;">
+    <div class="share-modal-overlay"></div>
+    <div class="share-modal-content">
+        <div class="share-modal-header">
+            <h3>Поделиться подборкой</h3>
+            <button class="share-modal-close" id="share-modal-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="share-modal-body">
+            <p style="margin-bottom: 16px; color: #666;">Скопируйте ссылку, чтобы поделиться подборкой:</p>
+            <div class="share-link-container">
+                <input type="text" id="share-link-input" class="share-link-input" readonly>
+                <button id="copy-link-btn" class="copy-link-btn">
+                    <i class="fas fa-copy"></i>
+                    <span>Копировать</span>
+                </button>
+            </div>
+            <div id="copy-success-message" class="copy-success-message" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <span>Ссылка скопирована!</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     loadFavorites();
@@ -192,17 +382,20 @@ function loadFavorites() {
     const favorites = getFavorites();
     const grid = document.getElementById('favorites-grid');
     const empty = document.getElementById('favorites-empty');
+    const shareBtn = document.getElementById('share-favorites-btn');
     
     const allIds = [...favorites.complexes, ...favorites.apartments];
     
     if (allIds.length === 0) {
         grid.style.display = 'none';
         empty.style.display = 'block';
+        if (shareBtn) shareBtn.style.display = 'none';
         return;
     }
     
     grid.style.display = 'grid';
     empty.style.display = 'none';
+    if (shareBtn) shareBtn.style.display = 'flex';
     
     // Загружаем данные о ЖК
     const complexPromises = favorites.complexes.map(id => 
@@ -381,7 +574,7 @@ function renderFavoriteCard(item) {
         }
         
         return `
-            <div class="favorite-card" onclick="window.location.href='/apartment/${item.complexId}/${item.apartmentId}/'">
+            <div class="favorite-card" onclick="window.location.href='/apartment/${item.complexId}/${item.apartmentId}/?from=favorites'">
                 <img src="${image}" alt="${escapeHtml(title)}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
                 <div class="favorite-card-content">
                     <h3 class="favorite-card-title">${escapeHtml(title)}</h3>
@@ -422,6 +615,134 @@ function formatPrice(price) {
         return priceStr;
     }
 }
+
+// Обработка кнопки поделиться
+document.addEventListener('DOMContentLoaded', function() {
+    const shareBtn = document.getElementById('share-favorites-btn');
+    const shareModal = document.getElementById('share-modal');
+    const shareModalClose = document.getElementById('share-modal-close');
+    const copyBtn = document.getElementById('copy-link-btn');
+    const shareLinkInput = document.getElementById('share-link-input');
+    const copySuccessMessage = document.getElementById('copy-success-message');
+    
+    if (shareBtn) {
+        shareBtn.addEventListener('click', async function() {
+            const favorites = getFavorites();
+            const allIds = [...favorites.complexes, ...favorites.apartments];
+            
+            if (allIds.length === 0) {
+                alert('Добавьте объекты в избранное, чтобы поделиться подборкой');
+                return;
+            }
+            
+            // Формируем данные для сохранения подборки
+            const complexes = [];
+            const apartmentMap = {};
+            
+            // Группируем квартиры по ЖК
+            favorites.apartments.forEach(fullId => {
+                const parts = fullId.split('_');
+                if (parts.length >= 2) {
+                    const complexId = parts[0];
+                    const apartmentId = parts.slice(1).join('_');
+                    if (!apartmentMap[complexId]) {
+                        apartmentMap[complexId] = [];
+                    }
+                    apartmentMap[complexId].push(apartmentId);
+                }
+            });
+            
+            // Добавляем ЖК с квартирами
+            Object.keys(apartmentMap).forEach(complexId => {
+                complexes.push({
+                    complex_id: complexId,
+                    apartment_ids: apartmentMap[complexId]
+                });
+            });
+            
+            // Добавляем ЖК без конкретных квартир
+            favorites.complexes.forEach(complexId => {
+                if (!apartmentMap[complexId]) {
+                    complexes.push({
+                        complex_id: complexId,
+                        apartment_ids: []
+                    });
+                }
+            });
+            
+            try {
+                // Сохраняем подборку
+                const response = await fetch('/api/apartment-selections/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: 'Подборка из избранного',
+                        complexes: complexes
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.selection_id) {
+                    // Формируем короткую ссылку
+                    const shortLink = `${window.location.origin}/selection/${result.selection_id}/`;
+                    shareLinkInput.value = shortLink;
+                    shareModal.style.display = 'flex';
+                } else {
+                    alert('Ошибка создания подборки: ' + (result.error || 'Неизвестная ошибка'));
+                }
+            } catch (error) {
+                console.error('Ошибка сохранения подборки:', error);
+                alert('Ошибка подключения к серверу');
+            }
+        });
+    }
+    
+    // Закрытие модального окна
+    if (shareModalClose) {
+        shareModalClose.addEventListener('click', function() {
+            shareModal.style.display = 'none';
+            copySuccessMessage.style.display = 'none';
+        });
+    }
+    
+    if (shareModal) {
+        shareModal.addEventListener('click', function(e) {
+            if (e.target === shareModal || e.target.classList.contains('share-modal-overlay')) {
+                shareModal.style.display = 'none';
+                copySuccessMessage.style.display = 'none';
+            }
+        });
+    }
+    
+    // Копирование ссылки
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+            shareLinkInput.select();
+            shareLinkInput.setSelectionRange(0, 99999); // Для мобильных устройств
+            
+            try {
+                document.execCommand('copy');
+                copySuccessMessage.style.display = 'flex';
+                setTimeout(() => {
+                    copySuccessMessage.style.display = 'none';
+                }, 3000);
+            } catch (err) {
+                // Fallback для современных браузеров
+                navigator.clipboard.writeText(shareLinkInput.value).then(() => {
+                    copySuccessMessage.style.display = 'flex';
+                    setTimeout(() => {
+                        copySuccessMessage.style.display = 'none';
+                    }, 3000);
+                }).catch(() => {
+                    alert('Не удалось скопировать ссылку. Скопируйте вручную.');
+                });
+            }
+        });
+    }
+});
 </script>
 {% endblock %}
 

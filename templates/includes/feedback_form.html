@@ -344,12 +344,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         window.addEventListener('scroll', function() {
             const feedbackSection = document.querySelector('.feedback-section');
+            const footerTransition = document.querySelector('.footer-transition');
             if (feedbackSection) {
                 const rect = feedbackSection.getBoundingClientRect();
                 const scrolled = window.pageYOffset;
-                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                
+                // Проверяем, не близко ли форма к футеру
+                let shouldLimit = false;
+                if (footerTransition) {
+                    const footerRect = footerTransition.getBoundingClientRect();
+                    const distanceToFooter = footerRect.top - rect.bottom;
+                    // Если до футера меньше 200px, ограничиваем параллакс
+                    if (distanceToFooter < 200) {
+                        shouldLimit = true;
+                    }
+                }
+                
+                if (rect.top < window.innerHeight && rect.bottom > 0 && !shouldLimit) {
                     const rate = (scrolled - rect.top) * 0.05;
-                    feedbackSection.style.transform = `translateY(${rate}px)`;
+                    // Ограничиваем максимальное смещение
+                    const maxRate = 30;
+                    const limitedRate = Math.min(rate, maxRate);
+                    feedbackSection.style.transform = `translateY(${limitedRate}px)`;
+                } else if (shouldLimit) {
+                    // Сбрасываем transform когда близко к футеру
+                    feedbackSection.style.transform = 'translateY(0)';
                 }
             }
         });

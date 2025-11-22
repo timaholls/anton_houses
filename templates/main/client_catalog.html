@@ -351,7 +351,26 @@ async function loadApartments() {
             }
             
             // Формируем ссылку на детальную страницу
-            const detailUrl = `/apartment/${apt.complex_id}/${apt.id}/`;
+            // ID квартиры должен быть в формате type_index (без complex_id в начале)
+            let apartmentId = apt.id;
+            if (apartmentId) {
+                // Если ID содержит complex_id в начале, убираем его
+                const parts = String(apartmentId).split('_');
+                if (parts.length >= 3 && parts[0] === apt.complex_id) {
+                    // Формат: complex_id_type_index -> используем type_index
+                    apartmentId = `${parts[1]}_${parts[2]}`;
+                } else if (parts.length >= 2 && parts[0] === apt.complex_id) {
+                    // Формат: complex_id_rest -> используем rest
+                    apartmentId = parts.slice(1).join('_');
+                }
+            } else if (apt.type !== undefined && apt.index !== undefined) {
+                // Формируем из type и index
+                apartmentId = `${apt.type}_${apt.index}`;
+            } else {
+                // Fallback
+                apartmentId = '0_0';
+            }
+            const detailUrl = `/apartment/${apt.complex_id}/${apartmentId}/`;
             
             return `
                 <div class="apartment-card-compact" onclick="window.location.href='${detailUrl}'">

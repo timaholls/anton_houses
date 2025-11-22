@@ -168,12 +168,95 @@
     {% endblock %}
 </main>
 
+<!-- Кнопка избранного -->
+<div class="favorites-button-container" id="favorites-button-container" style="display: none;">
+    <a href="{% url 'main:favorites' %}" class="favorites-button" id="favorites-button">
+        <i class="fas fa-heart"></i>
+        <span class="favorites-text">Избранное</span>
+        <span class="favorites-badge" id="favorites-badge-floating">0</span>
+    </a>
+</div>
+
 <!-- Кнопка чата -->
 <div class="chat-button-container">
     <button class="chat-button" id="chat-button">
         <i class="fas fa-comments"></i>
         <span class="chat-text">Чат</span>
     </button>
+</div>
+
+<!-- Модальное окно подписки -->
+<div class="subscription-modal-overlay" id="subscription-modal-overlay">
+    <div class="subscription-modal" id="subscription-modal">
+        <button class="subscription-modal-close" id="subscription-modal-close" aria-label="Закрыть">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="subscription-modal-content">
+            <div class="subscription-modal-header">
+                <div class="subscription-modal-icon">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+                <h2 class="subscription-modal-title">Подпишитесь на обновления</h2>
+                <p class="subscription-modal-subtitle">Получайте эксклюзивную информацию первыми!</p>
+            </div>
+            
+            <div class="subscription-benefits">
+                <div class="subscription-benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Информация о закрытых продажах</span>
+                </div>
+                <div class="subscription-benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Инвестиционные предложения</span>
+                </div>
+                <div class="subscription-benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Заранее старты продаж ЖК</span>
+                </div>
+                <div class="subscription-benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Специальные предложения</span>
+                </div>
+                <div class="subscription-benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Новости недвижимости</span>
+                </div>
+            </div>
+            
+            <form class="subscription-modal-form" id="subscription-modal-form">
+                <div class="subscription-modal-form-row">
+                    <div class="subscription-modal-form-group">
+                        <label for="subscription-modal-name">Ваше имя</label>
+                        <input type="text" id="subscription-modal-name" name="name" placeholder="Введите ваше имя" required>
+                    </div>
+                    
+                    <div class="subscription-modal-form-group">
+                        <label for="subscription-modal-email">Email адрес</label>
+                        <input type="email" id="subscription-modal-email" name="email" placeholder="Введите ваш email" required>
+                    </div>
+                </div>
+                
+                <div class="subscription-modal-checkboxes">
+                    <div class="subscription-modal-checkbox">
+                        <input type="checkbox" id="subscription-modal-projects" name="subscribe_to_projects" checked>
+                        <label for="subscription-modal-projects">Уведомления о новых будущих проектах</label>
+                    </div>
+                    
+                    <div class="subscription-modal-checkbox">
+                        <input type="checkbox" id="subscription-modal-promotions" name="subscribe_to_promotions" checked>
+                        <label for="subscription-modal-promotions">Уведомления о новых акциях</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="subscription-modal-button" id="subscription-modal-button">
+                    <span>Подписаться</span>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+                
+                <div class="subscription-modal-message" id="subscription-modal-message"></div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Окно чата -->
@@ -202,11 +285,11 @@
                     </div>
 
                     <div class="quick-actions">
-                        <button class="quick-action-btn" data-action="property">
-                            Продать недвижимость
+                        <button class="quick-action-btn" data-action="sell">
+                            Продать
                         </button>
-                        <button class="quick-action-btn" data-action="agent">
-                            Подобрать агента
+                        <button class="quick-action-btn" data-action="buy">
+                            Купить
                         </button>
                         <button class="quick-action-btn" data-action="question">
                             Задать вопрос
@@ -373,6 +456,8 @@
 <script src="{% static 'js/anchor-scroll.js' %}"></script>
 <script src="{% static 'js/dropdown-menu.js' %}"></script>
 <script src="{% static 'js/favorites.js' %}"></script>
+<script src="{% static 'js/chat-bot.js' %}"></script>
+<script src="{% static 'js/subscription-modal.js' %}"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html> 

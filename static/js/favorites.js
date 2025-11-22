@@ -180,6 +180,31 @@ function updateFavoritesCount() {
             mobileCountElement.style.display = 'none';
         }
     }
+    
+    // Обновить плавающую кнопку избранного
+    updateFavoritesFloatingButton();
+}
+
+/**
+ * Обновить плавающую кнопку избранного
+ */
+function updateFavoritesFloatingButton() {
+    const favorites = getFavorites();
+    const totalCount = favorites.complexes.length + favorites.apartments.length;
+    
+    const buttonContainer = document.getElementById('favorites-button-container');
+    const badgeElement = document.getElementById('favorites-badge-floating');
+    
+    if (buttonContainer) {
+        if (totalCount > 0) {
+            buttonContainer.style.display = 'block';
+            if (badgeElement) {
+                badgeElement.textContent = totalCount;
+            }
+        } else {
+            buttonContainer.style.display = 'none';
+        }
+    }
 }
 
 /**
@@ -256,8 +281,12 @@ window.toggleApartmentFavoriteHandler = function(complexId, apartmentId, button)
 
 // Инициализация при загрузке DOM
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initFavorites);
+    document.addEventListener('DOMContentLoaded', function() {
+        initFavorites();
+        updateFavoritesFloatingButton();
+    });
 } else {
     initFavorites();
+    updateFavoritesFloatingButton();
 }
 

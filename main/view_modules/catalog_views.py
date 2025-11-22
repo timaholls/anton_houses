@@ -1,6 +1,8 @@
 """Views для каталога жилых комплексов и недвижимости"""
 import json
 import re
+import sys
+from datetime import datetime, date
 from django.shortcuts import render
 from django.http import Http404, JsonResponse
 from django.core.paginator import Paginator
@@ -10,14 +12,264 @@ from ..utils import get_video_thumbnail
 from ..s3_service import PLACEHOLDER_IMAGE_URL
 
 
+def parse_completion_date(completion_date_str):
+    """Парсит строку срока сдачи вида '4 кв. 2017 — 2 кв. 2027' или '3 кв. 2024 – 3 кв. 2027'
+    Возвращает максимальную дату (последний квартал)"""
+    if not completion_date_str:
+        return None
+    
+    import re
+    # Ищем паттерны типа "4 кв. 2017" или "2 кв. 2027"
+    patterns = re.findall(r'(\d+)\s*кв\.\s*(\d{4})', completion_date_str)
+    
+    if not patterns:
+        return None
+    
+    # Берем максимальную дату (последний квартал в диапазоне)
+    max_date = None
+    for quarter_str, year_str in patterns:
+        try:
+            quarter = int(quarter_str)
+            year = int(year_str)
+            
+            # Вычисляем последний день квартала
+            if quarter == 1:
+                end_date = date(year, 3, 31)
+            elif quarter == 2:
+                end_date = date(year, 6, 30)
+            elif quarter == 3:
+                end_date = date(year, 9, 30)
+            elif quarter == 4:
+                end_date = date(year, 12, 31)
+            else:
+                continue
+            
+            if not max_date or end_date > max_date:
+                max_date = end_date
+        except (ValueError, TypeError):
+            continue
+    
+    return max_date
+
+
+def get_all_delivery_dates_from_db():
+    """Получает все уникальные сроки сдачи из базы данных"""
+    try:
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        all_records = list(unified_col.find({}))
+        
+        delivery_dates = set()
+        
+        for record in all_records:
+            # Получаем срок сдачи из parameters
+            completion_date_str = None
+            
+            if 'development' in record and 'avito' not in record:
+                # Новая структура
+                dev = record.get('development', {})
+                parameters = dev.get('parameters', {})
+                completion_date_str = parameters.get('Срок сдачи', '')
+            else:
+                # Старая структура
+                avito_dev = record.get('avito', {}).get('development', {})
+                if avito_dev:
+                    parameters = avito_dev.get('parameters', {})
+                    completion_date_str = parameters.get('Срок сдачи', '')
+                
+                if not completion_date_str:
+                    domrf_dev = record.get('domrf', {}).get('development', {})
+                    if domrf_dev:
+                        parameters = domrf_dev.get('parameters', {})
+                        completion_date_str = parameters.get('Срок сдачи', '')
+            
+            if completion_date_str:
+                # Парсим срок сдачи и добавляем максимальную дату из диапазона
+                parsed_date = parse_completion_date(completion_date_str)
+                if parsed_date:
+                    delivery_dates.add(parsed_date)
+        
+        return sorted(list(delivery_dates))
+    except Exception as e:
+        print(f"Ошибка получения сроков сдачи из базы: {e}")
+        return []
+
+
+def get_delivery_quarters():
+    """Генерирует список кварталов на основе реальных данных из базы"""
+    print("=" * 60)
+    print("🔍 [get_delivery_quarters] Начало генерации кварталов")
+    sys.stdout.flush()
+    
+    current_date = datetime.now().date()
+    current_year = current_date.year
+    current_month = current_date.month
+    current_quarter = (current_month - 1) // 3 + 1
+    
+    print(f"📅 Текущая дата: {current_date}")
+    print(f"📅 Текущий год: {current_year}")
+    print(f"📅 Текущий месяц: {current_month}")
+    print(f"📅 Текущий квартал: Q{current_quarter}")
+    sys.stdout.flush()
+    
+    print("\n🔹 Получение сроков сдачи из базы данных...")
+    sys.stdout.flush()
+    
+    # Получаем все уникальные сроки сдачи из базы
+    all_delivery_dates = get_all_delivery_dates_from_db()
+    
+    print(f"📊 Найдено уникальных сроков сдачи: {len(all_delivery_dates)}")
+    sys.stdout.flush()
+    
+    # Создаем множество кварталов из всех дат
+    quarters_set = set()
+    
+    for delivery_date in all_delivery_dates:
+        # Пропускаем прошедшие даты
+        if delivery_date < current_date:
+            continue
+        
+        year = delivery_date.year
+        month = delivery_date.month
+        
+        # Определяем квартал по месяцу
+        if month <= 3:
+            quarter = 1
+        elif month <= 6:
+            quarter = 2
+        elif month <= 9:
+            quarter = 3
+        else:
+            quarter = 4
+        
+        # Вычисляем последний день квартала
+        if quarter == 1:
+            end_date = date(year, 3, 31)
+        elif quarter == 2:
+            end_date = date(year, 6, 30)
+        elif quarter == 3:
+            end_date = date(year, 9, 30)
+        else:  # quarter == 4
+            end_date = date(year, 12, 31)
+        
+        quarters_set.add((year, quarter, end_date))
+    
+    # Преобразуем в список и сортируем
+    quarters_list = []
+    for year, quarter, end_date in sorted(quarters_set):
+        value = f"Q{quarter}_{year}"
+        label = f"До {quarter} квартала {year} года"
+        
+        quarters_list.append({
+            'value': value,
+            'label': label,
+            'end_date': end_date,
+            'year': year,
+            'quarter': quarter
+        })
+    
+    print(f"📊 Сгенерировано уникальных кварталов: {len(quarters_list)}")
+    for i, q in enumerate(quarters_list, 1):
+        print(f"   {i}. {q['label']} ({q['value']})")
+    print("=" * 60)
+    sys.stdout.flush()
+    
+    return quarters_list
+
+
 def client_catalog(request):
     """Каталог квартир для клиентов - страница с выбранными квартирами"""
+    # Проверяем, есть ли параметр selection_id (короткая ссылка)
+    selection_id = request.GET.get('selection_id', '').strip()
+    if selection_id:
+        # Если есть selection_id, получаем подборку и формируем параметры
+        from ..services.mongo_service import get_mongo_connection
+        from bson import ObjectId
+        
+        try:
+            db = get_mongo_connection()
+            selections_col = db['apartment_selections']
+            selection = selections_col.find_one({'_id': ObjectId(selection_id)})
+            
+            if selection:
+                complexes = selection.get('complexes', [])
+                complex_ids = []
+                apartment_ids = []
+                
+                for comp in complexes:
+                    complex_id = comp.get('complex_id', '')
+                    if complex_id:
+                        complex_ids.append(str(complex_id))
+                        apt_ids = comp.get('apartment_ids', [])
+                        for apt_id in apt_ids:
+                            apartment_ids.append(f"{complex_id}_{apt_id}")
+                
+                # Формируем URL с параметрами
+                from django.shortcuts import redirect
+                complexes_param = ','.join(complex_ids)
+                apartments_param = ','.join(apartment_ids)
+                redirect_url = f"/client-catalog/?complexes={complexes_param}"
+                if apartments_param:
+                    redirect_url += f"&apartments={apartments_param}"
+                return redirect(redirect_url)
+        except Exception as e:
+            # Если ошибка, просто показываем страницу без параметров
+            pass
+    
     return render(request, 'main/client_catalog.html')
 
 
 def favorites(request):
     """Страница избранного"""
     return render(request, 'main/favorites.html')
+
+
+def selection_view(request, selection_id):
+    """Редирект на client-catalog с параметрами из подборки"""
+    from django.shortcuts import redirect
+    from ..services.mongo_service import get_mongo_connection
+    from bson import ObjectId
+    
+    try:
+        db = get_mongo_connection()
+        selections_col = db['apartment_selections']
+        selection = selections_col.find_one({'_id': ObjectId(selection_id)})
+        
+        if not selection:
+            # Если подборка не найдена, редиректим на каталог
+            return redirect('main:catalog')
+        
+        complexes = selection.get('complexes', [])
+        complex_ids = []
+        apartment_ids = []
+        
+        for comp in complexes:
+            complex_id = comp.get('complex_id', '')
+            if complex_id:
+                # Убеждаемся, что complex_id - это строка
+                complex_id_str = str(complex_id)
+                complex_ids.append(complex_id_str)
+                apt_ids = comp.get('apartment_ids', [])
+                for apt_id in apt_ids:
+                    # Формируем полный ID квартиры: complexId_apartmentId
+                    # Если apt_id уже содержит complex_id, не дублируем
+                    if apt_id.startswith(complex_id_str + '_'):
+                        apartment_ids.append(apt_id)
+                    else:
+                        apartment_ids.append(f"{complex_id_str}_{apt_id}")
+        
+        # Формируем URL с параметрами
+        from urllib.parse import urlencode
+        params = {'complexes': ','.join(complex_ids)}
+        if apartment_ids:
+            params['apartments'] = ','.join(apartment_ids)
+        
+        redirect_url = f"/client-catalog/?{urlencode(params)}"
+        return redirect(redirect_url)
+        
+    except Exception as e:
+        # Если ошибка, редиректим на каталог
+        return redirect('main:catalog')
 
 
 def format_currency(value):
@@ -111,6 +363,11 @@ def get_complexes_list_for_filter():
 
 def catalog(request):
     """Каталог ЖК - теперь только рендерит шаблон, данные загружаются через API"""
+    print("\n" + "="*80)
+    print("🎯 [catalog] Функция catalog() вызвана")
+    print("="*80)
+    sys.stdout.flush()
+    
     page = request.GET.get('page', 1)
 
     # Получаем параметры фильтрации для начального состояния формы
@@ -122,7 +379,7 @@ def catalog(request):
     area_to = request.GET.get('area_to', '')
     price_from = request.GET.get('price_from', '')
     price_to = request.GET.get('price_to', '')
-    delivery_date = request.GET.get('delivery_date', '')
+    delivery_quarter = request.GET.get('delivery_quarter', '')
     has_offers = request.GET.get('has_offers', '')
     sort = request.GET.get('sort', 'price_asc')
     # Получаем выбранные ЖК (может быть несколько через запятую)
@@ -160,16 +417,15 @@ def catalog(request):
         districts = []
         streets = []
 
-    # Получаем ипотечные программы для фильтра
-    try:
-        db = get_mongo_connection()
-        mortgage_docs = list(db['mortgage_programs'].find({'is_active': True}).sort('rate', 1))
-        class MortgageProgram:
-            def __init__(self, id, name, is_individual=False):
-                self.id, self.name, self.is_individual = id, name, is_individual
-        mortgage_programs = [MortgageProgram(str(d.get('_id')), d.get('name',''), d.get('is_individual', False)) for d in mortgage_docs]
-    except Exception:
-        mortgage_programs = []
+    # Генерируем список кварталов для фильтра по сроку сдачи
+    print("\n" + "="*80)
+    print("🚀 [catalog view] Вызов get_delivery_quarters()")
+    print("="*80)
+    sys.stdout.flush()
+    delivery_quarters = get_delivery_quarters()
+    print(f"✅ [catalog view] Получено кварталов: {len(delivery_quarters)}")
+    print("="*80 + "\n")
+    sys.stdout.flush()
 
     # Получаем список ЖК для фильтра по названиям
     complexes_list = get_complexes_list_for_filter()
@@ -196,7 +452,7 @@ def catalog(request):
         'streets': streets,
         'complexes_list': complexes_list,
         'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
-        'mortgage_programs': mortgage_programs,
+        'delivery_quarters': delivery_quarters,
         'filters': {
             'rooms': rooms,
             'city': city,
@@ -206,7 +462,7 @@ def catalog(request):
             'area_to': area_to,
             'price_from': price_from,
             'price_to': price_to,
-            'delivery_date': delivery_date,
+            'delivery_quarter': delivery_quarter,
             'has_offers': has_offers,
             'sort': sort,
             'complexes': selected_complexes,
@@ -276,7 +532,21 @@ def detail(request, complex_id):
                 
                 # Основные данные
                 name = development.get('name', 'Без названия')
-                address = development.get('address', '').split('/')[0].strip()
+                address_raw = development.get('address', '')
+                if address_raw:
+                    address = address_raw.split('/')[0].strip()
+                else:
+                    # Формируем адрес из города и улицы, если есть
+                    city = record.get('city', '') or development.get('city', '')
+                    street = record.get('street', '') or development.get('street', '')
+                    if city and street:
+                        address = f"{street}, {city}"
+                    elif street:
+                        address = street
+                    elif city:
+                        address = city
+                    else:
+                        address = ''
                 price_range = development.get('price_range', '')
                 
                 # Фото ЖК
@@ -304,7 +574,21 @@ def detail(request, complex_id):
                 
                 # Основные данные
                 name = avito_dev.get('name') or domclick_dev.get('complex_name') or domrf_data.get('name', 'Без названия')
-                address = avito_dev.get('address', '').split('/')[0].strip() if avito_dev.get('address') else ''
+                address_raw = avito_dev.get('address', '') or domclick_dev.get('address', '')
+                if address_raw:
+                    address = address_raw.split('/')[0].strip()
+                else:
+                    # Формируем адрес из города и улицы, если есть
+                    city = record.get('city', '') or avito_dev.get('city', '') or domclick_dev.get('city', '')
+                    street = record.get('street', '') or avito_dev.get('street', '') or domclick_dev.get('street', '')
+                    if city and street:
+                        address = f"{street}, {city}"
+                    elif street:
+                        address = street
+                    elif city:
+                        address = city
+                    else:
+                        address = ''
                 price_range = avito_dev.get('price_range', '')
                 
                 # Фото ЖК из domclick
@@ -713,6 +997,23 @@ def secondary_detail_mongo(request, complex_id: str):
                 self.city = data.get('city', '')
                 self.district = data.get('district', '')
                 self.street = data.get('street', '')
+                # Формируем адрес из улицы и города, или используем поле address если есть
+                address_raw = data.get('address', '')
+                if address_raw:
+                    self.address = address_raw.split('/')[0].strip() if '/' in address_raw else address_raw.strip()
+                elif data.get('street') or data.get('city'):
+                    street = data.get('street', '')
+                    city = data.get('city', '')
+                    if street and city:
+                        self.address = f"{street}, {city}"
+                    elif street:
+                        self.address = street
+                    elif city:
+                        self.address = city
+                    else:
+                        self.address = ''
+                else:
+                    self.address = ''
                 self.commute_time = data.get('commute_time', '')
                 self.area_from = data.get('area', 0)
                 self.area_to = data.get('area', 0)
@@ -1077,6 +1378,11 @@ def _catalog_fallback(request, kind: str, title: str):
     """Рендер каталога без необходимости иметь запись CatalogLanding.
     kind: 'newbuild'|'secondary'
     """
+    print("\n" + "="*80)
+    print(f"🎯 [_catalog_fallback] Вызвана с kind='{kind}', title='{title}'")
+    print("="*80)
+    sys.stdout.flush()
+    
     if kind == 'secondary':
         queryset = []
     else:
@@ -1121,6 +1427,18 @@ def _catalog_fallback(request, kind: str, title: str):
 
     # Получаем список ЖК для фильтра
     complexes_list = get_complexes_list_for_filter()
+    
+    # Генерируем список кварталов для фильтра по сроку сдачи (только для новостроек)
+    delivery_quarters = []
+    if kind == 'newbuild':
+        print("\n" + "="*80)
+        print("🚀 [_catalog_fallback] Вызов get_delivery_quarters() для новостроек")
+        print("="*80)
+        sys.stdout.flush()
+        delivery_quarters = get_delivery_quarters()
+        print(f"✅ [_catalog_fallback] Получено кварталов: {len(delivery_quarters)}")
+        print("="*80 + "\n")
+        sys.stdout.flush()
 
     context = {
         'complexes': page_obj,
@@ -1131,6 +1449,7 @@ def _catalog_fallback(request, kind: str, title: str):
         'streets': streets,
         'complexes_list': complexes_list,
         'rooms_choices': [('Студия', 'Студия'), ('1', '1-комнатная'), ('2', '2-комнатная'), ('3', '3-комнатная'), ('4', '4-комнатная'), ('5+', '5+ комнат')],
+        'delivery_quarters': delivery_quarters,
         'filters': ({'stype': request.GET.get('stype', '')} if kind == 'secondary' else {}),
         'filters_applied': True,
         'page_title': title,
@@ -1144,10 +1463,20 @@ def _catalog_fallback(request, kind: str, title: str):
 
 def newbuild_index(request):
     # Стартовая страница новостроек - читает из MongoDB
+    print("\n" + "="*80)
+    print("🎯 [newbuild_index] Функция newbuild_index() вызвана")
+    print("="*80)
+    sys.stdout.flush()
+    
     db = get_mongo_connection()
     landing = db['catalog_landings'].find_one({'kind': 'newbuild', 'category': 'all', 'is_active': True})
     if landing:
+        print(f"✅ [newbuild_index] Найден landing, переход в catalog_landing")
+        sys.stdout.flush()
         return catalog_landing(request, slug=landing['slug'])
+    
+    print(f"✅ [newbuild_index] Landing не найден, переход в _catalog_fallback")
+    sys.stdout.flush()
     return _catalog_fallback(request, kind='newbuild', title='Новостройки')
 
 

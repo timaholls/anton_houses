@@ -1846,6 +1846,16 @@ def get_future_project(request, project_id):
             }, status=404)
         
         # Форматируем для отображения
+        # Получаем фото ЖК (может быть в gallery_photos или images)
+        gallery_photos = project.get('gallery_photos', project.get('images', []))
+        if not isinstance(gallery_photos, list):
+            gallery_photos = []
+        
+        # Получаем ход строительства
+        construction_progress = project.get('construction_progress', {})
+        if not isinstance(construction_progress, dict):
+            construction_progress = {}
+        
         formatted_project = {
             '_id': str(project['_id']),
             'name': project.get('name', 'Без названия'),
@@ -1858,6 +1868,9 @@ def get_future_project(request, project_id):
             'developer': project.get('developer', ''),
             'description': project.get('description', ''),
             'price_from': project.get('price_from', 0),
+            'gallery_photos': gallery_photos,
+            'images': gallery_photos,  # Для обратной совместимости
+            'construction_progress': construction_progress,
             'created_at': project.get('created_at', ''),
             'updated_at': project.get('updated_at', '')
         }
@@ -2934,6 +2947,14 @@ def upload_base64_photo(request):
             unified_id = data.get('unified_id', 'general')
             room_type = data.get('room_type', 'general')
             s3_key = f"unified_houses/{unified_id}/apartments/{room_type}/{filename}"
+        elif photo_type == 'future_project':
+            # Для будущих проектов используем project_id или общую папку
+            project_id = data.get('project_id', data.get('unified_id', 'general'))
+            room_type = data.get('room_type', 'gallery')  # gallery или construction
+            if room_type == 'construction':
+                s3_key = f"future_complexes/{project_id}/construction/{filename}"
+            else:  # gallery
+                s3_key = f"future_complexes/{project_id}/gallery/{filename}"
         else:  # unified / development
             unified_id = data.get('unified_id', 'general')
             s3_key = f"unified_houses/{unified_id}/development/{filename}"
@@ -3709,11 +3730,27 @@ def get_client_catalog_apartments(request):
                     'error': f'Не найдены ЖК с ID: {", ".join(missing_ids)}'
                 }, status=404)
         
+        # Создаем словарь для быстрого поиска: complex_id -> [apartment_ids]
+        # Это нужно для определения, какие квартиры показывать для каждого ЖК
+        complex_apartments_map = {}
+        for apt_id_param in apartment_ids:
+            parts = apt_id_param.split('_', 1)  # Разделяем на complex_id и остальное
+            if len(parts) == 2:
+                complex_id_str = parts[0]
+                apt_id_part = parts[1]
+                if complex_id_str not in complex_apartments_map:
+                    complex_apartments_map[complex_id_str] = []
+                complex_apartments_map[complex_id_str].append(apt_id_part)
+        
         # Собираем все квартиры из выбранных ЖК
         all_apartments = []
         
         for complex_data in complexes:
             complex_id = str(complex_data['_id'])
+            # Получаем список apartment_ids для этого ЖК (если есть)
+            this_complex_apartment_ids = complex_apartments_map.get(complex_id, [])
+            # Если список пустой, значит показываем все квартиры из ЖК
+            show_all_apartments = len(this_complex_apartment_ids) == 0
             
             # Определяем название и адрес ЖК
             complex_name = ''
@@ -3769,24 +3806,56 @@ def get_client_catalog_apartments(request):
             # Группируем квартиры по типам для правильной генерации ID (как в get_complexes_with_apartments)
             apartments_by_type = {}  # {apt_type: [apartments]}
             for apt_type, apt_data in apartment_types_data.items():
-                apartments_by_type[apt_type] = apt_data.get('apartments', [])
+                apartments_list = apt_data.get('apartments', [])
+                if apartments_list:
+                    apartments_by_type[apt_type] = apartments_list
+            
+            # Если указаны конкретные квартиры, создаем множество для быстрого поиска
+            apartment_ids_set = set()
+            if apartment_ids:
+                apartment_ids_set = {aid.strip() for aid in apartment_ids}
             
             for apt_type, apartments in apartments_by_type.items():
                 for apt_index, apt in enumerate(apartments):
                     # Генерируем ID квартиры (должно совпадать с get_complexes_with_apartments)
-                    apt_id = apt.get('_id')
-                    if not apt_id:
-                        # Используем индекс внутри типа (как в get_complexes_with_apartments)
-                        apt_id = f"{complex_id}_{apt_type}_{apt_index}"
-                    else:
-                        apt_id = str(apt_id)
+                    # Всегда используем формат complex_id_type_index для URL
+                    generated_id = f"{complex_id}_{apt_type}_{apt_index}"
+                    apt_id_part = f"{apt_type}_{apt_index}"
+                    # Используем generated_id как основной ID для URL
+                    apt_id = generated_id
                     
-                    # Если указаны конкретные квартиры, фильтруем
-                    if apartment_ids:
-                        # Проверяем точное совпадение
-                        apt_id_normalized = apt_id.strip()
-                        apartment_ids_normalized = [aid.strip() for aid in apartment_ids]
-                        if apt_id_normalized not in apartment_ids_normalized:
+                    # Если указаны конкретные квартиры для этого ЖК, фильтруем
+                    if not show_all_apartments and this_complex_apartment_ids:
+                        # Проверяем разные варианты совпадения
+                        found_match = False
+                        
+                        # Нормализуем для сравнения
+                        apt_id_part_clean = apt_id_part.strip()
+                        this_complex_apartment_ids_clean = [aid.strip() for aid in this_complex_apartment_ids]
+                        
+                        # 1. Совпадение по формату type_index (самый частый случай)
+                        if apt_id_part_clean in this_complex_apartment_ids_clean:
+                            found_match = True
+                        
+                        # 2. Проверяем, заканчивается ли какой-то параметр на type_index
+                        if not found_match:
+                            for apt_id_param in this_complex_apartment_ids_clean:
+                                apt_id_param_clean = apt_id_param.strip()
+                                if apt_id_param_clean == apt_id_part_clean:
+                                    found_match = True
+                                    break
+                                # Проверяем, заканчивается ли на _type_index
+                                if apt_id_param_clean.endswith(f"_{apt_id_part_clean}"):
+                                    found_match = True
+                                    break
+                        
+                        # 3. Проверяем полный формат complexId_type_index (на случай если в параметрах полный ID)
+                        if not found_match:
+                            full_id_with_part = f"{complex_id}_{apt_id_part_clean}"
+                            if full_id_with_part in apartment_ids_set:
+                                found_match = True
+                        
+                        if not found_match:
                             continue
                     
                     # Получаем фото планировки
@@ -3828,11 +3897,12 @@ def get_client_catalog_apartments(request):
                                 area = area_match.group(1).replace(',', '.')
                     
                     all_apartments.append({
-                        'id': apt_id,
+                        'id': apt_id,  # Используем generated_id в формате complex_id_type_index
                         'complex_id': complex_id,
                         'complex_name': complex_name,
                         'complex_address': complex_address,
                         'type': apt_type,
+                        'index': apt_index,  # Добавляем индекс для формирования URL
                         'title': title,
                         'rooms': rooms,
                         'area': area,

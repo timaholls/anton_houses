@@ -1092,8 +1092,14 @@
                             
                             html += `
                                 <div class="${cardClasses}" data-complex-id="${complex._id}">
-                                    <div class="compact-card-image-gallery" onclick="window.location.href='/complex/${complex._id}/'" style="cursor: pointer;">
+                                    <div class="compact-card-image-gallery" onclick="window.location.href='/complex/${complex._id}/'" style="cursor: pointer; position: relative;">
                                         ${galleryHtml}
+                                        ${complex.completion_date ? `
+                                            <div class="future-complex-badge">
+                                                <i class="fas fa-calendar-alt"></i>
+                                                <span>Сдача: ${complex.completion_date}</span>
+                                            </div>
+                                        ` : ''}
                                         ${photos.length > 1 ? `
                                             <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1)">
                                                 <i class="fas fa-chevron-left"></i>
@@ -1115,12 +1121,6 @@
                                                 <span>${complex.address || complex.city || 'Уфа'}</span>
                                             </div>
                                             <div class="compact-card-details">
-                                                ${complex.completion_date ? `
-                                                <div class="compact-detail-item">
-                                                    <i class="fas fa-calendar"></i>
-                                                    <span>${complex.completion_date}</span>
-                                                </div>
-                                                ` : ''}
                                                 ${complex.total_apartments ? `
                                                 <div class="compact-detail-item apartments-item">
                                                     <i class="fas fa-home"></i>

@@ -107,11 +107,12 @@ from .api.apartment_booking_api import (
 
 # Импортируем функции из feedback_api
 from .api.feedback_api import submit_feedback
+from .api.chat_api import submit_chat_request
 
 # Импортируем view для квартир
 from .view_modules.apartment_views import apartment_detail
 # Импортируем view для избранного
-from .view_modules.catalog_views import favorites
+from .view_modules.catalog_views import favorites, selection_view
 
 app_name = 'main'
 
@@ -133,6 +134,7 @@ urlpatterns = [
     path('catalog/', catalog, name='catalog'),
     path('client-catalog/', client_catalog, name='client_catalog'),
     path('favorites/', favorites, name='favorites'),
+    path('selection/<str:selection_id>/', selection_view, name='selection_view'),
     path('complex/<str:complex_id>/', detail, name='detail'),
     path('apartment/<str:complex_id>/<str:apartment_id>/', apartment_detail, name='apartment_detail'),
     
@@ -380,4 +382,7 @@ urlpatterns = [
     
     # Feedback API
     path('api/feedback/', submit_feedback, name='submit_feedback'),
+    
+    # Chat API
+    path('api/chat-request/', submit_chat_request, name='submit_chat_request'),
 ]

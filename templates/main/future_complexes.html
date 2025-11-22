@@ -29,15 +29,11 @@
                         <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ complex.name }}" class="gallery-image active" loading="lazy" decoding="async">
                     {% endif %}
                     
-                    <!-- Бейджи с датами -->
-                    <div class="future-complex-badge">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Сдача: {{ complex.delivery_date|date:"d.m.Y" }}</span>
-                    </div>
+                    <!-- Бейдж старта продаж -->
                     {% if complex.sales_start %}
                     <div class="future-complex-badge sales-start-badge">
                         <i class="fas fa-shopping-cart"></i>
-                        <span>Старт: {{ complex.sales_start|date:"d.m.Y" }}</span>
+                        <span>Старт продаж: {{ complex.sales_start|date:"d.m.Y" }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -50,12 +46,6 @@
                             <span>{{ complex.city }}{% if complex.district %}, {{ complex.district }}{% endif %}</span>
                         </div>
                         <div class="compact-card-details">
-                            {% if complex.delivery_date %}
-                            <div class="compact-detail-item">
-                                <i class="fas fa-calendar"></i>
-                                <span>Сдача {{ complex.delivery_date|date:"d.m.Y" }}</span>
-                            </div>
-                            {% endif %}
                             {% if complex.developer %}
                             <div class="compact-detail-item">
                                 <i class="fas fa-building"></i>
@@ -327,12 +317,11 @@
     font-size: 11px;
 }
 
-/* Бейдж старта продаж - ниже срока сдачи */
+/* Бейдж старта продаж - зеленый наверху */
 .future-complex-badge.sales-start-badge {
-    top: auto;
-    bottom: 8px;
-    background: #ff9800;
-    box-shadow: 0 4px 10px rgba(255,152,0,.35);
+    top: 8px;
+    background: #28a745;
+    box-shadow: 0 4px 10px rgba(40,167,69,.35);
 }
 
 /* Контент карточки (из каталога) */

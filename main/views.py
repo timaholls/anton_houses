@@ -225,7 +225,7 @@ from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, date
 import json
 
 
@@ -251,7 +251,7 @@ def catalog_api(request):
         price_from = request.GET.get('price_from', '').strip()
         price_to = request.GET.get('price_to', '').strip()
         has_offers = request.GET.get('has_offers', '').strip()
-        mortgage_program_id = request.GET.get('mortgage_program', '').strip()
+        delivery_quarter = request.GET.get('delivery_quarter', '').strip()
         
         # Сортировка
         sort = request.GET.get('sort', 'price_asc')
@@ -271,16 +271,27 @@ def catalog_api(request):
         db = get_mongo_connection()
         unified_col = db['unified_houses']
         
-        # Получаем информацию об ипотечной программе, если выбрана
-        mortgage_program_complexes = []
-        if mortgage_program_id:
+        # Преобразуем квартал в конечную дату для фильтрации
+        delivery_date_limit = None
+        if delivery_quarter:
             try:
-                mortgage_program = db['mortgage_programs'].find_one({'_id': ObjectId(mortgage_program_id)})
-                if mortgage_program and mortgage_program.get('is_individual'):
-                    # Если программа индивидуальная, получаем список привязанных ЖК
-                    mortgage_program_complexes = mortgage_program.get('complexes', [])
-            except:
-                pass
+                # Формат: Q4_2025
+                parts = delivery_quarter.split('_')
+                if len(parts) == 2:
+                    quarter = int(parts[0][1:])  # Убираем 'Q' и преобразуем в число
+                    year = int(parts[1])
+                    
+                    # Вычисляем последний день квартала
+                    if quarter == 1:
+                        delivery_date_limit = date(year, 3, 31)
+                    elif quarter == 2:
+                        delivery_date_limit = date(year, 6, 30)
+                    elif quarter == 3:
+                        delivery_date_limit = date(year, 9, 30)
+                    elif quarter == 4:
+                        delivery_date_limit = date(year, 12, 31)
+            except (ValueError, IndexError):
+                delivery_date_limit = None
         
         # Получаем список ЖК с акциями, если выбрана фильтрация по акциям
         complexes_with_offers = []
@@ -358,10 +369,66 @@ def catalog_api(request):
                 if record['_id'] not in selected_complex_ids:
                     continue
             
-            # Фильтр по ипотечной программе
-            if mortgage_program_complexes:
-                # Если выбрана индивидуальная программа, показываем только привязанные ЖК
-                if record['_id'] not in mortgage_program_complexes:
+            # Фильтр по сроку сдачи (до выбранного квартала)
+            if delivery_date_limit:
+                # Получаем срок сдачи из parameters (как в catalog_api)
+                completion_date_str = None
+                if 'development' in record and 'avito' not in record:
+                    # Новая структура
+                    dev = record.get('development', {})
+                    parameters = dev.get('parameters', {})
+                    completion_date_str = parameters.get('Срок сдачи', '')
+                else:
+                    # Старая структура - проверяем разные источники
+                    avito_dev = record.get('avito', {}).get('development', {})
+                    if avito_dev:
+                        parameters = avito_dev.get('parameters', {})
+                        completion_date_str = parameters.get('Срок сдачи', '')
+                    
+                    if not completion_date_str:
+                        domrf_dev = record.get('domrf', {}).get('development', {})
+                        if domrf_dev:
+                            parameters = domrf_dev.get('parameters', {})
+                            completion_date_str = parameters.get('Срок сдачи', '')
+                
+                if not completion_date_str:
+                    # Если у ЖК нет срока сдачи, пропускаем его при фильтрации
+                    continue
+                
+                # Парсим срок сдачи (формат: "4 кв. 2017 — 2 кв. 2027" или "3 кв. 2024")
+                import re
+                patterns = re.findall(r'(\d+)\s*кв\.\s*(\d{4})', completion_date_str)
+                
+                if not patterns:
+                    # Если не удалось распарсить, пропускаем
+                    continue
+                
+                # Берем максимальную дату (последний квартал в диапазоне)
+                max_delivery_date = None
+                for quarter_str, year_str in patterns:
+                    try:
+                        quarter = int(quarter_str)
+                        year = int(year_str)
+                        
+                        # Вычисляем последний день квартала
+                        if quarter == 1:
+                            end_date = date(year, 3, 31)
+                        elif quarter == 2:
+                            end_date = date(year, 6, 30)
+                        elif quarter == 3:
+                            end_date = date(year, 9, 30)
+                        elif quarter == 4:
+                            end_date = date(year, 12, 31)
+                        else:
+                            continue
+                        
+                        if not max_delivery_date or end_date > max_delivery_date:
+                            max_delivery_date = end_date
+                    except (ValueError, TypeError):
+                        continue
+                
+                # Фильтруем: показываем только ЖК со сроком сдачи до выбранного квартала
+                if max_delivery_date and max_delivery_date > delivery_date_limit:
                     continue
             
             # Фильтр по наличию акций
