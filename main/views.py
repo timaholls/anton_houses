@@ -1012,9 +1012,23 @@ def apartments_api(request):
                             apartment_id = apartment_id_str
                     
                     # Получаем фото планировки квартиры
-                    apartment_photo = apt.get('photo') or apt.get('image') or apt.get('plan') or apt.get('layout') or apt.get('layout_image')
+                    # Приоритет: layout_photo > фото из массива image > первое фото ЖК
+                    apartment_photo = None
+                    # 1. Пытаемся взять из массива image (как в detail.html)
+                    layout_photos = apt.get('image', [])
+                    if isinstance(layout_photos, list) and layout_photos:
+                        apartment_photo = layout_photos[0]
+                    elif isinstance(layout_photos, str) and layout_photos:
+                        apartment_photo = layout_photos
+                    # 2. Если нет, пытаемся взять из photo/plan/layout
+                    if not apartment_photo:
+                        apartment_photo = apt.get('photo') or apt.get('plan') or apt.get('layout') or apt.get('layout_image')
+                    # 3. Если всё ещё нет, берем первое фото ЖК
                     if not apartment_photo and photos:
                         apartment_photo = photos[0]
+                    # 4. Если и этого нет, используем placeholder
+                    if not apartment_photo:
+                        apartment_photo = '/media/gallery/placeholders.png'
                     
                     # Формируем название квартиры
                     rooms_display = apt_type
@@ -1071,21 +1085,30 @@ def apartments_api(request):
         end_idx = start_idx + per_page
         apartments_data = all_apartments[start_idx:end_idx]
         
-        # Формируем map_points для карты (используем координаты ЖК)
-        map_points = []
-        for apt in apartments_data:
-            if apt.get('latitude') and apt.get('longitude'):
-                apartment_title = apt.get('apartment_title', f"{apt.get('rooms', '')}-комнатная")
-                map_points.append({
-                    'id': apt['id'],
-                    'name': f"{apartment_title} - {apt.get('price', 'Цена по запросу')}",
-                    'price_range': apt.get('price', 'Цена не указана'),
-                    'price_display': apt.get('price', 'Цена не указана'),
+        # Собираем ВСЕ ЖК для карты (независимо от пагинации)
+        # Это нужно чтобы показать все точки ЖК, как в режиме "ЖК"
+        map_points_dict = {}
+        # Проходим по ВСЕМ квартирам (не только на текущей странице)
+        for apt in all_apartments:
+            complex_id = apt.get('complex_id')
+            if not complex_id or not apt.get('latitude') or not apt.get('longitude'):
+                continue
+            
+            if complex_id not in map_points_dict:
+                # Создаем точку для ЖК (точно как в catalog_api)
+                map_points_dict[complex_id] = {
+                    'id': complex_id,  # ID ЖК
+                    'name': apt.get('complex_name', 'ЖК'),
+                    'price_range': apt.get('price', 'Цена по запросу'),
+                    'price_display': apt.get('price', 'Цена по запросу'),
                     'lat': apt['latitude'],
                     'lng': apt['longitude'],
                     'latitude': apt['latitude'],
                     'longitude': apt['longitude'],
-                })
+                }
+        
+        # Преобразуем словарь в список
+        map_points = list(map_points_dict.values())
         
         total_pages = (total_count + per_page - 1) // per_page
         

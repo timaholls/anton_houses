@@ -997,103 +997,34 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
 
     // Глобальная функция applyFilters
     window.applyFilters = function () {
-        // Собираем данные формы
-        const formData = new FormData(document.getElementById('filters-form'));
-        const params = new URLSearchParams();
-
-        // Добавляем параметры фильтров
-        for (let [key, value] of formData.entries()) {
-            if (value) {
-                params.append(key, value);
-            }
-        }
-
-        // Показываем индикатор загрузки
-        const grid = document.getElementById('catalog-grid');
-        grid.innerHTML = '<div class="loading">Поиск...</div>';
-
-        // Определяем правильный API URL в зависимости от типа данных
-        const isSecondary = '{{ dataset_type }}' === 'secondary';
-        const apiUrl = isSecondary ? '/api/secondary/list/' : '/api/catalog/';
-
-        // Загружаем данные через API с фильтрами
-        fetch(`${apiUrl}?${params.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                window.currentPage = 1;
-                if (isSecondary) {
-                    renderItems(data);
-                } else {
-                    updateCatalog(data);
-                    updatePagination(data);
-                    updateResultsCount(data.total_count);
-                }
-
-                // Показываем заголовок результатов поиска
-                const searchResults = document.querySelector('.search-results');
-                if (!searchResults) {
-                    const resultsDiv = document.createElement('div');
-                    resultsDiv.className = 'search-results';
-                    resultsDiv.innerHTML = '<h3 class="search-title">Результаты поиска</h3>';
-                    grid.parentNode.insertBefore(resultsDiv, grid);
-                }
-
-                // Обновляем URL без параметров
-                const baseUrl = isSecondary ? '/secondary/' : '/catalog/';
-                window.history.pushState({}, '', baseUrl);
-            })
-            .catch(error => {
-                console.error('Ошибка поиска:', error);
-                grid.innerHTML = '<div class="error">Ошибка поиска</div>';
-            });
+        // Используем вспомогательную функцию для сброса страницы и загрузки данных
+        window.resetPageAndFetch();
     }
 
     // Глобальная функция loadPage
     window.loadPage = function (page) {
         if (page === window.currentPage) return;
-
-        // Собираем текущие фильтры
-        const formData = new FormData(document.getElementById('filters-form'));
-        const params = new URLSearchParams();
-
-        // Добавляем параметры фильтров
-        for (let [key, value] of formData.entries()) {
-            if (value) {
-                params.append(key, value);
+        
+        // Устанавливаем страницу в скрытое поле формы
+        const pageInput = document.getElementById('page-hidden');
+        if (pageInput) {
+            pageInput.value = page;
+        } else {
+            // Создаем скрытое поле если его нет
+            const form = document.getElementById('filters-form');
+            if (form) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.id = 'page-hidden';
+                hiddenInput.name = 'page';
+                hiddenInput.value = page;
+                form.appendChild(hiddenInput);
             }
         }
-
-        // Добавляем номер страницы
-        params.append('page', page);
-
-        // Показываем индикатор загрузки
-        const grid = document.getElementById('catalog-grid');
-        grid.innerHTML = '<div class="loading">Загрузка...</div>';
-
-        // Определяем правильный API URL в зависимости от типа данных
-        const isSecondary = '{{ dataset_type }}' === 'secondary';
-        const apiUrl = isSecondary ? '/api/secondary/list/' : '/api/catalog/';
-
-        // Загружаем данные через API
-        fetch(`${apiUrl}?${params.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                window.currentPage = data.current_page;
-                if (isSecondary) {
-                    renderItems(data);
-                } else {
-                    updateCatalog(data);
-                    updatePagination(data);
-                    updateResultsCount(data.total_count);
-                }
-                // Обновляем URL без параметров
-                const baseUrl = isSecondary ? '/secondary/' : '/catalog/';
-                window.history.pushState({}, '', baseUrl);
-            })
-            .catch(error => {
-                console.error('Ошибка загрузки:', error);
-                grid.innerHTML = '<div class="error">Ошибка загрузки данных</div>';
-            });
+        
+        window.currentPage = page;
+        // Используем единую функцию fetchData, которая учитывает режим ЖК/Квартиры
+        window.fetchData();
     }
 
     // Глобальная функция updateCatalog
@@ -1370,6 +1301,26 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
     // Инициализация глобальных переменных
     window.currentPage = 1;
 
+    // Вспомогательная функция для сброса страницы и загрузки данных
+    window.resetPageAndFetch = function () {
+        window.currentPage = 1;
+        const form = document.getElementById('filters-form');
+        if (form) {
+            const pageInput = form.querySelector('input[name="page"]');
+            if (pageInput) {
+                pageInput.value = 1;
+            } else {
+                // Создаем скрытое поле для страницы если его нет
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'page';
+                hiddenInput.value = 1;
+                form.appendChild(hiddenInput);
+            }
+        }
+        window.fetchData();
+    }
+
     // Глобальная функция fetchData
     window.fetchData = async function () {
         const form = document.getElementById('filters-form');
@@ -1383,6 +1334,23 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
         const apiUrl = isSecondary ? '/api/secondary/' : (isApartmentsMode ? '/api/apartments/' : '/api/catalog/');
 
         if (!form || !grid) return;
+        
+        // Устанавливаем страницу в форму, если она не установлена
+        const pageInput = form.querySelector('input[name="page"]');
+        if (pageInput) {
+            // Если page не был установлен через loadPage, используем текущую страницу или 1
+            if (!pageInput.value || pageInput.value === '') {
+                pageInput.value = window.currentPage || 1;
+            }
+        } else {
+            // Создаем скрытое поле для страницы если его нет
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'page';
+            hiddenInput.value = window.currentPage || 1;
+            form.appendChild(hiddenInput);
+        }
+        
         if ((localStorage.getItem('catalog_view') || 'list') !== 'map') {
             grid.innerHTML = '<div class="loading">Поиск...</div>';
         }
@@ -1397,6 +1365,11 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             const data = await res.json();
             // Если это не самый свежий ответ — игнорируем
             if (requestId !== window.latestRequestId) return;
+            
+            // Обновляем текущую страницу из ответа
+            if (data.current_page) {
+                window.currentPage = data.current_page;
+            }
             
             if (isApartmentsMode) {
                 renderApartments(data);
@@ -1424,12 +1397,12 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
         const apartments = data.apartments || [];
         const currentView = isSecondary ? 'list' : 'map';
         
-        // Рендерим карту для новостроек
+        // Рендерим карту для новостроек - показываем точки ЖК (как в режиме ЖК)
         if (!isSecondary) {
             if (typeof renderMapPoints === 'function') {
                 const mapPoints = data.map_points || [];
-                // Передаем информацию о том, что это квартиры
-                renderMapPoints(mapPoints, false, true); // третий параметр = isApartments
+                // Важно: передаем false в третьем параметре чтобы показывались ЖК, а не квартиры
+                renderMapPoints(mapPoints, false, false); // false = показываем точки ЖК
             }
         }
         
@@ -1504,6 +1477,43 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             const total = data.total_count || 0;
             if (total) resultsCount.textContent = `Найдено ${total} квартир`;
         }
+        
+        // Инициализируем состояние кнопок избранного для квартир
+        setTimeout(() => {
+            const favoriteBtns = grid.querySelectorAll('.favorite-btn[data-type="apartment"]');
+            favoriteBtns.forEach(btn => {
+                const id = btn.getAttribute('data-id');
+                if (id) {
+                    const parts = id.split('_apt_');
+                    if (parts.length === 2) {
+                        const complexId = parts[0];
+                        const apartmentId = parts[1];
+                        // Проверяем, есть ли квартира в избранном через localStorage
+                        try {
+                            const favorites = JSON.parse(localStorage.getItem('century21_favorites') || '{"apartments":[]}');
+                            const idStr = `${complexId}_${apartmentId}`;
+                            const isFavorite = favorites.apartments && favorites.apartments.includes(idStr);
+                            
+                            // Обновляем иконку
+                            const icon = btn.querySelector('i');
+                            if (icon) {
+                                if (isFavorite) {
+                                    icon.classList.remove('far');
+                                    icon.classList.add('fas');
+                                    btn.classList.add('favorite-active');
+                                } else {
+                                    icon.classList.remove('fas');
+                                    icon.classList.add('far');
+                                    btn.classList.remove('favorite-active');
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Ошибка проверки избранного:', e);
+                        }
+                    }
+                }
+            });
+        }, 100);
     }
 
     // Глобальная функция initMap
@@ -1609,16 +1619,21 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
                 if (isSec) {
                     link = `/secondary/${item.id}/`;
                 } else if (isApartments) {
-                    // Для квартир: извлекаем complex_id и apartment_id из item.id
-                    // Формат: complex_id_apt_apartment_id
-                    const parts = item.id.split('_apt_');
-                    if (parts.length === 2) {
-                        const complexId = parts[0];
-                        const apartmentId = parts[1];
-                        link = `/apartment/${complexId}/${apartmentId}/`;
+                    // В режиме квартир используем точки ЖК (как в режиме ЖК)
+                    // Проверяем, содержит ли ID формат квартиры (complex_id_apt_apartment_id)
+                    if (item.id.includes('_apt_')) {
+                        // Если это ID квартиры, извлекаем complex_id и apartment_id
+                        const parts = item.id.split('_apt_');
+                        if (parts.length === 2) {
+                            const complexId = parts[0];
+                            const apartmentId = parts[1];
+                            link = `/apartment/${complexId}/${apartmentId}/`;
+                        } else {
+                            link = `/complex/${parts[0]}/`;
+                        }
                     } else {
-                        // Fallback: если формат не соответствует ожидаемому
-                        link = `/complex/${parts[0]}/`;
+                        // Если это просто ID ЖК (что и должно быть после исправления)
+                        link = `/complex/${item.id}/`;
                     }
                 } else {
                     link = `/complex/${item.id}/`;
@@ -1850,7 +1865,7 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
                             checkbox.parentNode.replaceChild(newCheckbox, checkbox);
                             newCheckbox.addEventListener('change', function() {
                                 updateStreetHidden();
-                                window.fetchData();
+                                window.resetPageAndFetch();
                             });
                         });
                         
@@ -2262,7 +2277,7 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
         document.querySelectorAll('.street-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 updateStreetHidden();
-                window.fetchData();
+                window.resetPageAndFetch();
             });
         });
 
@@ -2692,14 +2707,64 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
 
     // Обработчики для избранного
     function toggleComplexFavoriteHandler(complexId, button) {
-        const isFavorite = toggleComplexFavorite(complexId);
-        updateFavoriteIcon(button, isFavorite);
+        if (typeof toggleComplexFavorite === 'function') {
+            const isFavorite = toggleComplexFavorite(complexId);
+            if (typeof updateFavoriteIcon === 'function') {
+                updateFavoriteIcon(button, isFavorite);
+            }
 
-        // Показываем уведомление
-        if (isFavorite) {
-            showFavoriteNotification('Добавлено в избранное');
-        } else {
-            showFavoriteNotification('Удалено из избранного');
+            // Показываем уведомление
+            if (isFavorite) {
+                showFavoriteNotification('Добавлено в избранное');
+            } else {
+                showFavoriteNotification('Удалено из избранного');
+            }
+        }
+    }
+
+    // Глобальная функция для обработки избранного (ЖК и Квартиры)
+    window.toggleFavorite = function(id, type, button) {
+        if (!id || !type || !button) return;
+        
+        if (type === 'apartment') {
+            // ID квартиры в формате: complex_id_apt_apartment_id
+            // Нужно извлечь complex_id и apartment_id
+            const parts = id.split('_apt_');
+            if (parts.length === 2) {
+                const complexId = parts[0];
+                const apartmentId = parts[1];
+                // Используем глобальную функцию из favorites.js
+                if (typeof window.toggleApartmentFavoriteHandler === 'function') {
+                    window.toggleApartmentFavoriteHandler(complexId, apartmentId, button);
+                } else if (typeof toggleApartmentFavorite === 'function') {
+                    // Fallback: используем напрямую функции из favorites.js
+                    const isFavorite = toggleApartmentFavorite(complexId, apartmentId);
+                    if (typeof updateFavoriteIcon === 'function') {
+                        updateFavoriteIcon(button, isFavorite);
+                    }
+                    if (isFavorite) {
+                        showFavoriteNotification('Квартира добавлена в избранное');
+                    } else {
+                        showFavoriteNotification('Квартира удалена из избранного');
+                    }
+                }
+            }
+        } else if (type === 'complex') {
+            // Для ЖК просто передаем ID
+            if (typeof window.toggleComplexFavoriteHandler === 'function') {
+                window.toggleComplexFavoriteHandler(id, button);
+            } else if (typeof toggleComplexFavorite === 'function') {
+                // Fallback: используем напрямую функции из favorites.js
+                const isFavorite = toggleComplexFavorite(id);
+                if (typeof updateFavoriteIcon === 'function') {
+                    updateFavoriteIcon(button, isFavorite);
+                }
+                if (isFavorite) {
+                    showFavoriteNotification('Добавлено в избранное');
+                } else {
+                    showFavoriteNotification('Удалено из избранного');
+                }
+            }
         }
     }
 
@@ -3068,7 +3133,7 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
         complexesCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', function () {
                 updateComplexesHidden();
-                window.fetchData();
+                window.resetPageAndFetch();
             });
         });
 
@@ -3153,7 +3218,8 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
 
             // Автоматически выполняем поиск при изменении select
             select.addEventListener('change', function () {
-                window.fetchData();
+                // Сбрасываем страницу на 1 при изменении фильтров
+                window.resetPageAndFetch();
             });
         });
 
