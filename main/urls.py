@@ -32,7 +32,7 @@ from .views import (
     # Not recommended
     not_recommended, not_recommended_detail,
     # API (реально существующие в views.py)
-    catalog_api, secondary_api, secondary_api_list,
+    catalog_api, apartments_api, secondary_api, secondary_api_list,
     districts_api, streets_api, article_view_api,
     # Manual Matching API
     get_unmatched_records, save_manual_match, get_unified_records,
@@ -244,6 +244,9 @@ urlpatterns = [
     # Catalog API
     path('catalog/api/', catalog_api, name='catalog_api'),
     path('api/catalog/', catalog_api, name='catalog_api_alt'),
+    
+    # Apartments API
+    path('api/apartments/', apartments_api, name='apartments_api'),
     
     # Secondary API
     path('api/secondary/', secondary_api, name='secondary_api'),

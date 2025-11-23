@@ -232,6 +232,146 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
     .favorite-btn.favorite-active {
         background: rgba(231, 76, 60, 0.1);
     }
+
+    /* Стили для кастомных выпадающих списков с чекбоксами */
+    .custom-dropdown {
+        position: relative;
+        width: 100%;
+        z-index: 99999 !important;
+    }
+
+    .custom-dropdown-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d4a574;
+        border-radius: 8px;
+        background: #faf8f3;
+        color: #1a1a1a;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 99999 !important;
+    }
+
+    .custom-dropdown-input:hover {
+        border-color: #bcaf8a;
+    }
+
+    .custom-dropdown-input.active {
+        border-color: #bcaf8a;
+        box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+        z-index: 99999 !important;
+    }
+
+    .dropdown-text {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dropdown-arrow {
+        font-size: 12px;
+        transition: transform 0.3s ease;
+        color: #1a1a1a;
+    }
+
+    .custom-dropdown-input.active .dropdown-arrow {
+        transform: rotate(180deg);
+    }
+
+    .custom-dropdown-list {
+        position: fixed !important;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-top: 4px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 999999 !important;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        min-width: 200px;
+    }
+
+    .custom-dropdown-list.active {
+        display: block;
+    }
+
+    .custom-dropdown-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .custom-dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .custom-dropdown-item:hover {
+        background-color: #f9fafb;
+    }
+
+    .custom-dropdown-item input[type="checkbox"] {
+        margin-right: 10px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #d4a574;
+    }
+
+    .custom-dropdown-item span {
+        flex: 1;
+        font-size: 14px;
+        color: #1a1a1a;
+    }
+
+    .custom-dropdown-item input[type="checkbox"]:checked + span {
+        font-weight: 600;
+    }
+
+    /* Убеждаемся, что родительские контейнеры не обрезают выпадающие списки */
+    .filter-group {
+        overflow: visible !important;
+        position: relative;
+    }
+
+    /* Убираем overflow: visible для мобильной версии - нужна прокрутка */
+    @media (min-width: 769px) {
+        .filters-section {
+            overflow: visible !important;
+        }
+    }
+
+    .filters-row {
+        overflow: visible !important;
+    }
+
+    .filters-row-grid {
+        overflow: visible !important;
+    }
+
+    /* Убеждаемся, что range-container не перекрывает выпадающие списки */
+    .range-container {
+        position: relative;
+        z-index: 1 !important;
+    }
+
+    .range-slider {
+        position: relative;
+        z-index: 1 !important;
+    }
+
+    .range-slider-input {
+        z-index: 2 !important;
+    }
 </style>
 {% endblock %}
 
@@ -293,40 +433,65 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             </div>
             <form class="filters-form" id="filters-form">
                 <div class="filters-row filters-row-grid fixed-grid">
-                    <div class="filter-group">
-                        <label for="city">Город</label>
-                        <select name="city" id="city" class="filter-select">
-                            <option value="">Любой</option>
-                            {% for city_name in cities %}
-                            <option value="{{ city_name }}" {% if filters.city == city_name %}selected{% endif %}>
-                                {{ city_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                    <div class="filter-group" id="city-group">
+                        <label>• Город</label>
+                        <div class="custom-dropdown" id="city-dropdown">
+                            <div class="custom-dropdown-input" id="city-input">
+                                <span class="dropdown-text" id="city-text">Любой</span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                            <div class="custom-dropdown-list" id="city-list">
+                                {% for city_name in cities %}
+                                <label class="custom-dropdown-item">
+                                    <input type="checkbox" name="city" value="{{ city_name }}" 
+                                           class="city-checkbox" data-city="{{ city_name }}" 
+                                           {% if filters.city == city_name %}checked{% endif %}>
+                                    <span>{{ city_name }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <input type="hidden" name="city" id="city-hidden" value="{{ filters.city|default:'' }}">
                     </div>
 
                     <div class="filter-group" id="district-group">
-                        <label for="district">Район</label>
-                        <select name="district" id="district" class="filter-select">
-                            <option value="">Любой</option>
-                            {% for district_name in districts %}
-                            <option value="{{ district_name }}" {% if filters.district == district_name %}selected{% endif %}>
-                                {{ district_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <label>• Район</label>
+                        <div class="custom-dropdown" id="district-dropdown">
+                            <div class="custom-dropdown-input" id="district-input">
+                                <span class="dropdown-text" id="district-text">Любой</span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                            <div class="custom-dropdown-list" id="district-list">
+                                {% for district_name in districts %}
+                                <label class="custom-dropdown-item">
+                                    <input type="checkbox" name="district" value="{{ district_name }}" 
+                                           class="district-checkbox" data-district="{{ district_name }}">
+                                    <span>{{ district_name }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <input type="hidden" name="district" id="district-hidden" value="{{ filters.district|default:'' }}">
                     </div>
 
                     <div class="filter-group" id="street-group">
-                        <label for="street">Улица</label>
-                        <select name="street" id="street" class="filter-select">
-                            <option value="">Любая</option>
-                            {% for street_name in streets %}
-                            <option value="{{ street_name }}" {% if filters.street == street_name %}selected{% endif %}>
-                                {{ street_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <label>• Улица</label>
+                        <div class="custom-dropdown" id="street-dropdown">
+                            <div class="custom-dropdown-input" id="street-input">
+                                <span class="dropdown-text" id="street-text">Любая</span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                            <div class="custom-dropdown-list" id="street-list">
+                                {% for street_name in streets %}
+                                <label class="custom-dropdown-item">
+                                    <input type="checkbox" name="street" value="{{ street_name }}" 
+                                           class="street-checkbox" data-street="{{ street_name }}">
+                                    <span>{{ street_name }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <input type="hidden" name="street" id="street-hidden" value="{{ filters.street|default:'' }}">
                     </div>
 
                     <div class="filter-group">
@@ -451,16 +616,25 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
                     {% endif %}
 
                     <!-- Фильтр по сроку сдачи -->
-                    <div class="filter-group">
-                        <label for="delivery_quarter">Срок сдачи</label>
-                        <select name="delivery_quarter" id="delivery_quarter" class="filter-select">
-                            <option value="">Любой срок</option>
-                            {% for quarter in delivery_quarters %}
-                            <option value="{{ quarter.value }}" {% if filters.delivery_quarter == quarter.value %}selected{% endif %}>
-                                {{ quarter.label }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                    <div class="filter-group" id="delivery-quarter-group">
+                        <label>• Срок сдачи</label>
+                        <div class="custom-dropdown" id="delivery-quarter-dropdown">
+                            <div class="custom-dropdown-input" id="delivery-quarter-input">
+                                <span class="dropdown-text" id="delivery-quarter-text">Любой срок</span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                            <div class="custom-dropdown-list" id="delivery-quarter-list">
+                                {% for quarter in delivery_quarters %}
+                                <label class="custom-dropdown-item">
+                                    <input type="checkbox" name="delivery_quarter" value="{{ quarter.value }}" 
+                                           class="delivery-quarter-checkbox" data-quarter="{{ quarter.value }}" 
+                                           {% if filters.delivery_quarter == quarter.value %}checked{% endif %}>
+                                    <span>{{ quarter.label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <input type="hidden" name="delivery_quarter" id="delivery-quarter-hidden" value="{{ filters.delivery_quarter|default:'' }}">
                     </div>
                 </div>
 
@@ -514,6 +688,13 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
                 <button type="button" class="view-btn active" data-view="map">Картой</button>
                 <button type="button" class="view-btn" data-view="list">Списком</button>
             </div>
+            
+            {% if dataset_type == 'newbuild' %}
+            <div class="content-toggle-right" style="margin-left: 12px;">
+                <button type="button" class="content-btn active" data-content="complexes">ЖК</button>
+                <button type="button" class="content-btn" data-content="apartments">Квартиры</button>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Результаты поиска -->
@@ -643,6 +824,55 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
         font-size: 12px;
         color: #6b7280;
     }
+    
+    /* Стили для тумблера ЖК/Квартиры */
+    .content-toggle-right {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .content-toggle-right .content-btn {
+        padding: 10px 16px;
+        border: 2px solid rgba(190, 175, 135, 0.3);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        color: var(--c21-dark);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .content-toggle-right .content-btn:hover {
+        border-color: rgba(190, 175, 135, 0.6);
+        background: rgba(255, 255, 255, 0.9);
+        transform: translateY(-1px);
+    }
+    
+    .content-toggle-right .content-btn.active {
+        background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+        border-color: var(--c21-gold);
+        color: white;
+        box-shadow: 0 4px 12px rgba(190, 175, 135, 0.3);
+    }
+    
+    @media (max-width: 768px) {
+        .controls-section {
+            flex-wrap: wrap;
+        }
+        
+        .content-toggle-right {
+            width: 100%;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        
+        .content-toggle-right .content-btn {
+            flex: 1;
+            text-align: center;
+        }
+    }
 </style>
 
 <script>
@@ -660,7 +890,7 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             // Новостройки: рендерим и карту и список
             if (typeof renderMapPoints === 'function') {
                 const mapPoints = data.map_points || data.complexes || [];
-                renderMapPoints(mapPoints, false);
+                renderMapPoints(mapPoints, false, false); // false = не квартиры
             }
 
             const list = data.complexes || [];
@@ -1145,7 +1375,12 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
         const form = document.getElementById('filters-form');
         const grid = document.getElementById('catalog-grid');
         const isSecondary = '{{ dataset_type }}' === 'secondary';
-        const apiUrl = isSecondary ? '/api/secondary/' : '/api/catalog/';
+        
+        // Определяем режим: ЖК или Квартиры
+        const contentMode = localStorage.getItem('catalog_content_mode') || 'complexes';
+        const isApartmentsMode = contentMode === 'apartments' && !isSecondary;
+        
+        const apiUrl = isSecondary ? '/api/secondary/' : (isApartmentsMode ? '/api/apartments/' : '/api/catalog/');
 
         if (!form || !grid) return;
         if ((localStorage.getItem('catalog_view') || 'list') !== 'map') {
@@ -1162,7 +1397,12 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             const data = await res.json();
             // Если это не самый свежий ответ — игнорируем
             if (requestId !== window.latestRequestId) return;
-            renderItems(data);
+            
+            if (isApartmentsMode) {
+                renderApartments(data);
+            } else {
+                renderItems(data);
+            }
         } catch (e) {
             // Игнорируем AbortError - это нормальная отмена запроса
             if (e.name === 'AbortError') {
@@ -1170,6 +1410,99 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             }
             if (grid) grid.innerHTML = '<div class="error">Ошибка загрузки</div>';
             console.error(e);
+        }
+    }
+    
+    // Глобальная функция renderApartments для рендеринга карточек квартир
+    window.renderApartments = function (data) {
+        const grid = document.getElementById('catalog-grid');
+        const resultsCount = document.querySelector('.results-count');
+        const isSecondary = '{{ dataset_type }}' === 'secondary';
+        
+        if (!grid) return;
+        
+        const apartments = data.apartments || [];
+        const currentView = isSecondary ? 'list' : 'map';
+        
+        // Рендерим карту для новостроек
+        if (!isSecondary) {
+            if (typeof renderMapPoints === 'function') {
+                const mapPoints = data.map_points || [];
+                // Передаем информацию о том, что это квартиры
+                renderMapPoints(mapPoints, false, true); // третий параметр = isApartments
+            }
+        }
+        
+        if (!apartments.length) {
+            grid.innerHTML = '<div class="no-complexes"><p>По вашему запросу ничего не найдено</p><p>Попробуйте изменить параметры поиска</p></div>';
+        } else {
+            let html = '';
+            apartments.forEach((apt, index) => {
+                // Формируем фото планировки квартиры
+                let photo = apt.photo || (Array.isArray(apt.complex_photos) && apt.complex_photos.length > 0 ? apt.complex_photos[0] : null) || '/media/gallery/placeholders.png';
+                
+                // Преобразуем в строку и проверяем
+                if (photo) {
+                    photo = String(photo);
+                    if (photo && photo !== '/media/gallery/placeholders.png' && !photo.startsWith('/media/') && !photo.startsWith('http')) {
+                        photo = `/media/${photo}`;
+                    }
+                } else {
+                    photo = '/media/gallery/placeholders.png';
+                }
+                
+                // Формируем название квартиры (крупно)
+                const apartmentTitle = apt.apartment_title || (apt.rooms === 'Студия' ? 'Студия' : apt.rooms === '1' ? '1-комнатная квартира' : apt.rooms === '2' ? '2-комнатная квартира' : apt.rooms === '3' ? '3-комнатная квартира' : apt.rooms === '4' ? '4-комнатная квартира' : apt.rooms === '5+' ? '5+ комнат' : `${apt.rooms}-комнатная квартира`);
+                
+                // Формируем цену
+                const priceDisplay = apt.price || 'Цена по запросу';
+                
+                // Формируем площадь
+                const areaDisplay = apt.area ? `${apt.area} м²` : '—';
+                
+                // Формируем этаж
+                const floorDisplay = apt.floor ? `${apt.floor} этаж` : '';
+                
+                html += `
+        <div class="compact-card">
+          <div class="compact-card-image-gallery">
+            <img src="${photo}" alt="${apartmentTitle}" class="gallery-image active" style="display: block;">
+            <div class="favorite-btn" data-id="${apt.id}" data-type="apartment" onclick="event.stopPropagation(); toggleFavorite('${apt.id}', 'apartment', this)">
+              <i class="far fa-heart"></i>
+            </div>
+          </div>
+          
+          <div class="compact-card-content" onclick="window.location.href='/apartment/${apt.complex_id}/${apt.apartment_id || (apt.id ? apt.id.split('_').slice(-2).join('_') : '0_0')}/'" style="cursor: pointer;">
+            <div class="compact-card-header">
+              <h3 class="compact-card-title">${apartmentTitle}</h3>
+              <div class="compact-card-location" style="font-size: 13px; color: #6b7280; margin-top: 4px;">
+                <i class="fas fa-building" style="font-size: 11px;"></i>
+                <span>${apt.complex_name || ''}</span>
+              </div>
+              <div class="compact-card-details">
+                <div class="compact-detail-item">
+                  <i class="fas fa-expand-arrows-alt"></i>
+                  <span>${areaDisplay}</span>
+                </div>
+                ${floorDisplay ? `<div class="compact-detail-item"><i class="fas fa-layer-group"></i><span>${floorDisplay}</span></div>` : ''}
+              </div>
+            </div>
+            <div class="compact-card-price">
+              <div class="compact-price-text">${priceDisplay}</div>
+            </div>
+          </div>
+        </div>`;
+            });
+            grid.innerHTML = html;
+        }
+        
+        // Обновляем пагинацию
+        if (typeof updatePagination === 'function') {
+            updatePagination(data);
+        }
+        if (resultsCount) {
+            const total = data.total_count || 0;
+            if (total) resultsCount.textContent = `Найдено ${total} квартир`;
         }
     }
 
@@ -1192,11 +1525,17 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
         const fd = new FormData(form);
         const params = new URLSearchParams();
 
-        // Собираем все параметры, исключая чекбоксы complexes (они обрабатываются через скрытое поле)
+        // Собираем все параметры, исключая чекбоксы city, complexes, district, street, delivery_quarter (они обрабатываются через скрытые поля)
         for (const [k, v] of fd.entries()) {
-            if (k !== 'complexes' && v !== '') {
+            if (k !== 'city' && k !== 'complexes' && k !== 'district' && k !== 'street' && k !== 'delivery_quarter' && v !== '') {
                 params.append(k, v);
             }
+        }
+
+        // Добавляем city из скрытого поля
+        const cityHidden = document.getElementById('city-hidden');
+        if (cityHidden && cityHidden.value) {
+            params.set('city', cityHidden.value);
         }
 
         // Добавляем complexes из скрытого поля
@@ -1205,27 +1544,98 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             params.set('complexes', complexesHidden.value);
         }
 
+        // Добавляем district из скрытого поля
+        const districtHidden = document.getElementById('district-hidden');
+        if (districtHidden && districtHidden.value) {
+            params.set('district', districtHidden.value);
+        }
+
+        // Добавляем street из скрытого поля
+        const streetHidden = document.getElementById('street-hidden');
+        if (streetHidden && streetHidden.value) {
+            params.set('street', streetHidden.value);
+        }
+
+        // Добавляем delivery_quarter из скрытого поля
+        const deliveryQuarterHidden = document.getElementById('delivery-quarter-hidden');
+        if (deliveryQuarterHidden && deliveryQuarterHidden.value) {
+            params.set('delivery_quarter', deliveryQuarterHidden.value);
+        }
+
         const sort = document.getElementById('sort-hidden');
         if (sort && sort.value) params.set('sort', sort.value);
         return params.toString();
     }
 
     // Глобальная функция renderMapPoints
-    window.renderMapPoints = function (list, isSec) {
-        if (!window.map) return;
-        window.markersLayer.clearLayers();
+    window.renderMapPoints = function (list, isSec, isApartments) {
+        // Убеждаемся, что карта видна для новостроек
+        const mapEl = document.getElementById('map');
+        if (mapEl && !isSec) {
+            mapEl.style.display = 'block';
+        }
+        
+        if (!window.map) {
+            // Если карта не инициализирована, инициализируем её
+            if (typeof window.initMap === 'function') {
+                window.initMap();
+            } else {
+                console.warn('initMap function not found');
+                return;
+            }
+        }
+        if (!window.map) {
+            console.warn('Map not initialized');
+            return;
+        }
+        
+        // Очищаем существующие маркеры
+        if (window.markersLayer) {
+            window.markersLayer.clearLayers();
+        } else {
+            window.markersLayer = L.layerGroup().addTo(window.map);
+        }
+        
         const bounds = [];
         list.forEach(item => {
-            const lat = item.lat, lng = item.lng;
+            const lat = item.lat || item.latitude;
+            const lng = item.lng || item.longitude;
             if (lat && lng) {
                 const marker = L.marker([lat, lng]).addTo(window.markersLayer);
                 const price = item.price_range || item.price_display || 'Цена по запросу';
-                const link = isSec ? `/secondary/${item.id}/` : `/complex/${item.id}/`;
+                
+                // Формируем ссылку в зависимости от типа
+                let link;
+                if (isSec) {
+                    link = `/secondary/${item.id}/`;
+                } else if (isApartments) {
+                    // Для квартир: извлекаем complex_id и apartment_id из item.id
+                    // Формат: complex_id_apt_apartment_id
+                    const parts = item.id.split('_apt_');
+                    if (parts.length === 2) {
+                        const complexId = parts[0];
+                        const apartmentId = parts[1];
+                        link = `/apartment/${complexId}/${apartmentId}/`;
+                    } else {
+                        // Fallback: если формат не соответствует ожидаемому
+                        link = `/complex/${parts[0]}/`;
+                    }
+                } else {
+                    link = `/complex/${item.id}/`;
+                }
+                
                 marker.bindPopup(`<b>${item.name}</b><br/>${price}<br/><a href="${link}">Подробнее</a>`);
                 bounds.push([lat, lng]);
             }
         });
-        if (bounds.length) window.map.fitBounds(bounds, { padding: [20, 20] });
+        
+        // Обновляем границы карты, если есть маркеры
+        if (bounds.length) {
+            window.map.fitBounds(bounds, { padding: [20, 20] });
+        } else {
+            // Если нет маркеров, устанавливаем вид по умолчанию (Уфа)
+            window.map.setView([54.7388, 55.9721], 11);
+        }
     }
 
     // Глобальная функция setView
@@ -1292,148 +1702,646 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             });
         }
 
-        // Обработка нажатия на кнопку "Поиск" - закрываем мобильное окно фильтров
-        const searchButton = filtersForm ? filtersForm.querySelector('button[type="submit"]') : null;
-        if (searchButton) {
-            searchButton.addEventListener('click', function (e) {
-                // Закрываем мобильное окно фильтров только при явном нажатии на кнопку "Поиск"
-                const sheet = document.getElementById('filters-sheet');
-                const backdrop = document.getElementById('filters-backdrop');
-                if (sheet && sheet.classList.contains('open')) {
-                    // Небольшая задержка, чтобы форма успела отправиться
-                    setTimeout(function () {
-                        sheet.classList.remove('open');
-                        if (backdrop) backdrop.classList.remove('open');
-                        document.body.style.overflow = '';
-                    }, 100);
+        // Обработка нажатия на кнопку "Поиск" - закрытие фильтра теперь в обработчике submit формы
+
+        // Обработка выбора города
+        const cityGroup = document.getElementById('city-group');
+        const cityDropdown = document.getElementById('city-dropdown');
+        const cityList = document.getElementById('city-list');
+        const cityInput = document.getElementById('city-input');
+        const cityText = document.getElementById('city-text');
+        const cityHidden = document.getElementById('city-hidden');
+        const districtGroup = document.getElementById('district-group');
+        const streetGroup = document.getElementById('street-group');
+        const districtDropdown = document.getElementById('district-dropdown');
+        const streetDropdown = document.getElementById('street-dropdown');
+        const districtList = document.getElementById('district-list');
+        const streetList = document.getElementById('street-list');
+        const districtInput = document.getElementById('district-input');
+        const streetInput = document.getElementById('street-input');
+        const districtText = document.getElementById('district-text');
+        const streetText = document.getElementById('street-text');
+        const districtHidden = document.getElementById('district-hidden');
+        const streetHidden = document.getElementById('street-hidden');
+        const deliveryQuarterGroup = document.getElementById('delivery-quarter-group');
+        const deliveryQuarterDropdown = document.getElementById('delivery-quarter-dropdown');
+        const deliveryQuarterList = document.getElementById('delivery-quarter-list');
+        const deliveryQuarterInput = document.getElementById('delivery-quarter-input');
+        const deliveryQuarterText = document.getElementById('delivery-quarter-text');
+        const deliveryQuarterHidden = document.getElementById('delivery-quarter-hidden');
+        
+        // Функция обновления текста в выпадающем списке города
+        window.updateCityText = function() {
+            if (!cityText) return;
+            const checkedCities = Array.from(document.querySelectorAll('.city-checkbox:checked')).map(cb => cb.value);
+            if (checkedCities.length === 0) {
+                cityText.textContent = 'Любой';
+            } else if (checkedCities.length === 1) {
+                cityText.textContent = checkedCities[0];
+            } else {
+                cityText.textContent = `Выбрано: ${checkedCities.length}`;
+            }
+        };
+        
+        // Функция обновления скрытого поля города
+        function updateCityHidden() {
+            if (!cityHidden) return;
+            const checkedCities = Array.from(document.querySelectorAll('.city-checkbox:checked')).map(cb => cb.value);
+            cityHidden.value = checkedCities.join(',');
+            window.updateCityText();
+        }
+        
+        // Функция обновления текста в выпадающем списке срока сдачи
+        window.updateDeliveryQuarterText = function() {
+            if (!deliveryQuarterText) return;
+            const checked = document.querySelectorAll('.delivery-quarter-checkbox:checked');
+            if (checked.length === 0) {
+                deliveryQuarterText.textContent = 'Любой срок';
+            } else if (checked.length === 1) {
+                deliveryQuarterText.textContent = checked[0].nextElementSibling.textContent;
+            } else {
+                deliveryQuarterText.textContent = `Выбрано: ${checked.length}`;
+            }
+        };
+        
+        // Функция обновления скрытого поля срока сдачи
+        function updateDeliveryQuarterHidden() {
+            if (!deliveryQuarterHidden) return;
+            const checked = Array.from(document.querySelectorAll('.delivery-quarter-checkbox:checked')).map(cb => cb.value);
+            deliveryQuarterHidden.value = checked.join(',');
+            window.updateDeliveryQuarterText();
+        }
+
+        // Функция обновления текста в выпадающем списке районов
+        window.updateDistrictText = function() {
+            const districtText = document.getElementById('district-text');
+            if (!districtText) return;
+            const checked = document.querySelectorAll('.district-checkbox:checked');
+            if (checked.length === 0) {
+                districtText.textContent = 'Любой';
+            } else if (checked.length === 1) {
+                districtText.textContent = checked[0].value;
+            } else {
+                districtText.textContent = `Выбрано: ${checked.length}`;
+            }
+        }
+
+        // Функция обновления текста в выпадающем списке улиц
+        window.updateStreetText = function() {
+            const streetText = document.getElementById('street-text');
+            if (!streetText) return;
+            const checked = document.querySelectorAll('.street-checkbox:checked');
+            if (checked.length === 0) {
+                streetText.textContent = 'Любая';
+            } else if (checked.length === 1) {
+                streetText.textContent = checked[0].value;
+            } else {
+                streetText.textContent = `Выбрано: ${checked.length}`;
+            }
+        }
+
+        // Функция загрузки улиц по выбранным районам
+        function loadStreetsForDistricts(selectedDistricts) {
+            const checkedCities = Array.from(document.querySelectorAll('.city-checkbox:checked')).map(cb => cb.value);
+            const city = checkedCities.length > 0 ? checkedCities[0] : '';
+            const streetList = document.getElementById('street-list');
+            const streetHidden = document.getElementById('street-hidden');
+            
+            if (!city || !streetList) return;
+            
+            // Сохраняем текущие выбранные улицы
+            const currentSelectedStreets = streetHidden ? streetHidden.value.split(',').filter(s => s.trim()) : [];
+            
+            // Формируем URL для запроса улиц
+            let url = `/api/streets/?city=${encodeURIComponent(city)}`;
+            if (selectedDistricts.length > 0) {
+                url += `&district=${selectedDistricts.map(d => encodeURIComponent(d)).join(',')}`;
+            }
+            
+            // Показываем индикатор загрузки только если список открыт или виден
+            const streetInput = document.getElementById('street-input');
+            if (streetInput && streetInput.classList.contains('active')) {
+                streetList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Загрузка...</div>';
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    streetList.innerHTML = '';
+                    
+                    if (data.streets && data.streets.length > 0) {
+                        data.streets.forEach(street => {
+                            // Проверяем, была ли эта улица выбрана ранее
+                            const wasSelected = currentSelectedStreets.includes(street);
+                            const item = document.createElement('label');
+                            item.className = 'custom-dropdown-item';
+                            item.innerHTML = `
+                                <input type="checkbox" name="street" value="${street}" 
+                                       class="street-checkbox" data-street="${street}" ${wasSelected ? 'checked' : ''}>
+                                <span>${street}</span>
+                            `;
+                            streetList.appendChild(item);
+                        });
+                        
+                        // Перепривязываем обработчики для новых чекбоксов
+                        document.querySelectorAll('.street-checkbox').forEach(checkbox => {
+                            // Удаляем старые обработчики
+                            const newCheckbox = checkbox.cloneNode(true);
+                            checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+                            newCheckbox.addEventListener('change', function() {
+                                updateStreetHidden();
+                                window.fetchData();
+                            });
+                        });
+                        
+                        // Обновляем скрытое поле, оставляя только те улицы, которые есть в новом списке
+                        const validSelectedStreets = currentSelectedStreets.filter(s => 
+                            data.streets.includes(s)
+                        );
+                        if (streetHidden) {
+                            streetHidden.value = validSelectedStreets.join(',');
+                        }
+                        window.updateStreetText();
+                        
+                        // Запускаем поиск после обновления списка улиц
+                        window.fetchData();
+                    } else {
+                        streetList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">Улицы не найдены</div>';
+                        if (streetHidden) {
+                            streetHidden.value = '';
+                        }
+                        window.updateStreetText();
+                        // Запускаем поиск даже если улиц нет
+                        window.fetchData();
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки улиц:', error);
+                    streetList.innerHTML = '<div style="padding: 20px; text-align: center; color: #e74c3c;">Ошибка загрузки</div>';
+                });
+        }
+
+        // Функция обновления скрытого поля районов
+        function updateDistrictHidden() {
+            const districtHidden = document.getElementById('district-hidden');
+            const checked = Array.from(document.querySelectorAll('.district-checkbox:checked'))
+                .map(cb => cb.value);
+            if (districtHidden) {
+                districtHidden.value = checked.join(',');
+            }
+            window.updateDistrictText();
+            
+            // Загружаем улицы для выбранных районов
+            const checkedCities = Array.from(document.querySelectorAll('.city-checkbox:checked')).map(cb => cb.value);
+            if (checkedCities.length > 0) {
+                loadStreetsForDistricts(checked);
+            }
+        }
+
+        // Функция обновления скрытого поля улиц
+        function updateStreetHidden() {
+            const streetHidden = document.getElementById('street-hidden');
+            const checked = Array.from(document.querySelectorAll('.street-checkbox:checked'))
+                .map(cb => cb.value);
+            if (streetHidden) {
+                streetHidden.value = checked.join(',');
+            }
+            window.updateStreetText();
+        }
+
+        // Инициализация текста при загрузке
+        // Сначала инициализируем город из скрытого поля, если он есть
+        if (cityHidden && cityHidden.value) {
+            const selectedCity = cityHidden.value.split(',')[0].trim(); // Берем первый город, если несколько
+            if (selectedCity) {
+                const cityCheckbox = document.querySelector(`.city-checkbox[value="${selectedCity}"]`);
+                if (cityCheckbox) {
+                    cityCheckbox.checked = true;
+                }
+            }
+        }
+        // Обновляем текст после инициализации
+        window.updateCityText();
+        window.updateDistrictText();
+        window.updateStreetText();
+        window.updateDeliveryQuarterText();
+
+        // Функция для вычисления позиции выпадающего списка
+        function updateDropdownPosition(input, list) {
+            if (!input || !list) return;
+            const rect = input.getBoundingClientRect();
+            list.style.top = (rect.bottom + 4) + 'px';
+            list.style.left = rect.left + 'px';
+            list.style.width = rect.width + 'px';
+        }
+
+        // Функция для перемещения списка в body при открытии
+        function moveDropdownToBody(list, input) {
+            if (!list || !input) return;
+            // Если список уже в body, не перемещаем
+            if (list.parentElement === document.body) return;
+            
+            // Сохраняем оригинального родителя
+            if (!list.dataset.originalParent) {
+                // Определяем правильный родитель по ID списка
+                let defaultParent = 'district-group';
+                if (list.id === 'city-list') {
+                    defaultParent = 'city-group';
+                } else if (list.id === 'street-list') {
+                    defaultParent = 'street-group';
+                }
+                list.dataset.originalParent = list.parentElement.id || defaultParent;
+            }
+            
+            // Перемещаем в body
+            document.body.appendChild(list);
+            updateDropdownPosition(input, list);
+        }
+
+        // Функция для возврата списка на место при закрытии
+        function returnDropdownToOriginal(list) {
+            if (!list || !list.dataset.originalParent) return;
+            const originalParent = document.getElementById(list.dataset.originalParent) || 
+                                   document.querySelector('.filter-group');
+            if (originalParent && list.parentElement === document.body) {
+                originalParent.appendChild(list);
+            }
+        }
+
+        // Обработка открытия/закрытия выпадающего списка города
+        if (cityInput && cityList) {
+            cityInput.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isActive = cityInput.classList.contains('active');
+                
+                // Закрываем все выпадающие списки
+                if (districtInput) districtInput.classList.remove('active');
+                if (districtList) {
+                    districtList.classList.remove('active');
+                    returnDropdownToOriginal(districtList);
+                }
+                if (streetInput) streetInput.classList.remove('active');
+                if (streetList) {
+                    streetList.classList.remove('active');
+                    returnDropdownToOriginal(streetList);
+                }
+                if (deliveryQuarterInput) deliveryQuarterInput.classList.remove('active');
+                if (deliveryQuarterList) {
+                    deliveryQuarterList.classList.remove('active');
+                    returnDropdownToOriginal(deliveryQuarterList);
+                }
+                
+                if (isActive) {
+                    cityInput.classList.remove('active');
+                    cityList.classList.remove('active');
+                    returnDropdownToOriginal(cityList);
+                } else {
+                    cityInput.classList.add('active');
+                    cityList.classList.add('active');
+                    // Перемещаем в body и вычисляем позицию
+                    moveDropdownToBody(cityList, cityInput);
+                }
+            });
+        }
+        
+        // Обработка выбора города через чекбоксы
+        document.querySelectorAll('.city-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // Для города можно выбрать только один - снимаем выбор с других
+                if (this.checked) {
+                    document.querySelectorAll('.city-checkbox').forEach(cb => {
+                        if (cb !== this) cb.checked = false;
+                    });
+                }
+                updateCityHidden();
+                
+                // Загружаем районы и улицы для выбранного города
+                const selectedCity = this.checked ? this.value : '';
+                if (selectedCity) {
+                    // Загружаем районы для выбранного города
+                    fetch(`/api/districts/?city=${encodeURIComponent(selectedCity)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            districtList.innerHTML = '';
+                            data.districts.forEach(district => {
+                                const item = document.createElement('label');
+                                item.className = 'custom-dropdown-item';
+                                item.innerHTML = `
+                                    <input type="checkbox" name="district" value="${district}" 
+                                           class="district-checkbox" data-district="${district}">
+                                    <span>${district}</span>
+                                `;
+                                districtList.appendChild(item);
+                            });
+                            // Перепривязываем обработчики
+                            document.querySelectorAll('.district-checkbox').forEach(checkbox => {
+                                checkbox.addEventListener('change', function() {
+                                    updateDistrictHidden();
+                                });
+                            });
+                            districtGroup.classList.remove('hidden');
+                            updateDistrictHidden();
+                        });
+                    
+                    // Загружаем все улицы для выбранного города
+                    loadStreetsForDistricts([]);
+                    streetGroup.classList.remove('hidden');
+                } else {
+                    // Если город не выбран, скрываем районы и улицы
+                    districtGroup.classList.add('hidden');
+                    streetGroup.classList.add('hidden');
+                    if (districtHidden) districtHidden.value = '';
+                    if (streetHidden) streetHidden.value = '';
+                    window.updateDistrictText();
+                    window.updateStreetText();
+                }
+                
+                // Запускаем поиск
+                window.fetchData();
+            });
+        });
+        
+        // Обработка открытия/закрытия выпадающего списка районов
+        if (districtInput && districtList) {
+            districtInput.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isActive = districtInput.classList.contains('active');
+                
+                // Закрываем все выпадающие списки
+                if (cityInput) cityInput.classList.remove('active');
+                if (cityList) {
+                    cityList.classList.remove('active');
+                    returnDropdownToOriginal(cityList);
+                }
+                if (streetInput) streetInput.classList.remove('active');
+                if (streetList) {
+                    streetList.classList.remove('active');
+                    returnDropdownToOriginal(streetList);
+                }
+                
+                if (isActive) {
+                    districtInput.classList.remove('active');
+                    districtList.classList.remove('active');
+                    returnDropdownToOriginal(districtList);
+                } else {
+                    districtInput.classList.add('active');
+                    districtList.classList.add('active');
+                    // Перемещаем в body и вычисляем позицию
+                    moveDropdownToBody(districtList, districtInput);
                 }
             });
         }
 
-        // Обработка выбора города
-        const citySelect = document.getElementById('city');
-        const districtGroup = document.getElementById('district-group');
-        const streetGroup = document.getElementById('street-group');
-        const districtSelect = document.getElementById('district');
-        const streetSelect = document.getElementById('street');
+        // Обработка открытия/закрытия выпадающего списка улиц
+        if (streetInput && streetList) {
+            streetInput.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isActive = streetInput.classList.contains('active');
+                
+                // Закрываем все выпадающие списки
+                if (cityInput) cityInput.classList.remove('active');
+                if (cityList) {
+                    cityList.classList.remove('active');
+                    returnDropdownToOriginal(cityList);
+                }
+                if (districtInput) districtInput.classList.remove('active');
+                if (districtList) {
+                    districtList.classList.remove('active');
+                    returnDropdownToOriginal(districtList);
+                }
+                if (deliveryQuarterInput) deliveryQuarterInput.classList.remove('active');
+                if (deliveryQuarterList) {
+                    deliveryQuarterList.classList.remove('active');
+                    returnDropdownToOriginal(deliveryQuarterList);
+                }
+                
+                if (isActive) {
+                    streetInput.classList.remove('active');
+                    streetList.classList.remove('active');
+                    returnDropdownToOriginal(streetList);
+                } else {
+                    streetInput.classList.add('active');
+                    streetList.classList.add('active');
+                    // Перемещаем в body и вычисляем позицию
+                    moveDropdownToBody(streetList, streetInput);
+                }
+            });
+        }
+
+        // Обновляем позицию при скролле и изменении размера окна
+        window.addEventListener('scroll', function() {
+            if (cityList && cityList.classList.contains('active') && cityInput) {
+                updateDropdownPosition(cityInput, cityList);
+            }
+            if (districtList && districtList.classList.contains('active') && districtInput) {
+                updateDropdownPosition(districtInput, districtList);
+            }
+            if (streetList && streetList.classList.contains('active') && streetInput) {
+                updateDropdownPosition(streetInput, streetList);
+            }
+        }, true);
+
+        window.addEventListener('resize', function() {
+            if (cityList && cityList.classList.contains('active') && cityInput) {
+                updateDropdownPosition(cityInput, cityList);
+            }
+            if (districtList && districtList.classList.contains('active') && districtInput) {
+                updateDropdownPosition(districtInput, districtList);
+            }
+            if (streetList && streetList.classList.contains('active') && streetInput) {
+                updateDropdownPosition(streetInput, streetList);
+            }
+        });
+
+        // Обработка открытия/закрытия выпадающего списка срока сдачи
+        if (deliveryQuarterInput && deliveryQuarterList) {
+            deliveryQuarterInput.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isActive = deliveryQuarterInput.classList.contains('active');
+                
+                // Закрываем все выпадающие списки
+                if (cityInput) cityInput.classList.remove('active');
+                if (cityList) {
+                    cityList.classList.remove('active');
+                    returnDropdownToOriginal(cityList);
+                }
+                if (districtInput) districtInput.classList.remove('active');
+                if (districtList) {
+                    districtList.classList.remove('active');
+                    returnDropdownToOriginal(districtList);
+                }
+                if (streetInput) streetInput.classList.remove('active');
+                if (streetList) {
+                    streetList.classList.remove('active');
+                    returnDropdownToOriginal(streetList);
+                }
+                
+                if (isActive) {
+                    deliveryQuarterInput.classList.remove('active');
+                    deliveryQuarterList.classList.remove('active');
+                    returnDropdownToOriginal(deliveryQuarterList);
+                } else {
+                    deliveryQuarterInput.classList.add('active');
+                    deliveryQuarterList.classList.add('active');
+                    // Перемещаем в body и вычисляем позицию
+                    moveDropdownToBody(deliveryQuarterList, deliveryQuarterInput);
+                }
+            });
+        }
+        
+        // Обработка выбора срока сдачи через чекбоксы
+        document.querySelectorAll('.delivery-quarter-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // Для срока сдачи можно выбрать только один - снимаем выбор с других
+                if (this.checked) {
+                    document.querySelectorAll('.delivery-quarter-checkbox').forEach(cb => {
+                        if (cb !== this) cb.checked = false;
+                    });
+                }
+                updateDeliveryQuarterHidden();
+                
+                // Запускаем поиск
+                window.fetchData();
+            });
+        });
+        
+        // Закрытие выпадающих списков при клике вне их
+        document.addEventListener('click', function(e) {
+            if (cityDropdown && !cityDropdown.contains(e.target) && 
+                cityList && !cityList.contains(e.target)) {
+                if (cityInput) cityInput.classList.remove('active');
+                if (cityList) {
+                    cityList.classList.remove('active');
+                    returnDropdownToOriginal(cityList);
+                }
+            }
+            if (districtDropdown && !districtDropdown.contains(e.target) && 
+                districtList && !districtList.contains(e.target)) {
+                if (districtInput) districtInput.classList.remove('active');
+                if (districtList) {
+                    districtList.classList.remove('active');
+                    returnDropdownToOriginal(districtList);
+                }
+            }
+            if (streetDropdown && !streetDropdown.contains(e.target) && 
+                streetList && !streetList.contains(e.target)) {
+                if (streetInput) streetInput.classList.remove('active');
+                if (streetList) {
+                    streetList.classList.remove('active');
+                    returnDropdownToOriginal(streetList);
+                }
+            }
+            if (deliveryQuarterDropdown && !deliveryQuarterDropdown.contains(e.target) && 
+                deliveryQuarterList && !deliveryQuarterList.contains(e.target)) {
+                if (deliveryQuarterInput) deliveryQuarterInput.classList.remove('active');
+                if (deliveryQuarterList) {
+                    deliveryQuarterList.classList.remove('active');
+                    returnDropdownToOriginal(deliveryQuarterList);
+                }
+            }
+        });
+
+        // Также закрываем при скролле страницы (опционально, можно убрать если нужно)
+        // window.addEventListener('scroll', function() {
+        //     districtInput.classList.remove('active');
+        //     districtList.classList.remove('active');
+        //     streetInput.classList.remove('active');
+        //     streetList.classList.remove('active');
+        // }, true);
+
+        // Обработка изменения чекбоксов районов
+        document.querySelectorAll('.district-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateDistrictHidden();
+                // Не запускаем fetchData сразу, так как загрузка улиц может занять время
+                // Запустим после обновления списка улиц
+            });
+        });
+
+        // Обработка изменения чекбоксов улиц
+        document.querySelectorAll('.street-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateStreetHidden();
+                window.fetchData();
+            });
+        });
+
+        // Инициализация выбранных значений из скрытых полей
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlCity = urlParams.get('city') || (cityHidden ? cityHidden.value : '');
+        const urlDistricts = urlParams.get('district') || (districtHidden ? districtHidden.value : '');
+        const urlStreets = urlParams.get('street') || (streetHidden ? streetHidden.value : '');
+        const urlDeliveryQuarter = urlParams.get('delivery_quarter') || (deliveryQuarterHidden ? deliveryQuarterHidden.value : '');
+        const selectedDistrictsFromUrl = urlDistricts ? urlDistricts.split(',').map(d => d.trim()).filter(d => d) : [];
+        const selectedStreetsFromUrl = urlStreets ? urlStreets.split(',').map(s => s.trim()).filter(s => s) : [];
+        
+        // Инициализация города из URL или скрытого поля
+        if (urlCity) {
+            const cityValue = urlCity.split(',')[0].trim();
+            const cityCheckbox = document.querySelector(`.city-checkbox[value="${cityValue}"]`);
+            if (cityCheckbox) {
+                cityCheckbox.checked = true;
+                if (cityHidden) {
+                    cityHidden.value = cityValue;
+                }
+            }
+        }
+        
+        // Инициализация срока сдачи из URL или скрытого поля
+        if (urlDeliveryQuarter) {
+            const quarterValue = urlDeliveryQuarter.split(',')[0].trim();
+            const quarterCheckbox = document.querySelector(`.delivery-quarter-checkbox[value="${quarterValue}"]`);
+            if (quarterCheckbox) {
+                quarterCheckbox.checked = true;
+                if (deliveryQuarterHidden) {
+                    deliveryQuarterHidden.value = quarterValue;
+                }
+            }
+        }
 
         // Инициализация: загружаем районы и улицы, если город уже выбран
-        if (citySelect.value) {
-            const selectedCity = citySelect.value;
-            const selectedDistrict = districtSelect.value;
+        const checkedCities = Array.from(document.querySelectorAll('.city-checkbox:checked')).map(cb => cb.value);
+        if (checkedCities.length > 0) {
+            const selectedCity = checkedCities[0];
+            const selectedDistricts = selectedDistrictsFromUrl.length > 0 ? selectedDistrictsFromUrl : (districtHidden ? districtHidden.value.split(',').filter(d => d) : []);
 
             // Загружаем районы
             fetch(`/api/districts/?city=${selectedCity}`)
                 .then(response => response.json())
                 .then(data => {
-                    districtSelect.innerHTML = '<option value="">Любой</option>';
+                    districtList.innerHTML = '';
                     data.districts.forEach(district => {
-                        const selected = district === selectedDistrict ? 'selected' : '';
-                        districtSelect.innerHTML += `<option value="${district}" ${selected}>${district}</option>`;
+                        const isChecked = selectedDistricts.includes(district);
+                        const item = document.createElement('label');
+                        item.className = 'custom-dropdown-item';
+                        item.innerHTML = `
+                            <input type="checkbox" name="district" value="${district}" 
+                                   class="district-checkbox" data-district="${district}" ${isChecked ? 'checked' : ''}>
+                            <span>${district}</span>
+                        `;
+                        districtList.appendChild(item);
+                    });
+                    // Обновляем скрытое поле и текст
+                    if (selectedDistricts.length > 0 && districtHidden) {
+                        districtHidden.value = selectedDistricts.join(',');
+                    }
+                    window.updateDistrictText();
+                    // Перепривязываем обработчики
+                    document.querySelectorAll('.district-checkbox').forEach(checkbox => {
+                        checkbox.addEventListener('change', function() {
+                            updateDistrictHidden();
+                        });
                     });
                     districtGroup.classList.remove('hidden');
                 });
 
-            // Загружаем улицы
-            let url = `/api/streets/?city=${selectedCity}`;
-            if (selectedDistrict) {
-                url += `&district=${selectedDistrict}`;
-            }
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    const selectedStreet = streetSelect.value;
-                    streetSelect.innerHTML = '<option value="">Любая</option>';
-                    data.streets.forEach(street => {
-                        const selected = street === selectedStreet ? 'selected' : '';
-                        streetSelect.innerHTML += `<option value="${street}" ${selected}>${street}</option>`;
-                    });
-                    streetGroup.classList.remove('hidden');
-                });
+            // Загружаем улицы для выбранных районов (или все, если районы не выбраны)
+            loadStreetsForDistricts(selectedDistricts);
+            streetGroup.classList.remove('hidden');
         }
 
-        citySelect.addEventListener('change', function () {
-            const selectedCity = this.value;
-
-            if (selectedCity) {
-                // Загружаем районы для выбранного города
-                fetch(`/api/districts/?city=${selectedCity}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        districtSelect.innerHTML = '<option value="">Любой</option>';
-                        data.districts.forEach(district => {
-                            districtSelect.innerHTML += `<option value="${district}">${district}</option>`;
-                        });
-
-                        // Показываем группу районов
-                        districtGroup.classList.remove('hidden');
-                    });
-
-                // Загружаем улицы для выбранного города
-                fetch(`/api/streets/?city=${selectedCity}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        streetSelect.innerHTML = '<option value="">Любая</option>';
-                        data.streets.forEach(street => {
-                            streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
-                        });
-
-                        // Показываем группу улиц
-                        streetGroup.classList.remove('hidden');
-                    });
-
-                // Автоматически запускаем поиск после выбора города
-                const form = document.getElementById('filters-form');
-                if (form) {
-                    form.dispatchEvent(new Event('submit', { cancelable: true }));
-                }
-            } else {
-                // Сбрасываем значения
-                districtSelect.innerHTML = '<option value="">Любой</option>';
-                streetSelect.innerHTML = '<option value="">Любая</option>';
-
-                // Скрываем группы через CSS класс
-                districtGroup.classList.add('hidden');
-                streetGroup.classList.add('hidden');
-            }
-        });
-
-        // Обработчик изменения района - обновляем улицы
-        districtSelect.addEventListener('change', function () {
-            const selectedCity = citySelect.value;
-            const selectedDistrict = this.value;
-
-            if (selectedCity) {
-                // Загружаем улицы для выбранного города и района
-                let url = `/api/streets/?city=${selectedCity}`;
-                if (selectedDistrict) {
-                    url += `&district=${selectedDistrict}`;
-                }
-
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        streetSelect.innerHTML = '<option value="">Любая</option>';
-                        data.streets.forEach(street => {
-                            streetSelect.innerHTML += `<option value="${street}">${street}</option>`;
-                        });
-                    });
-
-                // Автоматически запускаем поиск после выбора района
-                const form = document.getElementById('filters-form');
-                if (form) {
-                    form.dispatchEvent(new Event('submit', { cancelable: true }));
-                }
-            }
-        });
-
-        // Обработчик изменения улицы - автоматически запускаем поиск
-        streetSelect.addEventListener('change', function () {
-            const form = document.getElementById('filters-form');
-            if (form) {
-                form.dispatchEvent(new Event('submit', { cancelable: true }));
-            }
-        });
+        // Обработка изменения города уже добавлена выше в обработчике чекбоксов
+        // Удаляем старый обработчик для select, так как теперь используем кастомный выпадающий список
 
 
 
@@ -1891,6 +2799,38 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             setView(b.getAttribute('data-view'));
         }));
 
+        // Content toggle (ЖК / Квартиры) - только для новостроек
+        if (!isSecondary) {
+            const contentBtns = document.querySelectorAll('.content-btn');
+            const savedContentMode = localStorage.getItem('catalog_content_mode') || 'complexes';
+            
+            // Устанавливаем активную кнопку
+            contentBtns.forEach(btn => {
+                const mode = btn.getAttribute('data-content');
+                if (mode === savedContentMode) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Обработчик клика на тумблер ЖК/Квартиры
+            contentBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mode = btn.getAttribute('data-content');
+                    localStorage.setItem('catalog_content_mode', mode);
+                    
+                    // Обновляем активные кнопки
+                    contentBtns.forEach(b => {
+                        b.classList.toggle('active', b.getAttribute('data-content') === mode);
+                    });
+                    
+                    // Перезагружаем данные
+                    window.fetchData();
+                });
+            });
+        }
+
         // Инициализация вида по умолчанию
         // Принудительно устанавливаем вид "списком" для вторичной недвижимости
         if (isSecondary) {
@@ -1904,8 +2844,28 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
 
 
         if (form && !form.dataset.ajaxBound) {
-            form.addEventListener('submit', function (e) { e.preventDefault(); window.fetchData(); });
+            form.addEventListener('submit', function (e) { 
+                e.preventDefault(); 
+                window.fetchData(); 
+            });
             form.dataset.ajaxBound = '1';
+        }
+        
+        // Обработка нажатия на кнопку "Поиск" - закрываем фильтр только при явном клике
+        const searchButton = form ? form.querySelector('button[type="submit"]') : null;
+        if (searchButton) {
+            searchButton.addEventListener('click', function (e) {
+                // Закрываем фильтр только при явном нажатии на кнопку "Поиск" (мобильная версия)
+                if (window.innerWidth <= 768) {
+                    setTimeout(function () {
+                        const sheet = document.getElementById('filters-sheet');
+                        const backdrop = document.getElementById('filters-backdrop');
+                        if (sheet) sheet.classList.remove('open');
+                        if (backdrop) backdrop.classList.remove('open');
+                        document.body.classList.remove('filter-open');
+                    }, 100);
+                }
+            });
         }
 
         document.getElementById('clear-filters')?.addEventListener('click', function (e) {
@@ -1994,6 +2954,24 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
                 complexesCheckboxes.forEach(cb => cb.checked = false);
             }
             if (complexesHidden) complexesHidden.value = '';
+
+            // reset district checkboxes
+            const districtCheckboxes = document.querySelectorAll('.district-checkbox');
+            const districtHidden = document.getElementById('district-hidden');
+            if (districtCheckboxes) {
+                districtCheckboxes.forEach(cb => cb.checked = false);
+            }
+            if (districtHidden) districtHidden.value = '';
+            if (typeof updateDistrictText === 'function') updateDistrictText();
+
+            // reset street checkboxes
+            const streetCheckboxes = document.querySelectorAll('.street-checkbox');
+            const streetHidden = document.getElementById('street-hidden');
+            if (streetCheckboxes) {
+                streetCheckboxes.forEach(cb => cb.checked = false);
+            }
+            if (streetHidden) streetHidden.value = '';
+            if (typeof updateStreetText === 'function') updateStreetText();
             // Очистка поля поиска ЖК и показ всех элементов
             if (complexSearchInput) {
                 complexSearchInput.value = '';
@@ -2105,6 +3083,34 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
                 }
             });
             updateComplexesHidden();
+        }
+
+        // Инициализация выбранных районов и улиц из URL параметров или скрытых полей
+        const districtHidden = document.getElementById('district-hidden');
+        const streetHidden = document.getElementById('street-hidden');
+        const urlDistricts = urlParams.get('district') || (districtHidden ? districtHidden.value : '');
+        const urlStreets = urlParams.get('street') || (streetHidden ? streetHidden.value : '');
+        
+        if (urlDistricts) {
+            const selectedDistricts = urlDistricts.split(',').map(d => d.trim()).filter(d => d);
+            document.querySelectorAll('.district-checkbox').forEach(cb => {
+                if (selectedDistricts.includes(cb.value)) {
+                    cb.checked = true;
+                }
+            });
+            if (districtHidden) districtHidden.value = urlDistricts;
+            window.updateDistrictText();
+        }
+        
+        if (urlStreets) {
+            const selectedStreets = urlStreets.split(',').map(s => s.trim()).filter(s => s);
+            document.querySelectorAll('.street-checkbox').forEach(cb => {
+                if (selectedStreets.includes(cb.value)) {
+                    cb.checked = true;
+                }
+            });
+            if (streetHidden) streetHidden.value = urlStreets;
+            window.updateStreetText();
         }
 
         // Анимация появления фильтров
@@ -2225,8 +3231,52 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
         const closeBtn = document.getElementById('mobile-filter-close');
         const sheet = document.getElementById('filters-sheet');
         const backdrop = document.getElementById('filters-backdrop');
-        function openSheet() { if (sheet) { sheet.classList.add('open'); } if (backdrop) { backdrop.classList.add('open'); } document.body.style.overflow = 'hidden'; }
-        function closeSheet() { if (sheet) { sheet.classList.remove('open'); } if (backdrop) { backdrop.classList.remove('open'); } document.body.style.overflow = ''; }
+        
+        let isSheetOpen = false;
+        
+        function openSheet() { 
+            if (sheet) { 
+                sheet.classList.add('open');
+                
+                // Принудительно применяем стили для прокрутки через JavaScript
+                sheet.style.setProperty('overflow-y', 'auto', 'important');
+                sheet.style.setProperty('overflow-x', 'hidden', 'important');
+                sheet.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+                sheet.style.setProperty('touch-action', 'pan-y', 'important');
+                sheet.style.setProperty('max-height', '80vh', 'important');
+                sheet.style.setProperty('height', 'auto', 'important');
+                
+                // Убеждаемся, что форма не блокирует прокрутку
+                const form = sheet.querySelector('.filters-form');
+                if (form) {
+                    form.style.setProperty('height', 'auto', 'important');
+                    form.style.setProperty('overflow', 'visible', 'important');
+                }
+            } 
+            if (backdrop) { 
+                backdrop.classList.add('open'); 
+            } 
+            
+            // Блокируем прокрутку основной страницы
+            document.body.classList.add('filter-open');
+            
+            isSheetOpen = true;
+        }
+        
+        function closeSheet() { 
+            if (sheet) { 
+                sheet.classList.remove('open');
+            } 
+            if (backdrop) { 
+                backdrop.classList.remove('open'); 
+            } 
+            
+            // Разблокируем прокрутку основной страницы
+            document.body.classList.remove('filter-open');
+            
+            isSheetOpen = false;
+        }
+        
         if (openBtn) openBtn.addEventListener('click', openSheet);
         if (closeBtn) closeBtn.addEventListener('click', closeSheet);
         if (backdrop) backdrop.addEventListener('click', closeSheet);

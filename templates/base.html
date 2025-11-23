@@ -126,6 +126,9 @@
             </div>
             <nav class="mobile-drawer-nav">
                 <a href="{% url 'main:home' %}" class="drawer-link">Главная</a>
+                <a href="{% url 'main:favorites' %}" class="drawer-link">
+                    Избранное
+                </a>
                 <div class="drawer-group">
                     <div class="drawer-title">Жилые комплексы</div>
                     <a href="{% url 'main:newbuild_index' %}" class="drawer-sublink">Новостройки</a>
@@ -147,10 +150,6 @@
                 </div>
                 
                 <a href="{% url 'main:offices' %}" class="drawer-link">Офисы продаж</a>
-                <a href="{% url 'main:favorites' %}" class="drawer-link">
-                    <i class="far fa-heart"></i> Избранное
-                    <span class="favorites-count-mobile" id="favorites-count-mobile" style="display: none;"> (0)</span>
-                </a>
             </nav>
             <div class="mobile-drawer-footer">
                 <a class="drawer-phone" href="tel:

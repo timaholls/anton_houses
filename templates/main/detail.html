@@ -265,26 +265,26 @@
 					style="font-size: 18px; font-weight: 700; color: #ffffff; margin: 0; margin-bottom: 16px;">
 					Ответственный агент
 				</h2>
-
+				
 				<!-- Фото и информация об агенте -->
 				<div class="agent-profile"
 					style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
 					<div class="agent-photo-wrapper"
 						style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #8b7355, #a0856b); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.2);">
 						{% if agent %}
-						{% if agent.images and agent.images.0 %}
+							{% if agent.images and agent.images.0 %}
 						<img src="{{ agent.images.0 }}"
 							alt="{% if agent.full_name %}{{ agent.full_name }}{% else %}Агент{% endif %}"
-							style="width: 100%; height: 100%; object-fit: cover;">
-						{% elif agent.photo %}
+									style="width: 100%; height: 100%; object-fit: cover;">
+							{% elif agent.photo %}
 						<img src="{{ agent.photo }}"
 							alt="{% if agent.full_name %}{{ agent.full_name }}{% else %}Агент{% endif %}"
-							style="width: 100%; height: 100%; object-fit: cover;">
+									style="width: 100%; height: 100%; object-fit: cover;">
+							{% else %}
+								<i class="fas fa-user" style="color: #ffffff; font-size: 32px;"></i>
+							{% endif %}
 						{% else %}
-						<i class="fas fa-user" style="color: #ffffff; font-size: 32px;"></i>
-						{% endif %}
-						{% else %}
-						<i class="fas fa-user" style="color: #ffffff; font-size: 32px;"></i>
+							<i class="fas fa-user" style="color: #ffffff; font-size: 32px;"></i>
 						{% endif %}
 					</div>
 					<div class="agent-info" style="text-align: center;">
@@ -950,13 +950,13 @@
 							<h3 class="compact-card-title"
 								style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">
 								{% if apt.title %}
-								{{ apt.title }}
+									{{ apt.title }}
 								{% elif apt.rooms %}
-								{{ apt.rooms }}-комнатная квартира{% if apt.area %}, {{ apt.area }} м²{% endif %}
+									{{ apt.rooms }}-комнатная квартира{% if apt.area %}, {{ apt.area }} м²{% endif %}
 								{% elif apt.area %}
-								Квартира, {{ apt.area }} м²
+									Квартира, {{ apt.area }} м²
 								{% else %}
-								Квартира
+									Квартира
 								{% endif %}
 							</h3>
 						</div>
@@ -2451,15 +2451,15 @@
 	document.addEventListener('DOMContentLoaded', function () {
 		const stages = {{ complex.construction_progress.construction_stages| safe
 	}};
-	const stagesPerPage = 3;
-	let currentPage = 0;
-	const totalPages = Math.ceil(stages.length / stagesPerPage);
+		const stagesPerPage = 3;
+		let currentPage = 0;
+		const totalPages = Math.ceil(stages.length / stagesPerPage);
 
-	const prevBtn = document.getElementById('prevStagesBtn');
-	const nextBtn = document.getElementById('nextStagesBtn');
-	const stagesInfo = document.getElementById('stagesInfo');
-	const stagesGrid = document.getElementById('constructionStagesGrid');
-	const paginationDots = document.getElementById('paginationDots');
+		const prevBtn = document.getElementById('prevStagesBtn');
+		const nextBtn = document.getElementById('nextStagesBtn');
+		const stagesInfo = document.getElementById('stagesInfo');
+		const stagesGrid = document.getElementById('constructionStagesGrid');
+		const paginationDots = document.getElementById('paginationDots');
 
 	// Функция для создания карточки этапа
 	function createStageCard(stage) {

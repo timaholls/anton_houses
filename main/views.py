@@ -244,6 +244,10 @@ def catalog_api(request):
         district = request.GET.get('district', '').strip()
         street = request.GET.get('street', '').strip()
         
+        # Обрабатываем множественные значения для district и street (через запятую)
+        districts_list = [d.strip() for d in district.split(',') if d.strip()] if district else []
+        streets_list = [s.strip() for s in street.split(',') if s.strip()] if street else []
+        
         # Фильтры недвижимости
         rooms = request.GET.get('rooms', '').strip()
         area_from = request.GET.get('area_from', '').strip()
@@ -312,30 +316,30 @@ def catalog_api(request):
                 {'address_city': city},
                 {'city': city}
             ]
-        if district:
+        if districts_list:
+            # Множественный выбор районов - используем $in
+            district_filter = {
+                '$or': [
+                    {'address_district': {'$in': districts_list}},
+                    {'district': {'$in': districts_list}}
+                ]
+            }
             if '$or' in filter_query:
                 # Если уже есть $or для города, добавляем район через $and
                 filter_query = {
                     '$and': [
                         filter_query,
-                        {
-                            '$or': [
-                                {'address_district': district},
-                                {'district': district}
-                            ]
-                        }
+                        district_filter
                     ]
                 }
             else:
-                filter_query['$or'] = [
-                    {'address_district': district},
-                    {'district': district}
-                ]
-        if street:
+                filter_query.update(district_filter)
+        if streets_list:
+            # Множественный выбор улиц - используем $in
             street_filter = {
                 '$or': [
-                    {'address_street': street},
-                    {'street': street}
+                    {'address_street': {'$in': streets_list}},
+                    {'street': {'$in': streets_list}}
                 ]
             }
             if '$and' in filter_query:
@@ -777,6 +781,339 @@ def catalog_api(request):
         })
 
 
+@require_http_methods(["GET"])
+def apartments_api(request):
+    """API для каталога квартир из всех ЖК с фильтрацией"""
+    try:
+        # Получаем параметры фильтрации
+        page = int(request.GET.get('page', 1))
+        per_page = 9
+        
+        # Фильтры местоположения
+        city = request.GET.get('city', '').strip()
+        district = request.GET.get('district', '').strip()
+        street = request.GET.get('street', '').strip()
+        
+        # Обрабатываем множественные значения для district и street (через запятую)
+        districts_list = [d.strip() for d in district.split(',') if d.strip()] if district else []
+        streets_list = [s.strip() for s in street.split(',') if s.strip()] if street else []
+        
+        # Фильтры недвижимости
+        rooms = request.GET.get('rooms', '').strip()
+        area_from = request.GET.get('area_from', '').strip()
+        area_to = request.GET.get('area_to', '').strip()
+        price_from = request.GET.get('price_from', '').strip()
+        price_to = request.GET.get('price_to', '').strip()
+        delivery_quarter = request.GET.get('delivery_quarter', '').strip()
+        
+        # Сортировка
+        sort = request.GET.get('sort', 'price_asc')
+        
+        db = get_mongo_connection()
+        unified_col = db['unified_houses']
+        
+        # Преобразуем квартал в конечную дату для фильтрации
+        delivery_date_limit = None
+        if delivery_quarter:
+            try:
+                parts = delivery_quarter.split('_')
+                if len(parts) == 2:
+                    quarter = int(parts[0][1:])
+                    year = int(parts[1])
+                    if quarter == 1:
+                        delivery_date_limit = date(year, 3, 31)
+                    elif quarter == 2:
+                        delivery_date_limit = date(year, 6, 30)
+                    elif quarter == 3:
+                        delivery_date_limit = date(year, 9, 30)
+                    elif quarter == 4:
+                        delivery_date_limit = date(year, 12, 31)
+            except (ValueError, IndexError):
+                delivery_date_limit = None
+        
+        # Формируем фильтр для ЖК
+        filter_query = {}
+        if city:
+            filter_query['$or'] = [
+                {'address_city': city},
+                {'city': city}
+            ]
+        if districts_list:
+            district_filter = {
+                '$or': [
+                    {'address_district': {'$in': districts_list}},
+                    {'district': {'$in': districts_list}}
+                ]
+            }
+            if '$or' in filter_query:
+                filter_query = {
+                    '$and': [filter_query, district_filter]
+                }
+            else:
+                filter_query.update(district_filter)
+        if streets_list:
+            street_filter = {
+                '$or': [
+                    {'address_street': {'$in': streets_list}},
+                    {'street': {'$in': streets_list}}
+                ]
+            }
+            if '$and' in filter_query:
+                filter_query['$and'].append(street_filter)
+            elif '$or' in filter_query:
+                filter_query = {
+                    '$and': [filter_query, street_filter]
+                }
+            else:
+                filter_query.update(street_filter)
+        
+        # Получаем все ЖК
+        all_complexes = list(unified_col.find(filter_query))
+        
+        # Собираем все квартиры из всех ЖК
+        all_apartments = []
+        
+        for complex_record in all_complexes:
+            # Определяем структуру записи
+            is_new_structure = 'development' in complex_record and 'avito' not in complex_record
+            
+            # Получаем данные ЖК
+            if is_new_structure:
+                development = complex_record.get('development', {})
+                name = development.get('name', 'Без названия')
+                address = development.get('address', '')
+                photos = development.get('photos', [])
+                parameters = development.get('parameters', {})
+                apartment_types = complex_record.get('apartment_types', {})
+            else:
+                avito_dev = complex_record.get('avito', {}).get('development', {}) if complex_record.get('avito') else {}
+                name = avito_dev.get('name') or complex_record.get('domclick', {}).get('development', {}).get('complex_name', 'Без названия')
+                address_full = avito_dev.get('address', '')
+                address = address_full.split('/')[0].strip() if address_full else ''
+                photos = complex_record.get('domclick', {}).get('development', {}).get('photos', [])
+                parameters = avito_dev.get('parameters', {})
+                apartment_types = complex_record.get('avito', {}).get('apartment_types', {})
+            
+            # Проверяем срок сдачи
+            if delivery_date_limit:
+                completion_date_str = parameters.get('Срок сдачи', '')
+                if completion_date_str:
+                    import re
+                    patterns = re.findall(r'(\d+)\s*кв\.\s*(\d{4})', completion_date_str)
+                    if patterns:
+                        max_delivery_date = None
+                        for quarter_str, year_str in patterns:
+                            try:
+                                quarter = int(quarter_str)
+                                year = int(year_str)
+                                if quarter == 1:
+                                    end_date = date(year, 3, 31)
+                                elif quarter == 2:
+                                    end_date = date(year, 6, 30)
+                                elif quarter == 3:
+                                    end_date = date(year, 9, 30)
+                                elif quarter == 4:
+                                    end_date = date(year, 12, 31)
+                                else:
+                                    continue
+                                if not max_delivery_date or end_date > max_delivery_date:
+                                    max_delivery_date = end_date
+                            except (ValueError, TypeError):
+                                continue
+                        if max_delivery_date and max_delivery_date > delivery_date_limit:
+                            continue  # Пропускаем этот ЖК
+            
+            # Извлекаем квартиры из apartment_types
+            for apt_type, apt_data in apartment_types.items():
+                apartments = apt_data.get('apartments', [])
+                for apt_index, apt in enumerate(apartments):
+                    # Получаем данные квартиры
+                    area = apt.get('area') or apt.get('square') or apt.get('totalArea')
+                    if not area:
+                        title = apt.get('title', '')
+                        import re
+                        area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
+                        if area_match:
+                            area = area_match.group(1).replace(',', '.')
+                    
+                    # Фильтр по комнатам
+                    if rooms:
+                        selected_rooms = [r.strip() for r in rooms.split(',') if r.strip()]
+                        if selected_rooms and apt_type not in selected_rooms:
+                            continue
+                    
+                    # Фильтр по площади
+                    if area:
+                        try:
+                            area_val = float(str(area))
+                            if area_from:
+                                try:
+                                    if area_val < float(area_from):
+                                        continue
+                                except ValueError:
+                                    pass
+                            if area_to:
+                                try:
+                                    if area_val > float(area_to):
+                                        continue
+                                except ValueError:
+                                    pass
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    # Получаем цену
+                    price = apt.get('price') or apt.get('price_value') or ''
+                    price_num = None
+                    if price:
+                        import re
+                        # Парсим цену из строки типа "6,29 млн ₽" или "6290000"
+                        if isinstance(price, (int, float)):
+                            price_num = float(price) / 1000000  # Конвертируем в млн
+                        else:
+                            price_str = str(price)
+                            price_match = re.search(r'([\d,]+)\s*млн', price_str.lower())
+                            if price_match:
+                                price_num = float(price_match.group(1).replace(',', '.'))
+                            else:
+                                # Пытаемся извлечь число
+                                num_match = re.search(r'(\d+[,.]?\d*)', price_str)
+                                if num_match:
+                                    price_num = float(num_match.group(1).replace(',', '.'))
+                    
+                    # Фильтр по цене
+                    if price_num and (price_from or price_to):
+                        if price_from:
+                            try:
+                                if price_num < float(price_from.replace(',', '.')):
+                                    continue
+                            except ValueError:
+                                pass
+                        if price_to:
+                            try:
+                                if price_num > float(price_to.replace(',', '.')):
+                                    continue
+                            except ValueError:
+                                pass
+                    
+                    # Формируем ID квартиры для ссылки
+                    apartment_id = apt.get('id')
+                    if not apartment_id:
+                        # Если ID нет, формируем из типа и индекса
+                        apartment_id = f"{apt_type}_{apt_index}"
+                    else:
+                        # Если ID есть, проверяем формат
+                        apartment_id_str = str(apartment_id)
+                        # Если ID содержит complex_id, убираем его
+                        if apartment_id_str.startswith(str(complex_record['_id'])):
+                            parts = apartment_id_str.split('_')
+                            if len(parts) >= 3:
+                                apartment_id = f"{parts[1]}_{parts[2]}"
+                        else:
+                            apartment_id = apartment_id_str
+                    
+                    # Получаем фото планировки квартиры
+                    apartment_photo = apt.get('photo') or apt.get('image') or apt.get('plan') or apt.get('layout') or apt.get('layout_image')
+                    if not apartment_photo and photos:
+                        apartment_photo = photos[0]
+                    
+                    # Формируем название квартиры
+                    rooms_display = apt_type
+                    if apt_type == 'Студия':
+                        apartment_title = 'Студия'
+                    elif apt_type == '1':
+                        apartment_title = '1-комнатная квартира'
+                    elif apt_type == '2':
+                        apartment_title = '2-комнатная квартира'
+                    elif apt_type == '3':
+                        apartment_title = '3-комнатная квартира'
+                    elif apt_type == '4':
+                        apartment_title = '4-комнатная квартира'
+                    elif apt_type == '5+':
+                        apartment_title = '5+ комнат'
+                    else:
+                        apartment_title = f'{apt_type}-комнатная квартира'
+                    
+                    # Формируем карточку квартиры
+                    apartment_card = {
+                        'id': f"{str(complex_record['_id'])}_apt_{apartment_id}",
+                        'apartment_id': apartment_id,
+                        'complex_id': str(complex_record['_id']),
+                        'complex_name': name,
+                        'complex_address': address,
+                        'complex_photos': photos,
+                        'rooms': apt_type,
+                        'rooms_display': rooms_display,
+                        'apartment_title': apartment_title,
+                        'area': area,
+                        'price': price,
+                        'price_num': price_num,
+                        'floor': apt.get('floor') or apt.get('floor_number') or '',
+                        'title': apt.get('title', ''),
+                        'photo': apartment_photo,
+                        'latitude': complex_record.get('latitude'),
+                        'longitude': complex_record.get('longitude'),
+                    }
+                    all_apartments.append(apartment_card)
+        
+        # Сортировка
+        if sort == 'price_asc':
+            all_apartments.sort(key=lambda x: x.get('price_num') or float('inf'))
+        elif sort == 'price_desc':
+            all_apartments.sort(key=lambda x: x.get('price_num') or 0, reverse=True)
+        elif sort == 'area_desc':
+            all_apartments.sort(key=lambda x: float(str(x.get('area', 0)).replace(',', '.')) if x.get('area') else 0, reverse=True)
+        elif sort == 'area_asc':
+            all_apartments.sort(key=lambda x: float(str(x.get('area', float('inf'))).replace(',', '.')) if x.get('area') else float('inf'))
+        
+        # Пагинация
+        total_count = len(all_apartments)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        apartments_data = all_apartments[start_idx:end_idx]
+        
+        # Формируем map_points для карты (используем координаты ЖК)
+        map_points = []
+        for apt in apartments_data:
+            if apt.get('latitude') and apt.get('longitude'):
+                apartment_title = apt.get('apartment_title', f"{apt.get('rooms', '')}-комнатная")
+                map_points.append({
+                    'id': apt['id'],
+                    'name': f"{apartment_title} - {apt.get('price', 'Цена по запросу')}",
+                    'price_range': apt.get('price', 'Цена не указана'),
+                    'price_display': apt.get('price', 'Цена не указана'),
+                    'lat': apt['latitude'],
+                    'lng': apt['longitude'],
+                    'latitude': apt['latitude'],
+                    'longitude': apt['longitude'],
+                })
+        
+        total_pages = (total_count + per_page - 1) // per_page
+        
+        return JsonResponse({
+            'apartments': apartments_data,
+            'map_points': map_points,
+            'has_previous': page > 1,
+            'has_next': page < total_pages,
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_count': total_count
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'apartments': [],
+            'map_points': [],
+            'has_previous': False,
+            'has_next': False,
+            'current_page': 1,
+            'total_pages': 0,
+            'total_count': 0,
+            'error': str(e)
+        })
+
+
 def secondary_api(request):
     """API для вторичной недвижимости (AJAX) - legacy"""
     return secondary_api_list(request)
@@ -911,7 +1248,7 @@ def districts_api(request):
 
 
 def streets_api(request):
-    """API для получения улиц по городу и району - данные из unified_houses"""
+    """API для получения улиц по городу и району(ам) - данные из unified_houses"""
     city = request.GET.get('city', '')
     district = request.GET.get('district', '')
 
@@ -919,33 +1256,43 @@ def streets_api(request):
         try:
             db = get_mongo_connection()
             collection = db['unified_houses']
-            # Фильтруем по address_city или city
-            query = {
+            
+            # Базовый запрос по городу
+            base_query = {
                 '$or': [
                     {'address_city': city},
                     {'city': city}
                 ],
                 'address_street': {'$ne': None, '$ne': ''}
             }
-            # Если указан район, добавляем фильтр по району
+            
+            # Если указаны районы (может быть несколько через запятую)
             if district:
-                query = {
-                    '$and': [
-                        {
-                            '$or': [
-                                {'address_city': city},
-                                {'city': city}
-                            ]
-                        },
-                        {
-                            '$or': [
-                                {'address_district': district},
-                                {'district': district}
-                            ]
-                        },
-                        {'address_street': {'$ne': None, '$ne': ''}}
-                    ]
-                }
+                districts_list = [d.strip() for d in district.split(',') if d.strip()]
+                if districts_list:
+                    # Фильтруем по нескольким районам используя $in
+                    query = {
+                        '$and': [
+                            {
+                                '$or': [
+                                    {'address_city': city},
+                                    {'city': city}
+                                ]
+                            },
+                            {
+                                '$or': [
+                                    {'address_district': {'$in': districts_list}},
+                                    {'district': {'$in': districts_list}}
+                                ]
+                            },
+                            {'address_street': {'$ne': None, '$ne': ''}}
+                        ]
+                    }
+                else:
+                    query = base_query
+            else:
+                query = base_query
+                
             streets = collection.distinct('address_street', query)
             streets = [street for street in streets if street]
             streets = sorted(streets)
