@@ -150,107 +150,55 @@
             <div class="apartment-title-section">
                 <h1 class="apartment-title">{{ apartment.rooms }}-комнатная квартира</h1>
                 {% if complex.name %}
-                <div class="apartment-complex-name">
-                    {{ complex.name }}
-                </div>
+                <a href="{% url 'main:detail' complex.id %}" class="apartment-complex-link">
+                    Перейти в {{ complex.name }}
+                </a>
                 {% endif %}
             </div>
+        </div>
+
+        <div class="apartment-info-card">
             <div class="apartment-info-stack">
                 <div class="info-row">
                     <span class="info-label">Стоимость</span>
                     <span class="info-value price">
-
-            <!-- Правая панель - Информация об агенте -->
-            <div class="agent-sidebar" style="display: flex; flex-direction: column;">
-                <div class="agent-card"
-                    style="background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%); border-radius: 12px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 20px; height: fit-content; border: 1px solid rgba(255, 255, 255, 0.1);">
-                    <h2 class="agent-title" style="font-size: 18px; font-weight: 700; color: #ffffff; margin: 0; margin-bottom: 16px;">
-                        Ответственный агент
-                    </h2>
-                    
-                    <!-- Фото и информация об агенте -->
-                    <div class="agent-profile" style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                        <div class="agent-photo-wrapper"
-                            style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #8b7355, #a0856b); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.2);">
-                            {% if agent %}
-                                {% if agent.images and agent.images.0 %}
-                                    <img src="{{ agent.images.0 }}" alt="{% if agent.full_name %}{{ agent.full_name }}{% else %}Агент{% endif %}"
-                                        style="width: 100%; height: 100%; object-fit: cover;">
-                                {% elif agent.photo %}
-                                    <img src="{{ agent.photo }}" alt="{% if agent.full_name %}{{ agent.full_name }}{% else %}Агент{% endif %}"
-                                        style="width: 100%; height: 100%; object-fit: cover;">
-                                {% else %}
-                                    <i class="fas fa-user" style="color: #ffffff; font-size: 32px;"></i>
-                                {% endif %}
-                            {% else %}
-                                <i class="fas fa-user" style="color: #ffffff; font-size: 32px;"></i>
-                            {% endif %}
-                        </div>
-                        <div class="agent-info" style="text-align: center;">
-                            <div style="font-size: 18px; font-weight: 700; color: #ffffff; margin-bottom: 4px;">
-                                {% if agent %}
-                                {{ agent.full_name }}
-                                {% else %}
-                                Застройщик
-                                {% endif %}
-                            </div>
-                            <div style="font-size: 13px; color: #e5e5e5; font-weight: 500;">
-                                {% if agent %}
-                                Риелтор
-                                {% else %}
-                                Застройщик
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Кнопки действий -->
-                    <div class="agent-actions" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
-                        {% if agent and agent.id %}
-                        <a href="{% url 'main:employee_detail' agent.id %}" class="agent-action-btn"
-                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, #8b7355, #a0856b); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(139,115,85,0.3);">
-                            <i class="fas fa-user-tie" style="font-size: 16px;"></i>
-                            <span>Подробнее об агенте</span>
-                        </a>
+                        {% if apartment.price %}
+                            {{ apartment.price }}
+                        {% else %}
+                            По запросу
                         {% endif %}
-
-                        <a href="#mortgage" class="agent-action-btn"
-                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, #8b7355, #a0856b); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(139,115,85,0.3);">
-                            <i class="fas fa-calculator" style="font-size: 16px;"></i>
-                            <span>Рассчитать ипотеку</span>
-                        </a>
-
-                        <a href="tel:{% if agent and agent.phone %}{{ agent.phone }}{% else %}+78001234567{% endif %}" class="agent-action-btn agent-call-btn"
-                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: #10b981; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">
-                            <i class="fas fa-phone" style="font-size: 16px;"></i>
-                            <span>Позвонить</span>
-                        </a>
-
-                        <a href="https://wa.me/{% if agent and agent.phone %}{% with phone=agent.phone|cut:' '|cut:'-'|cut:'('|cut:')'|cut:'+' %}{% if phone|slice:':1' == '8' %}7{{ phone|slice:'1:' }}{% elif phone|slice:':1' == '7' %}{{ phone }}{% else %}7{{ phone }}{% endif %}{% endwith %}{% else %}79001234567{% endif %}" target="_blank" rel="noopener noreferrer" class="agent-action-btn agent-whatsapp-btn"
-                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: #25D366; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(37,211,102,0.3);">
-                            <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
-                            <span>Написать</span>
-                        </a>
-
-                        <button class="agent-action-btn agent-book-btn" onclick="openBookingModal()"
-                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, var(--c21-gold), var(--c21-gold-dark)); color: var(--c21-dark); text-decoration: none; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(190,175,135,0.3); cursor: pointer;">
-                            <i class="fas fa-calendar-check" style="font-size: 16px;"></i>
-                            <span>Забронировать квартиру</span>
-                        </button>
-                    </div>
+                    </span>
                 </div>
+                {% if apartment.price_per_sqm_formatted %}
+                <div class="info-row">
+                    <span class="info-label">Цена за м²</span>
+                    <span class="info-value">{% if apartment.price_per_sqm_formatted %}{{ apartment.price_per_sqm_formatted }} ₽{% endif %}</span>
+                </div>
+                {% endif %}
+                {% if apartment.area %}
+                <div class="info-row">
+                    <span class="info-label">Площадь</span>
+                    <span class="info-value">{{ apartment.area }} м²</span>
+                </div>
+                {% endif %}
+                {% if apartment.floor %}
+                <div class="info-row">
+                    <span class="info-label">Этаж</span>
+                    <span class="info-value">{{ apartment.floor }}</span>
+                </div>
+                {% endif %}
+                {% if apartment.completion_date %}
+                <div class="info-row">
+                    <span class="info-label">Срок сдачи</span>
+                    <span class="info-value">{{ apartment.completion_date }}</span>
+                </div>
+                {% endif %}
             </div>
         </div>
 
-        <div class="back-to-complex-link">
-            <a href="{% url 'main:detail' complex.id %}" class="back-to-complex-btn">
-                <i class="fas fa-building"></i>
-                Перейти к ЖК
-            </a>
-        </div>
-
+        <div class="apartment-content-flow">
         <!-- Основная информация о квартире -->
-        <div class="apartment-main-info" style="margin-top: 32px;">
+        <div class="apartment-main-info">
             <h2 class="section-title">О квартире</h2>
 
             {% if apartment.description %}
@@ -349,7 +297,12 @@
         <!-- Другие квартиры в ЖК -->
         {% if other_apartments %}
         <div class="other-apartments-section">
-            <h2 class="section-title">Другие квартиры в {{ complex.name }}</h2>
+        <h2 class="section-title">
+            Другие квартиры в
+            <a href="{% url 'main:detail' complex.id %}" class="apartment-complex-inline-link">
+                {{ complex.name }}
+            </a>
+        </h2>
             <div class="other-apartments-grid">
                 {% for other_apt in other_apartments %}
                 <div class="other-apartment-card">
@@ -403,6 +356,7 @@
             </div>
         </div>
         {% endif %}
+        </div>
     </section>
 </div>
 
@@ -482,15 +436,16 @@
 
     /* Заголовок квартиры */
     .apartment-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 32px;
-        gap: 20px;
+        margin-bottom: 16px;
     }
 
     .apartment-title-section {
-        flex: 1;
+        min-width: 260px;
+        padding: 28px 32px;
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid #ececec;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
     }
 
     .apartment-title {
@@ -499,6 +454,32 @@
         color: var(--c21-dark);
         margin: 0 0 12px 0;
         line-height: 1.2;
+    }
+
+    .apartment-complex-link,
+    .apartment-complex-inline-link {
+        font-weight: 600;
+        color: #1d4ed8;
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 4px;
+        transition: color 0.2s ease;
+    }
+
+    .apartment-complex-link {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 1.05rem;
+    }
+
+    .apartment-complex-inline-link {
+        display: inline;
+        font-size: inherit;
+    }
+
+    .apartment-complex-link:hover,
+    .apartment-complex-inline-link:hover {
+        color: #1e40af;
     }
 
     .apartment-location {
@@ -613,11 +594,11 @@
     }
 
     /* Информация о квартире */
-    .apartment-info-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 40px;
-        margin-bottom: 60px;
+    .apartment-content-flow {
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+        margin-top: 24px;
     }
 
     .apartment-main-info {
@@ -785,7 +766,7 @@
 
     .other-apartments-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 24px;
         margin-top: 32px;
     }
@@ -1100,9 +1081,8 @@
 
     /* Адаптивность */
     @media (max-width: 1024px) {
-        .apartment-info-grid {
-            grid-template-columns: 1fr;
-            gap: 24px;
+        .apartment-content-flow {
+            gap: 32px;
         }
 
         .apartment-contact {
@@ -1111,19 +1091,13 @@
     }
 
     @media (max-width: 768px) {
-        .apartment-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 16px;
-        }
-
         .apartment-title {
             font-size: 2rem;
         }
 
-        .apartment-price-section {
-            text-align: left;
-            width: 100%;
+        .apartment-title-section,
+        .apartment-info-card {
+            padding: 20px;
         }
 
         .gallery-main img {
@@ -1138,6 +1112,14 @@
             grid-template-columns: 1fr;
         }
 
+        .apartment-info-stack {
+            grid-template-columns: 1fr;
+        }
+
+        .other-apartments-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
         .other-apartments-grid {
             grid-template-columns: 1fr;
             gap: 16px;
@@ -1656,63 +1638,53 @@
 		background: #fff;
 	}
 
-	.apartment-info-stack {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		padding-top: 12px;
-	}
+    .apartment-info-card {
+        padding: 24px 28px;
+        margin-bottom: 16px;
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid #ececec;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    }
 
-	.info-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		padding-bottom: 8px;
-		border-bottom: 1px solid #f1f1f1;
-	}
+    .apartment-info-stack {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 18px 30px;
+        width: 100%;
+    }
 
-	.info-row:last-child {
-		border-bottom: none;
-	}
+    .info-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
 
-	.info-label {
-		color: #6b7280;
-		font-size: 14px;
-	}
+    .info-row:last-child {
+        border-bottom: none;
+    }
 
-	.info-value {
-		font-weight: 700;
-		color: #1f2937;
-		font-size: 16px;
-	}
+    .info-label {
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
 
-	.info-value.price {
-		font-size: 22px;
-		color: var(--c21-gold);
-	}
+    .info-value {
+        font-weight: 700;
+        color: #1f2937;
+        font-size: 18px;
+    }
 
-	.back-to-complex-link {
-		margin: 24px 0 12px;
-	}
-
-	.back-to-complex-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 10px 18px;
-		border-radius: 10px;
-		border: 1px solid #e5e7eb;
-		color: #374151;
-		font-weight: 600;
-		text-decoration: none;
-		transition: all 0.2s ease;
-	}
-
-	.back-to-complex-btn:hover {
-		border-color: #d1d5db;
-		background: #f3f4f6;
-	}
+    .info-value.price {
+        font-size: 24px;
+        color: var(--c21-gold);
+    }
 
 	.thumbnail-item:hover {
 		border-color: var(--c21-gold) !important;

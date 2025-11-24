@@ -111,9 +111,69 @@ document.addEventListener('DOMContentLoaded', function() {
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
     const mobileDrawer = document.getElementById('mobile-drawer');
     const mobileClose = document.querySelector('.mobile-menu-close');
-    function openMobile(){ if (mobileDrawer){ mobileDrawer.classList.add('open'); document.body.style.overflow='hidden'; } }
-    function closeMobile(){ if (mobileDrawer){ mobileDrawer.classList.remove('open'); document.body.style.overflow=''; } }
+    const mobileBackdrop = document.getElementById('mobile-drawer-backdrop');
+    const headerRow = document.querySelector('.header-row');
+
+    function lockScroll(lock) {
+        document.body.style.overflow = lock ? 'hidden' : '';
+    }
+
+    function setToggleState(expanded) {
+        if (mobileToggle) {
+            mobileToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        }
+    }
+
+    function openMobile(){
+        if (!mobileDrawer) return;
+        mobileDrawer.classList.add('open');
+        mobileDrawer.setAttribute('aria-hidden', 'false');
+        lockScroll(true);
+        setToggleState(true);
+        if (mobileBackdrop) mobileBackdrop.classList.add('visible');
+    }
+
+    function closeMobile(){
+        if (!mobileDrawer) return;
+        mobileDrawer.classList.remove('open');
+        mobileDrawer.setAttribute('aria-hidden', 'true');
+        lockScroll(false);
+        setToggleState(false);
+        if (mobileBackdrop) mobileBackdrop.classList.remove('visible');
+    }
+
     if (mobileToggle) mobileToggle.addEventListener('click', openMobile);
     if (mobileClose) mobileClose.addEventListener('click', closeMobile);
-    if (mobileDrawer) mobileDrawer.addEventListener('click', function(e){ if (e.target === mobileDrawer) closeMobile(); });
+    if (mobileDrawer) mobileDrawer.addEventListener('click', function(e){
+        if (e.target === mobileDrawer) closeMobile();
+    });
+    if (mobileBackdrop) mobileBackdrop.addEventListener('click', closeMobile);
+
+    function updateHeaderMode() {
+        if (!headerRow) return;
+        // На узких экранах всегда используем мобильное меню (CSS media query)
+        if (window.innerWidth <= 1200) {
+            document.body.classList.remove('force-mobile-nav');
+            return;
+        }
+        // На широких экранах проверяем, помещается ли контент
+        const mainNav = document.querySelector('.main-nav');
+        if (!mainNav) {
+            document.body.classList.remove('force-mobile-nav');
+            return;
+        }
+        // Проверяем, не переносится ли навигация
+        const navRect = mainNav.getBoundingClientRect();
+        const headerRect = headerRow.getBoundingClientRect();
+        const needsForce = navRect.width > headerRect.width * 0.6 || 
+                          mainNav.scrollHeight > mainNav.clientHeight;
+        document.body.classList.toggle('force-mobile-nav', needsForce);
+    }
+
+    updateHeaderMode();
+    let headerResizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(headerResizeTimer);
+        headerResizeTimer = setTimeout(updateHeaderMode, 120);
+    });
 }); 

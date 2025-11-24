@@ -29,8 +29,10 @@
 <header class="main-header">
     <div class="container">
         <div class="header-row">
-            <button class="mobile-menu-toggle" aria-label="Открыть меню">
-                <i class="fas fa-bars"></i>
+            <button class="mobile-menu-toggle" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobile-drawer">
+                <span class="menu-toggle-bar"></span>
+                <span class="menu-toggle-bar"></span>
+                <span class="menu-toggle-bar"></span>
             </button>
             <div class="header-left">
                 <div class="logo">
@@ -157,6 +159,7 @@
                         class="fas fa-phone"></i> Позвонить</a>
             </div>
         </aside>
+        <div class="mobile-drawer-backdrop" id="mobile-drawer-backdrop" aria-hidden="true"></div>
 
 
     </div>
