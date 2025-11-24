@@ -7844,8 +7844,8 @@ a:hover { color: var(--c21-gold); }
 }
 
 .subscription-modal-form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 }
 
@@ -7913,6 +7913,50 @@ a:hover { color: var(--c21-gold); }
     margin: 0;
     font-weight: 500;
     line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+    .subscription-modal {
+        max-width: 95%;
+        border-radius: 18px;
+    }
+    
+    .subscription-modal-content {
+        padding: 28px 20px;
+    }
+    
+    .subscription-modal-icon {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+    }
+    
+    .subscription-modal-icon i {
+        font-size: 28px;
+    }
+    
+    .subscription-modal-title {
+        font-size: 24px;
+    }
+    
+    .subscription-modal-subtitle {
+        font-size: 14px;
+    }
+    
+    .subscription-benefits {
+        padding: 18px;
+        margin-bottom: 24px;
+    }
+    
+    .subscription-benefit-item {
+        font-size: 14px;
+        gap: 10px;
+    }
+    
+    .subscription-modal-form-group input {
+        font-size: 14px;
+        padding: 12px 14px;
+    }
 }
 
 /* Кнопка подписки */

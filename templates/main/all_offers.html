@@ -259,6 +259,9 @@
 
 .offer-cta {
     flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     padding: 8px 16px !important;
     border-radius: 8px;
@@ -323,6 +326,17 @@
     .offer-content {
         min-height: auto;
     }
+
+    .offer-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .offer-cta {
+        width: 100% !important;
+        display: flex !important;
+    }
 }
 
 @media (max-width: 480px) {
@@ -350,8 +364,9 @@
     
     .offer-cta {
         flex: none;
-        width: 100%;
-        max-width: 200px;
+        width: 100% !important;
+        max-width: none !important;
+        display: flex !important;
     }
 }
 </style>

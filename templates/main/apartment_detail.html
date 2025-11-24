@@ -27,51 +27,16 @@
             <span class="breadcrumb-current">{{ apartment.rooms }}-комнатная квартира</span>
         </div>
 
-        <!-- Основная информация -->
-        <div class="apartment-header">
-            <div class="apartment-title-section">
-                <h1 class="apartment-title">{{ apartment.rooms }}-комнатная квартира</h1>
-                {% if complex.name %}
-                <div class="apartment-complex-name"
-                    style="font-size: 1.2rem; font-weight: 700; color: var(--c21-gold); margin-bottom: 8px;">
-                    {{ complex.name }}
-                </div>
-                {% endif %}
-
-            </div>
-            <div class="apartment-price-section">
-                <div class="apartment-price">
-                    {% if apartment.price %}
-                    <span class="price-main">{{ apartment.price }}</span>
-                    {% if apartment.price_per_sqm_formatted and apartment.price_per_sqm_formatted != '' %}
-                    <span class="price-per-sqm">{{ apartment.price_per_sqm_formatted }} ₽/м²</span>
-                    {% elif apartment.price_per_sqm %}
-                    <span class="price-per-sqm">{{ apartment.price_per_sqm|floatformat:0 }} ₽/м²</span>
-                    {% endif %}
-                    {% else %}
-                    <span class="price-main">Цена по запросу</span>
-                    {% endif %}
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button class="favorite-btn-detail" data-favorite-complex-id="{% if complex.id %}{{ complex.id }}{% else %}{% endif %}"
-                        data-favorite-apartment-id="{% if apartment.id %}{{ apartment.id }}{% else %}{% endif %}"
-                        onclick="if(typeof toggleApartmentFavoriteHandler === 'function') { toggleApartmentFavoriteHandler('{% if complex.id %}{{ complex.id }}{% else %}{% endif %}', '{% if apartment.id %}{{ apartment.id }}{% else %}{% endif %}', this); }"
-                        title="Добавить в избранное"
-                        style="width: 56px; height: 56px; border-radius: 12px; border: 1px solid #e9ecef; background: white; color: #ccc; font-size: 24px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
-                        <i class="far fa-heart"></i>
-                    </button>
-                    <button class="book-apartment-btn" onclick="openBookingModal()">
-                        <i class="fas fa-calendar-check"></i>
-                        Забронировать
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <!-- Hero секция с галереей и агентом -->
-        <div class="apartment-hero" style="display: grid; grid-template-columns: 1fr 380px; gap: 24px; margin: 24px 0;">
+        <div class="apartment-hero desktop-layout" style="display: grid; grid-template-columns: 1fr 380px; gap: 24px; margin: 24px 0;">
             <!-- Левая панель - Галерея изображений -->
             <div class="apartment-gallery-wrapper" style="position: relative;">
+                <button class="favorite-btn-floating favorite-btn-detail" data-favorite-complex-id="{% if complex.id %}{{ complex.id }}{% else %}{% endif %}"
+                    data-favorite-apartment-id="{% if apartment.id %}{{ apartment.id }}{% else %}{% endif %}"
+                    onclick="if(typeof toggleApartmentFavoriteHandler === 'function') { toggleApartmentFavoriteHandler('{% if complex.id %}{{ complex.id }}{% else %}{% endif %}', '{% if apartment.id %}{{ apartment.id }}{% else %}{% endif %}', this); }"
+                    title="Добавить в избранное">
+                    <i class="far fa-heart"></i>
+                </button>
                 {% if apartment.photos %}
                 <div class="apartment-gallery">
                     <div class="gallery-main" style="border-radius: 12px; overflow: hidden; background: #f5f5f5;">
@@ -97,6 +62,103 @@
                 </div>
                 {% endif %}
             </div>
+
+            <!-- Правая панель - Информация об агенте -->
+            <div class="agent-sidebar" style="display: flex; flex-direction: column;">
+                <div class="agent-card"
+                    style="background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%); border-radius: 12px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 20px; height: fit-content; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <h2 class="agent-title" style="font-size: 18px; font-weight: 700; color: #ffffff; margin: 0; margin-bottom: 16px;">
+                        Ответственный агент
+                    </h2>
+                    
+                    <!-- Фото и информация об агенте -->
+                    <div class="agent-profile" style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                        <div class="agent-photo-wrapper"
+                            style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #8b7355, #a0856b); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px солид rgba(255, 255, 255, 0.2);">
+                            {% if agent %}
+                                {% if agent.images and agent.images.0 %}
+                                    <img src="{{ agent.images.0 }}" alt="{% if agent.full_name %}{{ agent.full_name }}{% else %}Агент{% endif %}"
+                                        style="width: 100%; height: 100%; object-fit: cover;">
+                                {% elif agent.photo %}
+                                    <img src="{{ agent.photo }}" alt="{% if agent.full_name %}{{ agent.full_name }}{% else %}Агент{% endif %}"
+                                        style="width: 100%; height: 100%; object-fit: cover;">
+                                {% else %}
+                                    <i class="fas fa-user" style="color: #ffffff; font-size: 32px;"></i>
+                                {% endif %}
+                            {% else %}
+                                <i class="fas fa-user" style="color: #ffffff; font-size: 32px;"></i>
+                            {% endif %}
+                        </div>
+                        <div class="agent-info" style="text-align: center;">
+                            <div style="font-size: 18px; font-weight: 700; color: #ffffff; margin-bottom: 4px;">
+                                {% if agent %}
+                                {{ agent.full_name }}
+                                {% else %}
+                                Застройщик
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 13px; color: #e5e5e5; font-weight: 500;">
+                                {% if agent %}
+                                Риелтор
+                                {% else %}
+                                Застройщик
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки действий -->
+                    <div class="agent-actions" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                        {% if agent and agent.id %}
+                        <a href="{% url 'main:employee_detail' agent.id %}" class="agent-action-btn"
+                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, #8b7355, #a0856b); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(139,115,85,0.3);">
+                            <i class="fas fa-user-tie" style="font-size: 16px;"></i>
+                            <span>Подробнее об агенте</span>
+                        </a>
+                        {% endif %}
+
+                        <a href="#mortgage" class="agent-action-btn"
+                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, #8b7355, #a0856b); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(139,115,85,0.3);">
+                            <i class="fas fa-calculator" style="font-size: 16px;"></i>
+                            <span>Рассчитать ипотеку</span>
+                        </a>
+
+                        <a href="tel:{% if agent and agent.phone %}{{ agent.phone }}{% else %}+78001234567{% endif %}" class="agent-action-btn agent-call-btn"
+                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: #10b981; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">
+                            <i class="fas fa-phone" style="font-size: 16px;"></i>
+                            <span>Позвонить</span>
+                        </a>
+
+                        <a href="https://wa.me/{% if agent and agent.phone %}{% with phone=agent.phone|cut:' '|cut:'-'|cut:'('|cut:')'|cut:'+' %}{% if phone|slice:':1' == '8' %}7{{ phone|slice:'1:' }}{% elif phone|slice:':1' == '7' %}{{ phone }}{% else %}7{{ phone }}{% endif %}{% endwith %}{% else %}79001234567{% endif %}" target="_blank" rel="noopener noreferrer" class="agent-action-btn agent-whatsapp-btn"
+                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: #25D366; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(37,211,102,0.3);">
+                            <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
+                            <span>Написать</span>
+                        </a>
+
+                        <button class="agent-action-btn agent-book-btn" onclick="openBookingModal()"
+                            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, var(--c21-gold), var(--c21-gold-dark)); color: var(--c21-dark); text-decoration: none; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(190,175,135,0.3); cursor: pointer;">
+                            <i class="fas fa-calendar-check" style="font-size: 16px;"></i>
+                            <span>Забронировать квартиру</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- apartment-top -->
+
+        <!-- Основная информация -->
+        <div class="apartment-header">
+            <div class="apartment-title-section">
+                <h1 class="apartment-title">{{ apartment.rooms }}-комнатная квартира</h1>
+                {% if complex.name %}
+                <div class="apartment-complex-name">
+                    {{ complex.name }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="apartment-info-stack">
+                <div class="info-row">
+                    <span class="info-label">Стоимость</span>
+                    <span class="info-value price">
 
             <!-- Правая панель - Информация об агенте -->
             <div class="agent-sidebar" style="display: flex; flex-direction: column;">
@@ -178,6 +240,13 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="back-to-complex-link">
+            <a href="{% url 'main:detail' complex.id %}" class="back-to-complex-btn">
+                <i class="fas fa-building"></i>
+                Перейти к ЖК
+            </a>
         </div>
 
         <!-- Основная информация о квартире -->
@@ -1516,6 +1585,18 @@
 
 <style>
 	/* Стили для секции агента на странице квартиры */
+	.apartment-top {
+		display: block;
+	}
+
+	.apartment-hero {
+		display: grid;
+		grid-template-columns: 1fr 380px;
+		gap: 24px;
+		margin: 24px 0;
+		align-items: start;
+	}
+
 	.agent-sidebar {
 		min-width: 0;
 	}
@@ -1551,6 +1632,88 @@
 		box-shadow: 0 4px 12px rgba(190, 175, 135, 0.5) !important;
 	}
 
+	.favorite-btn-floating {
+		position: absolute;
+		top: 16px;
+		right: 16px;
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+		border: none;
+		background: rgba(255, 255, 255, 0.92);
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #b8b8b8;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		z-index: 5;
+	}
+
+	.favorite-btn-floating:hover {
+		color: var(--c21-gold);
+		background: #fff;
+	}
+
+	.apartment-info-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding-top: 12px;
+	}
+
+	.info-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding-bottom: 8px;
+		border-bottom: 1px solid #f1f1f1;
+	}
+
+	.info-row:last-child {
+		border-bottom: none;
+	}
+
+	.info-label {
+		color: #6b7280;
+		font-size: 14px;
+	}
+
+	.info-value {
+		font-weight: 700;
+		color: #1f2937;
+		font-size: 16px;
+	}
+
+	.info-value.price {
+		font-size: 22px;
+		color: var(--c21-gold);
+	}
+
+	.back-to-complex-link {
+		margin: 24px 0 12px;
+	}
+
+	.back-to-complex-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 18px;
+		border-radius: 10px;
+		border: 1px solid #e5e7eb;
+		color: #374151;
+		font-weight: 600;
+		text-decoration: none;
+		transition: all 0.2s ease;
+	}
+
+	.back-to-complex-btn:hover {
+		border-color: #d1d5db;
+		background: #f3f4f6;
+	}
+
 	.thumbnail-item:hover {
 		border-color: var(--c21-gold) !important;
 		transform: scale(1.05);
@@ -1558,13 +1721,19 @@
 
 	/* Мобильная версия */
 	@media (max-width: 1024px) {
+		.apartment-top {
+			display: flex;
+			flex-direction: column;
+			gap: 24px;
+		}
+
 		.apartment-hero {
 			grid-template-columns: 1fr !important;
 			gap: 20px !important;
 		}
 
 		.agent-sidebar {
-			order: -1;
+			order: 2;
 		}
 
 		.agent-card {

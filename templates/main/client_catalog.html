@@ -178,6 +178,22 @@
     to { transform: rotate(360deg); }
 }
 
+/* Стили для фильтров */
+.filter-btn[data-active="true"] {
+    background: #d4a574 !important;
+    color: #fff !important;
+    border-color: #d4a574 !important;
+}
+
+.filter-btn:hover {
+    border-color: #d4a574 !important;
+    color: #d4a574 !important;
+}
+
+.catalog-filters {
+    margin-bottom: 30px;
+}
+
 /* Мобильная версия */
 @media (max-width: 768px) {
     .apartments-grid {
@@ -196,6 +212,10 @@
     .client-catalog-header p {
         font-size: 16px;
     }
+    
+    .catalog-filters > div {
+        grid-template-columns: 1fr !important;
+    }
 }
 </style>
 {% endblock %}
@@ -204,8 +224,8 @@
 <div class="container">
     <section class="client-catalog-section">
         <div class="client-catalog-header">
-            <h1>Каталог квартир</h1>
-            <p>Выбранные предложения для вас</p>
+            <h1 id="catalog-title">Каталог квартир</h1>
+            <p id="catalog-subtitle">Выбранные предложения для вас</p>
         </div>
         
         <!-- Хлебные крошки -->
@@ -213,6 +233,41 @@
             <a href="{% url 'main:home' %}" class="breadcrumb-link">Главная</a>
             <span class="breadcrumb-separator">•</span>
             <span class="breadcrumb-current">Каталог квартир</span>
+        </div>
+        
+        <!-- Фильтры -->
+        <div class="catalog-filters" style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <!-- Фильтр по комнатам -->
+                <div class="filter-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">Количество комнат</label>
+                    <div class="button-filter" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <button type="button" class="filter-btn rooms-filter-btn" data-value="" data-active="true" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s;">Любое</button>
+                        <button type="button" class="filter-btn rooms-filter-btn" data-value="1" data-active="false" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s;">1</button>
+                        <button type="button" class="filter-btn rooms-filter-btn" data-value="2" data-active="false" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s;">2</button>
+                        <button type="button" class="filter-btn rooms-filter-btn" data-value="3" data-active="false" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s;">3</button>
+                        <button type="button" class="filter-btn rooms-filter-btn" data-value="4" data-active="false" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s;">4+</button>
+                    </div>
+                </div>
+                
+                <!-- Фильтр по цене -->
+                <div class="filter-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">Цена, ₽</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="price-from" placeholder="От" inputmode="numeric" style="flex: 1; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                        <span style="color: #9ca3af;">—</span>
+                        <input type="text" id="price-to" placeholder="До" inputmode="numeric" style="flex: 1; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                    </div>
+                </div>
+                
+                <!-- Фильтр по ЖК -->
+                <div class="filter-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">Жилой комплекс</label>
+                    <select id="complex-filter" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: #fff; cursor: pointer;">
+                        <option value="">Все ЖК</option>
+                    </select>
+                </div>
+            </div>
         </div>
         
         <!-- Сетка квартир -->
@@ -230,6 +285,23 @@
 const urlParams = new URLSearchParams(window.location.search);
 const complexesParam = urlParams.get('complexes') || '';
 const apartmentsParam = urlParams.get('apartments') || '';
+const isSelection = urlParams.get('is_selection') === 'true' || document.referrer.includes('/selection/');
+
+// Обновляем заголовок если это подборка
+if (isSelection) {
+    const titleEl = document.getElementById('catalog-title');
+    const subtitleEl = document.getElementById('catalog-subtitle');
+    if (titleEl) titleEl.textContent = 'Подборка квартир';
+    if (subtitleEl) subtitleEl.textContent = 'Выбранные квартиры из подборки';
+}
+
+// Переменные для фильтров
+let currentRoomsFilter = '';
+let currentPriceFrom = '';
+let currentPriceTo = '';
+let currentComplexFilter = '';
+let allApartments = []; // Сохраняем все квартиры для фильтрации на клиенте
+let allComplexes = []; // Сохраняем список ЖК
 
 // Загружаем квартиры
 async function loadApartments() {
@@ -252,6 +324,20 @@ async function loadApartments() {
             apiUrl += `&apartments=${encodeURIComponent(apartmentsParam)}`;
         }
         
+        // Добавляем фильтры
+        if (currentRoomsFilter) {
+            apiUrl += `&rooms=${encodeURIComponent(currentRoomsFilter)}`;
+        }
+        if (currentPriceFrom) {
+            apiUrl += `&price_from=${encodeURIComponent(currentPriceFrom)}`;
+        }
+        if (currentPriceTo) {
+            apiUrl += `&price_to=${encodeURIComponent(currentPriceTo)}`;
+        }
+        if (currentComplexFilter) {
+            apiUrl += `&filter_complex=${encodeURIComponent(currentComplexFilter)}`;
+        }
+        
         const response = await fetch(apiUrl);
         const result = await response.json();
         
@@ -267,139 +353,37 @@ async function loadApartments() {
         
         const apartments = result.apartments || [];
         
-        if (apartments.length === 0) {
-            grid.innerHTML = `
-                <div class="no-apartments">
-                    <p>Квартиры не найдены</p>
-                    <p>Попробуйте выбрать другие параметры</p>
-                </div>
-            `;
-            return;
+        // Сохраняем все квартиры для фильтрации
+        allApartments = apartments;
+        
+        // Заполняем список ЖК
+        const complexSet = new Set();
+        apartments.forEach(apt => {
+            if (apt.complex_id && apt.complex_name) {
+                complexSet.add(JSON.stringify({id: apt.complex_id, name: apt.complex_name}));
+            }
+        });
+        allComplexes = Array.from(complexSet).map(s => JSON.parse(s));
+        
+        // Обновляем селект ЖК
+        const complexSelect = document.getElementById('complex-filter');
+        if (complexSelect) {
+            const currentValue = complexSelect.value;
+            complexSelect.innerHTML = '<option value="">Все ЖК</option>';
+            allComplexes.forEach(complex => {
+                const option = document.createElement('option');
+                option.value = complex.id;
+                option.textContent = complex.name;
+                if (complex.id === currentValue) {
+                    option.selected = true;
+                }
+                complexSelect.appendChild(option);
+            });
         }
         
-        // Функция форматирования цены
-        function formatPrice(price) {
-            if (!price) return '';
-            
-            // Преобразуем в строку
-            let priceStr = String(price).trim();
-            
-            // Убираем все символы ₽
-            priceStr = priceStr.replace(/₽/g, '').replace(/руб/g, '').replace(/руб\./g, '').trim();
-            
-            // Убираем пробелы и запятые для парсинга
-            const priceClean = priceStr.replace(/\s/g, '').replace(/,/g, '').replace(/\./g, '').trim();
-            
-            // Проверяем, является ли это числом
-            if (!/^\d+$/.test(priceClean)) {
-                return priceStr; // Возвращаем как есть, если не число
-            }
-            
-            try {
-                // Преобразуем в число
-                const priceNum = parseFloat(priceStr.replace(/\s/g, '').replace(/,/g, '.').trim());
-                
-                if (priceNum <= 0) {
-                    return '';
-                }
-                
-                // Форматируем с разделителями тысяч
-                const formatted = priceNum.toLocaleString('ru-RU', {maximumFractionDigits: 0});
-                
-                // Добавляем ₽
-                return `${formatted} ₽`;
-            } catch (e) {
-                return priceStr;
-            }
-        }
-        
-        // Рендерим карточки квартир
-        grid.innerHTML = apartments.map(apt => {
-            // Формируем изображение
-            const imageUrl = apt.image || '/static/images/placeholder.png';
-            
-            // Формируем заголовок
-            let title = apt.title || '';
-            if (!title) {
-                if (apt.rooms) {
-                    title = `${apt.rooms}-комнатная квартира`;
-                } else {
-                    title = 'Квартира';
-                }
-            }
-            
-            // Формируем детали
-            const details = [];
-            if (apt.area) {
-                details.push(`<div class="apartment-detail-item"><i class="fas fa-ruler-combined"></i><span>${apt.area} м²</span></div>`);
-            }
-            if (apt.floor) {
-                details.push(`<div class="apartment-detail-item"><i class="fas fa-building"></i><span>${apt.floor} эт.</span></div>`);
-            }
-            if (apt.rooms) {
-                details.push(`<div class="apartment-detail-item"><i class="fas fa-home"></i><span>${apt.rooms}-комн.</span></div>`);
-            }
-            
-            // Формируем цену (форматируем если нужно)
-            let priceHtml = '<div class="apartment-price-text">Цена по запросу</div>';
-            if (apt.price) {
-                const formattedPrice = formatPrice(apt.price);
-                priceHtml = `
-                    <div class="apartment-price-text">${formattedPrice || apt.price}</div>
-                    ${apt.price_per_sqm ? `<div class="apartment-price-per-sqm">${formatPrice(apt.price_per_sqm) || apt.price_per_sqm} ₽/м²</div>` : ''}
-                `;
-            }
-            
-            // Формируем ссылку на детальную страницу
-            // ID квартиры должен быть в формате type_index (без complex_id в начале)
-            let apartmentId = apt.id;
-            if (apartmentId) {
-                // Если ID содержит complex_id в начале, убираем его
-                const parts = String(apartmentId).split('_');
-                if (parts.length >= 3 && parts[0] === apt.complex_id) {
-                    // Формат: complex_id_type_index -> используем type_index
-                    apartmentId = `${parts[1]}_${parts[2]}`;
-                } else if (parts.length >= 2 && parts[0] === apt.complex_id) {
-                    // Формат: complex_id_rest -> используем rest
-                    apartmentId = parts.slice(1).join('_');
-                }
-            } else if (apt.type !== undefined && apt.index !== undefined) {
-                // Формируем из type и index
-                apartmentId = `${apt.type}_${apt.index}`;
-            } else {
-                // Fallback
-                apartmentId = '0_0';
-            }
-            const detailUrl = `/apartment/${apt.complex_id}/${apartmentId}/`;
-            
-            return `
-                <div class="apartment-card-compact" onclick="window.location.href='${detailUrl}'">
-                    <div class="apartment-card-image">
-                        <img src="${imageUrl}" alt="${title}" loading="lazy" onerror="this.src='/static/images/placeholder.png'">
-                    </div>
-                    <div class="apartment-card-content">
-                        <div class="apartment-card-header">
-                            <div class="apartment-card-complex">${escapeHtml(apt.complex_name || 'ЖК')}</div>
-                            <h3 class="apartment-card-title">${escapeHtml(title)}</h3>
-                            ${apt.complex_address ? `
-                                <div class="apartment-card-location">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <span>${escapeHtml(apt.complex_address)}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        ${details.length > 0 ? `
-                            <div class="apartment-card-details">
-                                ${details.join('')}
-                            </div>
-                        ` : ''}
-                        <div class="apartment-card-price">
-                            ${priceHtml}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        // Применяем фильтры и рендерим
+        const filteredApartments = applyFilters(apartments);
+        renderApartments(filteredApartments);
         
     } catch (error) {
         console.error('Ошибка загрузки квартир:', error);
@@ -419,8 +403,260 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Загружаем квартиры при загрузке страницы
-document.addEventListener('DOMContentLoaded', loadApartments);
+// Функция применения фильтров
+function applyFilters(apartments) {
+    let filtered = [...apartments];
+    
+    // Фильтр по комнатам
+    if (currentRoomsFilter) {
+        filtered = filtered.filter(apt => {
+            const rooms = String(apt.rooms || '').trim();
+            if (currentRoomsFilter === '4') {
+                // 4+ означает 4 и более
+                const roomsNum = parseInt(rooms) || 0;
+                return roomsNum >= 4;
+            }
+            return rooms === currentRoomsFilter;
+        });
+    }
+    
+    // Фильтр по цене
+    if (currentPriceFrom || currentPriceTo) {
+        filtered = filtered.filter(apt => {
+            if (!apt.price) return false;
+            let priceNum = parseFloat(String(apt.price).replace(/\s/g, '').replace(/₽/g, '').replace(/руб/g, '').replace(/,/g, '')) || 0;
+            
+            // Убираем пробелы из значений фильтров на всякий случай
+            const priceFromNum = currentPriceFrom ? parseFloat(String(currentPriceFrom).replace(/\s/g, '')) : null;
+            const priceToNum = currentPriceTo ? parseFloat(String(currentPriceTo).replace(/\s/g, '')) : null;
+            
+            if (priceFromNum !== null && priceNum < priceFromNum) {
+                return false;
+            }
+            if (priceToNum !== null && priceNum > priceToNum) {
+                return false;
+            }
+            return true;
+        });
+    }
+    
+    // Фильтр по ЖК
+    if (currentComplexFilter) {
+        filtered = filtered.filter(apt => String(apt.complex_id) === String(currentComplexFilter));
+    }
+    
+    return filtered;
+}
+
+// Функция рендеринга квартир
+function renderApartments(apartments) {
+    const grid = document.getElementById('apartmentsGrid');
+    if (!grid) return;
+    
+    if (apartments.length === 0) {
+        grid.innerHTML = `
+            <div class="no-apartments">
+                <p>Квартиры не найдены</p>
+                <p>Попробуйте выбрать другие параметры</p>
+            </div>
+        `;
+        return;
+    }
+    
+    function formatPrice(price) {
+        if (!price) return '';
+        let priceStr = String(price).trim();
+        priceStr = priceStr.replace(/₽/g, '').replace(/руб/g, '').replace(/руб\./g, '').trim();
+        const priceClean = priceStr.replace(/\s/g, '').replace(/,/g, '').replace(/\./g, '').trim();
+        if (!/^\d+$/.test(priceClean)) {
+            return priceStr;
+        }
+        try {
+            const priceNum = parseFloat(priceStr.replace(/\s/g, '').replace(/,/g, '.').trim());
+            if (priceNum <= 0) return '';
+            const formatted = priceNum.toLocaleString('ru-RU', {maximumFractionDigits: 0});
+            return `${formatted} ₽`;
+        } catch (e) {
+            return priceStr;
+        }
+    }
+    
+    grid.innerHTML = apartments.map(apt => {
+        const imageUrl = apt.image || '/static/images/placeholder.png';
+        let title = apt.title || '';
+        if (!title) {
+            if (apt.rooms) {
+                title = `${apt.rooms}-комнатная квартира`;
+            } else {
+                title = 'Квартира';
+            }
+        }
+        
+        const details = [];
+        if (apt.area) {
+            details.push(`<div class="apartment-detail-item"><i class="fas fa-ruler-combined"></i><span>${apt.area} м²</span></div>`);
+        }
+        if (apt.floor) {
+            details.push(`<div class="apartment-detail-item"><i class="fas fa-building"></i><span>${apt.floor} эт.</span></div>`);
+        }
+        if (apt.rooms) {
+            details.push(`<div class="apartment-detail-item"><i class="fas fa-home"></i><span>${apt.rooms}-комн.</span></div>`);
+        }
+        
+        let priceHtml = '<div class="apartment-price-text">Цена по запросу</div>';
+        if (apt.price) {
+            const formattedPrice = formatPrice(apt.price);
+            priceHtml = `
+                <div class="apartment-price-text">${formattedPrice || apt.price}</div>
+                ${apt.price_per_sqm ? `<div class="apartment-price-per-sqm">${formatPrice(apt.price_per_sqm) || apt.price_per_sqm} ₽/м²</div>` : ''}
+            `;
+        }
+        
+        let apartmentId = apt.id;
+        if (apartmentId) {
+            const parts = String(apartmentId).split('_');
+            if (parts.length >= 3 && parts[0] === apt.complex_id) {
+                apartmentId = `${parts[1]}_${parts[2]}`;
+            } else if (parts.length >= 2 && parts[0] === apt.complex_id) {
+                apartmentId = parts.slice(1).join('_');
+            }
+        } else if (apt.type !== undefined && apt.index !== undefined) {
+            apartmentId = `${apt.type}_${apt.index}`;
+        } else {
+            apartmentId = '0_0';
+        }
+        const detailUrl = `/apartment/${apt.complex_id}/${apartmentId}/`;
+        
+        return `
+            <div class="apartment-card-compact" onclick="window.location.href='${detailUrl}'">
+                <div class="apartment-card-image">
+                    <img src="${imageUrl}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='/static/images/placeholder.png'">
+                </div>
+                <div class="apartment-card-content">
+                    <div class="apartment-card-header">
+                        <div class="apartment-card-complex">${escapeHtml(apt.complex_name || 'ЖК')}</div>
+                        <h3 class="apartment-card-title">${escapeHtml(title)}</h3>
+                        ${apt.complex_address ? `
+                            <div class="apartment-card-location">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${escapeHtml(apt.complex_address)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    ${details.length > 0 ? `
+                        <div class="apartment-card-details">
+                            ${details.join('')}
+                        </div>
+                    ` : ''}
+                    <div class="apartment-card-price">
+                        ${priceHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Обработчики фильтров
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчики кнопок комнат
+    document.querySelectorAll('.rooms-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.rooms-filter-btn').forEach(b => {
+                b.setAttribute('data-active', 'false');
+            });
+            this.setAttribute('data-active', 'true');
+            currentRoomsFilter = this.getAttribute('data-value') || '';
+            if (allApartments.length > 0) {
+                const filtered = applyFilters(allApartments);
+                renderApartments(filtered);
+            }
+        });
+    });
+    
+    // Функция форматирования цены с пробелами
+    function formatPriceInput(value) {
+        // Убираем все нецифровые символы
+        const numbers = value.replace(/\D/g, '');
+        if (!numbers) return '';
+        // Форматируем с пробелами для разделения тысяч
+        return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+    
+    // Функция получения числового значения из отформатированной строки
+    function getPriceNumber(value) {
+        return value.replace(/\s/g, '').trim();
+    }
+    
+    // Обработчики полей цены
+    const priceFrom = document.getElementById('price-from');
+    const priceTo = document.getElementById('price-to');
+    
+    if (priceFrom) {
+        priceFrom.addEventListener('input', function(e) {
+            const cursorPosition = this.selectionStart;
+            const oldValue = this.value;
+            const oldLength = oldValue.length;
+            
+            // Форматируем значение
+            const formatted = formatPriceInput(this.value);
+            this.value = formatted;
+            
+            // Восстанавливаем позицию курсора
+            const newLength = formatted.length;
+            const lengthDiff = newLength - oldLength;
+            const newPosition = Math.max(0, cursorPosition + lengthDiff);
+            this.setSelectionRange(newPosition, newPosition);
+            
+            // Сохраняем числовое значение для фильтрации
+            currentPriceFrom = getPriceNumber(formatted);
+            if (allApartments.length > 0) {
+                const filtered = applyFilters(allApartments);
+                renderApartments(filtered);
+            }
+        });
+    }
+    
+    if (priceTo) {
+        priceTo.addEventListener('input', function(e) {
+            const cursorPosition = this.selectionStart;
+            const oldValue = this.value;
+            const oldLength = oldValue.length;
+            
+            // Форматируем значение
+            const formatted = formatPriceInput(this.value);
+            this.value = formatted;
+            
+            // Восстанавливаем позицию курсора
+            const newLength = formatted.length;
+            const lengthDiff = newLength - oldLength;
+            const newPosition = Math.max(0, cursorPosition + lengthDiff);
+            this.setSelectionRange(newPosition, newPosition);
+            
+            // Сохраняем числовое значение для фильтрации
+            currentPriceTo = getPriceNumber(formatted);
+            if (allApartments.length > 0) {
+                const filtered = applyFilters(allApartments);
+                renderApartments(filtered);
+            }
+        });
+    }
+    
+    // Обработчик селекта ЖК
+    const complexFilter = document.getElementById('complex-filter');
+    if (complexFilter) {
+        complexFilter.addEventListener('change', function() {
+            currentComplexFilter = this.value || '';
+            if (allApartments.length > 0) {
+                const filtered = applyFilters(allApartments);
+                renderApartments(filtered);
+            }
+        });
+    }
+    
+    // Загружаем квартиры
+    loadApartments();
+});
 </script>
 {% endblock %}
 

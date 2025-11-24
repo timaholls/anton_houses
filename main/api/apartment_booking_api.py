@@ -127,10 +127,13 @@ def book_apartment(request):
         # print(f"Поиск квартиры с ID: {apartment_id}")
         # print(f"Всего квартир найдено: {len(apartments)}")
         
+        # Преобразуем apartment_id в строку для безопасной проверки
+        apartment_id_str = str(apartment_id) if apartment_id is not None else ''
+        
         # Если apartment_id содержит подчеркивание, это сгенерированный ID
-        if '_' in apartment_id:
+        if '_' in apartment_id_str:
             # Проверяем формат ID: может быть {complex_id}_{type}_{index} или {type}_{index}
-            apt_id_parts = apartment_id.split('_')
+            apt_id_parts = apartment_id_str.split('_')
             
             # Если ID начинается с complex_id (24 символа), убираем его
             if len(apt_id_parts) >= 3 and len(apt_id_parts[0]) == 24:
@@ -172,7 +175,7 @@ def book_apartment(request):
         else:
             # Обычный поиск по _id или id
             for apt in apartments:
-                if str(apt.get('id')) == str(apartment_id) or str(apt.get('_id')) == str(apartment_id):
+                if str(apt.get('id')) == apartment_id_str or str(apt.get('_id')) == apartment_id_str:
                     apartment_data = apt
                     break
         

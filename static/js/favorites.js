@@ -194,9 +194,10 @@ function updateFavoritesFloatingButton() {
     
     const buttonContainer = document.getElementById('favorites-button-container');
     const badgeElement = document.getElementById('favorites-badge-floating');
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
     
     if (buttonContainer) {
-        if (totalCount > 0) {
+        if (totalCount > 0 || isDesktop) {
             buttonContainer.style.display = 'block';
             if (badgeElement) {
                 badgeElement.textContent = totalCount;
@@ -289,4 +290,6 @@ if (document.readyState === 'loading') {
     initFavorites();
     updateFavoritesFloatingButton();
 }
+
+window.addEventListener('resize', updateFavoritesFloatingButton);
 

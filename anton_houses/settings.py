@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "century21-ufa-mir-v-kvadratah.ru"]
+ALLOWED_HOSTS = ["localhost", "192.168.0.134", "127.0.0.1", "century21-ufa-mir-v-kvadratah.ru"]
 
 # CSRF trusted origins для HTTPS
 CSRF_TRUSTED_ORIGINS = [

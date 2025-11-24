@@ -314,6 +314,121 @@
 .copy-success-message i {
     color: #28a745;
 }
+
+@media (max-width: 600px) {
+    .share-link-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .share-link-input {
+        width: 100%;
+    }
+    
+    .copy-link-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Стили для фильтров */
+.filter-btn[data-active="true"] {
+    background: #d4a574 !important;
+    color: #fff !important;
+    border-color: #d4a574 !important;
+}
+
+.filter-btn:hover {
+    border-color: #d4a574 !important;
+    color: #d4a574 !important;
+}
+
+.catalog-filters {
+    margin-bottom: 30px;
+}
+
+.favorites-filters-box {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.favorites-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.favorites-filter-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+}
+
+.favorites-filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.favorites-price-inputs {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.favorites-price-inputs span {
+    color: #9ca3af;
+}
+
+.favorites-price-inputs input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.favorites-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .catalog-filters {
+        margin: 0 -16px 24px;
+        border-radius: 0;
+    }
+    
+    .favorites-filters-box {
+        border-radius: 0;
+    }
+    
+    .favorites-filters-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .favorites-filter-buttons {
+        justify-content: flex-start;
+    }
+    
+    .favorites-price-inputs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .favorites-price-inputs span {
+        text-align: center;
+    }
+}
 </style>
 {% endblock %}
 
@@ -326,10 +441,16 @@
             <h1>Избранное</h1>
             <p>Ваши сохраненные объекты недвижимости</p>
                 </div>
-                <button id="share-favorites-btn" class="share-favorites-btn" style="display: none;">
-                    <i class="fas fa-share-alt"></i>
-                    <span>Поделиться</span>
-                </button>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button id="share-favorites-btn" class="share-favorites-btn" style="display: none;">
+                        <i class="fas fa-share-alt"></i>
+                        <span>Поделиться</span>
+                    </button>
+                    <button id="clear-favorites-btn" class="share-favorites-btn" style="display: none; background: #fff; color: #b91c1c; border: 1px solid #ef4444; box-shadow: none;">
+                        <i class="fas fa-trash-alt"></i>
+                        <span>Очистить избранное</span>
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -338,6 +459,41 @@
             <h2>Избранное пусто</h2>
             <p>Добавьте объекты недвижимости в избранное, чтобы вернуться к ним позже</p>
             <a href="{% url 'main:catalog' %}" class="btn">Перейти в каталог</a>
+        </div>
+        
+        <!-- Фильтры -->
+        <div class="catalog-filters favorites-filters-box" id="favorites-filters" style="display: none;">
+            <div class="favorites-filters-grid">
+                <!-- Фильтр по комнатам -->
+                <div class="filter-group favorites-filter-group">
+                    <label>Количество комнат</label>
+                    <div class="button-filter favorites-filter-buttons">
+                        <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="" data-active="true">Любое</button>
+                        <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="1" data-active="false">1</button>
+                        <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="2" data-active="false">2</button>
+                        <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="3" data-active="false">3</button>
+                        <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="4" data-active="false">4+</button>
+                    </div>
+                </div>
+                
+                <!-- Фильтр по цене -->
+                <div class="filter-group favorites-filter-group">
+                    <label>Цена, ₽</label>
+                    <div class="favorites-price-inputs">
+                        <input type="text" id="favorites-price-from" placeholder="От" inputmode="numeric">
+                        <span>—</span>
+                        <input type="text" id="favorites-price-to" placeholder="До" inputmode="numeric">
+                    </div>
+                </div>
+                
+                <!-- Фильтр по ЖК -->
+                <div class="filter-group favorites-filter-group">
+                    <label>Жилой комплекс</label>
+                    <select id="favorites-complex-filter" class="favorites-select">
+                        <option value="">Все ЖК</option>
+                    </select>
+                </div>
+            </div>
         </div>
         
         <div id="favorites-grid" class="favorites-grid">
@@ -374,15 +530,70 @@
 </div>
 
 <script>
+// Глобальные переменные для фильтрации
+let allFavoriteItems = [];
+let favoritesRoomsFilter = '';
+let favoritesPriceFrom = '';
+let favoritesPriceTo = '';
+let favoritesComplexFilter = '';
+
 document.addEventListener('DOMContentLoaded', function() {
     loadFavorites();
+    initFavoritesFilters();
+    initClearFavoritesButton();
 });
+
+let clearFavoritesBtn;
+
+function initClearFavoritesButton() {
+    clearFavoritesBtn = document.getElementById('clear-favorites-btn');
+    if (!clearFavoritesBtn) return;
+    updateClearFavoritesBtnVisibility();
+    clearFavoritesBtn.addEventListener('click', handleClearFavoritesClick);
+}
+
+function updateClearFavoritesBtnVisibility() {
+    if (!clearFavoritesBtn) return;
+    const favorites = getFavorites ? getFavorites() : { complexes: [], apartments: [] };
+    const totalCount = favorites.complexes.length + favorites.apartments.length;
+    clearFavoritesBtn.style.display = totalCount > 0 ? 'inline-flex' : 'none';
+}
+
+function handleClearFavoritesClick() {
+    if (confirm('Вы уверены, что хотите очистить избранное?')) {
+        clearAllFavoritesStorage();
+        if (typeof showFavoriteNotification === 'function') {
+            showFavoriteNotification('Избранное очищено');
+        }
+        refreshFavoritesPage();
+    }
+}
+
+function clearAllFavoritesStorage() {
+    try {
+        if (typeof FAVORITES_STORAGE_KEY !== 'undefined') {
+            localStorage.removeItem(FAVORITES_STORAGE_KEY);
+        } else {
+            localStorage.removeItem('century21_favorites');
+        }
+    } catch (e) {
+        console.error('Не удалось очистить избранное', e);
+    }
+    updateFavoritesCount && updateFavoritesCount();
+    updateFavoritesFloatingButton && updateFavoritesFloatingButton();
+}
+
+function refreshFavoritesPage() {
+    loadFavorites();
+    updateClearFavoritesBtnVisibility();
+}
 
 function loadFavorites() {
     const favorites = getFavorites();
     const grid = document.getElementById('favorites-grid');
     const empty = document.getElementById('favorites-empty');
     const shareBtn = document.getElementById('share-favorites-btn');
+    const filtersDiv = document.getElementById('favorites-filters');
     
     const allIds = [...favorites.complexes, ...favorites.apartments];
     
@@ -390,12 +601,14 @@ function loadFavorites() {
         grid.style.display = 'none';
         empty.style.display = 'block';
         if (shareBtn) shareBtn.style.display = 'none';
+        if (filtersDiv) filtersDiv.style.display = 'none';
         return;
     }
     
     grid.style.display = 'grid';
     empty.style.display = 'none';
     if (shareBtn) shareBtn.style.display = 'flex';
+    if (filtersDiv) filtersDiv.style.display = 'block';
     
     // Загружаем данные о ЖК
     const complexPromises = favorites.complexes.map(id => 
@@ -449,8 +662,255 @@ function loadFavorites() {
     
     Promise.all([...complexPromises, ...apartmentPromises]).then(results => {
         const validResults = results.filter(r => r !== null);
-        grid.innerHTML = validResults.map(item => renderFavoriteCard(item)).join('');
+        allFavoriteItems = validResults;
+        
+        // Заполняем список ЖК для фильтра
+        const complexSet = new Set();
+        validResults.forEach(item => {
+            if (item.type === 'apartment' && item.complexData) {
+                const complexId = item.complexId;
+                const complexName = item.complexData.name || 'Жилой комплекс';
+                complexSet.add(JSON.stringify({id: complexId, name: complexName}));
+            } else if (item.type === 'complex' && item.data) {
+                const complexId = item.id;
+                const complexName = item.data.name || 'Жилой комплекс';
+                complexSet.add(JSON.stringify({id: complexId, name: complexName}));
+            }
+        });
+        const allComplexes = Array.from(complexSet).map(s => JSON.parse(s));
+        
+        // Обновляем селект ЖК
+        const complexSelect = document.getElementById('favorites-complex-filter');
+        if (complexSelect) {
+            const currentValue = complexSelect.value;
+            complexSelect.innerHTML = '<option value="">Все ЖК</option>';
+            allComplexes.forEach(complex => {
+                const option = document.createElement('option');
+                option.value = complex.id;
+                option.textContent = complex.name;
+                if (complex.id === currentValue) {
+                    option.selected = true;
+                }
+                complexSelect.appendChild(option);
+            });
+        }
+        
+        // Инициализируем фильтр из выбранной кнопки (если еще не инициализирован)
+        if (favoritesRoomsFilter === '' && document.querySelector('.favorites-rooms-filter-btn[data-active="true"]')) {
+            const activeBtn = document.querySelector('.favorites-rooms-filter-btn[data-active="true"]');
+            favoritesRoomsFilter = activeBtn.getAttribute('data-value') || '';
+        }
+        
+        // Применяем фильтры и рендерим
+        const filtered = applyFavoritesFilters(validResults);
+        renderFavorites(filtered);
     });
+}
+
+function applyFavoritesFilters(items) {
+    let filtered = [...items];
+    
+    // Функция для нормализации количества комнат
+    function normalizeRooms(apt) {
+        let rooms = apt.rooms || '';
+        const title = apt.title || '';
+        
+        // Если rooms - число, преобразуем в строку
+        if (typeof rooms === 'number') {
+            rooms = String(rooms);
+        } else {
+            rooms = String(rooms).trim();
+        }
+        
+        // Если rooms пустое, пытаемся извлечь из title
+        if (!rooms && title) {
+            if (title.includes('-комн')) {
+                rooms = title.split('-комн')[0].trim();
+            } else if (title.includes('-к.')) {
+                rooms = title.split('-к.')[0].trim();
+            } else if (title.includes(' ком.')) {
+                rooms = title.split(' ком.')[0].trim();
+            } else {
+                // Пытаемся найти число в начале title
+                const match = title.match(/^(\d+)/);
+                if (match) {
+                    rooms = match[1];
+                }
+            }
+        }
+        
+        // Извлекаем только число из строки (убираем "-комн", "-к." и т.д.)
+        const roomsMatch = rooms.match(/^(\d+)/);
+        return roomsMatch ? roomsMatch[1] : '';
+    }
+    
+    // Фильтр по комнатам (только для квартир)
+    if (favoritesRoomsFilter) {
+        filtered = filtered.filter(item => {
+            if (item.type !== 'apartment') return true; // ЖК пропускаем
+            const apt = item.apartment;
+            const rooms = normalizeRooms(apt);
+            
+            if (!rooms) return false; // Если не удалось определить комнаты, пропускаем
+            
+            if (favoritesRoomsFilter === '4') {
+                const roomsNum = parseInt(rooms) || 0;
+                return roomsNum >= 4;
+            }
+            return rooms === favoritesRoomsFilter;
+        });
+    }
+    
+    // Фильтр по цене (только для квартир)
+    if (favoritesPriceFrom || favoritesPriceTo) {
+        filtered = filtered.filter(item => {
+            if (item.type !== 'apartment') return true; // ЖК пропускаем
+            const apt = item.apartment;
+            if (!apt.price) return false;
+            let priceNum = parseFloat(String(apt.price).replace(/\s/g, '').replace(/₽/g, '').replace(/руб/g, '').replace(/,/g, '')) || 0;
+            
+            // Убираем пробелы из значений фильтров на всякий случай
+            const priceFromNum = favoritesPriceFrom ? parseFloat(String(favoritesPriceFrom).replace(/\s/g, '')) : null;
+            const priceToNum = favoritesPriceTo ? parseFloat(String(favoritesPriceTo).replace(/\s/g, '')) : null;
+            
+            if (priceFromNum !== null && priceNum < priceFromNum) {
+                return false;
+            }
+            if (priceToNum !== null && priceNum > priceToNum) {
+                return false;
+            }
+            return true;
+        });
+    }
+    
+    // Фильтр по ЖК
+    if (favoritesComplexFilter) {
+        filtered = filtered.filter(item => {
+            if (item.type === 'apartment') {
+                return String(item.complexId) === String(favoritesComplexFilter);
+            } else if (item.type === 'complex') {
+                return String(item.id) === String(favoritesComplexFilter);
+            }
+            return false;
+        });
+    }
+    
+    return filtered;
+}
+
+function renderFavorites(items) {
+    const grid = document.getElementById('favorites-grid');
+    if (!grid) return;
+    
+    if (items.length === 0) {
+        grid.innerHTML = '<div class="no-apartments"><p>Квартиры не найдены</p><p>Попробуйте выбрать другие параметры</p></div>';
+        return;
+    }
+    
+    grid.innerHTML = items.map(item => renderFavoriteCard(item)).join('');
+}
+
+function initFavoritesFilters() {
+    // Инициализируем фильтр из выбранной кнопки
+    const activeRoomsBtn = document.querySelector('.favorites-rooms-filter-btn[data-active="true"]');
+    if (activeRoomsBtn) {
+        favoritesRoomsFilter = activeRoomsBtn.getAttribute('data-value') || '';
+    }
+    
+    // Обработчики кнопок комнат
+    document.querySelectorAll('.favorites-rooms-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.favorites-rooms-filter-btn').forEach(b => {
+                b.setAttribute('data-active', 'false');
+            });
+            this.setAttribute('data-active', 'true');
+            favoritesRoomsFilter = this.getAttribute('data-value') || '';
+            if (allFavoriteItems.length > 0) {
+                const filtered = applyFavoritesFilters(allFavoriteItems);
+                renderFavorites(filtered);
+            }
+        });
+    });
+    
+    // Функция форматирования цены с пробелами
+    function formatPriceInput(value) {
+        // Убираем все нецифровые символы
+        const numbers = value.replace(/\D/g, '');
+        if (!numbers) return '';
+        // Форматируем с пробелами для разделения тысяч
+        return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+    
+    // Функция получения числового значения из отформатированной строки
+    function getPriceNumber(value) {
+        return value.replace(/\s/g, '').trim();
+    }
+    
+    // Обработчики полей цены
+    const priceFrom = document.getElementById('favorites-price-from');
+    const priceTo = document.getElementById('favorites-price-to');
+    
+    if (priceFrom) {
+        priceFrom.addEventListener('input', function(e) {
+            const cursorPosition = this.selectionStart;
+            const oldValue = this.value;
+            const oldLength = oldValue.length;
+            
+            // Форматируем значение
+            const formatted = formatPriceInput(this.value);
+            this.value = formatted;
+            
+            // Восстанавливаем позицию курсора
+            const newLength = formatted.length;
+            const lengthDiff = newLength - oldLength;
+            const newPosition = Math.max(0, cursorPosition + lengthDiff);
+            this.setSelectionRange(newPosition, newPosition);
+            
+            // Сохраняем числовое значение для фильтрации
+            favoritesPriceFrom = getPriceNumber(formatted);
+            if (allFavoriteItems.length > 0) {
+                const filtered = applyFavoritesFilters(allFavoriteItems);
+                renderFavorites(filtered);
+            }
+        });
+    }
+    
+    if (priceTo) {
+        priceTo.addEventListener('input', function(e) {
+            const cursorPosition = this.selectionStart;
+            const oldValue = this.value;
+            const oldLength = oldValue.length;
+            
+            // Форматируем значение
+            const formatted = formatPriceInput(this.value);
+            this.value = formatted;
+            
+            // Восстанавливаем позицию курсора
+            const newLength = formatted.length;
+            const lengthDiff = newLength - oldLength;
+            const newPosition = Math.max(0, cursorPosition + lengthDiff);
+            this.setSelectionRange(newPosition, newPosition);
+            
+            // Сохраняем числовое значение для фильтрации
+            favoritesPriceTo = getPriceNumber(formatted);
+            if (allFavoriteItems.length > 0) {
+                const filtered = applyFavoritesFilters(allFavoriteItems);
+                renderFavorites(filtered);
+            }
+        });
+    }
+    
+    // Обработчик селекта ЖК
+    const complexFilter = document.getElementById('favorites-complex-filter');
+    if (complexFilter) {
+        complexFilter.addEventListener('change', function() {
+            favoritesComplexFilter = this.value || '';
+            if (allFavoriteItems.length > 0) {
+                const filtered = applyFavoritesFilters(allFavoriteItems);
+                renderFavorites(filtered);
+            }
+        });
+    }
 }
 
 function findApartmentInComplex(complexData, apartmentId) {

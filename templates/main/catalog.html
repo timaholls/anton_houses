@@ -1445,7 +1445,7 @@ CENTURY 21{% else %}CENTURY 21 - Каталог ЖК{% endif %}{% endblock %}
             </div>
           </div>
           
-          <div class="compact-card-content" onclick="window.location.href='/apartment/${apt.complex_id}/${apt.apartment_id || (apt.id ? apt.id.split('_').slice(-2).join('_') : '0_0')}/'" style="cursor: pointer;">
+          <div class="compact-card-content" onclick="window.location.href='/apartment/${apt.complex_id}/${apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0')}/'" style="cursor: pointer;">
             <div class="compact-card-header">
               <h3 class="compact-card-title">${apartmentTitle}</h3>
               <div class="compact-card-location" style="font-size: 13px; color: #6b7280; margin-top: 4px;">

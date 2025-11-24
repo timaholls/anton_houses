@@ -260,7 +260,7 @@ def selection_view(request, selection_id):
         
         # Формируем URL с параметрами
         from urllib.parse import urlencode
-        params = {'complexes': ','.join(complex_ids)}
+        params = {'complexes': ','.join(complex_ids), 'is_selection': 'true'}
         if apartment_ids:
             params['apartments'] = ','.join(apartment_ids)
         

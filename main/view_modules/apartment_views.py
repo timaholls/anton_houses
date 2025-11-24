@@ -50,6 +50,13 @@ def format_price(price):
 def apartment_detail(request, complex_id, apartment_id):
     """Детальная страница квартиры"""
     try:
+        # Преобразуем apartment_id в строку сразу в начале функции для безопасной работы
+        # Важно: Django передает параметры URL как строки, но на всякий случай преобразуем
+        if apartment_id is None:
+            apartment_id_str = ''
+        else:
+            apartment_id_str = str(apartment_id)
+        
         db = get_mongo_connection()
         
         # Получаем данные ЖК
@@ -94,11 +101,34 @@ def apartment_detail(request, complex_id, apartment_id):
                 # Используем enumerate для правильной генерации ID (как в get_client_catalog_apartments)
                 for apt_index, apt in enumerate(apt_apartments):
                     # Получаем все фото планировки - это уже массив!
-                    layout_photos = apt.get('image', [])
+                    # Проверяем разные возможные поля для фотографий
+                    layout_photos = None
+                    
+                    # Приоритет 1: images_apartment (используется в новой структуре)
+                    if 'images_apartment' in apt:
+                        layout_photos = apt.get('images_apartment', [])
+                    
+                    # Приоритет 2: image
+                    if not layout_photos:
+                        layout_photos = apt.get('image', [])
+                    
+                    # Приоритет 3: photos
+                    if not layout_photos:
+                        layout_photos = apt.get('photos', [])
                     
                     # Если это не массив, а строка - преобразуем в массив
                     if isinstance(layout_photos, str):
                         layout_photos = [layout_photos] if layout_photos else []
+                    elif not isinstance(layout_photos, list):
+                        layout_photos = [] if layout_photos is None else []
+                    
+                    # Если все еще пусто, пробуем layout, plan, photo, layout_image
+                    if not layout_photos:
+                        for field in ['layout', 'plan', 'photo', 'layout_image']:
+                            photo = apt.get(field)
+                            if photo:
+                                layout_photos = [photo] if isinstance(photo, str) else (photo if isinstance(photo, list) else [])
+                                break
                     
                     # Генерируем уникальный ID если его нет (формат: {complex_id}_{apt_type}_{apt_index})
                     apt_id = apt.get('_id')
@@ -216,9 +246,9 @@ def apartment_detail(request, complex_id, apartment_id):
         apartment_index = None
         
         # Если apartment_id содержит подчеркивание, это сгенерированный ID
-        if '_' in apartment_id:
+        if '_' in apartment_id_str:
             # Проверяем формат ID: может быть {complex_id}_{type}_{index} или {type}_{index}
-            apt_id_parts = apartment_id.split('_')
+            apt_id_parts = apartment_id_str.split('_')
             
             # Если ID начинается с complex_id (24 символа), убираем его
             if len(apt_id_parts) >= 3 and len(apt_id_parts[0]) == 24:
@@ -258,7 +288,7 @@ def apartment_detail(request, complex_id, apartment_id):
             # Обычный поиск по _id или id
             for apt in apartments:
                 apt_id = apt.get('id') or apt.get('_id')
-                if apt_id and (str(apt_id) == str(apartment_id)):
+                if apt_id and (str(apt_id) == apartment_id_str):
                     apartment_data = apt
                     break
         
@@ -266,8 +296,8 @@ def apartment_detail(request, complex_id, apartment_id):
             # Если не нашли в сформированном списке, пробуем найти напрямую в apartment_types
             if 'apartment_types' in complex_data:
                 apartment_types_data = complex_data.get('apartment_types', {})
-                if '_' in apartment_id:
-                    apt_id_parts = apartment_id.split('_')
+                if '_' in apartment_id_str:
+                    apt_id_parts = apartment_id_str.split('_')
                     if len(apt_id_parts) >= 2:
                         # Пробуем найти по типу и индексу напрямую в исходных данных
                         try:
@@ -278,9 +308,34 @@ def apartment_detail(request, complex_id, apartment_id):
                                 if apt_index < len(apt_list):
                                     apt = apt_list[apt_index]
                                     # Формируем данные квартиры так же, как при первом проходе
-                                    layout_photos = apt.get('image', [])
+                                    # Проверяем разные возможные поля для фотографий
+                                    layout_photos = None
+                                    
+                                    # Приоритет 1: images_apartment (используется в новой структуре)
+                                    if 'images_apartment' in apt:
+                                        layout_photos = apt.get('images_apartment', [])
+                                    
+                                    # Приоритет 2: image
+                                    if not layout_photos:
+                                        layout_photos = apt.get('image', [])
+                                    
+                                    # Приоритет 3: photos
+                                    if not layout_photos:
+                                        layout_photos = apt.get('photos', [])
+                                    
+                                    # Если это не массив, а строка - преобразуем в массив
                                     if isinstance(layout_photos, str):
                                         layout_photos = [layout_photos] if layout_photos else []
+                                    elif not isinstance(layout_photos, list):
+                                        layout_photos = [] if layout_photos is None else []
+                                    
+                                    # Если все еще пусто, пробуем layout, plan, photo, layout_image
+                                    if not layout_photos:
+                                        for field in ['layout', 'plan', 'photo', 'layout_image']:
+                                            photo = apt.get(field)
+                                            if photo:
+                                                layout_photos = [photo] if isinstance(photo, str) else (photo if isinstance(photo, list) else [])
+                                                break
                                     
                                     title = apt.get('title', '')
                                     rooms = apt.get('rooms', '')
@@ -311,7 +366,7 @@ def apartment_detail(request, complex_id, apartment_id):
                                             pass
                                     
                                     apartment_data = {
-                                        'id': str(apartment_id),
+                                        'id': apartment_id_str,
                                         'type': apt_type,
                                         'title': title,
                                         'price': price,
@@ -358,7 +413,7 @@ def apartment_detail(request, complex_id, apartment_id):
         # Получаем другие квартиры в этом ЖК для рекомендаций
         other_apartments = []
         for apt in apartments[:6]:  # Показываем до 6 других квартир
-            if str(apt.get('id')) != str(apartment_id):
+            if str(apt.get('id')) != apartment_id_str:
                 # Формируем данные для других квартир
                 other_apt_title = apt.get('title', '')
                 other_rooms = ''
@@ -404,7 +459,9 @@ def apartment_detail(request, complex_id, apartment_id):
                 
                 # Формируем правильный title для отображения
                 display_title = other_apt_title
-                if not display_title or (other_rooms and other_rooms not in display_title):
+                # Преобразуем other_rooms в строку для безопасной проверки
+                other_rooms_str = str(other_rooms) if other_rooms else ''
+                if not display_title or (other_rooms_str and other_rooms_str not in display_title):
                     # Если title пустой или не содержит количество комнат, формируем новый
                     if other_rooms:
                         display_title = f"{other_rooms}-комнатная квартира"
@@ -534,7 +591,7 @@ def apartment_detail(request, complex_id, apartment_id):
         price_formatted = format_price(price_raw) if price_raw else ''
         
         apartment_info = {
-            'id': apartment_id,  # Используем сгенерированный ID
+            'id': apartment_id_str,  # Используем сгенерированный ID
             'rooms': rooms,
             'area': area,
             'floor': floor,
@@ -555,17 +612,41 @@ def apartment_detail(request, complex_id, apartment_id):
             'kitchen_area': apartment_data.get('kitchenArea', ''),
             'living_area': apartment_data.get('livingArea', ''),
             'bedroom_area': apartment_data.get('bedroomArea', ''),
-            'photos': apartment_data.get('image', []),  # Используем поле image
+            'photos': apartment_data.get('image', []),  # Временно, будет обновлено ниже
             'description': apartment_data.get('description', ''),
             'features': apartment_data.get('features', []),
         }
         
-        # Отладочная информация для фотографий
-        photos = apartment_data.get('image', [])
+        # Получаем фотографии из разных возможных полей
+        # Приоритет: layout_photos > image > photos
+        photos = None
+        
+        # Сначала проверяем layout_photos (используется в сформированном списке apartments)
+        layout_photos = apartment_data.get('layout_photos')
+        if layout_photos:
+            photos = layout_photos
+        
+        # Если нет layout_photos, проверяем image
+        if not photos:
+            image_data = apartment_data.get('image')
+            if image_data:
+                photos = image_data
+        
+        # Если нет image, проверяем photos
+        if not photos:
+            photos_data = apartment_data.get('photos')
+            if photos_data:
+                photos = photos_data
+        
+        # Если это строка, преобразуем в массив
         if isinstance(photos, str):
-            photos = [photos]  # Если это строка, делаем массив
-        # print(f"Фотографии квартиры: {photos}")
-        # print(f"Количество фотографий: {len(photos)}")
+            photos = [photos] if photos else []
+        # Если это не список, делаем пустым списком
+        elif not isinstance(photos, list):
+            photos = []
+        
+        # Фильтруем пустые значения
+        photos = [p for p in photos if p]
         
         # Обновляем photos в apartment_info
         apartment_info['photos'] = photos
@@ -606,5 +687,8 @@ def apartment_detail(request, complex_id, apartment_id):
         return render(request, 'main/apartment_detail.html', context)
         
     except Exception as e:
+        import traceback
         print(f"Ошибка загрузки квартиры: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        print(f"apartment_id type: {type(apartment_id)}, value: {apartment_id}")
         raise Http404("Ошибка загрузки данных квартиры")
