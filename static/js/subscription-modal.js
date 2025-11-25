@@ -43,6 +43,7 @@
     // Показать модальное окно
     function showModal() {
         overlay.classList.add('active');
+        overlay.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
         localStorage.setItem(STORAGE_KEY_LAST_SHOWN, Date.now().toString());
     }
@@ -50,6 +51,7 @@
     // Скрыть модальное окно
     function hideModal() {
         overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
         localStorage.setItem(STORAGE_KEY_DISMISSED, Date.now().toString());
     }

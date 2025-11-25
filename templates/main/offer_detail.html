@@ -96,7 +96,7 @@
                          </span>
                      </div>
                      <div class="offer-actions">
-                         <span class="btn btn-primary btn-small">Подробнее об акции</span>
+                         <span class="btn btn-primary btn-small offer-cta">Подробнее об акции</span>
                      </div>
                  </div>
              </a>
@@ -397,6 +397,9 @@
 
  .offer-cta {
      flex: none;
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
      text-align: center;
      padding: 8px 16px !important;
      border-radius: 8px;
@@ -407,6 +410,13 @@
      font-size: 13px;
      font-weight: 700;
      min-width: 140px;
+     text-decoration: none;
+     transition: all 0.2s ease;
+ }
+
+ .offer-cta:hover {
+     transform: translateY(-1px);
+     box-shadow: 0 6px 16px rgba(190,175,135,.55);
  }
 
 
@@ -442,6 +452,17 @@
     .offer-content {
         min-height: auto;
     }
+
+    .offer-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .offer-cta {
+        width: 100% !important;
+        display: flex !important;
+    }
 }
 
 @media (max-width: 480px) {
@@ -468,13 +489,15 @@
     
     .offer-actions {
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
+        width: 100%;
     }
     
     .offer-cta {
         flex: none;
-        width: 100%;
-        max-width: 200px;
+        width: 100% !important;
+        max-width: none !important;
+        display: flex !important;
     }
 }
 </style>

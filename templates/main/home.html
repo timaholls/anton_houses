@@ -339,7 +339,7 @@
                                         </div>
                                         <div class="offer-limited">
                                             <i class="far fa-clock"></i>
-                                            <span>До ${offer.expires_at}</span>
+                                            <span>${offer.expires_at === 'Временное предложение' ? offer.expires_at : 'До ' + offer.expires_at}</span>
                                         </div>
                                     </div>
                                 </a>
