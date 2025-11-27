@@ -21,7 +21,7 @@ def videos_objects_api(request):
     objects = []
     if category == 'newbuild':
         db = get_mongo_connection()
-        unified = db['unified_houses']
+        unified = db['unified_houses_3']
         # Берём первые 1000 для селекта
         for r in unified.find({}, {'development.name': 1}).limit(1000):
             name = (r.get('development', {}) or {}).get('name') or (r.get('avito', {}) or {}).get('development', {}) .get('name') or (r.get('domclick', {}) or {}).get('development', {}) .get('complex_name') or 'ЖК'
@@ -67,7 +67,7 @@ def videos_list(request):
         active = request.GET.get('active')
         db = get_mongo_connection()
         videos_col = db['residential_videos']
-        unified = db['unified_houses']
+        unified = db['unified_houses_3']
         q = {}
         if active in ('1', 'true', 'True'):
             q['is_active'] = True

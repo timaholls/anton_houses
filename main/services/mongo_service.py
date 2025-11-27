@@ -32,10 +32,10 @@ def get_mongo_user(email: str):
 
 
 def get_unified_houses_from_mongo(filters=None, sort_by=None, limit=None, random=False):
-    """Получить ЖК из unified_houses коллекции MongoDB"""
+    """Получить ЖК из unified_houses_3 коллекции MongoDB"""
     try:
         db = get_mongo_connection()
-        collection = db['unified_houses']
+        collection = db['unified_houses_3']
         
         # Базовый фильтр - только записи с данными development
         mongo_filter = {'development': {'$exists': True, '$ne': None}}
@@ -149,7 +149,7 @@ def get_unified_houses_from_mongo(filters=None, sort_by=None, limit=None, random
         return complexes
         
     except Exception as e:
-        print(f"Ошибка получения данных из unified_houses: {e}")
+        print(f"Ошибка получения данных из unified_houses_3: {e}")
         return []
 
 

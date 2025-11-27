@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Создает коллекцию unified_houses_3, объединяя квартиры из unified_houses и unified_houses_2.
+Создает коллекцию unified_houses_3, объединяя квартиры из unified_houses_3 и unified_houses_2.
 Основная логика:
-    * Базой служит запись из unified_houses (сохраняем все поля без изменений)
+    * Базой служит запись из unified_houses_3 (сохраняем все поля без изменений)
     * Квартиры из unified_houses_2 добавляем только в те типы, где они реально нужны
     * Проверяем количество квартир по типам (Студии, 1-комн и т.д.)
-    * Не трогаем тип, если в unified_houses уже больше квартир и нет явной нехватки
+    * Не трогаем тип, если в unified_houses_3 уже больше квартир и нет явной нехватки
     * Если ЖК отсутствует в unified_houses_2 — просто копируем оригинальную запись
 """
 
@@ -24,7 +24,7 @@ from pymongo import MongoClient
 PROJECT_ROOT = Path(__file__).resolve().parent
 load_dotenv(PROJECT_ROOT / ".env")
 
-UNIFIED_COLLECTION = "unified_houses"
+UNIFIED_COLLECTION = "unified_houses_3"
 CIAN_COLLECTION = "unified_houses_2"
 TARGET_COLLECTION = "unified_houses_3"
 DEFAULT_THRESHOLD = 15
@@ -43,7 +43,7 @@ FORCED_REPLACE_NAMES = {
     "жк экогород яркий",
 }
 
-# ЖК, которые копируем как есть из unified_houses (без объединения и без замены)
+# ЖК, которые копируем как есть из unified_houses_3 (без объединения и без замены)
 COPY_ONLY_NAMES = {
     "жк холмогоры",
     "жк цветы башкирии",
@@ -163,7 +163,7 @@ def map_rooms_to_type_label(rooms: int) -> str:
 
 
 def convert_cian_apartment(cian_apt: Dict[str, Any]) -> Optional[Tuple[str, Dict[str, Any]]]:
-    """Конвертирует квартиру CIAN в формат unified_houses и возвращает (тип, данные)."""
+    """Конвертирует квартиру CIAN в формат unified_houses_3 и возвращает (тип, данные)."""
     title = cian_apt.get("title", "")
     rooms = parse_rooms_from_title(title)
     if rooms is None:
@@ -326,10 +326,10 @@ def should_merge_type(unified_count: int, cian_count: int, threshold: int) -> bo
     Определяет, стоит ли объединять конкретный тип квартир.
     Логика:
         * если новых квартир нет — ничего не делаем
-        * если в unified_houses нет квартир — добавляем
+        * если в unified_houses_3 нет квартир — добавляем
         * если в обеих записях мало квартир (<= threshold) — объединяем
         * если в CIAN больше квартир — дополняем
-        * иначе (в unified_houses уже больше) — пропускаем
+        * иначе (в unified_houses_3 уже больше) — пропускаем
     """
     if cian_count == 0:
         return False
@@ -348,7 +348,7 @@ def merge_apartments(
     threshold: int,
 ) -> Tuple[int, int, List[str]]:
     """
-    Объединяет квартиры в base_record (unified_houses) с CIAN-данными.
+    Объединяет квартиры в base_record (unified_houses_3) с CIAN-данными.
     Возвращает:
         (кол-во добавленных квартир, итоговое количество квартир, список логов)
     """
@@ -551,7 +551,7 @@ def process_records(args) -> None:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Объединяет unified_houses и unified_houses_2 в unified_houses_3"
+        description="Объединяет unified_houses_3 и unified_houses_2 в unified_houses_3"
     )
     parser.add_argument(
         "--building",

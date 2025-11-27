@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Скрипт для миграции данных из CIAN в unified_houses
+Скрипт для миграции данных из CIAN в unified_houses_3
 Создает новую запись с данными из CIAN, сохраняя критичные поля из старой записи
 """
 
@@ -157,7 +157,7 @@ def extract_summary_value(summary_info: List[Dict], label: str) -> Optional[str]
 
 def convert_cian_apartment_to_unified(cian_apt: Dict) -> Optional[Dict]:
     """
-    Преобразует квартиру из формата CIAN в формат unified_houses
+    Преобразует квартиру из формата CIAN в формат unified_houses_3
     """
     # Определяем тип квартиры
     title = cian_apt.get("title", "")
@@ -279,8 +279,8 @@ def load_cian_data() -> Optional[Dict]:
 
 
 def find_unified_record(db, building_name: str):
-    """Находит запись в unified_houses по названию ЖК"""
-    unified_col = db['unified_houses']
+    """Находит запись в unified_houses_3 по названию ЖК"""
+    unified_col = db['unified_houses_3']
     
     # Пробуем разные варианты поиска
     search_patterns = [
@@ -293,16 +293,16 @@ def find_unified_record(db, building_name: str):
     for pattern in search_patterns:
         record = unified_col.find_one(pattern)
         if record:
-            print(f"✅ Найдена запись в unified_houses: {record.get('development', {}).get('name', 'Без названия')}")
+            print(f"✅ Найдена запись в unified_houses_3: {record.get('development', {}).get('name', 'Без названия')}")
             return record
     
-    print(f"❌ Запись с названием '{building_name}' не найдена в unified_houses")
+    print(f"❌ Запись с названием '{building_name}' не найдена в unified_houses_3")
     return None
 
 
 def create_new_unified_record(old_record: Dict, cian_building: Dict) -> Dict:
     """
-    Создает новую запись unified_houses на основе старой записи и данных из CIAN
+    Создает новую запись unified_houses_3 на основе старой записи и данных из CIAN
     """
     # Сохраняем критичные поля из старой записи
     new_record = {
@@ -381,7 +381,7 @@ def create_new_unified_record(old_record: Dict, cian_building: Dict) -> Dict:
 
 def main():
     """Основная функция миграции"""
-    print("🔄 Начинаем миграцию данных из CIAN в unified_houses...")
+    print("🔄 Начинаем миграцию данных из CIAN в unified_houses_3...")
     print(f"📁 Ищем ЖК: {BUILDING_NAME}")
     
     # Загружаем данные из CIAN
@@ -408,7 +408,7 @@ def main():
     new_record = create_new_unified_record(old_record, cian_building)
     
     # Сохраняем новую запись
-    unified_col = db['unified_houses']
+    unified_col = db['unified_houses_3']
     result = unified_col.insert_one(new_record)
     
     print(f"\n✅ Новая запись создана!")

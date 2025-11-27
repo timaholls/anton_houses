@@ -5,7 +5,7 @@
     const STORAGE_KEY_LAST_SHOWN = 'subscription_modal_last_shown';
     const STORAGE_KEY_SUBSCRIBED = 'subscription_modal_subscribed';
     const STORAGE_KEY_DISMISSED = 'subscription_modal_dismissed';
-    const INTERVAL_MS = 5 * 60 * 1000; // 5 минут
+    const INTERVAL_MS = 15 * 60 * 1000; // 15 минут
     
     const overlay = document.getElementById('subscription-modal-overlay');
     const modal = document.getElementById('subscription-modal');
@@ -13,6 +13,8 @@
     const form = document.getElementById('subscription-modal-form');
     const submitBtn = document.getElementById('subscription-modal-button');
     const messageDiv = document.getElementById('subscription-modal-message');
+    const emailInput = document.getElementById('subscription-modal-email');
+    const emailError = document.getElementById('subscription-modal-email-error');
     
     if (!overlay || !modal || !form) {
         return; // Элементы не найдены
@@ -32,12 +34,12 @@
             const now = Date.now();
             const timeSinceLastShown = now - lastShownTime;
             
-            // Показываем, если прошло больше 5 минут
+            // Показываем, если прошло больше 15 минут
             return timeSinceLastShown >= INTERVAL_MS;
         }
         
-        // Если никогда не показывали, показываем
-        return true;
+        // Если никогда не показывали, не показываем при загрузке
+        return false;
     }
     
     // Показать модальное окно
@@ -56,12 +58,8 @@
         localStorage.setItem(STORAGE_KEY_DISMISSED, Date.now().toString());
     }
     
-    // Закрытие по клику на overlay (фон)
-    overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) {
-            hideModal();
-        }
-    });
+    // Ранее модалка закрывалась по клику на фон, из‑за чего данные терялись.
+    // Теперь оставляем только кнопку "X" и Escape, чтобы исключить случайные закрытия.
     
     // Закрытие по кнопке закрытия
     if (closeBtn) {
@@ -78,6 +76,7 @@
     // Обработка отправки формы
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
+        clearEmailValidation();
         
         const formData = new FormData(form);
         const data = {
@@ -88,8 +87,8 @@
         };
         
         // Валидация
-        if (!data.email || !data.email.includes('@')) {
-            showMessage('Пожалуйста, введите корректный email адрес', 'error');
+        if (!isValidEmail(data.email)) {
+            showEmailValidation('Введите корректный email');
             return;
         }
         
@@ -118,6 +117,7 @@
             if (result.success) {
                 showMessage(result.message || 'Подписка успешно оформлена!', 'success');
                 form.reset();
+                clearEmailValidation();
                 // Автоматически отмечаем чекбоксы
                 document.getElementById('subscription-modal-projects').checked = true;
                 document.getElementById('subscription-modal-promotions').checked = true;
@@ -130,7 +130,11 @@
                     hideModal();
                 }, 2000);
             } else {
-                showMessage(result.error || 'Произошла ошибка при подписке', 'error');
+                if (result.error && result.error.toLowerCase().includes('email')) {
+                    showEmailValidation(result.error);
+                } else {
+                    showMessage(result.error || 'Произошла ошибка при подписке', 'error');
+                }
             }
         } catch (error) {
             console.error('Ошибка подписки:', error);
@@ -140,6 +144,32 @@
             submitBtn.innerHTML = originalText;
         }
     });
+    
+    function isValidEmail(email) {
+        if (!email) return false;
+        const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return pattern.test(email);
+    }
+    
+    function showEmailValidation(text) {
+        if (!emailInput || !emailError) return;
+        emailInput.classList.add('has-error');
+        emailInput.setAttribute('aria-invalid', 'true');
+        emailError.textContent = text;
+        emailError.style.display = 'block';
+    }
+    
+    function clearEmailValidation() {
+        if (!emailInput || !emailError) return;
+        emailInput.classList.remove('has-error');
+        emailInput.removeAttribute('aria-invalid');
+        emailError.textContent = '';
+        emailError.style.display = 'none';
+    }
+    
+    if (emailInput) {
+        emailInput.addEventListener('input', clearEmailValidation);
+    }
     
     // Показать сообщение
     function showMessage(text, type) {
@@ -171,24 +201,15 @@
         return cookieValue;
     }
     
-    // Инициализация: показать модальное окно при загрузке страницы
-    function init() {
-        // Небольшая задержка для лучшего UX
-        setTimeout(() => {
-            if (shouldShowModal()) {
-                showModal();
-            }
-        }, 1000);
-    }
+    // Проверка каждые 15 минут (если модальное окно не показано)
+    // Первая проверка через 15 минут после загрузки страницы
+    setTimeout(() => {
+        if (shouldShowModal()) {
+            showModal();
+        }
+    }, INTERVAL_MS);
     
-    // Запуск при загрузке DOM
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-    
-    // Проверка каждые 5 минут (если модальное окно не показано)
+    // Периодическая проверка каждые 15 минут
     setInterval(() => {
         if (!overlay.classList.contains('active') && shouldShowModal()) {
             showModal();

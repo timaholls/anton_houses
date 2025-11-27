@@ -60,7 +60,7 @@ def apartment_detail(request, complex_id, apartment_id):
         db = get_mongo_connection()
         
         # Получаем данные ЖК
-        complex_collection = db['unified_houses']
+        complex_collection = db['unified_houses_3']
         complex_data = complex_collection.find_one({'_id': ObjectId(complex_id)})
         
         if not complex_data:
@@ -140,7 +140,37 @@ def apartment_detail(request, complex_id, apartment_id):
                     # Парсим данные из title, если их нет в отдельных полях
                     title = apt.get('title', '')
                     rooms = apt.get('rooms', '')
-                    floor = apt.get('floor', '')
+                    
+                    # Определяем этаж: сначала используем явные поля, затем диапазоны, затем парсим title
+                    floor = apt.get('floor') or apt.get('floor_number')
+                    floor_min = apt.get('floorMin')
+                    floor_max = apt.get('floorMax')
+                    
+                    def _format_floor(val):
+                        if val is None:
+                            return None
+                        if isinstance(val, (int, float)):
+                            if isinstance(val, float) and val.is_integer():
+                                val = int(val)
+                            return str(int(val))
+                        val_str = str(val).strip()
+                        return val_str or None
+                    
+                    # Если floor уже есть, но это число, преобразуем в строку
+                    if floor:
+                        floor = _format_floor(floor) or str(floor).strip() if floor else ''
+                    else:
+                        # Если floor нет, пытаемся получить из floorMin/floorMax
+                        formatted_min = _format_floor(floor_min)
+                        formatted_max = _format_floor(floor_max)
+                        if formatted_min and formatted_max:
+                            floor = formatted_min if formatted_min == formatted_max else f"{formatted_min}-{formatted_max}"
+                        elif formatted_min:
+                            floor = formatted_min
+                        elif formatted_max:
+                            floor = formatted_max
+                        else:
+                            floor = ''
                     
                     if title and not rooms:
                         # Извлекаем количество комнат из title
@@ -154,7 +184,8 @@ def apartment_detail(request, complex_id, apartment_id):
                             match = re.search(r'^(\d+)-комн', title)
                             rooms = match.group(1)
                     
-                    if title and not floor:
+                    # Извлекаем этаж из title только если не нашли в полях
+                    if not floor and title:
                         # Извлекаем этаж из title
                         floor_range_match = re.search(r'(\d+)-(\d+)\s*этаж', title)
                         if floor_range_match:
@@ -464,13 +495,54 @@ def apartment_detail(request, complex_id, apartment_id):
                 if not display_title or (other_rooms_str and other_rooms_str not in display_title):
                     # Если title пустой или не содержит количество комнат, формируем новый
                     if other_rooms:
-                        display_title = f"{other_rooms}-комнатная квартира"
+                        # Проверяем, является ли это студией
+                        if str(other_rooms).lower() in ['студия', 'studio', '0']:
+                            display_title = "Студия"
+                        else:
+                            display_title = f"{other_rooms}-комнатная квартира"
                         if other_area:
                             display_title += f", {other_area} м²"
                     elif other_area:
                         display_title = f"Квартира, {other_area} м²"
                     else:
                         display_title = "Квартира"
+                
+                # Определяем этаж для других квартир (та же логика, что и для основной)
+                other_floor = apt.get('floor') or apt.get('floor_number')
+                other_floor_min = apt.get('floorMin')
+                other_floor_max = apt.get('floorMax')
+                
+                def _format_floor_other(val):
+                    if val is None:
+                        return None
+                    if isinstance(val, (int, float)):
+                        if isinstance(val, float) and val.is_integer():
+                            val = int(val)
+                        return str(int(val))
+                    val_str = str(val).strip()
+                    return val_str or None
+                
+                if not other_floor:
+                    formatted_min = _format_floor_other(other_floor_min)
+                    formatted_max = _format_floor_other(other_floor_max)
+                    if formatted_min and formatted_max:
+                        other_floor = formatted_min if formatted_min == formatted_max else f"{formatted_min}-{formatted_max}"
+                    elif formatted_min:
+                        other_floor = formatted_min
+                    elif formatted_max:
+                        other_floor = formatted_max
+                    else:
+                        other_floor = ''
+                
+                # Если этаж не найден, пытаемся извлечь из title
+                if not other_floor and other_apt_title:
+                    floor_range_match = re.search(r'(\d+)-(\d+)\s*этаж', other_apt_title)
+                    if floor_range_match:
+                        other_floor = f"{floor_range_match.group(1)}-{floor_range_match.group(2)}"
+                    else:
+                        floor_match = re.search(r'(\d+)/(\d+)\s*эт', other_apt_title)
+                        if floor_match:
+                            other_floor = f"{floor_match.group(1)}/{floor_match.group(2)}"
                 
                 # Форматируем цену
                 other_price_raw = apt.get('price', '')
@@ -480,6 +552,7 @@ def apartment_detail(request, complex_id, apartment_id):
                     'id': apt.get('id'),
                     'rooms': other_rooms,
                     'area': other_area,
+                    'floor': other_floor or '',
                     'price': other_price_formatted,
                     'photos': apt.get('image', []),
                     'title': display_title
@@ -495,8 +568,47 @@ def apartment_detail(request, complex_id, apartment_id):
         # ВАЖНО: Сначала проверяем поле area/totalArea, потом парсим из title
         title = apartment_data.get('title', '')
         rooms = apartment_data.get('rooms', '')  # Используем уже извлеченное значение
+        
+        # Если rooms пустое, проверяем type (может быть "Студия" или "0")
+        if not rooms:
+            apt_type = apartment_data.get('type', '')
+            if str(apt_type).lower() in ['студия', 'studio', '0']:
+                rooms = 'Студия'
+            elif apt_type:
+                rooms = apt_type
+        
         area = ''
-        floor = apartment_data.get('floor', '')  # Используем уже извлеченное значение
+        
+        # Определяем этаж: сначала используем явные поля, затем диапазоны, затем парсим title
+        floor = apartment_data.get('floor') or apartment_data.get('floor_number')
+        floor_min = apartment_data.get('floorMin')
+        floor_max = apartment_data.get('floorMax')
+        
+        def _format_floor(val):
+            if val is None:
+                return None
+            if isinstance(val, (int, float)):
+                if isinstance(val, float) and val.is_integer():
+                    val = int(val)
+                return str(int(val))
+            val_str = str(val).strip()
+            return val_str or None
+        
+        # Если floor уже есть, но это число, преобразуем в строку
+        if floor:
+            floor = _format_floor(floor) or str(floor).strip() if floor else ''
+        else:
+            # Если floor нет, пытаемся получить из floorMin/floorMax
+            formatted_min = _format_floor(floor_min)
+            formatted_max = _format_floor(floor_max)
+            if formatted_min and formatted_max:
+                floor = formatted_min if formatted_min == formatted_max else f"{formatted_min}-{formatted_max}"
+            elif formatted_min:
+                floor = formatted_min
+            elif formatted_max:
+                floor = formatted_max
+            else:
+                floor = ''
         
         # Сначала пытаемся взять площадь из отдельного поля (из DomClick)
         area = apartment_data.get('area') or apartment_data.get('totalArea') or ''
@@ -525,7 +637,7 @@ def apartment_detail(request, complex_id, apartment_id):
                 if area_match:
                     area = area_match.group(1).replace(',', '.')
             
-            # Извлекаем этаж (поддерживаем форматы: "2-25 этаж", "3/15 эт.")
+            # Извлекаем этаж из title только если не нашли в полях (поддерживаем форматы: "2-25 этаж", "3/15 эт.")
             if not floor:
                 # Формат "2-25 этаж"
                 floor_range_match = re.search(r'(\d+)-(\d+)\s*этаж', title)
@@ -590,11 +702,21 @@ def apartment_detail(request, complex_id, apartment_id):
         price_raw = apartment_data.get('price', '')
         price_formatted = format_price(price_raw) if price_raw else ''
         
+        # Формируем правильное название квартиры
+        rooms_lower = str(rooms).lower().strip() if rooms else ''
+        if rooms_lower in ['студия', 'studio', '0'] or str(rooms).strip() == 'Студия':
+            apartment_title = 'Студия'
+        elif rooms:
+            apartment_title = f"{rooms}-комнатная квартира"
+        else:
+            apartment_title = "Квартира"
+        
         apartment_info = {
             'id': apartment_id_str,  # Используем сгенерированный ID
             'rooms': rooms,
+            'apartment_title': apartment_title,
             'area': area,
-            'floor': floor,
+            'floor': floor or '',  # Убеждаемся, что floor - строка
             'price': price_formatted,
             'price_per_sqm': price_per_sqm,
             'price_per_sqm_formatted': price_per_sqm_formatted,

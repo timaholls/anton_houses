@@ -235,6 +235,7 @@
                     <div class="subscription-modal-form-group">
                         <label for="subscription-modal-email">Email адрес</label>
                         <input type="email" id="subscription-modal-email" name="email" placeholder="Введите ваш email" required>
+                        <div class="subscription-input-error-text" id="subscription-modal-email-error"></div>
                     </div>
                 </div>
                 
@@ -360,7 +361,7 @@
     <div class="container">
         <div class="footer-content">
             <!-- Каталог -->
-            <div class="footer-section">
+            <div class="footer-section footer-section-catalog">
                 <h3 class="footer-title">Каталог</h3>
                 <ul class="footer-links">
                     <li><a href="{% url 'main:catalog_completed' %}">Сданные</a></li>
@@ -371,25 +372,6 @@
                     <li><a href="{% url 'main:catalog_premium' %}">Премиум-класс</a></li>
                     <li><a href="{% url 'main:catalog_finished' %}">С отделкой</a></li>
                     <li><a href="{% url 'main:catalog_unfinished' %}">Без отделки</a></li>
-                </ul>
-            </div>
-
-            <!-- Компания -->
-            <div class="footer-section">
-                <h3 class="footer-title">Компания</h3>
-                <ul class="footer-links">
-                    <li><a href="{% url 'main:team' %}">Наша команда</a></li>
-                    <li><a href="{% url 'main:articles' %}">Новости</a></li>
-                    <li><a href="{% url 'main:vacancies' %}">Вакансии</a></li>
-                    <li><a href="{% url 'main:offices' %}">Офисы продаж</a></li>
-                </ul>
-            </div>
-
-            <!-- Клиентам -->
-            <div class="footer-section">
-                <h3 class="footer-title">Клиентам</h3>
-                <ul class="footer-links">
-                    <li><a href="{% url 'main:mortgage' %}">Ипотека</a></li>
                 </ul>
             </div>
 
@@ -408,7 +390,17 @@
                         </div>
                         <div class="contact-item">
                             <i class="fas fa-clock"></i>
-                            <span>{% if head_office.schedule %}{{ head_office.schedule }}{% else %}Пн-Пт: 9:00-18:00{% endif %}</span>
+                            <span class="contact-schedule">
+                                {% if head_office.schedule %}
+                                    {{ head_office.schedule|linebreaksbr }}
+                                {% else %}
+                                    {% filter linebreaksbr %}
+Пн-Пт: 9:00-18:00
+Сб: 10:00-16:00
+Вс: выходной
+                                    {% endfilter %}
+                                {% endif %}
+                            </span>
                         </div>
                     {% else %}
                         <div class="contact-item">
@@ -421,7 +413,9 @@
                         </div>
                         <div class="contact-item">
                             <i class="fas fa-clock"></i>
-                            <span>Пн-Пт: 9:00-18:00</span>
+                            <span class="contact-schedule">{% filter linebreaksbr %}Пн-Пт: 9:00-18:00
+Сб: 10:00-16:00
+Вс: выходной{% endfilter %}</span>
                         </div>
                     {% endif %}
                 </div>
@@ -433,6 +427,25 @@
                         <span>Найти нас в 2ГИС</span>
                     </a>
                 </div>
+            </div>
+
+            <!-- Компания -->
+            <div class="footer-section footer-section-company">
+                <h3 class="footer-title">Компания</h3>
+                <ul class="footer-links">
+                    <li><a href="{% url 'main:team' %}">Наша команда</a></li>
+                    <li><a href="{% url 'main:articles' %}">Новости</a></li>
+                    <li><a href="{% url 'main:vacancies' %}">Вакансии</a></li>
+                    <li><a href="{% url 'main:offices' %}">Офисы продаж</a></li>
+                </ul>
+            </div>
+
+            <!-- Клиентам -->
+            <div class="footer-section">
+                <h3 class="footer-title">Клиентам</h3>
+                <ul class="footer-links">
+                    <li><a href="{% url 'main:mortgage' %}">Ипотека</a></li>
+                </ul>
             </div>
         </div>
 

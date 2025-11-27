@@ -35,7 +35,7 @@
         background: rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);backdrop-filter: blur(3px);
         box-shadow: 0 6px 18px rgba(0,0,0,.18);
     }
-    .ticker-track{display:inline-block;white-space:nowrap;animation:heroTicker 18s linear infinite; padding:10px 0}
+    .ticker-track{display:inline-block;white-space:nowrap;animation:heroTicker 36s linear infinite; padding:10px 0}
     .ticker-item{display:inline-block;color:#fff;font-weight:700;letter-spacing:.4px;padding:0 28px;opacity:.95}
     @keyframes heroTicker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 
@@ -71,7 +71,7 @@
                 <div class="offer-slide">
                     <div class="offer-card" id="offer-card-1">
                         {% if offers.0 %}
-                        <a href="{% url 'main:offer_detail' offers.0.id %}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                        <a href="{% url 'main:offer_detail' offers.0.id %}" class="offer-card-inner desktop-offer-card">
                             <div class="offer-media">
                                 {% if offers.0.get_main_image and offers.0.get_main_image.image %}
                                     <img src="{{ offers.0.get_main_image.image.url }}" alt="{{ offers.0.title }}" loading="lazy" decoding="async">
@@ -99,7 +99,7 @@
                 <div class="offer-slide">
                     <div class="offer-card" id="offer-card-2">
                         {% if offers.1 %}
-                        <a href="{% url 'main:offer_detail' offers.1.id %}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                        <a href="{% url 'main:offer_detail' offers.1.id %}" class="offer-card-inner desktop-offer-card">
                             <div class="offer-media">
                                 {% if offers.1.get_main_image and offers.1.get_main_image.image %}
                                     <img src="{{ offers.1.get_main_image.image.url }}" alt="{{ offers.1.title }}" loading="lazy" decoding="async">
@@ -127,7 +127,7 @@
                 <div class="offer-slide">
                     <div class="offer-card" id="offer-card-3">
                         {% if offers.2 %}
-                        <a href="{% url 'main:offer_detail' offers.2.id %}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                        <a href="{% url 'main:offer_detail' offers.2.id %}" class="offer-card-inner desktop-offer-card">
                             <div class="offer-media">
                                 {% if offers.2.get_main_image and offers.2.get_main_image.image %}
                                     <img src="{{ offers.2.get_main_image.image.url }}" alt="{{ offers.2.title }}" loading="lazy" decoding="async">
@@ -208,17 +208,20 @@
         .offer-slide:nth-child(2),
         .offer-slide:nth-child(3){display:block}
         
-        .offer-card{width:100%;display:grid;grid-template-columns:140px 1fr;gap:12px;background:#fff;border:1px solid #efe7ce;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.08);transition:box-shadow .3s ease, transform .3s ease, border-color .3s ease, opacity .3s ease;text-decoration:none;color:inherit;height:180px;opacity:1}
+        .offer-card{width:100%;display:flex;flex-direction:column;gap:10px;background:#fff;border:1px solid #efe7ce;border-radius:12px;padding:14px;box-shadow:0 6px 20px rgba(0,0,0,.08);transition:box-shadow .3s ease, transform .3s ease, border-color .3s ease, opacity .3s ease;text-decoration:none;color:inherit;opacity:1}
         .offer-card:hover{box-shadow:0 12px 28px rgba(0,0,0,.15);transform:translateY(-3px);border-color:var(--c21-gold)}
+        .offer-card-inner{display:grid;grid-template-columns:150px 1fr;gap:14px;width:100%;text-decoration:none;color:inherit}
+        .mobile-offer-card{grid-template-columns:140px 1fr;gap:12px}
+        .offer-content{display:flex;flex-direction:column;justify-content:space-between;gap:6px}
+        .offer-head{display:flex;flex-direction:column;gap:4px;margin-bottom:0}
+        .desktop-offer-card .offer-head{flex-direction:column}
         .offer-card.fade-out{opacity:0;transform:scale(0.95)}
         .offer-card.fade-in{opacity:1;transform:scale(1)}
         .offer-media{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:4/3;min-height:80px}
         .offer-media img{width:100%;height:100%;object-fit:cover;display:block}
         .offer-badge-hot{position:absolute;left:6px;top:6px;z-index:2;background:var(--c21-gold);color:var(--c21-dark);padding:3px 6px;border-radius:999px;font-weight:800;display:inline-flex;gap:3px;align-items:center;font-size:10px;box-shadow:0 3px 8px rgba(190,175,135,.4)}
         .offer-badge-hot i{font-size:10px}
-        .offer-content{display:flex;flex-direction:column;min-height:80px}
-        .offer-head{display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:6px}
-        .offer-chip{display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:2px 6px;border-radius:999px;font-weight:700;font-size:10px;white-space:normal;word-wrap:break-word;max-width:100%;line-height:1.2}
+        .offer-chip{display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:2px 6px;border-radius:999px;font-weight:700;font-size:10px;white-space:normal;word-break:break-word;max-width:100%;line-height:1.2}
         .offer-title{margin:0;font-size:14px;font-weight:800;color:#222;line-height:1.2;word-wrap:break-word;hyphens:auto}
         .offer-limited{display:flex;align-items:center;gap:4px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:6px;padding:4px 6px;margin-top:6px;font-weight:600;font-size:10px;width:fit-content}
         .offer-limited i{color:var(--c21-gold);font-size:10px}
@@ -328,7 +331,7 @@
                         if (offerIndex < offersData.length) {
                             const offer = offersData[offerIndex];
                             card.innerHTML = `
-                                <a href="${offer.detail_url}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                                <a href="${offer.detail_url}" class="offer-card-inner desktop-offer-card">
                                     <div class="offer-media">
                                         <img src="${offer.image_url}" alt="${offer.title}" loading="lazy" decoding="async">
                                     </div>
@@ -430,7 +433,7 @@
                             
                             setTimeout(() => {
                                 card.innerHTML = `
-                                    <a href="${offer.detail_url}" style="text-decoration: none; color: inherit; display: grid; grid-template-columns: 140px 1fr; gap: 12px; width: 100%;">
+                                <a href="${offer.detail_url}" class="offer-card-inner mobile-offer-card">
                                         <div class="offer-media">
                                             <img src="${offer.image_url}" alt="${offer.title}" loading="lazy" decoding="async">
                                         </div>
@@ -641,7 +644,7 @@
         <div class="home-grid">
             {% for complex in complexes %}
             <div class="home-property-card"> 
-                <div class="home-card-image-gallery" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer; position: relative;">
+                <div class="home-card-image-gallery" onclick="window.open('{% url 'main:detail' complex.id %}', '_blank');" style="cursor: pointer; position: relative;">
                     {% if complex.development.photos %}
                         {% for photo in complex.development.photos %}
                             <img class="gallery-image" src="{{ photo }}" alt="{{ complex.development.name|default:'ЖК' }}" loading="lazy" decoding="async" sizes="(max-width: 900px) 100vw, 33vw" style="{% if not forloop.first %}display: none;{% endif %}">
@@ -674,7 +677,7 @@
                     {% endif %}
                 </div>
                 
-                <div class="home-card-content" onclick="window.location.href='{% url 'main:detail' complex.id %}'" style="cursor: pointer;">
+                <div class="home-card-content" onclick="window.open('{% url 'main:detail' complex.id %}', '_blank');" style="cursor: pointer;">
                     <div class="home-card-header">
                         <h3 class="home-card-title">{{ complex.development.name|default:'ЖК' }}</h3>
                         {% if complex.rating and complex.rating > 0 %}

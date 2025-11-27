@@ -5,7 +5,7 @@
 
 Использование:
     python migrate_base64_to_s3.py
-    python migrate_base64_to_s3.py --collection unified_houses
+    python migrate_base64_to_s3.py --collection unified_houses_3
     python migrate_base64_to_s3.py --collection secondary_properties
     python migrate_base64_to_s3.py --dry-run  # только проверка, без изменений
 """
@@ -219,8 +219,8 @@ def migrate_collection(collection_name, dry_run=False):
         total_processed += 1
         
         # Определяем S3 префикс в зависимости от коллекции
-        if collection_name == 'unified_houses':
-            s3_prefix = f"unified_houses/{doc_id}"
+        if collection_name == 'unified_houses_3':
+            s3_prefix = f"unified_houses_3/{doc_id}"
         elif collection_name == 'secondary_properties':
             slug = doc.get('slug', doc_id)
             s3_prefix = f"secondary_complexes/{slug}"
@@ -268,18 +268,18 @@ def migrate_collection(collection_name, dry_run=False):
 
 def main():
     parser = argparse.ArgumentParser(description='Миграция base64 изображений в S3')
-    parser.add_argument('--collection', type=str, help='Имя коллекции (unified_houses, secondary_properties, или all)')
+    parser.add_argument('--collection', type=str, help='Имя коллекции (unified_houses_3, secondary_properties, или all)')
     parser.add_argument('--dry-run', action='store_true', help='Только проверка, без реальных изменений')
     args = parser.parse_args()
     
     collections = []
     if args.collection:
         if args.collection == 'all':
-            collections = ['unified_houses', 'secondary_properties']
+            collections = ['unified_houses_3', 'secondary_properties']
         else:
             collections = [args.collection]
     else:
-        collections = ['unified_houses', 'secondary_properties']
+        collections = ['unified_houses_3', 'secondary_properties']
     
     total_processed = 0
     total_updated = 0

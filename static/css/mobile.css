@@ -740,41 +740,48 @@ body {
     .filters-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, .35);
-        backdrop-filter: blur(2px);
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
         opacity: 0;
         pointer-events: none;
-        transition: opacity .25s ease;
+        transition: opacity 0.3s ease;
         z-index: 9999 !important;
     }
 
     .filters-backdrop.open {
         opacity: 1;
-        pointer-events: auto
+        pointer-events: auto;
     }
 
-    /* МИНИМАЛЬНЫЕ СТИЛИ ДЛЯ ПРОКРУТКИ ФИЛЬТРА */
+    /* Модальное окно фильтров в центре экрана */
     #filters-sheet.filters-section {
         position: fixed !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: -110% !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) scale(0.95) !important;
+        width: 90% !important;
+        max-width: 500px !important;
+        max-height: 85vh !important;
         z-index: 10000 !important;
         background: #fff !important;
-        border-radius: 16px 16px 0 0 !important;
-        padding: 12px !important;
-        box-shadow: 0 -8px 24px rgba(0, 0, 0, .15) !important;
-        margin-bottom: 0 !important;
-        transition: bottom .28s ease !important;
-        max-height: 80vh !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        touch-action: pan-y !important;
+        border-radius: 16px !important;
+        padding: 0 !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+        margin: 0 !important;
+        transition: transform 0.3s ease, opacity 0.3s ease !important;
+        opacity: 0 !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
     }
 
     #filters-sheet.filters-section.open {
-        bottom: 0 !important;
+        transform: translate(-50%, -50%) scale(1) !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
     }
 
     /* Блокируем прокрутку body когда фильтр открыт */
@@ -785,35 +792,78 @@ body {
     }
 
     .filters-sheet-header {
-        display: none;
+        display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 6px 6px 10px 6px;
-        border-bottom: 1px solid #eee;
-        margin-bottom: 10px
+        padding: 16px 20px;
+        border-bottom: 1px solid #e9ecef;
+        position: relative;
+    }
+
+    .filters-modal-title {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
     }
 
     .sheet-close {
         border: none;
-        background: #f3f4f6;
-        border-radius: 8px;
+        background: transparent;
+        border-radius: 50%;
         width: 36px;
         height: 36px;
-        font-size: 22px;
-        line-height: 22px
+        font-size: 20px;
+        line-height: 1;
+        color: #666;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        padding: 0;
+    }
+
+    .sheet-close:hover {
+        background: #f8f9fa;
+        color: #1f2937;
+    }
+
+    .filters-reset-btn {
+        border: none;
+        background: transparent;
+        color: #666;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .filters-reset-btn:hover {
+        background: #f8f9fa;
+        color: #1f2937;
     }
 
     .filters-form {
         display: block !important;
         height: auto !important;
-        overflow: visible !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding: 20px !important;
+        flex: 1;
+        -webkit-overflow-scrolling: touch !important;
     }
 
     /* Перестраиваем сетку фильтров под мобильный UX */
     .filters-row-grid {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 8px;
     }
 
     .filters-row-grid .filter-group {
@@ -855,17 +905,50 @@ body {
     }
 
     .filter-group {
-        background: #fafafa;
-        border: 1px solid #eee;
-        border-radius: 10px;
-        padding: 10px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        margin-bottom: 12px;
+    }
+
+    .filter-group:last-child {
+        margin-bottom: 0;
     }
 
     .filter-group label {
         display: block;
-        font-size: 12px;
-        color: #666;
+        font-size: 16px;
+        font-weight: 600;
+        color: #1f2937;
         margin-bottom: 6px;
+    }
+
+    .filter-select-input {
+        width: 100%;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 12px 14px;
+        background: #fff;
+        font-size: 15px;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .filter-select-input:hover,
+    .filter-select-input:focus {
+        border-color: #bcaf87;
+        box-shadow: 0 0 0 3px rgba(188, 175, 135, 0.15);
+        outline: none;
+    }
+
+    .filter-select-input span {
+        font-weight: 500;
+        color: #1f2937;
     }
 
     .filter-select {
@@ -886,17 +969,430 @@ body {
     }
 
     .range-container {
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    /* Стили для полей ввода "От" и "до" */
+    .range-input-group {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 0;
+    }
+
+    .range-input-wrapper {
+        flex: 1;
+    }
+
+    .range-input-wrapper input[type="text"],
+    .range-input-wrapper input[type="number"],
+    .range-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 14px;
         background: #fff;
-        border: 1px solid #eee;
-        border-radius: 10px;
-        padding: 10px;
+        color: #1f2937;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .range-input-wrapper input[type="text"]:focus,
+    .range-input-wrapper input[type="number"]:focus,
+    .range-input:focus {
+        outline: none;
+        border-color: #bcaf87;
+    }
+
+    .range-input-wrapper input[type="text"]::placeholder,
+    .range-input-wrapper input[type="number"]::placeholder,
+    .range-input::placeholder {
+        color: #9ca3af;
+    }
+
+    /* Убираем стрелки у number input */
+    .range-input::-webkit-inner-spin-button,
+    .range-input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .range-input[type=number] {
+        -moz-appearance: textfield;
+    }
+
+    /* Стили для чекбоксов комнат */
+    .rooms-checkboxes {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .room-checkbox-item {
+        display: flex;
+        align-items: center;
+        padding: 4px 0;
+        cursor: pointer;
+    }
+
+    .room-checkbox-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        cursor: pointer;
+        border: 2px solid #d1d5db;
+        border-radius: 4px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: #fff;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .room-checkbox-item input[type="checkbox"]:checked {
+        background: #bcaf87;
+        border-color: #bcaf87;
+    }
+
+    .room-checkbox-item input[type="checkbox"]:checked::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .room-checkbox-item span {
+        font-size: 14px;
+        color: #1f2937;
+    }
+
+    /* Стили для radio buttons сортировки */
+    .sorting-radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .sorting-radio-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        cursor: pointer;
+    }
+
+    .sorting-radio-item input[type="radio"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        cursor: pointer;
+        border: 2px solid #d1d5db;
+        border-radius: 50%;
+        appearance: none;
+        -webkit-appearance: none;
+        background: #fff;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .sorting-radio-item input[type="radio"]:checked {
+        border-color: #bcaf87;
+        background: #fff;
+    }
+
+    .sorting-radio-item input[type="radio"]:checked::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #bcaf87;
+    }
+
+    .sorting-radio-item span {
+        font-size: 14px;
+        color: #1f2937;
+    }
+
+    /* Стили для сегментированного контрола ЖК/Квартиры */
+    .content-toggle-segmented {
+        display: flex;
+        background: #f3f4f6;
+        border-radius: 8px;
+        padding: 4px;
+        gap: 0;
+    }
+
+    .content-toggle-btn-segmented,
+    .offers-toggle-btn {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        background: transparent;
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-radius: 6px;
+        white-space: nowrap;
+    }
+
+    .content-toggle-btn-segmented[data-active="true"],
+    .offers-toggle-btn[data-active="true"] {
+        background: #fff;
+        color: #1f2937;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .content-toggle-btn-segmented:hover,
+    .offers-toggle-btn:hover {
+        color: #1f2937;
+    }
+
+    /* Общие модальные окна фильтров */
+    .filter-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10000;
+    }
+
+    .filter-modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .filter-modal-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(37, 37, 38, 0.85);
+        backdrop-filter: blur(8px);
+    }
+
+    .filter-modal-content {
+        position: relative;
+        background: #fff;
+        border-radius: 16px;
+        width: min(90%, 520px);
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        z-index: 10001;
+    }
+
+    .filter-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .filter-modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .filter-modal-close {
+        border: none;
+        background: transparent;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+        line-height: 1;
+        color: #666;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        padding: 0;
+    }
+
+    .filter-modal-close:hover {
+        background: #f8f9fa;
+        color: #1f2937;
+    }
+
+    .filter-modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 24px;
+    }
+
+    .filter-modal-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .filter-modal-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 0;
+        cursor: pointer;
+    }
+
+    .filter-modal-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        cursor: pointer;
+        border: 2px solid #d1d5db;
+        border-radius: 4px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: #fff;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .filter-modal-item input[type="checkbox"]:checked {
+        background: #bcaf87;
+        border-color: #bcaf87;
+    }
+
+    .filter-modal-item input[type="checkbox"]:checked::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .filter-modal-item span {
+        font-size: 14px;
+        color: #1f2937;
+    }
+
+    .filter-modal-search {
+        margin-bottom: 12px;
+    }
+
+    .filter-modal-search input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #1f2937;
+        box-sizing: border-box;
+    }
+
+    .filter-modal-search input:focus {
+        outline: none;
+        border-color: #bcaf87;
+        box-shadow: 0 0 0 2px rgba(188, 175, 135, 0.2);
+    }
+
+    .filter-modal-empty {
+        padding: 16px;
+        text-align: center;
+        color: #9ca3af;
+        font-size: 14px;
+    }
+
+    .filter-modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        border-top: 1px solid #e9ecef;
+        gap: 12px;
+    }
+
+    .filter-modal-reset {
+        border: none;
+        background: transparent;
+        color: #666;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .filter-modal-reset:hover {
+        background: #f8f9fa;
+        color: #e74c3c;
+    }
+
+    .filter-modal-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .filter-modal-cancel,
+    .filter-modal-apply {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-modal-cancel {
+        background: #f3f4f6;
+        color: #1f2937;
+    }
+
+    .filter-modal-cancel:hover {
+        background: #e9ecef;
+    }
+
+    .filter-modal-apply {
+        background: #bcaf87;
+        color: #fff;
+    }
+
+    .filter-modal-apply:hover {
+        background: #a89a75;
     }
 
     .range-display {
         display: flex;
         justify-content: center;
-        gap: 6px;
-        font-size: 12px;
+        gap: 8px;
+        font-size: 14px;
+        color: #1f2937;
+        margin-bottom: 0;
+    }
+
+    .range-value {
+        color: #1f2937;
+    }
+
+    .range-value strong {
+        font-weight: 600;
     }
 
     .range-slider {
@@ -984,6 +1480,78 @@ body {
         }
     }
 
+    /* Стили для чекбоксов */
+    .custom-dropdown-item,
+    .complex-filter-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        cursor: pointer;
+    }
+
+    .custom-dropdown-item input[type="checkbox"],
+    .complex-filter-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        cursor: pointer;
+        border: 2px solid #d1d5db;
+        border-radius: 4px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: #fff;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .custom-dropdown-item input[type="checkbox"]:checked,
+    .complex-filter-item input[type="checkbox"]:checked {
+        background: #bcaf87;
+        border-color: #bcaf87;
+    }
+
+    .custom-dropdown-item input[type="checkbox"]:checked::after,
+    .complex-filter-item input[type="checkbox"]:checked::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .custom-dropdown-item span,
+    .complex-filter-item .complex-name {
+        font-size: 14px;
+        color: #1f2937;
+    }
+
+    /* Стили для dropdown */
+    .custom-dropdown-input {
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        transition: border-color 0.2s ease;
+    }
+
+    .custom-dropdown-input:hover {
+        border-color: #bcaf87;
+    }
+
+    .dropdown-text {
+        font-size: 14px;
+        color: #1f2937;
+    }
+
+    .dropdown-arrow {
+        color: #9ca3af;
+        font-size: 12px;
+    }
+
     /* Горизонтальная лента кнопок комнат */
     .button-filter {
         display: flex;
@@ -994,6 +1562,33 @@ body {
 
     .button-filter::-webkit-scrollbar {
         display: none
+    }
+
+    .filter-btn,
+    .filter-chip-btn {
+        padding: 10px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        background: #fff;
+        color: #1f2937;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .filter-btn:hover,
+    .filter-chip-btn:hover {
+        border-color: #bcaf87;
+        background: #faf7ee;
+    }
+
+    .filter-btn[data-active="true"],
+    .filter-chip-btn[data-active="true"] {
+        background: #bcaf87;
+        border-color: #bcaf87;
+        color: #fff;
     }
 
     .filter-btn {

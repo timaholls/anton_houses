@@ -66,7 +66,7 @@ def promotions_list(request):
         if active in ('1', 'true', 'True'):
             q['is_active'] = True
         items = []
-        unified = db['unified_houses']
+        unified = db['unified_houses_3']
         for p in promotions.find(q).sort('created_at', -1):
             comp_name = ''
             try:

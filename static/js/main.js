@@ -112,19 +112,56 @@ document.addEventListener('DOMContentLoaded', function() {
     const mobileDrawer = document.getElementById('mobile-drawer');
     const mobileClose = document.querySelector('.mobile-menu-close');
     const mobileBackdrop = document.getElementById('mobile-drawer-backdrop');
+    const pageMain = document.querySelector('main');
+    const pageFooter = document.querySelector('footer');
+
+    function setPageInert(isInert) {
+        [pageMain, pageFooter].forEach(el => {
+            if (!el) return;
+            if (isInert) {
+                el.setAttribute('inert', '');
+            } else {
+                el.removeAttribute('inert');
+            }
+        });
+    }
+
     function openMobile(){ 
         if (mobileDrawer){ 
             mobileDrawer.classList.add('open'); 
+            mobileDrawer.setAttribute('aria-hidden', 'false');
+            mobileDrawer.setAttribute('aria-modal', 'true');
+            mobileDrawer.setAttribute('tabindex', '-1');
             document.body.style.overflow='hidden';
-            if (mobileBackdrop) mobileBackdrop.classList.add('open');
+            setPageInert(true);
+            requestAnimationFrame(() => mobileDrawer.focus());
         } 
+        if (mobileToggle) {
+            mobileToggle.setAttribute('aria-expanded', 'true');
+        }
+        if (mobileBackdrop) {
+            mobileBackdrop.classList.add('open');
+            mobileBackdrop.setAttribute('aria-hidden', 'false');
+        }
     }
     function closeMobile(){ 
         if (mobileDrawer){ 
             mobileDrawer.classList.remove('open'); 
+            mobileDrawer.setAttribute('aria-hidden', 'true');
+            mobileDrawer.removeAttribute('aria-modal');
             document.body.style.overflow='';
-            if (mobileBackdrop) mobileBackdrop.classList.remove('open');
+            setPageInert(false);
+            if (mobileDrawer.contains(document.activeElement) && mobileToggle) {
+                mobileToggle.focus();
+            }
         } 
+        if (mobileToggle) {
+            mobileToggle.setAttribute('aria-expanded', 'false');
+        }
+        if (mobileBackdrop) {
+            mobileBackdrop.classList.remove('open');
+            mobileBackdrop.setAttribute('aria-hidden', 'true');
+        }
     }
     if (mobileToggle) mobileToggle.addEventListener('click', openMobile);
     if (mobileClose) mobileClose.addEventListener('click', closeMobile);

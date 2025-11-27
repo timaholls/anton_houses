@@ -8,10 +8,10 @@ from ..s3_service import PLACEHOLDER_IMAGE_URL
 
 def home(request):
     """Главная страница"""
-    # Получаем 9 популярных ЖК для главной страницы из unified_houses
+    # Получаем 9 популярных ЖК для главной страницы из unified_houses_3
     try:
         db = get_mongo_connection()
-        unified_collection = db['unified_houses']
+        unified_collection = db['unified_houses_3']
         
         # Получаем все ЖК с флагом is_featured и рейтингом 4 или 5
         featured_complexes = list(unified_collection.find({
@@ -69,7 +69,7 @@ def home(request):
         try:
             db = get_mongo_connection()
             promotions = db['promotions']
-            unified = db['unified_houses']
+            unified = db['unified_houses_3']
             q = {'is_active': True}
             items = []
             for p in promotions.find(q).sort('created_at', -1).limit(limit):

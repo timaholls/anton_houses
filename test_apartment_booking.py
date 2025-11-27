@@ -164,7 +164,7 @@ def test_mongodb_connection():
         print(f"📊 Всего бронирований в базе: {total_bookings}")
         
         # Проверяем коллекцию ЖК
-        complexes_collection = db['unified_houses']
+        complexes_collection = db['unified_houses_3']
         total_complexes = complexes_collection.count_documents({})
         print(f"🏢 Всего ЖК в базе: {total_complexes}")
         

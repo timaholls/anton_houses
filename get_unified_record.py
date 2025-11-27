@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Скрипт для получения и вывода данных записи из unified_houses
+Скрипт для получения и вывода данных записи из unified_houses_3
 """
 import json
 from bson import ObjectId
@@ -9,7 +9,7 @@ from main.services.mongo_service import get_mongo_connection
 def get_record_data(record_id: str):
     """Получает данные записи по ID"""
     db = get_mongo_connection()
-    unified_col = db['unified_houses']
+    unified_col = db['unified_houses_3']
     
     try:
         record = unified_col.find_one({'_id': ObjectId(record_id)})

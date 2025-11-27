@@ -233,11 +233,14 @@ import json
 
 @require_http_methods(["GET"])
 def catalog_api(request):
-    """API для каталога ЖК из MongoDB unified_houses с полной поддержкой фильтрации"""
+    """API для каталога ЖК из MongoDB unified_houses_3 с полной поддержкой фильтрации"""
     try:
         # Получаем параметры фильтрации
         page = int(request.GET.get('page', 1))
-        per_page = 9
+        try:
+            per_page = int(request.GET.get('per_page', 15))
+        except (TypeError, ValueError):
+            per_page = 15
         
         # Фильтры местоположения
         city = request.GET.get('city', '').strip()
@@ -247,6 +250,17 @@ def catalog_api(request):
         # Обрабатываем множественные значения для district и street (через запятую)
         districts_list = [d.strip() for d in district.split(',') if d.strip()] if district else []
         streets_list = [s.strip() for s in street.split(',') if s.strip()] if street else []
+        complexes_param = request.GET.get('complexes', '').strip()
+        selected_complex_ids = []
+        if complexes_param:
+            for cid in complexes_param.split(','):
+                cid = cid.strip()
+                if not cid:
+                    continue
+                try:
+                    selected_complex_ids.append(ObjectId(cid))
+                except Exception:
+                    continue
         
         # Фильтры недвижимости
         rooms = request.GET.get('rooms', '').strip()
@@ -273,7 +287,7 @@ def catalog_api(request):
                 selected_complex_ids = []
 
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Преобразуем квартал в конечную дату для фильтрации
         delivery_date_limit = None
@@ -787,7 +801,10 @@ def apartments_api(request):
     try:
         # Получаем параметры фильтрации
         page = int(request.GET.get('page', 1))
-        per_page = 9
+        try:
+            per_page = int(request.GET.get('per_page', 15))
+        except (TypeError, ValueError):
+            per_page = 15
         
         # Фильтры местоположения
         city = request.GET.get('city', '').strip()
@@ -797,6 +814,13 @@ def apartments_api(request):
         # Обрабатываем множественные значения для district и street (через запятую)
         districts_list = [d.strip() for d in district.split(',') if d.strip()] if district else []
         streets_list = [s.strip() for s in street.split(',') if s.strip()] if street else []
+        complexes_param = request.GET.get('complexes', '').strip()
+        selected_complex_ids = []
+        if complexes_param:
+            try:
+                selected_complex_ids = [ObjectId(cid.strip()) for cid in complexes_param.split(',') if cid.strip()]
+            except Exception:
+                selected_complex_ids = []
         
         # Фильтры недвижимости
         rooms = request.GET.get('rooms', '').strip()
@@ -810,7 +834,7 @@ def apartments_api(request):
         sort = request.GET.get('sort', 'price_asc')
         
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Преобразуем квартал в конечную дату для фильтрации
         delivery_date_limit = None
@@ -866,6 +890,9 @@ def apartments_api(request):
                 }
             else:
                 filter_query.update(street_filter)
+        
+        if selected_complex_ids:
+            filter_query['_id'] = {'$in': selected_complex_ids}
         
         # Получаем все ЖК
         all_complexes = list(unified_col.find(filter_query))
@@ -929,8 +956,8 @@ def apartments_api(request):
                 for apt_index, apt in enumerate(apartments):
                     # Получаем данные квартиры
                     area = apt.get('area') or apt.get('square') or apt.get('totalArea')
+                    title = apt.get('title', '')
                     if not area:
-                        title = apt.get('title', '')
                         import re
                         area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
                         if area_match:
@@ -1046,6 +1073,41 @@ def apartments_api(request):
                         apartment_title = '5+ комнат'
                     else:
                         apartment_title = f'{apt_type}-комнатная квартира'
+
+                    # Определяем этаж: сначала используем явные поля, затем диапазоны, затем парсим title
+                    floor_value = apt.get('floor') or apt.get('floor_number')
+                    floor_min = apt.get('floorMin')
+                    floor_max = apt.get('floorMax')
+
+                    def _format_floor(val):
+                        if val is None:
+                            return None
+                        if isinstance(val, (int, float)):
+                            if isinstance(val, float) and val.is_integer():
+                                val = int(val)
+                            return str(int(val))
+                        val_str = str(val).strip()
+                        return val_str or None
+
+                    if not floor_value:
+                        formatted_min = _format_floor(floor_min)
+                        formatted_max = _format_floor(floor_max)
+                        if formatted_min and formatted_max:
+                            floor_value = formatted_min if formatted_min == formatted_max else f"{formatted_min}-{formatted_max}"
+                        elif formatted_min:
+                            floor_value = formatted_min
+                        elif formatted_max:
+                            floor_value = formatted_max
+
+                    if not floor_value and title:
+                        import re
+                        floor_range_match = re.search(r'(\d+)-(\d+)\s*этаж', title)
+                        if floor_range_match:
+                            floor_value = f"{floor_range_match.group(1)}-{floor_range_match.group(2)}"
+                        else:
+                            floor_match = re.search(r'(\d+)/(\d+)\s*эт', title)
+                            if floor_match:
+                                floor_value = f"{floor_match.group(1)}/{floor_match.group(2)}"
                     
                     # Формируем карточку квартиры
                     apartment_card = {
@@ -1061,7 +1123,7 @@ def apartments_api(request):
                         'area': area,
                         'price': price,
                         'price_num': price_num,
-                        'floor': apt.get('floor') or apt.get('floor_number') or '',
+                        'floor': floor_value or '',
                         'title': apt.get('title', ''),
                         'photo': apartment_photo,
                         'latitude': complex_record.get('latitude'),
@@ -1215,6 +1277,7 @@ def secondary_api_list(request):
                 'rooms': doc.get('rooms'),
                 'area_from': doc.get('area'),
                 'area_to': None,
+                'floor': doc.get('floor') or doc.get('floor_number'),
                 'price_range': price_range,
                 'price_display': price_range,
                 'image_url': image_url,
@@ -1245,23 +1308,34 @@ def secondary_api_list(request):
 
 
 def districts_api(request):
-    """API для получения районов по городу - данные из unified_houses"""
+    """API для получения районов по городу (поддерживает новостройки и вторичку)."""
     city = request.GET.get('city', '')
+    dataset = request.GET.get('dataset', 'newbuild')
     if city:
         try:
             db = get_mongo_connection()
-            collection = db['unified_houses']
-            # Фильтруем по address_city или city
-            query = {
-                '$or': [
-                    {'address_city': city},
-                    {'city': city}
-                ],
-                'address_district': {'$ne': None, '$ne': ''}
-            }
-            districts = collection.distinct('address_district', query)
-            districts = [district for district in districts if district]
-            districts = sorted(districts)
+            if dataset == 'secondary':
+                collection = db['secondary_properties']
+                base_query = {'city': city}
+                districts = collection.distinct('district', {**base_query, 'district': {'$ne': None, '$ne': ''}})
+                alt_districts = collection.distinct(
+                    'address_district',
+                    {**base_query, 'address_district': {'$ne': None, '$ne': ''}}
+                )
+                districts = sorted({d for d in list(districts) + list(alt_districts) if d})
+            else:
+                collection = db['unified_houses_3']
+                # Фильтруем по address_city или city
+                query = {
+                    '$or': [
+                        {'address_city': city},
+                        {'city': city}
+                    ],
+                    'address_district': {'$ne': None, '$ne': ''}
+                }
+                districts = collection.distinct('address_district', query)
+                districts = [district for district in districts if district]
+                districts = sorted(districts)
         except Exception:
             districts = []
     else:
@@ -1271,54 +1345,72 @@ def districts_api(request):
 
 
 def streets_api(request):
-    """API для получения улиц по городу и району(ам) - данные из unified_houses"""
+    """API для получения улиц по городу и району(ам) (новостройки и вторичка)."""
     city = request.GET.get('city', '')
     district = request.GET.get('district', '')
+    dataset = request.GET.get('dataset', 'newbuild')
 
     if city:
         try:
             db = get_mongo_connection()
-            collection = db['unified_houses']
-            
-            # Базовый запрос по городу
-            base_query = {
-                '$or': [
-                    {'address_city': city},
-                    {'city': city}
-                ],
-                'address_street': {'$ne': None, '$ne': ''}
-            }
-            
-            # Если указаны районы (может быть несколько через запятую)
-            if district:
-                districts_list = [d.strip() for d in district.split(',') if d.strip()]
-                if districts_list:
-                    # Фильтруем по нескольким районам используя $in
-                    query = {
-                        '$and': [
-                            {
-                                '$or': [
-                                    {'address_city': city},
-                                    {'city': city}
-                                ]
-                            },
-                            {
-                                '$or': [
-                                    {'address_district': {'$in': districts_list}},
-                                    {'district': {'$in': districts_list}}
-                                ]
-                            },
-                            {'address_street': {'$ne': None, '$ne': ''}}
-                        ]
-                    }
+            if dataset == 'secondary':
+                collection = db['secondary_properties']
+                
+                base_query = {'city': city}
+                if district:
+                    districts_list = [d.strip() for d in district.split(',') if d.strip()]
+                    if districts_list:
+                        base_query['district'] = {'$in': districts_list}
+                
+                street_query = {**base_query, 'street': {'$ne': None, '$ne': ''}}
+                streets_primary = collection.distinct('street', street_query)
+                streets_alt = collection.distinct(
+                    'address_street',
+                    {**base_query, 'address_street': {'$ne': None, '$ne': ''}}
+                )
+                streets = sorted({s for s in list(streets_primary) + list(streets_alt) if s})
+            else:
+                collection = db['unified_houses_3']
+                
+                # Базовый запрос по городу
+                base_query = {
+                    '$or': [
+                        {'address_city': city},
+                        {'city': city}
+                    ],
+                    'address_street': {'$ne': None, '$ne': ''}
+                }
+                
+                # Если указаны районы (может быть несколько через запятую)
+                if district:
+                    districts_list = [d.strip() for d in district.split(',') if d.strip()]
+                    if districts_list:
+                        # Фильтруем по нескольким районам используя $in
+                        query = {
+                            '$and': [
+                                {
+                                    '$or': [
+                                        {'address_city': city},
+                                        {'city': city}
+                                    ]
+                                },
+                                {
+                                    '$or': [
+                                        {'address_district': {'$in': districts_list}},
+                                        {'district': {'$in': districts_list}}
+                                    ]
+                                },
+                                {'address_street': {'$ne': None, '$ne': ''}}
+                            ]
+                        }
+                    else:
+                        query = base_query
                 else:
                     query = base_query
-            else:
-                query = base_query
-                
-            streets = collection.distinct('address_street', query)
-            streets = [street for street in streets if street]
-            streets = sorted(streets)
+                    
+                streets = collection.distinct('address_street', query)
+                streets = [street for street in streets if street]
+                streets = sorted(streets)
         except Exception:
             streets = []
     else:

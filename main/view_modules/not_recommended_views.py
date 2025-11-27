@@ -24,7 +24,7 @@ def not_recommended_detail(request, object_id):
     """Детальная страница объекта с низким рейтингом"""
     try:
         db = get_mongo_connection()
-        col = db['unified_houses']
+        col = db['unified_houses_3']
         
         # Получаем объект
         record = col.find_one({'_id': ObjectId(object_id)})

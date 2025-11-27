@@ -11,7 +11,7 @@ def all_offers(request):
         try:
             db = get_mongo_connection()
             promotions = db['promotions']
-            unified = db['unified_houses']
+            unified = db['unified_houses_3']
             q = {'is_active': True}
             adapters = []
             for p in promotions.find(q).sort('created_at', -1):
@@ -69,7 +69,7 @@ def offer_detail(request, offer_id):
         try:
             db = get_mongo_connection()
             promotions = db['promotions']
-            unified = db['unified_houses']
+            unified = db['unified_houses_3']
             p = promotions.find_one({'_id': ObjectId(str(offer_id_str))})
             if not p:
                 raise Exception('not found')

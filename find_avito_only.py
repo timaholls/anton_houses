@@ -12,7 +12,7 @@ from bson import ObjectId
 from main.services.mongo_service import get_mongo_connection
 
 db = get_mongo_connection()
-col = db['unified_houses']
+col = db['unified_houses_3']
 
 # Находим документы, где есть только avito (domrf и domclick = null)
 filter_query = {
@@ -30,7 +30,7 @@ for doc in cursor:
     ids.append((doc_id, avito_id))
 
 print(f"\nНайдено документов с только avito: {len(ids)}\n")
-print("ID unified_houses -> ID avito:")
+print("ID unified_houses_3 -> ID avito:")
 print("-" * 60)
 for unified_id, avito_id in ids:
     print(f"{unified_id} -> {avito_id}")

@@ -95,7 +95,7 @@
 .favorite-card-image {
     width: 100%;
     height: 240px;
-    object-fit: cover;
+    object-fit: contain;
     background: #f8f9fa;
 }
 
@@ -469,6 +469,7 @@
                     <label>Количество комнат</label>
                     <div class="button-filter favorites-filter-buttons">
                         <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="" data-active="true">Любое</button>
+                        <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="studio" data-active="false">Студия</button>
                         <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="1" data-active="false">1</button>
                         <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="2" data-active="false">2</button>
                         <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="3" data-active="false">3</button>
@@ -712,18 +713,41 @@ function applyFavoritesFilters(items) {
     
     // Функция для нормализации количества комнат
     function normalizeRooms(apt) {
-        let rooms = apt.rooms || '';
         const title = apt.title || '';
+        let rooms = apt.rooms;
         
-        // Если rooms - число, преобразуем в строку
+        const isStudioValue = (value) => {
+            if (!value && value !== 0) return false;
+            const normalized = String(value).trim().toLowerCase();
+            return normalized === 'студия' || normalized === 'studio' || normalized === '0';
+        };
+        
         if (typeof rooms === 'number') {
             rooms = String(rooms);
-        } else {
+        } else if (rooms) {
             rooms = String(rooms).trim();
+        } else {
+            rooms = '';
         }
         
-        // Если rooms пустое, пытаемся извлечь из title
+        if (isStudioValue(rooms)) {
+            return 'studio';
+        }
+        
+        // Если rooms пустое, пытаемся извлечь из других полей
+        if (!rooms) {
+            const typeValue = apt.type || apt.room_type || '';
+            if (isStudioValue(typeValue)) {
+                return 'studio';
+            }
+        }
+        
         if (!rooms && title) {
+            const titleLower = title.toLowerCase();
+            if (titleLower.includes('студия') || titleLower.includes('studio')) {
+                return 'studio';
+            }
+            
             if (title.includes('-комн')) {
                 rooms = title.split('-комн')[0].trim();
             } else if (title.includes('-к.')) {
@@ -739,8 +763,12 @@ function applyFavoritesFilters(items) {
             }
         }
         
+        if (isStudioValue(rooms)) {
+            return 'studio';
+        }
+        
         // Извлекаем только число из строки (убираем "-комн", "-к." и т.д.)
-        const roomsMatch = rooms.match(/^(\d+)/);
+        const roomsMatch = rooms ? rooms.match(/^(\d+)/) : null;
         return roomsMatch ? roomsMatch[1] : '';
     }
     
@@ -753,6 +781,9 @@ function applyFavoritesFilters(items) {
             
             if (!rooms) return false; // Если не удалось определить комнаты, пропускаем
             
+            if (favoritesRoomsFilter === 'studio') {
+                return rooms === 'studio';
+            }
             if (favoritesRoomsFilter === '4') {
                 const roomsNum = parseInt(rooms) || 0;
                 return roomsNum >= 4;
@@ -981,7 +1012,7 @@ function renderFavoriteCard(item) {
         const address = complex.address || '';
         
         return `
-            <div class="favorite-card" onclick="window.location.href='/complex/${item.id}/'">
+            <div class="favorite-card" onclick="window.open('/complex/${item.id}/', '_blank');">
                 <img src="${image}" alt="${name}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
                 <div class="favorite-card-content">
                     <h3 class="favorite-card-title">${escapeHtml(name)}</h3>
@@ -1033,12 +1064,21 @@ function renderFavoriteCard(item) {
             areaText = `${apt.area} м²`;
         }
         
+        // Формируем этаж
+        let floorText = '';
+        if (apt.floor) {
+            floorText = `${apt.floor} этаж`;
+        }
+        
         return `
-            <div class="favorite-card" onclick="window.location.href='/apartment/${item.complexId}/${item.apartmentId}/?from=favorites'">
+            <div class="favorite-card" onclick="window.open('/apartment/${item.complexId}/${item.apartmentId}/?from=favorites', '_blank');">
                 <img src="${image}" alt="${escapeHtml(title)}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
                 <div class="favorite-card-content">
                     <h3 class="favorite-card-title">${escapeHtml(title)}</h3>
-                    ${areaText ? `<div style="color: #666; font-size: 14px; margin-bottom: 8px;">${escapeHtml(areaText)}</div>` : ''}
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
+                        ${areaText ? `<div style="color: #666; font-size: 14px; display: flex; align-items: center; gap: 4px;"><i class="fas fa-expand-arrows-alt" style="font-size: 12px;"></i><span>${escapeHtml(areaText)}</span></div>` : ''}
+                        ${floorText ? `<div style="color: #666; font-size: 14px; display: flex; align-items: center; gap: 4px;"><i class="fas fa-layer-group" style="font-size: 12px;"></i><span>${escapeHtml(floorText)}</span></div>` : ''}
+                    </div>
                     <div class="favorite-card-location">
                         <i class="fas fa-map-marker-alt"></i>
                         <span>${escapeHtml(complexName)}</span>

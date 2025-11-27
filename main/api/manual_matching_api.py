@@ -188,7 +188,7 @@ def get_unmatched_records(request):
         domrf_col = db['domrf']
         avito_col = db['avito']
         domclick_col = db['domclick']
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем ID уже сопоставленных записей
         matched_records = list(unified_col.find({}, {
@@ -354,7 +354,7 @@ def save_manual_match(request):
         domrf_col = db['domrf']
         avito_col = db['avito']
         domclick_col = db['domclick']
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем DomRF запись если она выбрана
         domrf_record = None
@@ -2669,7 +2669,7 @@ def toggle_featured(request):
             return JsonResponse({'success': False, 'error': 'Не указан complex_id'}, status=400)
         
         db = get_mongo_connection()
-        unified_collection = db['unified_houses']
+        unified_collection = db['unified_houses_3']
         residential_collection = db['residential_complexes']
         
         # Обновляем флаг в объединенной записи
@@ -2695,7 +2695,7 @@ def get_unified_records(request):
     """API: Получить уже объединенные записи"""
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Параметры пагинации
         page = int(request.GET.get('page', 1))
@@ -2779,7 +2779,7 @@ def unified_get(request, unified_id: str):
     """API: получить одну объединенную запись для редактирования."""
     try:
         db = get_mongo_connection()
-        col = db['unified_houses']
+        col = db['unified_houses_3']
         doc = col.find_one({'_id': ObjectId(unified_id)})
         if not doc:
             return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
@@ -2833,7 +2833,7 @@ def unified_update(request, unified_id: str):
     """API: обновить произвольные поля объединенной записи (безопасный апдейт)."""
     try:
         db = get_mongo_connection()
-        col = db['unified_houses']
+        col = db['unified_houses_3']
         # Поддерживаем form-data и JSON
         payload = {}
         if request.content_type and 'application/json' in request.content_type:
@@ -2946,7 +2946,7 @@ def upload_base64_photo(request):
         elif photo_type == 'apartment':
             unified_id = data.get('unified_id', 'general')
             room_type = data.get('room_type', 'general')
-            s3_key = f"unified_houses/{unified_id}/apartments/{room_type}/{filename}"
+            s3_key = f"unified_houses_3/{unified_id}/apartments/{room_type}/{filename}"
         elif photo_type == 'future_project':
             # Для будущих проектов используем project_id или общую папку
             project_id = data.get('project_id', data.get('unified_id', 'general'))
@@ -2957,7 +2957,7 @@ def upload_base64_photo(request):
                 s3_key = f"future_complexes/{project_id}/gallery/{filename}"
         else:  # unified / development
             unified_id = data.get('unified_id', 'general')
-            s3_key = f"unified_houses/{unified_id}/development/{filename}"
+            s3_key = f"unified_houses_3/{unified_id}/development/{filename}"
         
         # Загружаем в S3
         try:
@@ -2984,7 +2984,7 @@ def get_location_options(request):
     """API: Получить списки городов, районов и улиц для фильтров каталога"""
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем уникальные города
         cities = unified_col.distinct('city', {'city': {'$ne': None, '$ne': ''}})
@@ -3017,7 +3017,7 @@ def get_not_recommended_objects(request):
     """API: получить объекты с рейтингом меньше 3 для страницы 'Не рекомендуем'."""
     try:
         db = get_mongo_connection()
-        col = db['unified_houses']
+        col = db['unified_houses_3']
         
         # Параметры пагинации
         page = int(request.GET.get('page', 1))
@@ -3096,7 +3096,7 @@ def mortgage_programs_list(request):
     try:
         db = get_mongo_connection()
         col = db['mortgage_programs']
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         items = []
         for doc in col.find({}).sort('rate', 1):
             # Получаем информацию о связанных ЖК
@@ -3157,7 +3157,7 @@ def mortgage_programs_create(request):
         # Валидация ЖК для индивидуальных программ
         complex_ids = []
         if is_individual and complexes:
-            unified_col = db['unified_houses']
+            unified_col = db['unified_houses_3']
             for complex_id in complexes:
                 try:
                     if unified_col.find_one({'_id': ObjectId(complex_id)}):
@@ -3186,7 +3186,7 @@ def get_complexes_for_mortgage(request):
     """API: получить список ЖК для выбора в ипотечных программах."""
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем все ЖК
         complexes = []
@@ -3275,7 +3275,7 @@ def get_mortgage_program(request, program_id):
         # Получаем информацию о связанных ЖК
         complexes = []
         if program.get('complexes'):
-            unified_col = db['unified_houses']
+            unified_col = db['unified_houses_3']
             for complex_id in program.get('complexes', []):
                 try:
                     complex_doc = unified_col.find_one({'_id': ObjectId(complex_id)})
@@ -3356,7 +3356,7 @@ def promotions_list(request):
         if active in ('1', 'true', 'True'):
             q['is_active'] = True
         items = []
-        unified = db['unified_houses']
+        unified = db['unified_houses_3']
         for p in promotions.find(q).sort('created_at', -1):
             comp_name = ''
             try:
@@ -3417,7 +3417,7 @@ def promotions_toggle(request, promo_id):
 def unified_delete(request, unified_id):
     try:
         db = get_mongo_connection()
-        unified = db['unified_houses']
+        unified = db['unified_houses_3']
         
         # Сначала получаем документ чтобы узнать связанные файлы
         doc = unified.find_one({'_id': ObjectId(unified_id)})
@@ -3504,7 +3504,7 @@ def unified_delete(request, unified_id):
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_apartment_photo(request):
-    """API: Удалить фото квартиры из unified_houses"""
+    """API: Удалить фото квартиры из unified_houses_3"""
     try:
         data = json.loads(request.body)
         unified_id = data.get('unified_id')
@@ -3520,7 +3520,7 @@ def delete_apartment_photo(request):
             }, status=400)
         
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем документ
         doc = unified_col.find_one({'_id': ObjectId(unified_id)})
@@ -3562,7 +3562,7 @@ def delete_apartment_photo(request):
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_development_photo(request):
-    """API: Удалить фото ЖК из unified_houses"""
+    """API: Удалить фото ЖК из unified_houses_3"""
     try:
         data = json.loads(request.body)
         unified_id = data.get('unified_id')
@@ -3576,7 +3576,7 @@ def delete_development_photo(request):
             }, status=400)
         
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем документ
         doc = unified_col.find_one({'_id': ObjectId(unified_id)})
@@ -3613,7 +3613,7 @@ def delete_development_photo(request):
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_construction_photo(request):
-    """API: Удалить фото хода строительства из unified_houses"""
+    """API: Удалить фото хода строительства из unified_houses_3"""
     try:
         data = json.loads(request.body)
         unified_id = data.get('unified_id')
@@ -3628,7 +3628,7 @@ def delete_construction_photo(request):
             }, status=400)
         
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем документ
         doc = unified_col.find_one({'_id': ObjectId(unified_id)})
@@ -3715,7 +3715,7 @@ def get_client_catalog_apartments(request):
                 apartment_ids = []
         
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем ЖК
         complexes = list(unified_col.find({'_id': {'$in': complex_ids}}))
@@ -4134,7 +4134,7 @@ def get_complex_by_id(request, complex_id):
     """API: Получить данные ЖК по ID для страницы избранного"""
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         complex_data = unified_col.find_one({'_id': ObjectId(complex_id)})
         
@@ -4205,7 +4205,7 @@ def get_complexes_with_apartments(request):
     """API: Получить все ЖК с их квартирами, сгруппированными по категориям"""
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses']
+        unified_col = db['unified_houses_3']
         
         # Получаем все ЖК
         complexes = list(unified_col.find({}))

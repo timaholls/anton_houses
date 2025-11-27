@@ -49,8 +49,8 @@ def agent_properties(request, employee_id):
     secondary_properties = []
     
     try:
-        # Новостройки: unified_houses по agent_id
-        rc_cursor = db['unified_houses'].find({'agent_id': ObjectId(employee_id)})
+        # Новостройки: unified_houses_3 по agent_id
+        rc_cursor = db['unified_houses_3'].find({'agent_id': ObjectId(employee_id)})
         for d in rc_cursor:
             development = d.get('development', {}) or {}
             item = {
@@ -173,8 +173,8 @@ def employee_detail(request, employee_id):
     residential_complexes = []
     secondary_properties = []
     try:
-        # Новостройки: unified_houses по agent_id (максимум 4)
-        rc_cursor = db['unified_houses'].find({'agent_id': ObjectId(employee_id)}).limit(4)
+        # Новостройки: unified_houses_3 по agent_id (максимум 4)
+        rc_cursor = db['unified_houses_3'].find({'agent_id': ObjectId(employee_id)}).limit(4)
         for d in rc_cursor:
             development = d.get('development', {}) or {}
             item = {
@@ -207,7 +207,7 @@ def employee_detail(request, employee_id):
     total_residential_count = 0
     total_secondary_count = 0
     try:
-        total_residential_count = db['unified_houses'].count_documents({'agent_id': ObjectId(employee_id)})
+        total_residential_count = db['unified_houses_3'].count_documents({'agent_id': ObjectId(employee_id)})
     except Exception:
         pass
     try:

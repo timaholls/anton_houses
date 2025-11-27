@@ -873,10 +873,11 @@
 	{% endif %}
 
 	<!-- Варианты квартир из MongoDB -->
-	{% if not is_secondary and is_mongodb and complex.apartment_variants %}
+{% if not is_secondary and is_mongodb %}
 	<div class="detail-apartments" style="margin: 32px 0;">
 		<h2 style="font-size: 28px; font-weight: 600; margin-bottom: 24px;">Варианты квартир</h2>
 
+	{% if complex.apartment_variants %}
 		<!-- Фильтр по типам (только существующие) -->
 		<div class="apartment-types-filter" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
 			{% for type in complex.apartment_types %}
@@ -985,7 +986,7 @@
 
 						<!-- Кнопка для перехода на детальную страницу квартиры -->
 						<div style="margin-top: 12px;">
-							<a href="{% url 'main:apartment_detail' complex.id apt.id %}" class="apartment-detail-link"
+							<a href="{% url 'main:apartment_detail' complex.id apt.id %}" class="apartment-detail-link" target="_blank" rel="noopener noreferrer"
 								style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; background: linear-gradient(135deg, #beaf87 0%, #d4af37 100%); color: #1f2937; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(190,175,135,0.3);">
 								<i class="fas fa-eye"></i>
 								Подробнее
@@ -995,9 +996,15 @@
 				</div>
 				{% endfor %}
 				{% else %}
-				<div
-					style="grid-column: 1 / -1; padding: 24px; text-align: center; color: #9ca3af; border: 1px dashed #e5e7eb; border-radius: 12px;">
-					Квартиры этого типа временно отсутствуют
+				<div class="no-apartments-cta">
+					<div class="no-apartments-icon">
+						<span>🎧</span>
+					</div>
+					<h3>Подберём квартиру от застройщика</h3>
+					<p>В этом ЖК пока нет таких вариантов — оставьте заявку, менеджер предложит подходящие квартиры в других проектах.</p>
+					<button type="button" class="no-apartments-btn anchor-feedback-btn">
+						Подобрать квартиру
+					</button>
 				</div>
 				{% endif %}
 				{% endwith %}
@@ -1010,6 +1017,18 @@
 			</div>
 		</div>
 		{% endfor %}
+	{% else %}
+		<div class="no-apartments-cta">
+			<div class="no-apartments-icon">
+				<span>🎧</span>
+			</div>
+			<h3>Подберём квартиру от застройщика</h3>
+			<p>В этом ЖК пока нет доступных вариантов — оставьте заявку, и менеджер подберёт похожие квартиры в других проектах.</p>
+			<button type="button" class="no-apartments-btn anchor-feedback-btn">
+				Подобрать квартиру
+			</button>
+		</div>
+	{% endif %}
 	</div>
 	{% endif %}
 
@@ -1172,21 +1191,6 @@
 	<div class="construction-progress-section" style="margin: 32px 0;">
 		<h2 style="font-size: 28px; font-weight: 600; margin-bottom: 24px;">Ход строительства</h2>
 		<div class="construction-stages-container">
-			<!-- Пагинация для этапов строительства -->
-			<div class="construction-pagination"
-				style="display: flex; justify-content: center; align-items: center; gap: 16px; margin-bottom: 24px;">
-				<button id="prevStagesBtn" class="pagination-btn"
-					style="background: var(--c21-gold); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;"
-					disabled>
-					<i class="fas fa-chevron-left"></i> Предыдущие
-				</button>
-				<span id="stagesInfo" style="color: #666; font-weight: 600;">Этапы 1-3 из {{ complex.construction_progress.construction_stages|length }}</span>
-				<button id="nextStagesBtn" class="pagination-btn"
-					style="background: var(--c21-gold); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-					Следующие <i class="fas fa-chevron-right"></i>
-				</button>
-			</div>
-
 			<!-- Контейнер для карточек этапов -->
 			<div id="constructionStagesGrid" class="construction-stages-grid"
 				style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;">
@@ -1194,11 +1198,14 @@
 			</div>
 
 			<!-- Нижняя пагинация -->
-			<div class="construction-pagination-bottom"
-				style="display: flex; justify-content: center; margin-top: 32px;">
-				<div class="pagination-dots" id="paginationDots" style="display: flex; gap: 8px;">
-					<!-- Точки пагинации будут добавлены через JavaScript -->
-				</div>
+			<div class="construction-pagination-bottom advanced-pagination">
+				<button id="prevStagesBtnBottom" class="pagination-btn" disabled>
+					<i class="fas fa-chevron-left"></i>
+				</button>
+				<div class="pagination-pages" id="bottomPaginationPages"></div>
+				<button id="nextStagesBtnBottom" class="pagination-btn">
+					<i class="fas fa-chevron-right"></i>
+				</button>
 			</div>
 		</div>
 	</div>
@@ -1252,36 +1259,25 @@
 		<div class="offers-header" style="text-align:center;margin-bottom:24px;">
 			<h2 class="section-title" style="font-size:28px;font-weight:700;color:#222;margin:0;">Акции {{ complex.name }}</h2>
 		</div>
-		<div class="offers-grid"
-			style="display:grid;grid-template-columns:repeat(auto-fit, minmax(400px, 1fr));gap:20px;justify-items:center;">
+		<div class="offers-grid">
 			{% for offer in complex_offers %}
-			<a href="{% url 'main:offer_detail' offer.id %}" class="offer-card"
-				style="width:100%;max-width:600px;display:grid;grid-template-columns:200px 1fr;gap:16px;background:#fff;border:1px solid #efe7ce;border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.06);transition:box-shadow .2s ease, transform .2s ease, border-color .2s ease;text-decoration:none;color:inherit;">
-				<div class="offer-media"
-					style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/10;min-height:120px;">
+			<a href="{% url 'main:offer_detail' offer.id %}" class="offer-card">
+				<div class="offer-media">
 					{% if offer.get_main_image and offer.get_main_image.image %}
 					<img src="{{ offer.get_main_image.image.url }}" alt="{{ offer.title }}" loading="lazy"
-						decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">
+						decoding="async">
 					{% else %}
-					<img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ offer.title }}" loading="lazy" decoding="async"
-						style="width:100%;height:100%;object-fit:cover;display:block;">
+					<img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ offer.title }}" loading="lazy" decoding="async">
 					{% endif %}
-					<div class="offer-media::after"
-						style="content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.00) 40%, rgba(0,0,0,.18) 100%);">
-					</div>
 				</div>
-				<div class="offer-content"
-					style="display:flex;flex-direction:column;justify-content:space-between;min-height:120px;">
-					<div class="offer-head"
-						style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-						<span class="offer-chip"
-							style="display:inline-block;background:var(--c21-dark);color:var(--c21-gold);padding:3px 8px;border-radius:999px;font-weight:700;font-size:11px;white-space:nowrap;">{{ offer.residential_complex.name }}</span>
+				<div class="offer-content">
+					<div class="offer-head">
+						<span class="offer-chip">{{ offer.residential_complex.name }}</span>
 						<h3 class="offer-title"
 							style="margin:0;font-size:16px;font-weight:800;color:#222;line-height:1.3;word-wrap:break-word;hyphens:auto;">
 							{{ offer.title }}</h3>
 					</div>
-					<div class="offer-limited"
-						style="display:flex;align-items:center;gap:6px;color:#7b6a3e;background:#faf7ee;border:1px solid #efe7ce;border-radius:8px;padding:6px 8px;margin-top:8px;font-weight:600;font-size:12px;">
+					<div class="offer-limited">
 						<i class="far fa-clock" style="color:var(--c21-gold);font-size:12px;"></i>
 						<span>
 							{% if offer.expires_at %}
@@ -1291,28 +1287,13 @@
 							{% endif %}
 						</span>
 					</div>
-					<div class="offer-actions"
-						style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;justify-content:flex-start;">
-						<span class="btn btn-primary btn-small offer-cta"
-							style="flex:none;text-align:center;padding:8px 16px !important;border-radius:8px;background:linear-gradient(180deg,var(--c21-gold), var(--c21-gold-dark)) !important;color:var(--c21-dark) !important;border:none !important;box-shadow:0 4px 12px rgba(190,175,135,.45);font-size:13px;font-weight:700;min-width:140px;">Подробнее
-							об акции</span>
+					<div class="offer-actions">
+						<span class="btn btn-primary btn-small offer-cta">Подробнее об акции</span>
 					</div>
 				</div>
 			</a>
 			{% endfor %}
 		</div>
-		<style>
-			.offer-card:hover {
-				box-shadow: 0 16px 36px rgba(0, 0, 0, .14);
-				transform: translateY(-2px);
-				border-color: var(--c21-gold)
-			}
-
-			.offer-cta:hover {
-				filter: brightness(.98);
-				transform: translateY(-1px)
-			}
-		</style>
 	</div>
 	{% endif %}
 
@@ -1349,6 +1330,7 @@
 						{% endif %}
 					</div>
 					<a href="{{ property.url }}?agent_id={{ agent.id }}" class="btn btn-outline btn-small"
+						target="_blank" rel="noopener noreferrer"
 						style="margin-top: 8px; width: 100%; justify-content: center;">
 						Подробнее
 					</a>
@@ -1359,7 +1341,8 @@
 
 		<!-- Кнопка "Все объекты агента" -->
 		<div style="text-align: center; margin-top: 24px;">
-			<a href="{% url 'main:agent_properties' agent.id %}" class="btn btn-secondary">
+			<a href="{% url 'main:agent_properties' agent.id %}" class="btn btn-secondary" target="_blank"
+				rel="noopener noreferrer">
 				<i class="fas fa-building"></i>
 				Все объекты агента
 			</a>
@@ -1496,7 +1479,11 @@
 		<h2>{% if agent %}Другие похожие ЖК{% else %}Похожие ЖК{% endif %}</h2>
 		<div class="similar-grid">
 			{% for similar in similar_complexes %}
-			<div class="similar-card">
+			{% if is_secondary %}
+			<div class="similar-card" data-url="/secondary/{{ similar.id }}/" style="cursor: pointer;">
+			{% else %}
+			<div class="similar-card" data-url="/complex/{{ similar.id }}/" style="cursor: pointer;">
+			{% endif %}
 				<div class="similar-image">
 					{% if similar.get_main_image and similar.get_main_image.image %}
 					<img src="{{ similar.get_main_image.image.url }}" alt="{{ similar.name }}">
@@ -1724,7 +1711,12 @@
 		// Функциональность похожих ЖК
 		const similarCards = document.querySelectorAll('.similar-card');
 		similarCards.forEach(card => {
-			card.addEventListener('click', function () { });
+			const url = card.dataset.url;
+			if (url) {
+				card.addEventListener('click', function () {
+					window.open(url, '_blank');
+				});
+			}
 		});
 
 
@@ -2094,14 +2086,19 @@
 			html += `<button onclick="changePage('${type}', ${currentPage - 1})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s;"><i class="fas fa-chevron-left"></i></button>`;
 		}
 
-		// Кнопки страниц
-		for (let i = 1; i <= totalPages; i++) {
-			if (i === currentPage) {
-				html += `<button style="padding: 8px 12px; border: 2px solid #2563eb; background: #2563eb; color: white; border-radius: 6px; font-weight: 600; font-size: 14px;">${i}</button>`;
-			} else {
-				html += `<button onclick="changePage('${type}', ${i})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s;">${i}</button>`;
+		const pageButtons = buildPageButtons(currentPage, totalPages);
+		pageButtons.forEach(item => {
+			if (item === 'ellipsis') {
+				html += `<span style="padding: 8px 6px; color: #9ca3af; font-size: 14px;">…</span>`;
+				return;
 			}
-		}
+
+			if (item === currentPage) {
+				html += `<button style="padding: 8px 12px; border: 2px solid #2563eb; background: #2563eb; color: white; border-radius: 6px; font-weight: 600; font-size: 14px;">${item}</button>`;
+			} else {
+				html += `<button onclick="changePage('${type}', ${item})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s;">${item}</button>`;
+			}
+		});
 
 		// Кнопка "Вперед"
 		if (currentPage < totalPages) {
@@ -2109,6 +2106,49 @@
 		}
 
 		pagination.innerHTML = html;
+	}
+
+	function buildPageButtons(currentPage, totalPages) {
+		const maxMiddlePages = 4;
+		const pages = [];
+
+		if (totalPages <= maxMiddlePages + 2) {
+			for (let i = 1; i <= totalPages; i++) {
+				pages.push(i);
+			}
+			return pages;
+		}
+
+		pages.push(1);
+
+		let left = currentPage - 2;
+		let right = currentPage + 2;
+
+		if (left <= 2) {
+			left = 2;
+			right = Math.min(totalPages - 1, left + (maxMiddlePages - 1));
+		}
+
+		if (right >= totalPages - 1) {
+			right = totalPages - 1;
+			left = Math.max(2, right - (maxMiddlePages - 1));
+		}
+
+		if (left > 2) {
+			pages.push('ellipsis');
+		}
+
+		for (let i = left; i <= right; i++) {
+			pages.push(i);
+		}
+
+		if (right < totalPages - 1) {
+			pages.push('ellipsis');
+		}
+
+		pages.push(totalPages);
+
+		return pages;
 	}
 
 	// Смена страницы
@@ -2361,27 +2401,191 @@
 	}
 
 	.pagination-btn:hover:not(:disabled) {
-		background: var(--c21-gold-dark) !important;
+		background: #A19276 !important;
 		transform: translateY(-2px);
 	}
 
-	.pagination-dot {
-		width: 12px;
-		height: 12px;
-		border-radius: 50%;
-		background: #ddd;
+	.advanced-pagination {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 12px;
+		margin-top: 16px;
+		flex-wrap: wrap;
+	}
+
+	.advanced-pagination .pagination-btn {
+		background: #BEAF87;
+		color: white;
+		border: none;
+		padding: 8px 12px;
+		border-radius: 8px;
 		cursor: pointer;
-		transition: all 0.3s ease;
+		font-weight: 600;
+		display: flex;
+		align-items: center;
+		gap: 4px;
 	}
 
-	.pagination-dot.active {
-		background: var(--c21-gold);
-		transform: scale(1.2);
+	.advanced-pagination .pagination-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
-	.pagination-dot:hover {
-		background: var(--c21-gold);
-		opacity: 0.7;
+	.advanced-pagination .pagination-pages {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.advanced-pagination .pagination-page {
+		min-width: 32px;
+		height: 32px;
+		border-radius: 8px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		background: #f3f4f6;
+		color: #111827;
+		font-weight: 600;
+		cursor: pointer;
+		border: 1px solid transparent;
+		padding: 0 6px;
+	}
+
+	.advanced-pagination .pagination-page.active {
+		background: #BEAF87;
+		color: white;
+		border-color: #A19276;
+	}
+
+	/* Акции */
+	.complex-offers-section .offers-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+		gap: 20px;
+		justify-items: center;
+	}
+
+	.offer-card {
+		width: 100%;
+		max-width: 620px;
+		display: flex;
+		gap: 16px;
+		background: #fff;
+		border: 1px solid #efe7ce;
+		border-radius: 16px;
+		padding: 16px;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+		transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.offer-card:hover {
+		box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14);
+		transform: translateY(-2px);
+		border-color: #BEAF87;
+	}
+
+	.offer-media {
+		flex: 0 0 200px;
+		position: relative;
+		border-radius: 12px;
+		overflow: hidden;
+		aspect-ratio: 16/10;
+		min-height: 120px;
+	}
+
+	.offer-media img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	.offer-media::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.18) 100%);
+	}
+
+	.offer-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		min-height: 120px;
+	}
+
+	.offer-head {
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+		flex-wrap: wrap;
+		margin-bottom: 8px;
+	}
+
+	.offer-chip {
+		display: inline-block;
+		background: #252526;
+		color: #BEAF87;
+		padding: 3px 8px;
+		border-radius: 999px;
+		font-weight: 700;
+		font-size: 11px;
+		white-space: nowrap;
+	}
+
+	.offer-limited {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		color: #7b6a3e;
+		background: #faf7ee;
+		border: 1px solid #efe7ce;
+		border-radius: 8px;
+		padding: 6px 8px;
+		margin-top: 8px;
+		font-weight: 600;
+		font-size: 12px;
+	}
+
+	.offer-actions {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		flex-wrap: wrap;
+		margin-top: 10px;
+		justify-content: flex-start;
+	}
+
+	.offer-cta {
+		flex: none;
+		text-align: center;
+		padding: 8px 16px !important;
+		border-radius: 8px;
+		background: linear-gradient(180deg, #BEAF87, #A19276) !important;
+		color: #252526 !important;
+		border: none !important;
+		box-shadow: 0 4px 12px rgba(190, 175, 135, 0.45);
+		font-size: 13px;
+		font-weight: 700;
+		min-width: 140px;
+	}
+
+	.offer-cta:hover {
+		filter: brightness(.98);
+		transform: translateY(-1px);
+	}
+
+	.advanced-pagination .pagination-page.ellipsis {
+		cursor: default;
+		background: transparent;
+		color: #9ca3af;
+		border: none;
 	}
 
 	/* Мобильная адаптация */
@@ -2391,14 +2595,22 @@
 			gap: 16px !important;
 		}
 
-		.construction-pagination {
-			flex-direction: column;
-			gap: 12px !important;
+		.advanced-pagination {
+			flex-wrap: nowrap;
+			justify-content: center;
+			gap: 8px !important;
 		}
 
-		.pagination-btn {
-			width: 100%;
-			max-width: 200px;
+		.pagination-btn,
+		.advanced-pagination .pagination-btn {
+			width: auto;
+			min-width: 44px;
+			max-width: none;
+		}
+
+		.advanced-pagination .pagination-pages {
+			flex: 1;
+			justify-content: center;
 		}
 
 		.stage-header {
@@ -2406,12 +2618,28 @@
 			gap: 8px;
 			text-align: center;
 		}
+
+		.offer-card {
+			flex-direction: column;
+		}
+
+		.offer-media {
+			flex: none;
+			width: 100%;
+		}
+
+		.offer-actions {
+			justify-content: center;
+			width: 100%;
+		}
+
+		.offer-cta {
+			width: 100%;
+		}
 	}
 
 	/* Дополнительные стили для MongoDB версии */
-		{
-		% if is_mongodb %
-	}
+	{% if is_mongodb %}
 
 	.apartment-card {
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -2423,6 +2651,63 @@
 
 	.gallery-item:hover img {
 		transform: scale(1.05);
+	}
+
+	.no-apartments-cta {
+		grid-column: 1 / -1;
+		padding: 32px;
+		background: #f8fafc;
+		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+		color: #1f2937;
+	}
+
+	.no-apartments-icon {
+		width: 80px;
+		height: 80px;
+		border-radius: 50%;
+		background: #e0f2fe;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 36px;
+	}
+
+	.no-apartments-cta h3 {
+		font-size: 20px;
+		font-weight: 700;
+		margin: 0;
+	}
+
+	.no-apartments-cta p {
+		margin: 0;
+		font-size: 15px;
+		color: #4b5563;
+		max-width: 420px;
+	}
+
+	.no-apartments-btn {
+		margin-top: 8px;
+		padding: 12px 28px;
+		background: linear-gradient(135deg, #BEAF87, #A19276);
+		color: #252526;
+		border: none;
+		border-radius: 999px;
+		font-size: 15px;
+		font-weight: 600;
+		cursor: pointer;
+		box-shadow: 0 8px 24px rgba(190, 175, 135, 0.4);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.no-apartments-btn:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 12px 32px rgba(190, 175, 135, 0.5);
 	}
 
 	@media (max-width: 768px) {
@@ -2440,26 +2725,40 @@
 		}
 	}
 
-		{
-		% endif %
-	}
+	{% endif %}
 </style>
 
 <!-- JavaScript для секции хода строительства -->
 {% if is_mongodb and complex.construction_progress and complex.construction_progress.construction_stages %}
+{{ complex.construction_progress.construction_stages|json_script:"construction-stages-data" }}
 <script>
 	document.addEventListener('DOMContentLoaded', function () {
-		const stages = {{ complex.construction_progress.construction_stages| safe
-	}};
+		const stagesDataEl = document.getElementById('construction-stages-data');
+		let stages = [];
+		if (stagesDataEl) {
+			try {
+				stages = JSON.parse(stagesDataEl.textContent);
+			} catch (err) {
+				console.error('Ошибка парсинга данных хода строительства:', err);
+				stages = [];
+			}
+		}
+		if (!stages.length) {
+			console.warn('Данные хода строительства отсутствуют или не удалось их загрузить');
+			return;
+		}
+
 		const stagesPerPage = 3;
 		let currentPage = 0;
-		const totalPages = Math.ceil(stages.length / stagesPerPage);
+		const totalPages = Math.max(1, Math.ceil(stages.length / stagesPerPage));
 
-		const prevBtn = document.getElementById('prevStagesBtn');
-		const nextBtn = document.getElementById('nextStagesBtn');
-		const stagesInfo = document.getElementById('stagesInfo');
+		const prevBtnTop = document.getElementById('prevStagesBtn');
+		const nextBtnTop = document.getElementById('nextStagesBtn');
+		const prevBtnBottom = document.getElementById('prevStagesBtnBottom');
+		const nextBtnBottom = document.getElementById('nextStagesBtnBottom');
 		const stagesGrid = document.getElementById('constructionStagesGrid');
-		const paginationDots = document.getElementById('paginationDots');
+		const topPaginationContainer = document.getElementById('topPaginationPages');
+		const bottomPaginationContainer = document.getElementById('bottomPaginationPages');
 
 	// Функция для создания карточки этапа
 	function createStageCard(stage) {
@@ -2516,26 +2815,96 @@
 
 		stagesGrid.innerHTML = currentStages.map(stage => createStageCard(stage)).join('');
 
-		// Обновляем информацию о страницах
-		stagesInfo.textContent = `Этапы ${startIndex + 1}-${endIndex} из ${stages.length}`;
-
 		// Обновляем состояние кнопок
-		prevBtn.disabled = currentPage === 0;
-		nextBtn.disabled = currentPage === totalPages - 1;
+		const isFirstPage = currentPage === 0;
+		const isLastPage = currentPage === totalPages - 1;
 
-		// Обновляем точки пагинации
-		updatePaginationDots();
+		[prevBtnTop, prevBtnBottom].forEach(btn => {
+			if (btn) btn.disabled = isFirstPage;
+		});
+
+		[nextBtnTop, nextBtnBottom].forEach(btn => {
+			if (btn) btn.disabled = isLastPage;
+		});
+
+		// Обновляем пагинацию
+		updatePagination();
 	}
 
-	// Функция для обновления точек пагинации
-	function updatePaginationDots() {
-		paginationDots.innerHTML = '';
-		for (let i = 0; i < totalPages; i++) {
-			const dot = document.createElement('span');
-			dot.className = `pagination-dot ${i === currentPage ? 'active' : ''}`;
-			dot.onclick = () => goToPage(i);
-			paginationDots.appendChild(dot);
+	// Функция для построения массива страниц с ограничением
+	function getPaginationPages() {
+		const pages = [];
+		const maxVisible = 5;
+		const firstPage = 0;
+		const lastPage = totalPages - 1;
+
+		if (totalPages <= maxVisible) {
+			for (let i = 0; i < totalPages; i++) {
+				pages.push(i);
+			}
+			return pages;
 		}
+
+		pages.push(firstPage);
+
+		let start = Math.max(currentPage - 1, firstPage + 1);
+		let end = Math.min(currentPage + 1, lastPage - 1);
+
+		if (start - firstPage > 1) {
+			pages.push('ellipsis-left');
+		} else {
+			start = firstPage + 1;
+		}
+
+		if (lastPage - end > 1) {
+			// keep end as is
+		} else {
+			end = lastPage - 1;
+		}
+
+		for (let i = start; i <= end; i++) {
+			if (i > firstPage && i < lastPage) {
+				pages.push(i);
+			}
+		}
+
+		if (lastPage - end > 1) {
+			pages.push('ellipsis-right');
+		}
+
+		if (lastPage !== firstPage) {
+			pages.push(lastPage);
+		}
+
+		return pages;
+	}
+
+	function renderPagination(container) {
+		if (!container) return;
+		container.innerHTML = '';
+
+		const pages = getPaginationPages();
+
+		pages.forEach(page => {
+			if (typeof page === 'string' && page.startsWith('ellipsis')) {
+				const ellipsis = document.createElement('span');
+				ellipsis.className = 'pagination-page ellipsis';
+				ellipsis.textContent = '...';
+				container.appendChild(ellipsis);
+			} else {
+				const pageBtn = document.createElement('button');
+				pageBtn.type = 'button';
+				pageBtn.className = `pagination-page ${page === currentPage ? 'active' : ''}`;
+				pageBtn.textContent = page + 1;
+				pageBtn.onclick = () => goToPage(page);
+				container.appendChild(pageBtn);
+			}
+		});
+	}
+
+	function updatePagination() {
+		renderPagination(topPaginationContainer);
+		renderPagination(bottomPaginationContainer);
 	}
 
 	// Функция для перехода на страницу
@@ -2547,17 +2916,26 @@
 	}
 
 	// Обработчики кнопок
-	prevBtn.addEventListener('click', () => {
-		if (currentPage > 0) {
-			currentPage--;
-			updateStagesDisplay();
+	// Обработчики кнопок
+	[prevBtnTop, prevBtnBottom].forEach(btn => {
+		if (btn) {
+			btn.addEventListener('click', () => {
+				if (currentPage > 0) {
+					currentPage--;
+					updateStagesDisplay();
+				}
+			});
 		}
 	});
 
-	nextBtn.addEventListener('click', () => {
-		if (currentPage < totalPages - 1) {
-			currentPage++;
-			updateStagesDisplay();
+	[nextBtnTop, nextBtnBottom].forEach(btn => {
+		if (btn) {
+			btn.addEventListener('click', () => {
+				if (currentPage < totalPages - 1) {
+					currentPage++;
+					updateStagesDisplay();
+				}
+			});
 		}
 	});
 

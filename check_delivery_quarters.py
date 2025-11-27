@@ -21,7 +21,7 @@ from main.services.mongo_service import get_mongo_connection
 def get_all_delivery_dates_from_db():
     """Получает все уникальные сроки сдачи из базы данных"""
     db = get_mongo_connection()
-    unified_col = db['unified_houses']
+    unified_col = db['unified_houses_3']
     all_records = list(unified_col.find({}))
     
     delivery_dates = set()
@@ -180,7 +180,7 @@ def parse_completion_date(completion_date_str):
 def get_complexes_for_quarter(end_date):
     """Получает список ЖК, которые подходят под фильтр по кварталу"""
     db = get_mongo_connection()
-    unified_col = db['unified_houses']
+    unified_col = db['unified_houses_3']
     
     # Получаем все записи
     all_records = list(unified_col.find({}))

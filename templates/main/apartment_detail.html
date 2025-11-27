@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ apartment.rooms }}-комнатная квартира в {{ complex.name }} — CENTURY 21{% endblock %}
+{% block title %}{% if apartment.apartment_title %}{{ apartment.apartment_title }}{% elif apartment.rooms|lower == 'студия' or apartment.rooms|lower == 'studio' or apartment.rooms == '0' or apartment.rooms == 'Студия' %}Студия{% else %}{{ apartment.rooms }}-комнатная квартира{% endif %} в {{ complex.name }} — CENTURY 21{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -24,7 +24,7 @@
             <span class="breadcrumb-separator">•</span>
             <a href="{% url 'main:detail' complex.id %}" class="breadcrumb-link">{{ complex.name }}</a>
             <span class="breadcrumb-separator">•</span>
-            <span class="breadcrumb-current">{{ apartment.rooms }}-комнатная квартира</span>
+            <span class="breadcrumb-current">{% if apartment.apartment_title %}{{ apartment.apartment_title }}{% elif apartment.rooms|lower == 'студия' or apartment.rooms|lower == 'studio' or apartment.rooms == '0' or apartment.rooms == 'Студия' %}Студия{% else %}{{ apartment.rooms }}-комнатная квартира{% endif %}</span>
         </div>
 
         <!-- Hero секция с галереей и агентом -->
@@ -40,14 +40,14 @@
                 {% if apartment.photos %}
                 <div class="apartment-gallery">
                     <div class="gallery-main" style="border-radius: 12px; overflow: hidden; background: #f5f5f5;">
-                        <img src="{{ apartment.photos.0 }}" alt="{{ apartment.rooms }}-комнатная квартира" id="main-image"
+                        <img src="{{ apartment.photos.0 }}" alt="{% if apartment.apartment_title %}{{ apartment.apartment_title }}{% elif apartment.rooms|lower == 'студия' or apartment.rooms|lower == 'studio' or apartment.rooms == '0' or apartment.rooms == 'Студия' %}Студия{% else %}{{ apartment.rooms }}-комнатная квартира{% endif %}" id="main-image"
                             loading="lazy" onclick="openImageFullSize(this.src)" style="cursor: pointer; width: 100%; height: auto; display: block;">
                     </div>
                     {% if apartment.photos|length > 1 %}
                     <div class="gallery-thumbnails" style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
                         {% for photo in apartment.photos %}
                         <div class="thumbnail-item" onclick="changeMainImage('{{ photo }}')" style="width: 80px; height: 80px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.3s;">
-                            <img src="{{ photo }}" alt="{{ apartment.rooms }}-комнатная квартира" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                            <img src="{{ photo }}" alt="{% if apartment.apartment_title %}{{ apartment.apartment_title }}{% elif apartment.rooms|lower == 'студия' or apartment.rooms|lower == 'studio' or apartment.rooms == '0' or apartment.rooms == 'Студия' %}Студия{% else %}{{ apartment.rooms }}-комнатная квартира{% endif %}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         {% endfor %}
                     </div>
@@ -56,7 +56,7 @@
                 {% else %}
                 <div class="apartment-gallery">
                     <div class="gallery-main" style="border-radius: 12px; overflow: hidden; background: #f5f5f5;">
-                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{{ apartment.rooms }}-комнатная квартира" id="main-image"
+                        <img src="{{ PLACEHOLDER_IMAGE_URL }}" alt="{% if apartment.apartment_title %}{{ apartment.apartment_title }}{% elif apartment.rooms|lower == 'студия' or apartment.rooms|lower == 'studio' or apartment.rooms == '0' or apartment.rooms == 'Студия' %}Студия{% else %}{{ apartment.rooms }}-комнатная квартира{% endif %}" id="main-image"
                             loading="lazy" style="width: 100%; height: auto; display: block;">
                     </div>
                 </div>
@@ -148,9 +148,9 @@
         <!-- Основная информация -->
         <div class="apartment-header">
             <div class="apartment-title-section">
-                <h1 class="apartment-title">{{ apartment.rooms }}-комнатная квартира</h1>
+                <h1 class="apartment-title">{% if apartment.apartment_title %}{{ apartment.apartment_title }}{% elif apartment.rooms|lower == 'студия' or apartment.rooms|lower == 'studio' or apartment.rooms == '0' or apartment.rooms == 'Студия' %}Студия{% else %}{{ apartment.rooms }}-комнатная квартира{% endif %}</h1>
                 {% if complex.name %}
-                <a href="{% url 'main:detail' complex.id %}" class="apartment-complex-link">
+                <a href="{% url 'main:detail' complex.id %}" class="apartment-complex-link" target="_blank" rel="noopener noreferrer">
                     Перейти в {{ complex.name }}
                 </a>
                 {% endif %}
@@ -184,7 +184,7 @@
                 {% if apartment.floor %}
                 <div class="info-row">
                     <span class="info-label">Этаж</span>
-                    <span class="info-value">{{ apartment.floor }}</span>
+                    <span class="info-value">{% if 'этаж' in apartment.floor %}{{ apartment.floor }}{% else %}{{ apartment.floor }} этаж{% endif %}</span>
                 </div>
                 {% endif %}
                 {% if apartment.completion_date %}
@@ -276,7 +276,7 @@
                         <i class="fas fa-arrows-alt-v"></i>
                         <div class="characteristic-content">
                             <span class="characteristic-label">Высота потолков</span>
-                            <span class="characteristic-value">{{ apartment.ceiling_height }} м</span>
+                            <span class="characteristic-value">{{ apartment.ceiling_height }}</span>
                         </div>
                     </div>
                     {% endif %}
@@ -299,7 +299,7 @@
         <div class="other-apartments-section">
         <h2 class="section-title">
             Другие квартиры в
-            <a href="{% url 'main:detail' complex.id %}" class="apartment-complex-inline-link">
+            <a href="{% url 'main:detail' complex.id %}" class="apartment-complex-inline-link" target="_blank" rel="noopener noreferrer">
                 {{ complex.name }}
             </a>
         </h2>
@@ -307,25 +307,33 @@
                 {% for other_apt in other_apartments %}
                 <div class="other-apartment-card">
                     <div class="other-apartment-media">
+                        {% if other_apt.id %}
+                        <button class="favorite-btn favorite-btn-floating"
+                            data-favorite-complex-id="{% if complex.id %}{{ complex.id }}{% endif %}"
+                            data-favorite-apartment-id="{{ other_apt.id }}"
+                            onclick="event.stopPropagation(); if(typeof toggleApartmentFavoriteHandler === 'function') { toggleApartmentFavoriteHandler('{% if complex.id %}{{ complex.id }}{% endif %}', '{{ other_apt.id }}', this); }"
+                            title="Добавить в избранное">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        {% endif %}
                         {% if other_apt.photos and other_apt.photos.0 %}
                         <img src="{{ other_apt.photos.0 }}"
-                            alt="{% if other_apt.rooms %}{{ other_apt.rooms }}-комнатная квартира{% else %}Квартира{% endif %}"
+                            alt="{% if other_apt.rooms|lower == 'студия' or other_apt.rooms|lower == 'studio' or other_apt.rooms == '0' %}Студия{% elif other_apt.rooms %}{{ other_apt.rooms }}-комнатная квартира{% else %}Квартира{% endif %}"
                             loading="lazy">
                         {% else %}
                         <img src="{{ PLACEHOLDER_IMAGE_URL }}"
-                            alt="{% if other_apt.rooms %}{{ other_apt.rooms }}-комнатная квартира{% else %}Квартира{% endif %}"
+                            alt="{% if other_apt.rooms|lower == 'студия' or other_apt.rooms|lower == 'studio' or other_apt.rooms == '0' %}Студия{% elif other_apt.rooms %}{{ other_apt.rooms }}-комнатная квартира{% else %}Квартира{% endif %}"
                             loading="lazy">
                         {% endif %}
                         {% if other_apt.rooms %}
                         <div class="other-apartment-badge">
                             <i class="fas fa-home"></i>
-                            <span>{{ other_apt.rooms }}-комнатная</span>
+                            <span>{% if other_apt.rooms|lower == 'студия' or other_apt.rooms|lower == 'studio' or other_apt.rooms == '0' %}Студия{% else %}{{ other_apt.rooms }}-комнатная{% endif %}</span>
                         </div>
                         {% endif %}
                     </div>
                     <div class="other-apartment-content">
-                        <h3 class="other-apartment-title">{% if other_apt.rooms %}{{ other_apt.rooms }}-комнатная
-                            квартира{% else %}Квартира{% endif %}</h3>
+                        <h3 class="other-apartment-title">{% if other_apt.rooms|lower == 'студия' or other_apt.rooms|lower == 'studio' or other_apt.rooms == '0' %}Студия{% elif other_apt.rooms %}{{ other_apt.rooms }}-комнатная квартира{% else %}Квартира{% endif %}</h3>
                         <div class="other-apartment-details">
                             {% if other_apt.area %}
                             <div class="other-apartment-area">
@@ -346,7 +354,7 @@
                         </div>
                         {% endif %}
                         <a href="{% url 'main:apartment_detail' complex.id other_apt.id %}?from=apartment&prev_apt={{ apartment.id }}"
-                            class="other-apartment-link">
+                            class="other-apartment-link" target="_blank" rel="noopener noreferrer">
                             Подробнее
                             <i class="fas fa-arrow-right"></i>
                         </a>
@@ -372,7 +380,7 @@
 
         <div class="booking-modal-body">
             <div class="booking-apartment-info">
-                <h4>{{ apartment.rooms }}-комнатная квартира</h4>
+                <h4>{% if apartment.apartment_title %}{{ apartment.apartment_title }}{% elif apartment.rooms|lower == 'студия' or apartment.rooms|lower == 'studio' or apartment.rooms == '0' or apartment.rooms == 'Студия' %}Студия{% else %}{{ apartment.rooms }}-комнатная квартира{% endif %}</h4>
                 <p>{{ complex.name }}, {{ apartment.area }} м²</p>
                 {% if apartment.price %}
                 <div class="booking-price">{{ apartment.price }}</div>

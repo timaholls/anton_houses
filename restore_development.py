@@ -13,7 +13,7 @@ from bson import ObjectId
 from main.services.mongo_service import get_mongo_connection
 
 db = get_mongo_connection()
-unified_col = db['unified_houses']
+unified_col = db['unified_houses_3']
 avito_col = db['avito']
 
 # ID документов для восстановления (из предыдущего запроса)
@@ -38,10 +38,10 @@ for unified_id_str in unified_ids:
     try:
         unified_id = ObjectId(unified_id_str)
         
-        # Получаем документ из unified_houses
+        # Получаем документ из unified_houses_3
         unified_doc = unified_col.find_one({'_id': unified_id})
         if not unified_doc:
-            print(f"❌ [{unified_id_str}] Документ не найден в unified_houses")
+            print(f"❌ [{unified_id_str}] Документ не найден в unified_houses_3")
             errors_count += 1
             continue
         
@@ -67,7 +67,7 @@ for unified_id_str in unified_ids:
             print(f"⚠️  [{unified_id_str}] Нет development в avito документе")
             continue
         
-        # Сохраняем текущие фотки из unified_houses (уже в S3)
+        # Сохраняем текущие фотки из unified_houses_3 (уже в S3)
         current_development = unified_doc.get('development', {})
         current_photos = current_development.get('photos', [])
         
