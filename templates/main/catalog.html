@@ -902,7 +902,7 @@
                                                value="{{ filters.stype|default:'' }}">
                                     </div>
                                 {% else %}
-                                    <div class="filter-group">
+                                    <div class="filter-group" id="rooms-filter-group" style="display: none;">
                                         <label>Количество комнат</label>
                                         <div class="rooms-checkboxes">
                                             {% for value, label in rooms_choices %}
@@ -923,7 +923,7 @@
 
                                 {% endif %}
 
-                                <div class="filter-group">
+                                <div class="filter-group" id="floor-filter-group" style="display: none;">
                                     <label>Этаж</label>
                                     <div class="range-container">
                                         <div class="range-input-group">
@@ -960,36 +960,30 @@
                                     <div class="range-container">
                                         <div class="range-input-group">
                                             <div class="range-input-wrapper">
-                                                <input type="number"
+                                                <input type="text"
                                                        id="price-from-input"
                                                        name="price_from"
                                                        class="range-input"
                                                        placeholder="От"
-                                                       min="1"
-                                                       max="100"
-                                                       step="0.1"
                                                        value="{{ filters.price_from|default:'' }}"
                                                        inputmode="numeric"
-                                                       pattern="[0-9]*">
+                                                       pattern="[0-9\s]*">
                                             </div>
                                             <div class="range-input-wrapper">
-                                                <input type="number"
+                                                <input type="text"
                                                        id="price-to-input"
                                                        name="price_to"
                                                        class="range-input"
                                                        placeholder="До"
-                                                       min="1"
-                                                       max="100"
-                                                       step="0.1"
                                                        value="{{ filters.price_to|default:'' }}"
                                                        inputmode="numeric"
-                                                       pattern="[0-9]*">
+                                                       pattern="[0-9\s]*">
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="filter-group">
+                                <div class="filter-group" id="area-filter-group" style="display: none;">
                                     <label>Укажите площадь дома, м²</label>
                                     <div class="range-container">
                                         <div class="range-input-group">
@@ -1647,55 +1641,73 @@
                             photos = [fallbackImage];
                         }
 
-                        // Генерируем HTML для галереи
-                        const galleryHtml = photos.map((photo, i) =>
-                            `<img src="${photo}" alt="${item.name}" class="gallery-image ${i === 0 ? 'active' : ''}" style="display: ${i === 0 ? 'block' : 'none'};">`
-                        ).join('');
+                        // Формируем главное фото и миниатюры (как у новостроек)
+                        const mainPhoto = photos[0] || '/media/gallery/placeholders.png';
+                        const thumbnailsHtml = photos.length > 1 ? `
+                <div class="catalog-card-thumbs">
+                    ${photos.map((photo, i) => `
+                        <button type="button" class="catalog-thumb ${i === 0 ? 'active' : ''}" data-photo="${photo}"
+                            onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
+                            <img src="${photo}" alt="${item.name} превью ${i + 1}">
+                        </button>
+                    `).join('')}
+                </div>
+            ` : '';
 
                         // Для вторички не добавляем класс рейтинга (у вторички нет рейтинга)
-                        const cardClasses = 'property-card-compact';
+                        const cardClasses = 'property-card-compact catalog-card-horizontal';
                         const priceText = formatPriceText(item.price_range || item.price_display || item.price || '');
+                        const addressText = item.address || (item.city ? (item.district ? `${item.city}, ${item.district}` : item.city) : 'Уфа');
+                        
+                        // Формируем детали для вторички
+                        let detailsHtml = '';
+                        if (item.area_from || item.rooms || item.floor) {
+                            detailsHtml = '<div class="catalog-card-detail-list">';
+                            if (item.area_from) {
+                                detailsHtml += `
+                                    <div class="catalog-detail-item">
+                                        <span>Площадь</span>
+                                        <strong>${item.area_from} м²</strong>
+                                    </div>
+                                `;
+                            }
+                            if (item.rooms) {
+                                detailsHtml += `
+                                    <div class="catalog-detail-item">
+                                        <span>Комнат</span>
+                                        <strong>${item.rooms}</strong>
+                                    </div>
+                                `;
+                            }
+                            if (item.floor) {
+                                detailsHtml += `
+                                    <div class="catalog-detail-item">
+                                        <span>Этаж</span>
+                                        <strong>${item.floor}</strong>
+                                    </div>
+                                `;
+                            }
+                            detailsHtml += '</div>';
+                        }
+                        
                         return `
-        <div class="${cardClasses}" data-complex-id="${item.id}">
-          <div class="compact-card-image-gallery" onclick="window.open('/secondary/${item.id}/', '_blank');" style="cursor: pointer;">
-            ${galleryHtml}
-            ${photos.length > 1 ? `
-              <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeImage(this, -1);">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-              <button class="gallery-nav gallery-next" onclick="event.stopPropagation(); changeImage(this, 1);">
-                <i class="fas fa-chevron-right"></i>
-              </button>
-              <div class="gallery-dots">
-                ${photos.map((_, i) => {
-                            const activeClass = i === 0 ? 'active' : '';
-                            return `<span class="dot ${activeClass}" onclick="event.stopPropagation(); setImage(this, ${i});"></span>`;
-                        }).join('')}
-              </div>
-            ` : ''}
-          </div>
-          
-          <div class="compact-card-content" onclick="window.open('/secondary/${item.id}/', '_blank');" style="cursor: pointer;">
-            <div class="compact-card-header">
-              <h3 class="compact-card-title">${item.name}</h3>
-              <div class="compact-card-location">
-                <i class="fas fa-map-marker-alt"></i>
-                <span>${item.city}${item.district ? ', ' + item.district : ''}</span>
-              </div>
-              <div class="compact-card-details">
-                <div class="compact-detail-item">
-                  <i class="fas fa-expand-arrows-alt"></i>
-                  <span>${item.area_from || '—'} м²</span>
+            <div class="${cardClasses}" data-complex-id="${item.id}">
+                <div class="catalog-card-media">
+                    <div class="catalog-card-main-image" onclick="window.open('/secondary/${item.id}/', '_blank');">
+                        <img src="${mainPhoto}" alt="${item.name}">
+                    </div>
+                    ${thumbnailsHtml}
                 </div>
-                ${item.rooms ? `<div class="compact-detail-item"><i class="fas fa-bed"></i><span>${item.rooms}-комн.</span></div>` : ''}
-                ${item.floor ? `<div class="compact-detail-item"><i class="fas fa-layer-group"></i><span>${item.floor} эт.</span></div>` : ''}
-              </div>
-            </div>
-            <div class="compact-card-price">
-              <div class="compact-price-text">${priceText}</div>
-            </div>
-          </div>
-        </div>`;
+                
+                <div class="catalog-card-body" onclick="window.open('/secondary/${item.id}/', '_blank');">
+                    <div class="catalog-card-header">
+                        <h3 class="compact-card-title">${item.name}</h3>
+                    </div>
+                    <p class="catalog-card-address">${addressText}</p>
+                    ${priceText ? `<div class="catalog-card-price-line"><span>Стоимость:</span><strong>${priceText}</strong></div>` : ''}
+                    ${detailsHtml}
+                </div>
+            </div>`;
                     }).join('');
                 }
             }
@@ -2284,7 +2296,7 @@
                                     ${apt.complex_name || ''}${apt.completion_date ? ` • Сдача: ${apt.completion_date}` : ''}
                                 </p>
                                 <p class="catalog-card-address">
-                                    ${apt.city || ''}${apt.address ? `, ${apt.address}` : ''}
+                                    ${apt.address || apt.complex_address || apt.city || 'Уфа'}
                                 </p>
                                 ${priceDisplay ? `<div class="catalog-card-price-line"><span>Стоимость:</span><strong>${priceDisplay}</strong></div>` : ''}
                                 <div class="catalog-card-detail-list">
@@ -2422,7 +2434,15 @@
             // Собираем все параметры, исключая чекбоксы city, complexes, district, street, delivery_quarter (они обрабатываются через скрытые поля)
             for (const [k, v] of fd.entries()) {
                 if (k !== 'city' && k !== 'complexes' && k !== 'district' && k !== 'street' && k !== 'delivery_quarter' && v !== '') {
-                    params.append(k, v);
+                    // Удаляем пробелы из значений цены перед отправкой
+                    if (k === 'price_from' || k === 'price_to') {
+                        const cleanValue = String(v).replace(/\s/g, '');
+                        if (cleanValue) {
+                            params.append(k, cleanValue);
+                        }
+                    } else {
+                        params.append(k, v);
+                    }
                 }
             }
 
@@ -2728,6 +2748,19 @@
 
         // Обработка полей ввода "От" и "До" для площади и цены
         document.addEventListener('DOMContentLoaded', function () {
+            // Инициализация видимости фильтров этажей и площади для вторички
+            const isSecondaryPage = '{{ dataset_type }}' === 'secondary';
+            const floorFilterGroupInit = document.getElementById('floor-filter-group');
+            const areaFilterGroupInit = document.getElementById('area-filter-group');
+            if (isSecondaryPage) {
+                if (floorFilterGroupInit) {
+                    floorFilterGroupInit.style.display = 'block';
+                }
+                if (areaFilterGroupInit) {
+                    areaFilterGroupInit.style.display = 'block';
+                }
+            }
+
             // Обработка полей ввода площади
             const areaFromInput = document.getElementById('area-from-input');
             const areaToInput = document.getElementById('area-to-input');
@@ -2750,23 +2783,66 @@
                 });
             }
 
+            // Функция форматирования цены с пробелами
+            function formatPriceInput(value) {
+                // Убираем все нецифровые символы (кроме пробелов, которые мы добавим)
+                const numbers = String(value).replace(/\D/g, '');
+                if (!numbers) return '';
+                // Форматируем с пробелами для разделения тысяч
+                return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+            }
+
+            // Функция получения числового значения из отформатированной строки
+            function getPriceNumber(value) {
+                return String(value).replace(/\s/g, '').trim();
+            }
+
             // Обработка полей ввода цены
             const priceFromInput = document.getElementById('price-from-input');
             const priceToInput = document.getElementById('price-to-input');
             if (priceFromInput && priceToInput) {
+                // Форматируем начальные значения при загрузке страницы
+                if (priceFromInput.value) {
+                    priceFromInput.value = formatPriceInput(priceFromInput.value);
+                }
+                if (priceToInput.value) {
+                    priceToInput.value = formatPriceInput(priceToInput.value);
+                }
+
                 [priceFromInput, priceToInput].forEach(input => {
+                    input.addEventListener('input', function (e) {
+                        const cursorPosition = this.selectionStart;
+                        const oldValue = this.value;
+                        const oldLength = oldValue.length;
+                        
+                        // Форматируем значение
+                        const formatted = formatPriceInput(this.value);
+                        this.value = formatted;
+                        
+                        // Восстанавливаем позицию курсора
+                        const newLength = formatted.length;
+                        const lengthDiff = newLength - oldLength;
+                        const newPosition = Math.max(0, Math.min(cursorPosition + lengthDiff, formatted.length));
+                        this.setSelectionRange(newPosition, newPosition);
+                    });
+
                     input.addEventListener('change', function () {
                         // Валидация: проверяем, что "от" не больше "до" (только если оба поля заполнены)
-                        const fromValue = parseFloat(priceFromInput.value);
-                        const toValue = parseFloat(priceToInput.value);
-                        if (fromValue && toValue && fromValue > toValue) {
+                        const fromValueNum = parseFloat(getPriceNumber(priceFromInput.value));
+                        const toValueNum = parseFloat(getPriceNumber(priceToInput.value));
+                        if (fromValueNum && toValueNum && fromValueNum > toValueNum) {
                             // Если "от" больше "до", меняем местами только если оба заполнены
-                            priceFromInput.value = toValue;
-                            priceToInput.value = fromValue;
+                            const temp = priceFromInput.value;
+                            priceFromInput.value = priceToInput.value;
+                            priceToInput.value = temp;
                         }
                         window.resetPageAndFetch();
                     });
                     input.addEventListener('blur', function () {
+                        // Убеждаемся, что значение отформатировано при потере фокуса
+                        if (this.value) {
+                            this.value = formatPriceInput(this.value);
+                        }
                         window.resetPageAndFetch();
                     });
                 });
@@ -3808,6 +3884,9 @@
             if (!isSecondary) {
                 const contentToggleBtns = document.querySelectorAll('.content-toggle-btn-segmented[data-content]');
                 const contentModeHidden = document.getElementById('content-mode-hidden');
+                const floorFilterGroup = document.getElementById('floor-filter-group');
+                const areaFilterGroup = document.getElementById('area-filter-group');
+                const roomsFilterGroup = document.getElementById('rooms-filter-group');
                 if (contentToggleBtns.length > 0 && contentModeHidden) {
                     const applyContentMode = (mode) => {
                         contentModeHidden.value = mode;
@@ -3816,6 +3895,16 @@
                             const bMode = b.getAttribute('data-content');
                             b.setAttribute('data-active', bMode === mode ? 'true' : 'false');
                         });
+                        // Показываем фильтры этажей, площади и комнат только в режиме квартир
+                        if (floorFilterGroup) {
+                            floorFilterGroup.style.display = (mode === 'apartments') ? 'block' : 'none';
+                        }
+                        if (areaFilterGroup) {
+                            areaFilterGroup.style.display = (mode === 'apartments') ? 'block' : 'none';
+                        }
+                        if (roomsFilterGroup) {
+                            roomsFilterGroup.style.display = (mode === 'apartments') ? 'block' : 'none';
+                        }
                     };
 
                     const initialMode = contentModeHidden.value || localStorage.getItem('catalog_content_mode') || 'complexes';

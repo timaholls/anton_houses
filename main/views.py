@@ -171,7 +171,9 @@ __all__ = [
     'company_management', 
     'manual_matching',
     # API functions (defined below in this file)
-    'catalog_api', 
+    'catalog_api',
+    'apartments_api',
+    'complex_apartments_api',
     'secondary_api', 
     'secondary_api_list',
     'districts_api', 
@@ -270,6 +272,31 @@ def catalog_api(request):
         price_to = request.GET.get('price_to', '').strip()
         has_offers = request.GET.get('has_offers', '').strip()
         delivery_quarter = request.GET.get('delivery_quarter', '').strip()
+        
+        # Функция конвертации цены: если число >= 100, считаем что это рубли и конвертируем в миллионы
+        def convert_price_to_millions(price_str):
+            """Конвертирует цену в миллионы рублей.
+            Если число >= 100, считаем что это рубли и делим на 1 000 000.
+            Иначе считаем что это уже миллионы.
+            """
+            if not price_str:
+                return None
+            try:
+                # Убираем пробелы и заменяем запятую на точку
+                price_clean = price_str.replace(' ', '').replace(',', '.')
+                price_val = float(price_clean)
+                
+                # Если число >= 100, считаем что это рубли, конвертируем в миллионы
+                if price_val >= 100:
+                    return price_val / 1_000_000
+                # Иначе считаем что это уже миллионы
+                return price_val
+            except (ValueError, TypeError):
+                return None
+        
+        # Конвертируем цены из фильтра в миллионы
+        price_from_millions = convert_price_to_millions(price_from) if price_from else None
+        price_to_millions = convert_price_to_millions(price_to) if price_to else None
         
         # Сортировка
         sort = request.GET.get('sort', 'price_asc')
@@ -476,46 +503,28 @@ def catalog_api(request):
                     if not has_matching_rooms:
                         continue
             
-            # Фильтр по цене
-            price_range = ''
-            if 'development' in record and 'avito' not in record:
-                # Новая структура
-                price_range = record.get('development', {}).get('price_range', '')
-            else:
-                # Старая структура
-                price_range = record.get('avito', {}).get('development', {}).get('price_range', '')
-            
-            if price_range and (price_from or price_to):
-                # Парсим цену из строки типа "От 6,29 до 14,97 млн ₽"
-                import re
-                price_match = re.search(r'от\s+([\d,]+)\s+до\s+([\d,]+)\s+млн', price_range.lower())
-                if price_match:
-                    min_price = float(price_match.group(1).replace(',', '.'))  # млн руб
-                    max_price = float(price_match.group(2).replace(',', '.'))  # млн руб
-                    
-                    if price_from:
-                        try:
-                            price_from_val = float(price_from.replace(',', '.'))
-                            # Если минимальная цена ЖК меньше фильтра, пропускаем
-                            # (это означает, что в ЖК есть квартиры дешевле фильтра)
-                            if min_price < price_from_val:
-                                continue
-                        except ValueError:
-                            pass
-                    
-                    if price_to:
-                        try:
-                            price_to_val = float(price_to.replace(',', '.'))
-                            if min_price > price_to_val:
-                                continue
-                            # Также проверяем, что максимальная цена не превышает фильтр
-                            if max_price > price_to_val:
-                                continue
-                        except ValueError:
-                            pass
+            # Фильтр по цене (используем поля min_price и max_price)
+            if price_from_millions is not None or price_to_millions is not None:
+                # Получаем min_price и max_price из записи (в миллионах рублей)
+                min_price = record.get('min_price')
+                max_price = record.get('max_price')
+                
+                # Если поля не заполнены, пропускаем фильтрацию по цене
+                if min_price is None or max_price is None:
+                    # Если фильтр задан, но цены нет - пропускаем запись
+                    continue
                 else:
-                    # Если не удалось распарсить цену, пропускаем фильтрацию по цене
-                    pass
+                    # Фильтр "от X": ЖК включается, если min_price >= price_from_millions
+                    # (все квартиры в ЖК стоят от указанной цены или выше)
+                    if price_from_millions is not None:
+                        if min_price < price_from_millions:
+                            continue
+                    
+                    # Фильтр "до Y": ЖК включается, если max_price <= price_to_millions
+                    # (все квартиры в ЖК стоят до указанной цены или ниже)
+                    if price_to_millions is not None:
+                        if max_price > price_to_millions:
+                            continue
             
             # Фильтр по площади (проверяем в apartment_types)
             if area_from or area_to:
@@ -571,46 +580,24 @@ def catalog_api(request):
             
             filtered_records.append(record)
         
-        # Сортировка - всегда по полю "от X млн"
+        # Сортировка по цене (используем поле min_price)
         if sort == 'price_asc':
-            # Сортировка по возрастанию цены (дешевле) - от меньшего "от" к большему
+            # Сортировка по возрастанию цены (дешевле) - от меньшего min_price к большему
             def get_price_from(record):
-                price_range = ''
-                if 'development' in record and 'avito' not in record:
-                    price_range = record.get('development', {}).get('price_range', '')
-                else:
-                    price_range = record.get('avito', {}).get('development', {}).get('price_range', '')
-                
-                import re
-                price_lower = price_range.lower()
-                
-                # Ищем только "от X млн"
-                price_match_from = re.search(r'от\s+([\d,]+)\s+млн', price_lower)
-                if price_match_from:
-                    return float(price_match_from.group(1).replace(',', '.'))
-                
-                # Если "от" не найдено - в конец списка
+                min_price = record.get('min_price')
+                if min_price is not None:
+                    return float(min_price)
+                # Если цена не найдена - в конец списка
                 return float('inf')
             filtered_records.sort(key=get_price_from)
         elif sort == 'price_desc':
-            # Сортировка по убыванию цены (дороже) - от большего "от" к меньшему
+            # Сортировка по убыванию цены (дороже) - от большего min_price к меньшему
             def get_price_from(record):
-                price_range = ''
-                if 'development' in record and 'avito' not in record:
-                    price_range = record.get('development', {}).get('price_range', '')
-                else:
-                    price_range = record.get('avito', {}).get('development', {}).get('price_range', '')
-                
-                import re
-                price_lower = price_range.lower()
-                
-                # Ищем только "от X млн"
-                price_match_from = re.search(r'от\s+([\d,]+)\s+млн', price_lower)
-                if price_match_from:
-                    return float(price_match_from.group(1).replace(',', '.'))
-                
-                # Если "от" не найдено - в начало списка (самые дорогие)
-                return 0
+                min_price = record.get('min_price')
+                if min_price is not None:
+                    return float(min_price)
+                # Если цена не найдена - в конец списка
+                return float('-inf')
             filtered_records.sort(key=get_price_from, reverse=True)
         elif sort == 'area_desc':
             # Сортировка по убыванию площади
@@ -842,6 +829,31 @@ def apartments_api(request):
         price_to = request.GET.get('price_to', '').strip()
         delivery_quarter = request.GET.get('delivery_quarter', '').strip()
         
+        # Функция конвертации цены: если число >= 100, считаем что это рубли и конвертируем в миллионы
+        def convert_price_to_millions(price_str):
+            """Конвертирует цену в миллионы рублей.
+            Если число >= 100, считаем что это рубли и делим на 1 000 000.
+            Иначе считаем что это уже миллионы.
+            """
+            if not price_str:
+                return None
+            try:
+                # Убираем пробелы и заменяем запятую на точку
+                price_clean = price_str.replace(' ', '').replace(',', '.')
+                price_val = float(price_clean)
+                
+                # Если число >= 100, считаем что это рубли, конвертируем в миллионы
+                if price_val >= 100:
+                    return price_val / 1_000_000
+                # Иначе считаем что это уже миллионы
+                return price_val
+            except (ValueError, TypeError):
+                return None
+        
+        # Конвертируем цены из фильтра в миллионы
+        price_from_millions = convert_price_to_millions(price_from) if price_from else None
+        price_to_millions = convert_price_to_millions(price_to) if price_to else None
+        
         # Сортировка
         sort = request.GET.get('sort', 'price_asc')
         
@@ -933,6 +945,9 @@ def apartments_api(request):
                 parameters = avito_dev.get('parameters', {})
                 apartment_types = complex_record.get('avito', {}).get('apartment_types', {})
             
+            # Получаем город из записи ЖК
+            complex_city = complex_record.get('city') or complex_record.get('address_city') or 'Уфа'
+            
             # Получаем срок сдачи
             completion_date_str = parameters.get('Срок сдачи', '')
             
@@ -1002,39 +1017,41 @@ def apartments_api(request):
                         except (ValueError, TypeError):
                             pass
                     
-                    # Получаем цену
+                    # Получаем цену (в базе формат: "3 905 000 ₽")
                     price = apt.get('price') or apt.get('price_value') or ''
                     price_num = None
                     if price:
                         import re
-                        # Парсим цену из строки типа "6,29 млн ₽" или "6290000"
                         if isinstance(price, (int, float)):
-                            price_num = float(price) / 1000000  # Конвертируем в млн
+                            # Если уже число, конвертируем в миллионы
+                            price_num = float(price) / 1000000
                         else:
+                            # Извлекаем все цифры из строки (убираем пробелы, символы валюты и т.д.)
                             price_str = str(price)
-                            price_match = re.search(r'([\d,]+)\s*млн', price_str.lower())
-                            if price_match:
-                                price_num = float(price_match.group(1).replace(',', '.'))
-                            else:
-                                # Пытаемся извлечь число
-                                num_match = re.search(r'(\d+[,.]?\d*)', price_str)
-                                if num_match:
-                                    price_num = float(num_match.group(1).replace(',', '.'))
+                            # Убираем все нецифровые символы, оставляем только цифры
+                            digits_only = re.sub(r'\D', '', price_str)
+                            if digits_only:
+                                try:
+                                    # Конвертируем в число и делим на 1 000 000 для получения миллионов
+                                    price_num = float(digits_only) / 1000000
+                                except (ValueError, TypeError):
+                                    pass
                     
-                    # Фильтр по цене
-                    if price_num and (price_from or price_to):
-                        if price_from:
-                            try:
-                                if price_num < float(price_from.replace(',', '.')):
-                                    continue
-                            except ValueError:
-                                pass
-                        if price_to:
-                            try:
-                                if price_num > float(price_to.replace(',', '.')):
-                                    continue
-                            except ValueError:
-                                pass
+                    # Фильтр по цене (price_num уже в миллионах)
+                    if price_from_millions is not None or price_to_millions is not None:
+                        # Если фильтр по цене задан, но у квартиры нет цены - пропускаем её
+                        if price_num is None:
+                            continue
+                        
+                        # Фильтр "от X": квартира включается, если price_num >= price_from_millions
+                        if price_from_millions is not None:
+                            if price_num < price_from_millions:
+                                continue
+                        
+                        # Фильтр "до Y": квартира включается, если price_num <= price_to_millions
+                        if price_to_millions is not None:
+                            if price_num > price_to_millions:
+                                continue
                     
                     # Формируем ID квартиры для ссылки
                     apartment_id = apt.get('id')
@@ -1104,10 +1121,11 @@ def apartments_api(request):
                     elif floor_max is not None:
                         floor_value = str(floor_max)
                     
-                    # Фильтр по этажам (используем только floorMin и floorMax)
-                    # Логика: пользователь хочет квартиры, где ВСЕ варианты этажей попадают в диапазон
-                    # "ОТ 5" = минимальный этаж квартиры >= 5 (нет вариантов ниже 5)
-                    # "ДО 10" = максимальный этаж квартиры <= 10 (нет вариантов выше 10)
+                    # Фильтр по этажам
+                    # floorMin = этаж квартиры, floorMax = всего этажей в доме
+                    # Фильтруем только по floorMin (этаж квартиры)
+                    # "ОТ 5" = квартира на 5 этаже или выше
+                    # "ДО 10" = квартира на 10 этаже или ниже
                     if floor_from or floor_to:
                         floor_passes_filter = False
                         
@@ -1127,36 +1145,12 @@ def apartments_api(request):
                         except (ValueError, TypeError):
                             pass
                         
-                        if floor_min is not None and floor_max is not None:
-                            # У квартиры есть диапазон этажей (например 2-12)
-                            # Проверяем, что весь диапазон попадает в фильтр
-                            if filter_min is not None and filter_max is not None:
-                                # Оба значения фильтра заданы
-                                # Квартира проходит, если: floor_min >= filter_min AND floor_max <= filter_max
-                                if floor_min >= filter_min and floor_max <= filter_max:
-                                    floor_passes_filter = True
-                            elif filter_min is not None:
-                                # Только "от" задано: минимальный этаж квартиры >= filter_min
-                                if floor_min >= filter_min:
-                                    floor_passes_filter = True
-                            elif filter_max is not None:
-                                # Только "до" задано: максимальный этаж квартиры <= filter_max
-                                if floor_max <= filter_max:
-                                    floor_passes_filter = True
-                        elif floor_min is not None:
-                            # Только floor_min задан у квартиры (одиночный этаж или только минимум)
+                        # Используем только floor_min (этаж квартиры) для фильтрации
+                        if floor_min is not None:
                             passes = True
                             if filter_min is not None and floor_min < filter_min:
                                 passes = False
                             if filter_max is not None and floor_min > filter_max:
-                                passes = False
-                            floor_passes_filter = passes
-                        elif floor_max is not None:
-                            # Только floor_max задан у квартиры
-                            passes = True
-                            if filter_min is not None and floor_max < filter_min:
-                                passes = False
-                            if filter_max is not None and floor_max > filter_max:
                                 passes = False
                             floor_passes_filter = passes
                         else:
@@ -1173,6 +1167,8 @@ def apartments_api(request):
                         'complex_id': str(complex_record['_id']),
                         'complex_name': name,
                         'complex_address': address,
+                        'address': address,  # Адрес ЖК для отображения в карточке
+                        'city': complex_city,  # Город для отображения в карточке
                         'complex_photos': photos,
                         'rooms': apt_type,
                         'rooms_display': rooms_display,
@@ -1254,6 +1250,223 @@ def apartments_api(request):
             'total_pages': 0,
             'total_count': 0,
             'error': str(e)
+        })
+
+
+def complex_apartments_api(request, complex_id):
+    """API для получения квартир конкретного ЖК с фильтрацией"""
+    try:
+        # Параметры фильтрации
+        apt_type = request.GET.get('type')  # Тип квартиры (Студия, 1, 2, 3, 4, 5+)
+        area_from = request.GET.get('area_from')
+        area_to = request.GET.get('area_to')
+        floor_from = request.GET.get('floor_from')
+        floor_to = request.GET.get('floor_to')
+        price_from = request.GET.get('price_from')
+        price_to = request.GET.get('price_to')
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 6))
+        
+        db = get_mongo_connection()
+        unified_col = db['unified_houses_3']
+        
+        # Получаем ЖК
+        from bson import ObjectId
+        try:
+            complex_record = unified_col.find_one({'_id': ObjectId(complex_id)})
+        except:
+            complex_record = unified_col.find_one({'_id': complex_id})
+        
+        if not complex_record:
+            return JsonResponse({'error': 'Complex not found', 'apartments': [], 'total_count': 0})
+        
+        # Получаем квартиры из структуры (логика как в detail view)
+        apartment_types = {}
+        
+        # Проверяем структуру: новая (упрощенная) или старая (с вложенностью)
+        is_new_structure = 'development' in complex_record and 'avito' not in complex_record
+        
+        if is_new_structure:
+            # НОВАЯ СТРУКТУРА: apartment_types в корне записи
+            apartment_types = complex_record.get('apartment_types', {})
+        else:
+            # СТАРАЯ СТРУКТУРА: apartment_types внутри avito
+            avito_data = complex_record.get('avito', {})
+            apartment_types = avito_data.get('apartment_types', {})
+        
+        filtered_apartments = []
+        
+        # Преобразуем фильтры в числа
+        filter_floor_min = int(floor_from) if floor_from else None
+        filter_floor_max = int(floor_to) if floor_to else None
+        filter_price_min = float(price_from) if price_from else None
+        filter_price_max = float(price_to) if price_to else None
+        filter_area_min = float(area_from) if area_from else None
+        filter_area_max = float(area_to) if area_to else None
+        
+        # Собираем квартиры
+        for type_key, type_data in apartment_types.items():
+            apartments = type_data.get('apartments', [])
+            
+            for apt_index, apt in enumerate(apartments):
+                # Определяем тип квартиры
+                apt_type_str = type_key
+                if apt_type_str.lower() in ['студия', 'studio']:
+                    apt_type_str = 'Студия'
+                
+                # Фильтр по типу
+                if apt_type and apt_type != apt_type_str:
+                    continue
+                
+                # Получаем площадь
+                area = apt.get('area') or apt.get('totalArea') or ''
+                if not area:
+                    title = apt.get('title', '')
+                    if title:
+                        import re
+                        area_match = re.search(r'(\d+[,.]?\d*)\s*м²', title)
+                        if area_match:
+                            area = area_match.group(1).replace(',', '.')
+                
+                area_num = None
+                if area:
+                    try:
+                        area_num = float(str(area).replace(',', '.'))
+                    except ValueError:
+                        pass
+                
+                # Фильтр по площади
+                if filter_area_min is not None and area_num is not None:
+                    if area_num < filter_area_min:
+                        continue
+                if filter_area_max is not None and area_num is not None:
+                    if area_num > filter_area_max:
+                        continue
+                
+                # Получаем этаж
+                floor_min = apt.get('floorMin')
+                floor_max = apt.get('floorMax')
+                floor_value = apt.get('floor', '')
+                
+                # Если нет floorMin/floorMax, парсим из floor
+                if floor_min is None and floor_max is None and floor_value:
+                    import re
+                    floor_str = str(floor_value)
+                    range_match = re.match(r'(\d+)\s*[-–—]\s*(\d+)', floor_str)
+                    if range_match:
+                        floor_min = int(range_match.group(1))
+                        floor_max = int(range_match.group(2))
+                    else:
+                        single_match = re.match(r'(\d+)', floor_str)
+                        if single_match:
+                            floor_min = floor_max = int(single_match.group(1))
+                
+                # Формируем floor_value для отображения
+                if not floor_value and floor_min is not None:
+                    if floor_max is not None and floor_min != floor_max:
+                        floor_value = f"{floor_min}-{floor_max}"
+                    else:
+                        floor_value = str(floor_min)
+                
+                # Фильтр по этажу
+                # floorMin = этаж квартиры, floorMax = всего этажей в доме
+                # Фильтруем только по floorMin (этаж квартиры)
+                # "от 5" → floorMin >= 5 (квартира на 5 этаже или выше)
+                # "до 10" → floorMin <= 10 (квартира на 10 этаже или ниже)
+                if filter_floor_min is not None or filter_floor_max is not None:
+                    if floor_min is None:
+                        # Нет данных об этаже - пропускаем
+                        continue
+                    
+                    floor_passes = True
+                    
+                    # "от X": этаж квартиры >= X
+                    if filter_floor_min is not None and floor_min < filter_floor_min:
+                        floor_passes = False
+                    
+                    # "до Y": этаж квартиры <= Y
+                    if filter_floor_max is not None and floor_min > filter_floor_max:
+                        floor_passes = False
+                    
+                    if not floor_passes:
+                        continue
+                
+                # Получаем цену
+                price = apt.get('price') or ''
+                price_num = None
+                if price:
+                    import re
+                    if isinstance(price, (int, float)):
+                        price_num = float(price)
+                    else:
+                        price_str = str(price)
+                        digits_only = re.sub(r'\D', '', price_str)
+                        if digits_only:
+                            try:
+                                price_num = float(digits_only)
+                            except ValueError:
+                                pass
+                
+                # Фильтр по цене
+                if filter_price_min is not None or filter_price_max is not None:
+                    if price_num is None:
+                        continue
+                    if filter_price_min is not None and price_num < filter_price_min:
+                        continue
+                    if filter_price_max is not None and price_num > filter_price_max:
+                        continue
+                
+                # Получаем фото
+                layout_photos = apt.get('image', [])
+                if isinstance(layout_photos, dict):
+                    layout_photos = [layout_photos.get('128x96', '')]
+                elif isinstance(layout_photos, str):
+                    layout_photos = [layout_photos] if layout_photos else []
+                
+                # Формируем данные квартиры
+                apt_id = apt.get('_id') or f"{complex_id}_{type_key}_{apt_index}"
+                
+                filtered_apartments.append({
+                    'id': str(apt_id),
+                    'type': apt_type_str,
+                    'title': apt.get('title', ''),
+                    'price': price,
+                    'price_num': price_num,
+                    'area': area,
+                    'area_num': area_num,
+                    'floor': floor_value,
+                    'floor_min': floor_min,
+                    'floor_max': floor_max,
+                    'layout_photos': layout_photos[:5] if layout_photos else [],
+                    'rooms': apt.get('rooms', ''),
+                    'completion_date': apt.get('completionDate', ''),
+                })
+        
+        # Пагинация
+        total_count = len(filtered_apartments)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        apartments_page = filtered_apartments[start_idx:end_idx]
+        
+        total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 0
+        
+        return JsonResponse({
+            'apartments': apartments_page,
+            'total_count': total_count,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': total_pages,
+            'has_previous': page > 1,
+            'has_next': page < total_pages,
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'error': str(e),
+            'apartments': [],
+            'total_count': 0,
         })
 
 
@@ -1426,7 +1639,8 @@ def streets_api(request):
                     'address_street',
                     {**base_query, 'address_street': {'$ne': None, '$ne': ''}}
                 )
-                streets = sorted({s for s in list(streets_primary) + list(streets_alt) if s})
+                # Сортируем по алфавиту (case-insensitive для правильной сортировки)
+                streets = sorted({s for s in list(streets_primary) + list(streets_alt) if s}, key=str.lower)
             else:
                 collection = db['unified_houses_3']
                 
@@ -1468,7 +1682,8 @@ def streets_api(request):
                     
                 streets = collection.distinct('address_street', query)
                 streets = [street for street in streets if street]
-                streets = sorted(streets)
+                # Сортируем по алфавиту (case-insensitive для правильной сортировки)
+                streets = sorted(streets, key=str.lower)
         except Exception:
             streets = []
     else:
