@@ -324,20 +324,242 @@
             .catalog-card-thumbs {
                 justify-content: flex-start;
             }
+
+            /* Отступы для модального окна фильтра на мобильной версии */
+            #filters-sheet.filters-section .filters-sheet-header {
+                padding: 20px 24px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                flex-direction: row !important;
+                position: relative !important;
+            }
+
+            #filters-sheet.filters-section .filters-form {
+                padding: 24px !important;
+            }
+
+            #filters-sheet.filters-section .filters-actions {
+                padding: 0 24px 24px 24px !important;
+                margin-top: 12px !important;
+            }
+
+            /* Заголовок слева */
+            #filters-sheet.filters-section .filters-modal-title {
+                margin: 0 !important;
+                font-size: 1.25rem !important;
+                font-weight: 700 !important;
+                color: #1f2937 !important;
+                flex: 1 !important;
+            }
+
+            /* Кнопка закрытия справа вверху */
+            #filters-sheet.filters-section .filter-modal-close,
+            #filters-sheet.filters-section #mobile-filter-close {
+                border: none !important;
+                background: transparent !important;
+                border-radius: 50% !important;
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 18px !important;
+                color: #666 !important;
+                cursor: pointer !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                transition: all 0.2s ease !important;
+                flex-shrink: 0 !important;
+                margin-left: auto !important;
+                padding: 0 !important;
+                position: relative !important;
+                z-index: 10 !important;
+            }
+
+            #filters-sheet.filters-section .filter-modal-close:hover,
+            #filters-sheet.filters-section #mobile-filter-close:hover {
+                background: #f8f9fa !important;
+                color: #1f2937 !important;
+            }
+
+            /* Показываем кнопку закрытия на мобильной версии */
+            #mobile-filter-close {
+                display: flex !important;
+            }
         }
 
-        @media (min-width: 769px) {
+        /* Планшетная версия: фильтр как на мобильном, карточки как на ПК */
+        @media (min-width: 769px) and (max-width: 991px) {
+            /* Показываем кнопку открытия фильтра (используем мобильные стили) */
+            .mobile-filter-toggle {
+                display: inline-flex !important;
+            }
+
+            /* Скрываем фильтр по умолчанию */
+            .filters-section {
+                opacity: 0 !important;
+                transform: translate(-50%, -50%) scale(0.95) !important;
+                pointer-events: none !important;
+                visibility: hidden !important;
+            }
+
+            /* Показываем фильтр при открытии */
+            .filters-section.open {
+                opacity: 1 !important;
+                transform: translate(-50%, -50%) scale(1) !important;
+                pointer-events: auto !important;
+                visibility: visible !important;
+            }
+
+            /* Показываем кнопку закрытия */
+            #mobile-filter-close {
+                display: flex !important;
+            }
+
+            /* Карточки остаются горизонтальными (как на ПК) */
+            .catalog-card-horizontal {
+                flex-direction: row !important;
+            }
+
+            .catalog-card-media {
+                width: 360px !important;
+            }
+
+            /* Фильтр в модальном окне */
+            #filters-sheet.filters-section {
+                position: fixed !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) scale(0.95) !important;
+                width: 90% !important;
+                max-width: 600px !important;
+                max-height: 85vh !important;
+                z-index: 10000 !important;
+                background: #fff !important;
+                border-radius: 16px !important;
+                padding: 0 !important;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+                margin: 0 !important;
+                transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease !important;
+                overflow: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            /* Показываем фильтр при открытии (более специфичный селектор) */
+            #filters-sheet.filters-section.open {
+                opacity: 1 !important;
+                transform: translate(-50%, -50%) scale(1) !important;
+                pointer-events: auto !important;
+                visibility: visible !important;
+            }
+
+            /* Скрываем sidebar на планшетах, но позволяем модальному окну внутри отображаться */
+            .catalog-sidebar {
+                display: block !important;
+                visibility: hidden !important;
+                position: absolute !important;
+                width: 0 !important;
+                height: 0 !important;
+                overflow: visible !important;
+                pointer-events: none !important;
+            }
+            
+            /* Когда фильтр открыт, разрешаем взаимодействие */
+            body.filter-open .catalog-sidebar {
+                pointer-events: auto !important;
+            }
+
+            /* Layout без sidebar */
+            .catalog-layout {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            /* Отступы для модального окна фильтра на планшетной версии */
+            #filters-sheet.filters-section .filters-sheet-header {
+                padding: 20px 24px !important;
+            }
+
+            #filters-sheet.filters-section .filters-form {
+                padding: 24px !important;
+            }
+
+            #filters-sheet.filters-section .filters-actions {
+                padding: 0 24px 24px 24px !important;
+                margin-top: 12px !important;
+            }
+
+            /* Настройка header для правильного позиционирования */
+            #filters-sheet.filters-section .filters-sheet-header {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                flex-direction: row !important;
+                position: relative !important;
+            }
+
+            /* Заголовок слева */
+            #filters-sheet.filters-section .filters-modal-title {
+                margin: 0 !important;
+                font-size: 1.25rem !important;
+                font-weight: 700 !important;
+                color: #1f2937 !important;
+                flex: 1 !important;
+            }
+
+            /* Кнопка закрытия справа вверху */
+            #filters-sheet.filters-section .filter-modal-close,
+            #filters-sheet.filters-section #mobile-filter-close {
+                border: none !important;
+                background: transparent !important;
+                border-radius: 50% !important;
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 18px !important;
+                color: #666 !important;
+                cursor: pointer !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                transition: all 0.2s ease !important;
+                flex-shrink: 0 !important;
+                margin-left: auto !important;
+                padding: 0 !important;
+                position: relative !important;
+                z-index: 10 !important;
+            }
+
+            #filters-sheet.filters-section .filter-modal-close:hover,
+            #filters-sheet.filters-section #mobile-filter-close:hover {
+                background: #f8f9fa !important;
+                color: #1f2937 !important;
+            }
+
+            /* Показываем кнопку закрытия на планшетной версии */
+            #mobile-filter-close {
+                display: flex !important;
+            }
+
+        }
+
+        @media (min-width: 992px) {
             #mobile-filter-close {
                 display: none;
+            }
+
+            .mobile-filter-toggle {
+                display: none !important;
             }
 
             .filters-section {
                 opacity: 1 !important;
                 transform: none !important;
             }
-        }
 
-        @media (min-width: 992px) {
+            .catalog-sidebar {
+                display: block !important;
+            }
+
             .catalog-sidebar .filters-section {
                 max-height: none;
                 overflow: visible;
@@ -564,18 +786,16 @@
                 {% endif %}
             </div>
 
-            <!-- Мобильная кнопка открытия фильтра -->
-            <button type="button" class="mobile-filter-toggle" id="mobile-filter-open">Фильтры</button>
             <div class="filters-backdrop" id="filters-backdrop" aria-hidden="true"></div>
 
             <div class="catalog-layout">
                 <aside class="catalog-sidebar" aria-label="Фильтры каталога">
                     <div class="filters-section" id="filters-sheet">
                         <div class="filters-sheet-header">
-                            <button type="button" class="sheet-close" id="mobile-filter-close" aria-label="Закрыть">
+                            <h2 class="filters-modal-title">Фильтры</h2>
+                            <button type="button" class="filter-modal-close" id="mobile-filter-close" aria-label="Закрыть">
                                 <i class="fas fa-times"></i>
                             </button>
-                            <h2 class="filters-modal-title">Фильтры</h2>
                         </div>
                         <form class="filters-form" id="filters-form">
                             <input type="hidden" name="per_page" id="per_page-hidden" value="{{ request.GET.per_page|default:'15' }}">
@@ -735,27 +955,6 @@
                                     </div>
                                 </div>
 
-                                {% if dataset_type != 'secondary' %}
-                                    <div class="filter-group content-toggle-wrapper">
-                                        <div class="content-toggle-segmented">
-                                            <button type="button" class="content-toggle-btn-segmented"
-                                                    data-value="complexes"
-                                                    data-active="{% if not filters.content_mode or filters.content_mode == 'complexes' %}true{% else %}false{% endif %}"
-                                                    data-content="complexes">
-                                                ЖК
-                                            </button>
-                                            <button type="button" class="content-toggle-btn-segmented"
-                                                    data-value="apartments"
-                                                    data-active="{% if filters.content_mode == 'apartments' %}true{% else %}false{% endif %}"
-                                                    data-content="apartments">
-                                                Квартиры
-                                            </button>
-                                        </div>
-                                        <input type="hidden" name="content_mode" id="content-mode-hidden"
-                                               value="{{ filters.content_mode|default:'complexes' }}">
-                                    </div>
-                                {% endif %}
-
                                 <div class="filter-group">
                                     <label>Цена, ₽</label>
                                     <div class="range-container">
@@ -911,8 +1110,13 @@
                     </div>
 
                 <div class="view-toggle-right">
-                    <button type="button" class="view-btn active" data-view="map">Картой</button>
-                    <button type="button" class="view-btn" data-view="list">Списком</button>
+                    <!-- Кнопка фильтров в мобильной версии -->
+                    <button type="button" class="mobile-filter-toggle" id="mobile-filter-open">Фильтры</button>
+                    
+                    <div class="view-toggle-buttons">
+                        <button type="button" class="view-btn active" data-view="map">Картой</button>
+                        <button type="button" class="view-btn" data-view="list">Списком</button>
+                    </div>
                     <div class="page-size-toggle">
                         <span>Элементов:</span>
                         <button type="button" class="page-size-btn" data-size="15" data-active="true">15</button>
@@ -923,7 +1127,7 @@
 
                     <div class="catalog-content">
                     <div id="map"
-                        style="width: 100%; height: 340px; display:block; border-radius:12px; overflow:hidden; margin-bottom:24px;">
+                        style="width: 100%; height: 260px; display:block; border-radius:12px; overflow:hidden; margin-bottom:24px;">
                         </div>
                         <div class="catalog-grid" id="catalog-grid">
                             <!-- Карточки загружаются через API -->
@@ -2052,11 +2256,21 @@
                     const areaDisplay = apt.area ? `${apt.area} м²` : '—';
                     const floorDisplay = apt.floor ? `${apt.floor} этаж` : '';
                     const apartmentUrl = `/apartment/${apt.complex_id}/${apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0')}/`;
+                    
+                    // Определяем complexId и apartmentId для избранного
+                    const complexId = apt.complex_id || '';
+                    const apartmentId = apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0');
 
                     html += `
                         <div class="property-card-compact catalog-card-horizontal" data-complex-id="${apt.id}">
                             <div class="catalog-card-media">
-                                <div class="catalog-card-main-image" onclick="window.open('${apartmentUrl}', '_blank');">
+                                <div class="catalog-card-main-image" onclick="window.open('${apartmentUrl}', '_blank');" style="position: relative;">
+                                    <button class="favorite-btn" data-favorite-complex-id="${complexId}"
+                                        data-favorite-apartment-id="${apartmentId}"
+                                        onclick="event.stopPropagation(); if(typeof toggleApartmentFavoriteHandler === 'function') { toggleApartmentFavoriteHandler('${complexId}', '${apartmentId}', this); }"
+                                        title="Добавить в избранное">
+                                        <i class="far fa-heart"></i>
+                                    </button>
                                     <img src="${photo}" alt="${apartmentTitle}">
                                 </div>
                                 ${thumbnailsHtml}
@@ -2092,6 +2306,12 @@
                                             <strong>${apt.rooms}</strong>
                                         </div>
                                     ` : ''}
+                                    ${apt.completion_date ? `
+                                        <div class="catalog-detail-item">
+                                            <span>Сдача</span>
+                                            <strong>${apt.completion_date}</strong>
+                                        </div>
+                                    ` : ''}
                                     ${apt.complex_name ? `
                                         <div class="catalog-detail-item">
                                             <span>ЖК</span>
@@ -2112,6 +2332,7 @@
 
             // Инициализируем состояние кнопок избранного для квартир
             setTimeout(() => {
+                // Старый формат (для совместимости)
                 const favoriteBtns = grid.querySelectorAll('.favorite-btn[data-type="apartment"]');
                 favoriteBtns.forEach(btn => {
                     const id = btn.getAttribute('data-id');
@@ -2142,6 +2363,37 @@
                             } catch (e) {
                                 console.error('Ошибка проверки избранного:', e);
                             }
+                        }
+                    }
+                });
+                
+                // Новый формат с data-favorite-complex-id и data-favorite-apartment-id
+                const newFavoriteBtns = grid.querySelectorAll('.favorite-btn[data-favorite-apartment-id]');
+                newFavoriteBtns.forEach(btn => {
+                    const complexId = btn.getAttribute('data-favorite-complex-id');
+                    const apartmentId = btn.getAttribute('data-favorite-apartment-id');
+                    if (complexId && apartmentId) {
+                        // Проверяем, есть ли квартира в избранном через localStorage
+                        try {
+                            const favorites = JSON.parse(localStorage.getItem('century21_favorites') || '{"apartments":[]}');
+                            const idStr = `${complexId}_${apartmentId}`;
+                            const isFavorite = favorites.apartments && favorites.apartments.includes(idStr);
+
+                            // Обновляем иконку
+                            const icon = btn.querySelector('i');
+                            if (icon) {
+                                if (isFavorite) {
+                                    icon.classList.remove('far');
+                                    icon.classList.add('fas');
+                                    btn.classList.add('favorite-active');
+                                } else {
+                                    icon.classList.remove('fas');
+                                    icon.classList.add('far');
+                                    btn.classList.remove('favorite-active');
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Ошибка проверки избранного:', e);
                         }
                     }
                 });
@@ -2322,6 +2574,30 @@
 
             const openSheet = () => {
                 applyScrollFixes();
+                
+                // Для планшетов (769-991px): принудительно показываем модальное окно
+                if (window.innerWidth >= 769 && window.innerWidth <= 991) {
+                    sheet.style.cssText = `
+                        position: fixed !important;
+                        top: 50% !important;
+                        left: 50% !important;
+                        transform: translate(-50%, -50%) scale(1) !important;
+                        opacity: 1 !important;
+                        visibility: visible !important;
+                        pointer-events: auto !important;
+                        z-index: 10000 !important;
+                        width: 90% !important;
+                        max-width: 600px !important;
+                        max-height: 85vh !important;
+                        background: #fff !important;
+                        border-radius: 16px !important;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+                        overflow: hidden !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                    `;
+                }
+                
                 sheet.classList.add('open');
                 sheet.setAttribute('aria-hidden', 'false');
                 document.body.classList.add('filter-open');
@@ -2336,6 +2612,12 @@
                 sheet.classList.remove('open');
                 sheet.setAttribute('aria-hidden', 'true');
                 document.body.classList.remove('filter-open');
+                
+                // Сбрасываем inline стили для планшетов
+                if (window.innerWidth >= 769 && window.innerWidth <= 991) {
+                    sheet.style.cssText = '';
+                }
+                
                 if (backdrop) {
                     backdrop.classList.remove('open');
                     backdrop.setAttribute('aria-hidden', 'true');
@@ -2344,7 +2626,7 @@
             };
 
             openBtn.addEventListener('click', function (e) {
-                if (window.innerWidth > 768) return;
+                if (window.innerWidth > 991) return;
                 e.preventDefault();
                 e.stopPropagation();
                 openSheet();
@@ -2371,6 +2653,18 @@
                     closeSheet();
                 }
             });
+
+            // Закрываем модальное окно при нажатии "Применить" на мобильных/планшетах
+            const applyBtn = sheet.querySelector('button[type="submit"].btn-primary');
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function() {
+                    setTimeout(function() {
+                        if (window.innerWidth <= 991) {
+                            closeSheet();
+                        }
+                    }, 100);
+                });
+            }
 
             window.showFiltersSheet = openSheet;
             window.hideFiltersSheet = closeSheet;
@@ -2440,13 +2734,12 @@
             if (areaFromInput && areaToInput) {
                 [areaFromInput, areaToInput].forEach(input => {
                     input.addEventListener('change', function () {
-                        // Валидация: проверяем, что "от" не больше "до"
-                        const fromValue = parseFloat(areaFromInput.value) || 0;
-                        const toValue = parseFloat(areaToInput.value) || 0;
-                        if (fromValue > toValue && toValue > 0) {
+                        // Валидация: проверяем, что "от" не больше "до" (только если оба поля заполнены)
+                        const fromValue = parseFloat(areaFromInput.value);
+                        const toValue = parseFloat(areaToInput.value);
+                        if (fromValue && toValue && fromValue > toValue) {
+                            // Если "от" больше "до", меняем местами только если оба заполнены
                             areaFromInput.value = toValue;
-                        }
-                        if (toValue < fromValue && fromValue > 0) {
                             areaToInput.value = fromValue;
                         }
                         window.resetPageAndFetch();
@@ -2463,13 +2756,12 @@
             if (priceFromInput && priceToInput) {
                 [priceFromInput, priceToInput].forEach(input => {
                     input.addEventListener('change', function () {
-                        // Валидация: проверяем, что "от" не больше "до"
-                        const fromValue = parseFloat(priceFromInput.value) || 0;
-                        const toValue = parseFloat(priceToInput.value) || 0;
-                        if (fromValue > toValue && toValue > 0) {
+                        // Валидация: проверяем, что "от" не больше "до" (только если оба поля заполнены)
+                        const fromValue = parseFloat(priceFromInput.value);
+                        const toValue = parseFloat(priceToInput.value);
+                        if (fromValue && toValue && fromValue > toValue) {
+                            // Если "от" больше "до", меняем местами только если оба заполнены
                             priceFromInput.value = toValue;
-                        }
-                        if (toValue < fromValue && fromValue > 0) {
                             priceToInput.value = fromValue;
                         }
                         window.resetPageAndFetch();
@@ -2486,13 +2778,12 @@
             if (floorFromInput && floorToInput) {
                 [floorFromInput, floorToInput].forEach(input => {
                     input.addEventListener('change', function () {
-                        // Валидация: проверяем, что "от" не больше "до"
-                        const fromValue = parseInt(floorFromInput.value) || 0;
-                        const toValue = parseInt(floorToInput.value) || 0;
-                        if (fromValue > toValue && toValue > 0) {
+                        // Валидация: проверяем, что "от" не больше "до" (только если оба поля заполнены)
+                        const fromValue = parseInt(floorFromInput.value);
+                        const toValue = parseInt(floorToInput.value);
+                        if (fromValue && toValue && fromValue > toValue) {
+                            // Если "от" больше "до", меняем местами только если оба заполнены
                             floorFromInput.value = toValue;
-                        }
-                        if (toValue < fromValue && fromValue > 0) {
                             floorToInput.value = fromValue;
                         }
                         window.resetPageAndFetch();
@@ -2892,7 +3183,7 @@
                 const streetList = document.getElementById('street-list');
                 const streetHidden = document.getElementById('street-hidden');
 
-                if (!city || !streetList) return;
+                if (!city || !streetList) return Promise.resolve();
 
                 // Сохраняем текущие выбранные улицы
                 const currentSelectedStreets = streetHidden ? streetHidden.value.split(',').filter(s => s.trim()) : [];
@@ -2909,7 +3200,7 @@
                     streetList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Загрузка...</div>';
                 }
 
-                fetch(url)
+                return fetch(url)
                     .then(response => response.json())
                     .then(data => {
                         streetList.innerHTML = '';
@@ -3872,8 +4163,7 @@
             let activeController = null;
             let latestRequestId = 0;
 
-            // View toggle
-            const toggleBtns = document.querySelectorAll('.view-btn');
+            // View toggle - инициализация перенесена в отдельную функцию
             const savedView = localStorage.getItem('catalog_view') || 'list';
 
             // Отключаем кнопку карты для вторичной недвижимости
@@ -3887,14 +4177,54 @@
                 }
             }
 
-
-            toggleBtns.forEach(b => b.addEventListener('click', () => {
-                // Не обрабатываем клик по кнопке карты для вторичной недвижимости
-                if (isSecondary && b.getAttribute('data-view') === 'map') {
+            // Функция инициализации кнопок view toggle
+            function initViewToggleButtons() {
+                const mapBtn = document.querySelector('.view-btn[data-view="map"]');
+                const listBtn = document.querySelector('.view-btn[data-view="list"]');
+                
+                if (!mapBtn || !listBtn) {
+                    console.log('View buttons not found');
                     return;
                 }
-                setView(b.getAttribute('data-view'));
-            }));
+                
+                // Клонируем кнопки чтобы удалить все старые обработчики
+                const newMapBtn = mapBtn.cloneNode(true);
+                const newListBtn = listBtn.cloneNode(true);
+                mapBtn.parentNode.replaceChild(newMapBtn, mapBtn);
+                listBtn.parentNode.replaceChild(newListBtn, listBtn);
+                
+                // Добавляем обработчик на кнопку "Картой"
+                newMapBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (isSecondary) return;
+                    
+                    if (typeof window.setView === 'function') {
+                        window.setView('map');
+                    }
+                });
+                
+                // Добавляем обработчик на кнопку "Списком"
+                newListBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (typeof window.setView === 'function') {
+                        window.setView('list');
+                    }
+                });
+                
+                console.log('View toggle buttons initialized');
+            }
+            
+            // Инициализируем кнопки после полной загрузки DOM
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initViewToggleButtons);
+            } else {
+                // DOM уже загружен, используем небольшую задержку чтобы быть последними
+                setTimeout(initViewToggleButtons, 100);
+            }
             // Инициализация вида по умолчанию
             // Принудительно устанавливаем вид "списком" для вторичной недвижимости
             if (isSecondary) {
@@ -3906,33 +4236,8 @@
             }
 
 
-            const perPageHiddenField = form ? form.querySelector('#per_page-hidden') : null;
-            const pageSizeButtons = document.querySelectorAll('.page-size-btn');
-
-            const applyPageSizeState = (size) => {
-                pageSizeButtons.forEach(btn => {
-                    btn.setAttribute('data-active', btn.getAttribute('data-size') === size ? 'true' : 'false');
-                });
-            };
-
-            const initPageSize = () => {
-                if (!perPageHiddenField || !pageSizeButtons.length) return;
-                const savedSize = localStorage.getItem('catalog_per_page') || perPageHiddenField.value || '15';
-                perPageHiddenField.value = savedSize;
-                applyPageSizeState(savedSize);
-
-                pageSizeButtons.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const size = btn.getAttribute('data-size');
-                        if (!size || perPageHiddenField.value === size) return;
-                        perPageHiddenField.value = size;
-                        localStorage.setItem('catalog_per_page', size);
-                        applyPageSizeState(size);
-                        window.resetPageAndFetch();
-                    });
-                });
-            };
-            initPageSize();
+            // Инициализация кнопок количества элементов - пустая заглушка
+            // Реальная инициализация происходит ниже через делегирование событий
 
             if (form && !form.dataset.ajaxBound) {
                 form.addEventListener('submit', function (e) {
@@ -3946,8 +4251,8 @@
             const searchButton = form ? form.querySelector('button[type="submit"]') : null;
             if (searchButton) {
                 searchButton.addEventListener('click', function (e) {
-                    // Закрываем фильтр только при явном нажатии на кнопку "Поиск" (мобильная версия)
-                    if (window.innerWidth <= 768) {
+                    // Закрываем фильтр только при явном нажатии на кнопку "Поиск" (мобильная и планшетная версия)
+                    if (window.innerWidth <= 991) {
                         setTimeout(function () {
                             const sheet = document.getElementById('filters-sheet');
                             const backdrop = document.getElementById('filters-backdrop');
@@ -4037,37 +4342,21 @@
 
                 observer.observe(filtersSection);
             }
-            // Кнопка "Сбросить" фильтры
-            const resetBtn = document.getElementById('filters-reset-btn');
-            if (resetBtn) {
-                resetBtn.addEventListener('click', function () {
-                    const form = document.getElementById('filters-form');
-                    if (form) {
-                        form.reset();
-                        // Сбрасываем все скрытые поля
-                        const hiddenInputs = form.querySelectorAll('input[type="hidden"]');
-                        hiddenInputs.forEach(input => input.value = '');
-                        // Сбрасываем активные кнопки
-                        const activeButtons = form.querySelectorAll('[data-active="true"]');
-                        activeButtons.forEach(btn => {
-                            btn.setAttribute('data-active', 'false');
-                            btn.classList.remove('active');
-                        });
-                        // Сбрасываем чекбоксы
-                        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
-                        checkboxes.forEach(cb => cb.checked = false);
-                        // Сбрасываем поля этажа
-                        const floorFrom = document.getElementById('floor-from-input');
-                        const floorTo = document.getElementById('floor-to-input');
-                        if (floorFrom) floorFrom.value = '';
-                        if (floorTo) floorTo.value = '';
-                        // Перезагружаем страницу с очищенными фильтрами
-                        const url = new URL(window.location.href);
-                        url.search = '';
-                        window.location.href = url.toString();
-                    }
-                });
-            }
+            // Кнопка "Сбросить" - инициализация вынесена в конец файла
+
+            // Инициализация города Уфа по умолчанию
+            (function initDefaultCity() {
+                const cityHidden = document.getElementById('city-hidden');
+                const cityText = document.getElementById('city-text');
+                // Если город не выбран (пустое значение), устанавливаем Уфу по умолчанию
+                if (cityHidden && !cityHidden.value) {
+                    cityHidden.value = 'Уфа';
+                    if (cityText) cityText.textContent = 'Уфа';
+                    // Также отмечаем чекбокс в модальном окне города
+                    const cityCheckbox = document.querySelector('.city-modal-checkbox[value="Уфа"]');
+                    if (cityCheckbox) cityCheckbox.checked = true;
+                }
+            })();
 
             // Принудительная инициализация для всех типов
             const isSecondaryInit = '{{ dataset_type }}' === 'secondary';
@@ -4307,6 +4596,250 @@
                 document.addEventListener('DOMContentLoaded', trigger);
             } else {
                 trigger();
+            }
+        })();
+
+        // ========== ИНИЦИАЛИЗАЦИЯ КНОПОК КОЛИЧЕСТВА ЭЛЕМЕНТОВ ==========
+        // Используем делегирование событий на родительском элементе
+        (function() {
+            function initPageSizeButtons() {
+                const container = document.querySelector('.page-size-toggle');
+                if (!container) {
+                    console.warn('page-size-toggle container not found');
+                    return;
+                }
+                
+                // Устанавливаем начальное состояние
+                const perPageField = document.getElementById('per_page-hidden');
+                if (perPageField) {
+                    const savedSize = localStorage.getItem('catalog_per_page') || perPageField.value || '15';
+                    perPageField.value = savedSize;
+                    
+                    // Обновляем активную кнопку
+                    container.querySelectorAll('.page-size-btn').forEach(btn => {
+                        btn.setAttribute('data-active', btn.getAttribute('data-size') === savedSize ? 'true' : 'false');
+                    });
+                }
+                
+                // Используем делегирование событий
+                container.addEventListener('click', function(e) {
+                    const btn = e.target.closest('.page-size-btn');
+                    if (!btn) return;
+                    
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const size = btn.getAttribute('data-size');
+                    const perPageField = document.getElementById('per_page-hidden');
+                    
+                    if (!size || !perPageField) {
+                        console.error('Page size button click: missing size or field');
+                        return;
+                    }
+                    
+                    // Обновляем значение
+                    perPageField.value = size;
+                    localStorage.setItem('catalog_per_page', size);
+                    
+                    // Обновляем состояние всех кнопок
+                    container.querySelectorAll('.page-size-btn').forEach(b => {
+                        b.setAttribute('data-active', b.getAttribute('data-size') === size ? 'true' : 'false');
+                    });
+                    
+                    // Запускаем поиск
+                    if (typeof window.resetPageAndFetch === 'function') {
+                        window.resetPageAndFetch();
+                    } else if (typeof window.fetchData === 'function') {
+                        window.currentPage = 1;
+                        window.fetchData();
+                    }
+                });
+            }
+            
+            // Запускаем при готовности DOM
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initPageSizeButtons);
+            } else {
+                initPageSizeButtons();
+            }
+        })();
+
+        // ========== КНОПКА "СБРОСИТЬ" ФИЛЬТРЫ ==========
+        (function() {
+            function initResetButton() {
+                const resetBtn = document.getElementById('filters-reset-btn');
+                if (!resetBtn) {
+                    console.warn('Reset button not found');
+                    return;
+                }
+                
+                resetBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('Reset button clicked');
+                    
+                    const form = document.getElementById('filters-form');
+                    if (!form) {
+                        console.error('Form not found');
+                        return;
+                    }
+                    
+                    // Сбрасываем форму
+                    form.reset();
+                    
+                    // Сбрасываем все скрытые поля (кроме per_page)
+                    form.querySelectorAll('input[type="hidden"]').forEach(input => {
+                        if (input.id !== 'per_page-hidden') {
+                            input.value = '';
+                        }
+                    });
+                    
+                    // Сбрасываем активные кнопки комнат
+                    form.querySelectorAll('[data-active="true"]').forEach(btn => {
+                        if (!btn.classList.contains('page-size-btn')) {
+                            btn.setAttribute('data-active', 'false');
+                            btn.classList.remove('active');
+                        }
+                    });
+                    
+                    // Сбрасываем чекбоксы
+                    form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        cb.checked = false;
+                    });
+                    
+                    // Сбрасываем текстовые поля
+                    const fieldsToReset = [
+                        'floor-from-input', 'floor-to-input',
+                        'area-from-input', 'area-to-input',
+                        'price-from-input', 'price-to-input'
+                    ];
+                    fieldsToReset.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+                    
+                    // Устанавливаем город Уфа по умолчанию
+                    const cityHidden = document.getElementById('city-hidden');
+                    const cityText = document.getElementById('city-text');
+                    if (cityHidden) {
+                        cityHidden.value = 'Уфа';
+                    }
+                    if (cityText) {
+                        cityText.textContent = 'Уфа';
+                    }
+                    // Отмечаем чекбокс города Уфа
+                    const cityCheckbox = document.querySelector('.city-modal-checkbox[value="Уфа"]');
+                    if (cityCheckbox) cityCheckbox.checked = true;
+                    
+                    // Сбрасываем районы
+                    const districtHidden = document.getElementById('district-hidden');
+                    const districtText = document.getElementById('district-text');
+                    if (districtHidden) districtHidden.value = '';
+                    if (districtText) districtText.textContent = 'Любой';
+                    document.querySelectorAll('.district-modal-checkbox').forEach(cb => cb.checked = false);
+                    
+                    // Сбрасываем улицы
+                    const streetHidden = document.getElementById('street-hidden');
+                    const streetText = document.getElementById('street-text');
+                    if (streetHidden) streetHidden.value = '';
+                    if (streetText) streetText.textContent = 'Любая';
+                    document.querySelectorAll('.street-modal-checkbox').forEach(cb => cb.checked = false);
+                    
+                    // Сбрасываем ЖК
+                    const complexesHidden = document.getElementById('complexes-hidden');
+                    const complexesText = document.getElementById('complexes-text');
+                    if (complexesHidden) complexesHidden.value = '';
+                    if (complexesText) complexesText.textContent = 'Любые';
+                    document.querySelectorAll('.complex-modal-checkbox').forEach(cb => cb.checked = false);
+                    
+                    // Сбрасываем срок сдачи
+                    const deliveryHidden = document.getElementById('delivery-quarter-hidden');
+                    const deliveryText = document.getElementById('delivery-quarter-text');
+                    if (deliveryHidden) deliveryHidden.value = '';
+                    if (deliveryText) deliveryText.textContent = 'Любой срок';
+                    document.querySelectorAll('.delivery-quarter-modal-checkbox').forEach(cb => cb.checked = false);
+                    
+                    // Закрываем модальное окно фильтров (для мобильной версии)
+                    if (window.innerWidth <= 991) {
+                        const sheet = document.getElementById('filters-sheet');
+                        const backdrop = document.getElementById('filters-backdrop');
+                        if (sheet) sheet.classList.remove('open');
+                        if (backdrop) backdrop.classList.remove('open');
+                        document.body.classList.remove('filter-open');
+                    }
+                    
+                    console.log('Filters reset, calling API...');
+                    
+                    // Выполняем AJAX поиск
+                    if (typeof window.resetPageAndFetch === 'function') {
+                        window.resetPageAndFetch();
+                    } else if (typeof window.fetchData === 'function') {
+                        window.currentPage = 1;
+                        window.fetchData();
+                    } else {
+                        console.error('No fetch function available');
+                    }
+                });
+                
+                console.log('Reset button handler attached');
+            }
+            
+            // Запускаем при готовности DOM
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initResetButton);
+            } else {
+                initResetButton();
+            }
+        })();
+    </script>
+    
+    <!-- ФИНАЛЬНЫЙ ФИКС: Кнопки Карта/Список - выполняется последним -->
+    <script>
+        (function() {
+            function fixViewToggleButtons() {
+                const mapBtn = document.querySelector('.view-btn[data-view="map"]');
+                const listBtn = document.querySelector('.view-btn[data-view="list"]');
+                
+                if (!mapBtn || !listBtn) {
+                    console.log('View buttons not found, retrying...');
+                    setTimeout(fixViewToggleButtons, 100);
+                    return;
+                }
+                
+                // Клонируем чтобы удалить ВСЕ старые обработчики
+                const newMapBtn = mapBtn.cloneNode(true);
+                const newListBtn = listBtn.cloneNode(true);
+                mapBtn.parentNode.replaceChild(newMapBtn, mapBtn);
+                listBtn.parentNode.replaceChild(newListBtn, listBtn);
+                
+                // Добавляем обработчики
+                newMapBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof window.setView === 'function') {
+                        window.setView('map');
+                    }
+                });
+                
+                newListBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof window.setView === 'function') {
+                        window.setView('list');
+                    }
+                });
+                
+                console.log('✅ View toggle buttons fixed');
+            }
+            
+            // Запускаем с задержкой чтобы гарантировано быть последними
+            if (document.readyState === 'complete') {
+                setTimeout(fixViewToggleButtons, 200);
+            } else {
+                window.addEventListener('load', function() {
+                    setTimeout(fixViewToggleButtons, 200);
+                });
             }
         })();
     </script>

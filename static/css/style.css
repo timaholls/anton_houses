@@ -3118,6 +3118,13 @@ body {
 .view-toggle-right {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.view-toggle-buttons {
+    display: flex;
+    gap: 8px;
 }
 
 .page-size-toggle {
@@ -3153,7 +3160,8 @@ body {
     border-color: rgba(190, 175, 135, 0.6);
 }
 
-.view-toggle-right .view-btn {
+.view-toggle-right .view-btn,
+.view-toggle-buttons .view-btn {
     padding: 10px 16px;
     border: 2px solid rgba(190, 175, 135, 0.3);
     border-radius: 8px;
@@ -3166,13 +3174,15 @@ body {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.view-toggle-right .view-btn:hover {
+.view-toggle-right .view-btn:hover,
+.view-toggle-buttons .view-btn:hover {
     border-color: rgba(190, 175, 135, 0.6);
     background: rgba(255, 255, 255, 0.9);
     transform: translateY(-1px);
 }
 
-.view-toggle-right .view-btn.active {
+.view-toggle-right .view-btn.active,
+.view-toggle-buttons .view-btn.active {
     background: var(--c21-gold);
     border-color: var(--c21-gold);
     color: var(--c21-dark);
@@ -7236,12 +7246,31 @@ a:hover { color: var(--c21-gold); }
     }
     
     .view-toggle-right {
-        justify-content: center;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .view-toggle-buttons {
+        display: flex;
+        width: 100%;
+        gap: 8px;
     }
     
-    .view-toggle-right .view-btn {
+    .view-toggle-right .view-btn,
+    .view-toggle-buttons .view-btn {
         flex: 1;
         text-align: center;
+    }
+
+    .page-size-toggle {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
+        padding-top: 12px;
+        width: 100%;
+        justify-content: flex-end;
     }
     
     .sorting-dropdown {

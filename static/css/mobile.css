@@ -23,9 +23,16 @@ body {
     display: none;
 }
 
-#mobile-filter-open,
+/* Кнопка закрытия скрыта по умолчанию на десктопе, но видна на мобильных и планшетах */
 #mobile-filter-close {
     display: none;
+}
+
+/* Показываем кнопку закрытия на мобильных и планшетах */
+@media (max-width: 991px) {
+    #mobile-filter-close {
+        display: flex !important;
+    }
 }
 
 /* ===== Header (main-header) ===== */
@@ -481,7 +488,7 @@ body {
         color: #333;
         font-weight: 700;
     }
-    
+
     .mobile-drawer-backdrop {
         position: fixed;
         inset: 0;
@@ -492,7 +499,7 @@ body {
         transition: opacity .3s ease;
         z-index: 2399;
     }
-    
+
     .mobile-drawer-backdrop.open {
         opacity: 1;
         pointer-events: auto;
@@ -724,17 +731,68 @@ body {
         margin-top: 100px !important;
     }
 
-    /* Compact mobile filters */
+    /* Кнопки элементов страницы */
+    .view-toggle-right {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    /* Кнопка фильтров - первая в ряду */
     .mobile-filter-toggle {
-        display: none;
+        display: inline-flex !important;
+        order: 1;
+        flex: 0 0 auto;
         align-items: center;
         gap: 8px;
-        padding: 10px 14px;
-        border: 1px solid #eee;
-        border-radius: 999px;
-        background: #fff;
+        padding: 10px 16px;
+        border: 2px solid rgba(188, 175, 135, 0.3);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(188, 175, 135, 0.1), rgba(188, 175, 135, 0.05));
         font-weight: 700;
-        margin: 8px 0 12px 0
+        font-size: 14px;
+        color: var(--c21-dark);
+        margin: 0;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .mobile-filter-toggle:hover {
+        border-color: rgba(188, 175, 135, 0.6);
+        background: linear-gradient(135deg, rgba(188, 175, 135, 0.15), rgba(188, 175, 135, 0.1));
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .mobile-filter-toggle:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Кнопки вида (Картой/Списком) */
+    .view-toggle-buttons {
+        order: 2;
+        display: flex !important;
+        gap: 8px !important;
+        flex: 1 1 auto;
+    }
+
+    /* Кнопки количества элементов */
+    .page-size-toggle {
+        order: 3;
+        margin-left: auto !important;
+        padding-left: 8px !important;
+        border-left: 1px solid rgba(15, 23, 42, 0.08) !important;
+        border-top: none !important;
+        padding-top: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        width: auto !important;
+        justify-content: flex-end !important;
     }
 
     .filters-backdrop {
@@ -759,7 +817,7 @@ body {
         top: 50% !important;
         left: 50% !important;
         transform: translate(-50%, -50%) scale(0.95) !important;
-        width: 90% !important;
+        width: calc(100% - 32px) !important;
         max-width: 500px !important;
         max-height: 85vh !important;
         z-index: 10000 !important;
@@ -784,6 +842,165 @@ body {
         visibility: visible !important;
     }
 
+    /* Отступы для элементов модального окна на мобильной версии */
+    #filters-sheet.filters-section .filters-sheet-header {
+        padding: 20px 24px !important;
+    }
+
+    #filters-sheet.filters-section .filters-form {
+        padding: 24px !important;
+    }
+
+    #filters-sheet.filters-section .filters-actions {
+        padding: 0 24px 24px 24px !important;
+        margin-top: 12px !important;
+    }
+
+    /* Блокируем прокрутку body когда фильтр открыт */
+    body.filter-open {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+    }
+
+    /* Кнопки элементов страницы в ряд для планшетов */
+    .view-toggle-right {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    /* Кнопка фильтров на планшетах использует те же стили что и на мобильных */
+    .mobile-filter-toggle {
+        order: 1;
+        flex: 0 0 auto;
+    }
+
+    /* Кнопки вида (Картой/Списком) на планшетах */
+    .view-toggle-buttons {
+        order: 2;
+        display: flex !important;
+        gap: 8px !important;
+        flex: 1 1 auto;
+    }
+
+    /* Кнопки количества элементов на планшетах */
+    .page-size-toggle {
+        order: 3;
+        margin-left: auto !important;
+        padding-left: 8px !important;
+        border-left: 1px solid rgba(15, 23, 42, 0.08) !important;
+        border-top: none !important;
+        padding-top: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        width: auto !important;
+        justify-content: flex-end !important;
+    }
+}
+
+/* Планшетная версия: фильтр как на мобильном, но с большим max-width */
+@media (min-width: 769px) and (max-width: 991px) {
+
+    /* Показываем кнопку фильтра на планшетах */
+    .mobile-filter-toggle {
+        display: inline-flex !important;
+        order: 1;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border: 2px solid rgba(188, 175, 135, 0.3);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(188, 175, 135, 0.1), rgba(188, 175, 135, 0.05));
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--c21-dark);
+        margin: 0;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .mobile-filter-toggle:hover {
+        border-color: rgba(188, 175, 135, 0.6);
+        background: linear-gradient(135deg, rgba(188, 175, 135, 0.15), rgba(188, 175, 135, 0.1));
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .mobile-filter-toggle:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .filters-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 9999 !important;
+    }
+
+    .filters-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Модальное окно фильтров для планшетов - больше по размеру */
+    #filters-sheet.filters-section {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) scale(0.95) !important;
+        width: 90% !important;
+        max-width: 600px !important;
+        max-height: 85vh !important;
+        z-index: 10000 !important;
+        background: #fff !important;
+        border-radius: 16px !important;
+        padding: 0 !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+        margin: 0 !important;
+        transition: transform 0.3s ease, opacity 0.3s ease !important;
+        opacity: 0 !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+    }
+
+    #filters-sheet.filters-section.open,
+    body.filter-open #filters-sheet.filters-section {
+        transform: translate(-50%, -50%) scale(1) !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
+        display: flex !important;
+        z-index: 10001 !important;
+    }
+
+    /* Отступы для элементов модального окна на планшетах */
+    #filters-sheet.filters-section .filters-sheet-header {
+        padding: 20px 24px !important;
+    }
+
+    #filters-sheet.filters-section .filters-form {
+        padding: 24px !important;
+    }
+
+    #filters-sheet.filters-section .filters-actions {
+        padding: 0 24px 24px 24px !important;
+        margin-top: 12px !important;
+    }
+
     /* Блокируем прокрутку body когда фильтр открыт */
     body.filter-open {
         overflow: hidden !important;
@@ -792,44 +1009,53 @@ body {
     }
 
     .filters-sheet-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px 20px;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 20px 24px !important;
         border-bottom: 1px solid #e9ecef;
-        position: relative;
+        position: relative !important;
+        flex-direction: row !important;
     }
 
     .filters-modal-title {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #1f2937;
+        margin: 0 !important;
+        font-size: 1.25rem !important;
+        font-weight: 700 !important;
+        color: #1f2937 !important;
+        flex: 1 !important;
     }
 
-    .sheet-close {
-        border: none;
-        background: transparent;
-        border-radius: 50%;
-        width: 36px;
-        height: 36px;
-        font-size: 20px;
-        line-height: 1;
-        color: #666;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        padding: 0;
+    /* Используем стили filter-modal-close для кнопки закрытия - справа вверху */
+    #filters-sheet .filter-modal-close,
+    #filters-sheet .filters-sheet-header .filter-modal-close,
+    #mobile-filter-close.filter-modal-close,
+    .filters-sheet-header #mobile-filter-close {
+        border: none !important;
+        background: transparent !important;
+        border-radius: 50% !important;
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 18px !important;
+        color: #666 !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+        padding: 0 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        margin-left: auto !important;
     }
 
-    .sheet-close:hover {
-        background: #f8f9fa;
-        color: #1f2937;
+    #filters-sheet .filter-modal-close:hover,
+    #filters-sheet .filters-sheet-header .filter-modal-close:hover,
+    #mobile-filter-close.filter-modal-close:hover,
+    .filters-sheet-header #mobile-filter-close:hover {
+        background: #f8f9fa !important;
+        color: #1f2937 !important;
     }
 
     .filters-reset-btn {
@@ -854,9 +1080,14 @@ body {
         height: auto !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
-        padding: 20px !important;
+        padding: 24px !important;
         flex: 1;
         -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Дополнительная специфичность для мобильной версии */
+    #filters-sheet .filters-form {
+        padding: 24px !important;
     }
 
     /* Перестраиваем сетку фильтров под мобильный UX */
@@ -1442,7 +1673,14 @@ body {
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        margin-top: 12px;
+        margin-top: 12px !important;
+        padding: 0 24px 24px 24px !important;
+    }
+
+    /* Дополнительная специфичность для мобильной версии */
+    #filters-sheet .filters-actions {
+        padding: 0 24px 24px 24px !important;
+        margin-top: 12px !important;
     }
 
     .filters-actions .btn {
@@ -1464,8 +1702,8 @@ body {
         color: #666;
     }
 
-    /* Show mobile-only controls only on small screens */
-    @media (max-width: 1024px) {
+    /* Show mobile-only controls on small screens and tablets */
+    @media (max-width: 991px) {
         .mobile-filter-toggle {
             display: inline-flex;
         }
@@ -2281,5 +2519,5 @@ body {
     .mortgage-page .compact-price-text {
         font-size: 14px;
     }
-}
+
 }

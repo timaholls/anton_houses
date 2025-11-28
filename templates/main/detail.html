@@ -4,6 +4,52 @@
 
 {% block extra_css %}
 <style>
+	/* Кнопка "Назад в каталог" */
+	.back-to-catalog-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		padding: 12px 24px;
+		background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+		color: #ffffff;
+		border: none;
+		border-radius: 10px;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 8px rgba(31, 41, 55, 0.2);
+		text-decoration: none;
+	}
+
+	.back-to-catalog-btn:hover {
+		background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(31, 41, 55, 0.3);
+		color: #ffffff;
+		text-decoration: none;
+	}
+
+	.back-to-catalog-btn:active {
+		transform: translateY(0);
+	}
+
+	.back-to-catalog-btn i {
+		font-size: 14px;
+		transition: transform 0.3s ease;
+	}
+
+	.back-to-catalog-btn:hover i {
+		transform: translateX(-3px);
+	}
+
+	@media (max-width: 768px) {
+		.back-to-catalog-btn {
+			padding: 10px 18px;
+			font-size: 13px;
+		}
+	}
+
 	/* Стили для галереи в карточках квартир */
 	.compact-card-image-gallery {
 		position: relative;
@@ -211,6 +257,14 @@
 
 {% block content %}
 <div class="detail-container">
+	<!-- Кнопка "Назад в каталог" -->
+	<div class="back-to-catalog-wrapper" style="margin-bottom: 20px;">
+		<a href="/catalog/" class="back-to-catalog-btn">
+			<i class="fas fa-arrow-left"></i>
+			<span>Назад в каталог</span>
+		</a>
+	</div>
+
 	<!-- Hero секция с главным изображением и агентом -->
 	<div class="detail-hero" style="display: grid; grid-template-columns: 1fr 380px; gap: 24px; margin-bottom: 40px;">
 		<!-- Левая панель - Галерея изображений -->
@@ -878,15 +932,54 @@
 		<h2 style="font-size: 28px; font-weight: 600; margin-bottom: 24px;">Варианты квартир</h2>
 
 	{% if complex.apartment_variants %}
-		<!-- Фильтр по типам (только существующие) -->
-		<div class="apartment-types-filter" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
-			{% for type in complex.apartment_types %}
-			<button class="apt-filter-btn {% if forloop.first %}active{% endif %}" data-type="{{ type }}"
-				onclick="filterApartmentsByType('{{ type }}')"
-				style="padding: 10px 20px; border: 2px solid {% if forloop.first %}#2563eb{% else %}#e5e7eb{% endif %}; background: {% if forloop.first %}#2563eb{% else %}white{% endif %}; color: {% if forloop.first %}white{% else %}#374151{% endif %}; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.3s;">
-				{% if type == 'Студия' %}Студия{% else %}{{type}}-комн{% endif %}
-			</button>
-			{% endfor %}
+		<!-- Фильтры квартир -->
+		<div class="apartments-filters-wrapper">
+			<!-- Фильтр по типам (только существующие) -->
+			<div class="apartment-types-filter" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+				{% for type in complex.apartment_types %}
+				<button class="apt-filter-btn {% if forloop.first %}active{% endif %}" data-type="{{ type }}"
+					onclick="filterApartmentsByType('{{ type }}')"
+					style="padding: 10px 20px; border: 2px solid {% if forloop.first %}#2563eb{% else %}#e5e7eb{% endif %}; background: {% if forloop.first %}#2563eb{% else %}white{% endif %}; color: {% if forloop.first %}white{% else %}#374151{% endif %}; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.3s;">
+					{% if type == 'Студия' %}Студия{% else %}{{type}}-комн{% endif %}
+				</button>
+				{% endfor %}
+			</div>
+			
+			<!-- Дополнительные фильтры -->
+			<div class="apartments-extra-filters">
+				<div class="apt-filter-group">
+					<label class="apt-filter-label">Площадь, м²</label>
+					<div class="apt-filter-inputs">
+						<input type="number" id="apt-area-from" class="apt-filter-input" placeholder="от" min="0">
+						<span class="apt-filter-separator">—</span>
+						<input type="number" id="apt-area-to" class="apt-filter-input" placeholder="до" min="0">
+					</div>
+				</div>
+				<div class="apt-filter-group">
+					<label class="apt-filter-label">Этаж</label>
+					<div class="apt-filter-inputs">
+						<input type="number" id="apt-floor-from" class="apt-filter-input" placeholder="от" min="1">
+						<span class="apt-filter-separator">—</span>
+						<input type="number" id="apt-floor-to" class="apt-filter-input" placeholder="до" min="1">
+					</div>
+				</div>
+				<div class="apt-filter-group">
+					<label class="apt-filter-label">Цена, ₽</label>
+					<div class="apt-filter-inputs">
+						<input type="number" id="apt-price-from" class="apt-filter-input" placeholder="от" min="0" step="100000">
+						<span class="apt-filter-separator">—</span>
+						<input type="number" id="apt-price-to" class="apt-filter-input" placeholder="до" min="0" step="100000">
+					</div>
+				</div>
+				<div class="apt-filter-actions">
+					<button type="button" class="apt-filter-apply-btn" onclick="applyApartmentFilters()">
+						<i class="fas fa-check"></i> Применить
+					</button>
+					<button type="button" class="apt-filter-reset-btn" onclick="resetApartmentFilters()">
+						<i class="fas fa-times"></i> Сбросить
+					</button>
+				</div>
+			</div>
 		</div>
 
 		<!-- Список квартир по типам с пагинацией -->
@@ -898,7 +991,12 @@
 				{% with apartments=complex.apartment_variants_grouped|get_item:apt_type %}
 				{% if apartments %}
 				{% for apt in apartments %}
-				<div class="apartment-card" data-apt-type="{{ apt.type }}" data-apt-index="{{ forloop.counter0 }}"
+				<div class="apartment-card" 
+					data-apt-type="{{ apt.type }}" 
+					data-apt-index="{{ forloop.counter0 }}"
+					data-apt-area="{{ apt.area|default:apt.totalArea|default:'0' }}"
+					data-apt-floor="{{ apt.floor|default:'' }}"
+					data-apt-price="{{ apt.price|default:'0' }}"
 					style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; transition: all 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: {% if forloop.counter0 < 6 %}block{% else %}none{% endif %};">
 					<!-- Галерея фото точно как в каталоге -->
 					<div class="compact-card-image-gallery" onclick="openAptGalleryFromCard(this)">
@@ -974,12 +1072,25 @@
 						{% elif apt.pricePerSqm %}
 						<div class="apt-price-per-m" style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">{{ apt.pricePerSqm|floatformat:0 }} ₽/м²</div>
 						{% endif %}
-						<div class="compact-card-details" style="display: flex; flex-direction: column; gap: 4px;">
+						
+						<!-- Детали квартиры как в каталоге -->
+						<div class="apt-card-details-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; margin: 12px 0; padding: 12px; background: #f9fafb; border-radius: 8px;">
+							{% if apt.area or apt.totalArea %}
+							<div class="apt-detail-item" style="display: flex; flex-direction: column; gap: 2px;">
+								<span style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px;">Площадь</span>
+								<span style="font-size: 14px; font-weight: 600; color: #1f2937;">{{ apt.area|default:apt.totalArea }} м²</span>
+							</div>
+							{% endif %}
+							{% if apt.floor %}
+							<div class="apt-detail-item" style="display: flex; flex-direction: column; gap: 2px;">
+								<span style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px;">Этаж</span>
+								<span style="font-size: 14px; font-weight: 600; color: #1f2937;">{{ apt.floor }}</span>
+							</div>
+							{% endif %}
 							{% if apt.completion_date %}
-							<div class="compact-detail-item"
-								style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280;">
-								<i class="fas fa-calendar"></i>
-								<span>{{ apt.completion_date }}</span>
+							<div class="apt-detail-item" style="display: flex; flex-direction: column; gap: 2px; grid-column: span 2;">
+								<span style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px;">Срок сдачи</span>
+								<span style="font-size: 14px; font-weight: 600; color: #1f2937;">{{ apt.completion_date }}</span>
 							</div>
 							{% endif %}
 						</div>
@@ -2025,7 +2136,234 @@
 				btn.classList.remove('active');
 			}
 		});
+		
+		// После переключения типа, применяем текущие фильтры (если они установлены)
+		const hasFilters = document.getElementById('apt-area-from')?.value || 
+						   document.getElementById('apt-area-to')?.value ||
+						   document.getElementById('apt-floor-from')?.value ||
+						   document.getElementById('apt-floor-to')?.value ||
+						   document.getElementById('apt-price-from')?.value ||
+						   document.getElementById('apt-price-to')?.value;
+		if (hasFilters) {
+			applyApartmentFilters();
+		}
 	}
+
+	// Фильтрация квартир по площади, этажу и цене
+	function applyApartmentFilters() {
+		const areaFrom = parseFloat(document.getElementById('apt-area-from')?.value) || 0;
+		const areaTo = parseFloat(document.getElementById('apt-area-to')?.value) || Infinity;
+		const floorFrom = parseInt(document.getElementById('apt-floor-from')?.value) || 0;
+		const floorTo = parseInt(document.getElementById('apt-floor-to')?.value) || Infinity;
+		const priceFrom = parseFloat(document.getElementById('apt-price-from')?.value) || 0;
+		const priceTo = parseFloat(document.getElementById('apt-price-to')?.value) || Infinity;
+
+		// Находим активную секцию
+		const activeSection = document.querySelector('.apartments-type-section[style*="display: block"], .apartments-type-section:not([style*="display: none"])');
+		if (!activeSection) return;
+
+		const cards = activeSection.querySelectorAll('.apartment-card');
+		let visibleCount = 0;
+
+		cards.forEach(card => {
+			// Получаем данные карточки
+			let area = parseFloat(card.dataset.aptArea) || 0;
+			let floor = card.dataset.aptFloor || '';
+			let price = card.dataset.aptPrice || '0';
+
+			// Парсим цену (может быть в формате "6,29 млн ₽" или числом)
+			let priceNum = 0;
+			if (price) {
+				const priceStr = String(price).toLowerCase();
+				const mlnMatch = priceStr.match(/([\d,\.]+)\s*млн/);
+				if (mlnMatch) {
+					priceNum = parseFloat(mlnMatch[1].replace(',', '.')) * 1000000;
+				} else {
+					priceNum = parseFloat(String(price).replace(/[^\d.]/g, '')) || 0;
+				}
+			}
+
+			// Парсим этаж (может быть "5-12" или "5")
+			let floorMin = 0, floorMax = Infinity;
+			if (floor) {
+				const floorStr = String(floor);
+				const rangeMatch = floorStr.match(/(\d+)\s*[-–—]\s*(\d+)/);
+				if (rangeMatch) {
+					floorMin = parseInt(rangeMatch[1]);
+					floorMax = parseInt(rangeMatch[2]);
+				} else {
+					const singleMatch = floorStr.match(/(\d+)/);
+					if (singleMatch) {
+						floorMin = floorMax = parseInt(singleMatch[1]);
+					}
+				}
+			}
+
+			// Проверяем условия фильтрации
+			let passesFilter = true;
+
+			// Фильтр по площади
+			if (areaFrom > 0 && area < areaFrom) passesFilter = false;
+			if (areaTo < Infinity && area > areaTo) passesFilter = false;
+
+			// Фильтр по этажу (диапазон должен пересекаться)
+			if (floorFrom > 0 && floorMax < floorFrom) passesFilter = false;
+			if (floorTo < Infinity && floorMin > floorTo) passesFilter = false;
+
+			// Фильтр по цене
+			if (priceFrom > 0 && priceNum < priceFrom) passesFilter = false;
+			if (priceTo < Infinity && priceNum > priceTo) passesFilter = false;
+
+			// Устанавливаем флаг видимости (реальное отображение через пагинацию)
+			card.dataset.filtered = passesFilter ? 'true' : 'false';
+
+			if (passesFilter) {
+				visibleCount++;
+			}
+		});
+
+		// Обновляем пагинацию с учётом фильтров
+		const activeType = document.querySelector('.apt-filter-btn.active')?.dataset.type;
+		if (activeType) {
+			initializeFilteredPagination(activeType);
+		}
+
+		// Показываем/скрываем сообщение "не найдено"
+		let noResultsEl = activeSection.querySelector('.apt-no-results');
+		if (!noResultsEl) {
+			noResultsEl = document.createElement('div');
+			noResultsEl.className = 'apt-no-results';
+			noResultsEl.innerHTML = '<i class="fas fa-search" style="font-size: 24px; margin-bottom: 8px; color: #9ca3af;"></i><br>Квартиры по заданным параметрам не найдены.<br>Попробуйте изменить фильтры.';
+			activeSection.querySelector('.apartments-grid')?.after(noResultsEl);
+		}
+		
+		if (visibleCount === 0) {
+			noResultsEl.classList.add('visible');
+		} else {
+			noResultsEl.classList.remove('visible');
+		}
+	}
+
+	// Сброс фильтров квартир
+	function resetApartmentFilters() {
+		document.getElementById('apt-area-from').value = '';
+		document.getElementById('apt-area-to').value = '';
+		document.getElementById('apt-floor-from').value = '';
+		document.getElementById('apt-floor-to').value = '';
+		document.getElementById('apt-price-from').value = '';
+		document.getElementById('apt-price-to').value = '';
+
+		// Сбрасываем флаги фильтрации
+		document.querySelectorAll('.apartment-card').forEach(card => {
+			card.dataset.filtered = 'true';
+		});
+
+		// Обновляем пагинацию
+		const activeType = document.querySelector('.apt-filter-btn.active')?.dataset.type;
+		if (activeType) {
+			initializeFilteredPagination(activeType);
+		}
+
+		// Скрываем сообщение "не найдено"
+		document.querySelectorAll('.apt-no-results').forEach(el => {
+			el.classList.remove('visible');
+		});
+	}
+
+	// Пагинация с учётом фильтров
+	function initializeFilteredPagination(type) {
+		const section = document.querySelector(`[data-type-section="${type}"]`);
+		if (!section) return;
+
+		const allCards = section.querySelectorAll('.apartment-card');
+		const filteredCards = Array.from(allCards).filter(card => card.dataset.filtered !== 'false');
+		const totalCards = filteredCards.length;
+		const perPage = 6;
+		const totalPages = Math.ceil(totalCards / perPage);
+
+		// Скрываем все карточки сначала
+		allCards.forEach(card => card.style.display = 'none');
+
+		// Показываем первые N отфильтрованных карточек
+		filteredCards.slice(0, perPage).forEach(card => card.style.display = 'block');
+
+		const pagination = section.querySelector('.apt-pagination');
+		if (pagination) {
+			if (totalPages <= 1) {
+				pagination.style.display = 'none';
+			} else {
+				pagination.style.display = 'flex';
+				renderFilteredPagination(type, 1, totalPages);
+			}
+		}
+	}
+
+	// Отрисовка пагинации с фильтрами
+	function renderFilteredPagination(type, currentPage, totalPages) {
+		const pagination = document.querySelector(`[data-type-pagination="${type}"]`);
+		if (!pagination) return;
+
+		let html = '';
+		const perPage = 6;
+
+		if (currentPage > 1) {
+			html += `<button onclick="changeFilteredPage('${type}', ${currentPage - 1})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px;"><i class="fas fa-chevron-left"></i></button>`;
+		}
+
+		for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+			if (i === currentPage) {
+				html += `<button style="padding: 8px 12px; border: 2px solid #2563eb; background: #2563eb; color: white; border-radius: 6px; font-weight: 600; font-size: 14px;">${i}</button>`;
+			} else {
+				html += `<button onclick="changeFilteredPage('${type}', ${i})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px;">${i}</button>`;
+			}
+		}
+
+		if (currentPage < totalPages) {
+			html += `<button onclick="changeFilteredPage('${type}', ${currentPage + 1})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px;"><i class="fas fa-chevron-right"></i></button>`;
+		}
+
+		pagination.innerHTML = html;
+	}
+
+	// Переключение страницы с учётом фильтров
+	function changeFilteredPage(type, page) {
+		const section = document.querySelector(`[data-type-section="${type}"]`);
+		if (!section) return;
+
+		const allCards = section.querySelectorAll('.apartment-card');
+		const filteredCards = Array.from(allCards).filter(card => card.dataset.filtered !== 'false');
+		const perPage = 6;
+		const start = (page - 1) * perPage;
+		const end = start + perPage;
+		const totalPages = Math.ceil(filteredCards.length / perPage);
+
+		// Скрываем все
+		allCards.forEach(card => card.style.display = 'none');
+
+		// Показываем нужные
+		filteredCards.slice(start, end).forEach(card => card.style.display = 'block');
+
+		// Обновляем пагинацию
+		renderFilteredPagination(type, page, totalPages);
+
+		// Прокрутка
+		section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+	}
+
+	// Инициализация слушателей фильтров - применение по Enter
+	document.addEventListener('DOMContentLoaded', function() {
+		const filterInputs = ['apt-area-from', 'apt-area-to', 'apt-floor-from', 'apt-floor-to', 'apt-price-from', 'apt-price-to'];
+		filterInputs.forEach(id => {
+			const el = document.getElementById(id);
+			if (el) {
+				el.addEventListener('keypress', function(e) {
+					if (e.key === 'Enter') {
+						applyApartmentFilters();
+					}
+				});
+			}
+		});
+	});
 
 	// Инициализация пагинации для типа квартир
 	function initializePagination(type) {
@@ -2054,7 +2392,7 @@
 	}
 
 	// Отображение страницы
-	function showPage(type, page, perPage) {
+	function showPage(type, page, perPage, shouldScroll = false) {
 		const section = document.querySelector(`[data-type-section="${type}"]`);
 		if (!section) return;
 
@@ -2070,8 +2408,10 @@
 			}
 		});
 
-		// Прокрутка к началу секции
-		section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+		// Прокрутка к началу секции (только при ручном переключении страниц)
+		if (shouldScroll) {
+			section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+		}
 	}
 
 	// Рендеринг кнопок пагинации
@@ -2160,7 +2500,7 @@
 		const totalPages = Math.ceil(cards.length / 6);
 
 		renderPagination(type, page, totalPages);
-		showPage(type, page, 6);
+		showPage(type, page, 6, true); // Прокрутка при ручном переключении
 	}
 
 	// Функции для галереи фото (как в каталоге)
@@ -2710,6 +3050,132 @@
 		box-shadow: 0 12px 32px rgba(190, 175, 135, 0.5);
 	}
 
+	/* Стили для дополнительных фильтров квартир */
+	.apartments-filters-wrapper {
+		margin-bottom: 24px;
+	}
+
+	.apartments-extra-filters {
+		display: flex;
+		gap: 16px;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		padding: 16px;
+		background: #f8fafc;
+		border-radius: 12px;
+		border: 1px solid #e5e7eb;
+	}
+
+	.apt-filter-group {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		min-width: 140px;
+	}
+
+	.apt-filter-label {
+		font-size: 13px;
+		font-weight: 500;
+		color: #6b7280;
+	}
+
+	.apt-filter-inputs {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.apt-filter-input {
+		width: 80px;
+		padding: 8px 12px;
+		border: 1px solid #d1d5db;
+		border-radius: 8px;
+		font-size: 14px;
+		color: #1f2937;
+		background: white;
+		transition: border-color 0.2s, box-shadow 0.2s;
+	}
+
+	.apt-filter-input:focus {
+		outline: none;
+		border-color: #2563eb;
+		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+	}
+
+	.apt-filter-input::placeholder {
+		color: #9ca3af;
+	}
+
+	.apt-filter-separator {
+		color: #9ca3af;
+		font-size: 14px;
+	}
+
+	.apt-filter-reset-btn {
+		padding: 8px 16px;
+		background: transparent;
+		border: 1px solid #d1d5db;
+		border-radius: 8px;
+		font-size: 13px;
+		font-weight: 500;
+		color: #6b7280;
+		cursor: pointer;
+		transition: all 0.2s;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		height: 38px;
+	}
+
+	.apt-filter-reset-btn:hover {
+		background: #f3f4f6;
+		border-color: #9ca3af;
+		color: #374151;
+	}
+
+	/* Сообщение "не найдено" */
+	.apt-no-results {
+		display: none;
+		padding: 40px 20px;
+		text-align: center;
+		color: #6b7280;
+		font-size: 15px;
+		background: #f9fafb;
+		border-radius: 12px;
+		margin-top: 16px;
+	}
+
+	.apt-no-results.visible {
+		display: block;
+	}
+
+	/* Кнопки действий фильтров */
+	.apt-filter-actions {
+		display: flex;
+		gap: 8px;
+		align-items: flex-end;
+	}
+
+	.apt-filter-apply-btn {
+		padding: 8px 20px;
+		background: #2563eb;
+		border: none;
+		border-radius: 8px;
+		font-size: 13px;
+		font-weight: 600;
+		color: white;
+		cursor: pointer;
+		transition: all 0.2s;
+		height: 38px;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.apt-filter-apply-btn:hover {
+		background: #1d4ed8;
+	}
+
 	@media (max-width: 768px) {
 		.apartments-grid {
 			grid-template-columns: 1fr !important;
@@ -2718,6 +3184,46 @@
 		.apartment-types-filter {
 			overflow-x: auto;
 			flex-wrap: nowrap !important;
+			-webkit-overflow-scrolling: touch;
+			padding-bottom: 4px;
+		}
+
+		/* Мобильная адаптация фильтров */
+		.apartments-extra-filters {
+			flex-direction: column;
+			gap: 12px;
+			padding: 12px;
+			overflow-x: hidden;
+		}
+
+		.apt-filter-group {
+			width: 100%;
+			min-width: unset;
+			box-sizing: border-box;
+		}
+
+		.apt-filter-inputs {
+			width: 100%;
+			box-sizing: border-box;
+		}
+
+		.apt-filter-input {
+			flex: 1;
+			width: 100%;
+			min-width: 0;
+			box-sizing: border-box;
+		}
+
+		.apt-filter-actions {
+			width: 100%;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.apt-filter-reset-btn,
+		.apt-filter-apply-btn {
+			width: 100%;
+			justify-content: center;
 		}
 
 		.apt-filter-btn {

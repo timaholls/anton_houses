@@ -673,6 +673,21 @@ def detail(request, complex_id):
                                         pass
                             
                             formatted_price_per_sqm = format_currency_per_sqm(price_per_sqm_raw)
+                            
+                            # Получаем этаж из floorMin/floorMax (как в каталоге)
+                            floor_min = apt.get('floorMin')
+                            floor_max = apt.get('floorMax')
+                            floor_value = apt.get('floor', '')
+                            if not floor_value and (floor_min is not None or floor_max is not None):
+                                if floor_min is not None and floor_max is not None:
+                                    if floor_min == floor_max:
+                                        floor_value = str(floor_min)
+                                    else:
+                                        floor_value = f"{floor_min}-{floor_max}"
+                                elif floor_min is not None:
+                                    floor_value = str(floor_min)
+                                elif floor_max is not None:
+                                    floor_value = str(floor_max)
 
                             apartment_variants.append({
                                 'id': str(apt_id),  # Добавляем ID квартиры
@@ -690,7 +705,7 @@ def detail(request, complex_id):
                                 'rooms': apt.get('rooms', ''),
                                 'area': area,  # Площадь из DomClick (приоритет над totalArea)
                                 'totalArea': apt.get('totalArea', '') or area,  # Для совместимости
-                                'floor': apt.get('floor', ''),
+                                'floor': floor_value,
                                 'pricePerSqm': apt.get('pricePerSqm', ''),
                                 'layout': apt.get('layout', ''),
                                 'balcony': apt.get('balcony', ''),
@@ -799,6 +814,21 @@ def detail(request, complex_id):
                                     pass
                         
                         formatted_price_per_sqm = format_currency_per_sqm(price_per_sqm_raw)
+                        
+                        # Получаем этаж из floorMin/floorMax (как в каталоге)
+                        floor_min = apt.get('floorMin')
+                        floor_max = apt.get('floorMax')
+                        floor_value = apt.get('floor', '')
+                        if not floor_value and (floor_min is not None or floor_max is not None):
+                            if floor_min is not None and floor_max is not None:
+                                if floor_min == floor_max:
+                                    floor_value = str(floor_min)
+                                else:
+                                    floor_value = f"{floor_min}-{floor_max}"
+                            elif floor_min is not None:
+                                floor_value = str(floor_min)
+                            elif floor_max is not None:
+                                floor_value = str(floor_max)
 
                         apartment_variants.append({
                             'id': str(apt_id),  # Добавляем ID квартиры
@@ -816,7 +846,7 @@ def detail(request, complex_id):
                             'rooms': apt.get('rooms', ''),
                             'area': area,  # Площадь из DomClick (приоритет над totalArea)
                             'totalArea': apt.get('totalArea', '') or area,  # Для совместимости
-                            'floor': apt.get('floor', ''),
+                            'floor': floor_value,
                             'pricePerSqm': apt.get('pricePerSqm', ''),
                             'layout': apt.get('layout', ''),
                             'balcony': apt.get('balcony', ''),

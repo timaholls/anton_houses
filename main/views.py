@@ -571,10 +571,10 @@ def catalog_api(request):
             
             filtered_records.append(record)
         
-        # Сортировка
+        # Сортировка - всегда по полю "от X млн"
         if sort == 'price_asc':
-            # Сортировка по возрастанию цены
-            def get_min_price(record):
+            # Сортировка по возрастанию цены (дешевле) - от меньшего "от" к большему
+            def get_price_from(record):
                 price_range = ''
                 if 'development' in record and 'avito' not in record:
                     price_range = record.get('development', {}).get('price_range', '')
@@ -582,14 +582,19 @@ def catalog_api(request):
                     price_range = record.get('avito', {}).get('development', {}).get('price_range', '')
                 
                 import re
-                price_match = re.search(r'от\s+([\d,]+)\s+млн', price_range.lower())
-                if price_match:
-                    return float(price_match.group(1).replace(',', '.'))
+                price_lower = price_range.lower()
+                
+                # Ищем только "от X млн"
+                price_match_from = re.search(r'от\s+([\d,]+)\s+млн', price_lower)
+                if price_match_from:
+                    return float(price_match_from.group(1).replace(',', '.'))
+                
+                # Если "от" не найдено - в конец списка
                 return float('inf')
-            filtered_records.sort(key=get_min_price)
+            filtered_records.sort(key=get_price_from)
         elif sort == 'price_desc':
-            # Сортировка по убыванию цены
-            def get_max_price(record):
+            # Сортировка по убыванию цены (дороже) - от большего "от" к меньшему
+            def get_price_from(record):
                 price_range = ''
                 if 'development' in record and 'avito' not in record:
                     price_range = record.get('development', {}).get('price_range', '')
@@ -597,11 +602,16 @@ def catalog_api(request):
                     price_range = record.get('avito', {}).get('development', {}).get('price_range', '')
                 
                 import re
-                price_match = re.search(r'до\s+([\d,]+)\s+млн', price_range.lower())
-                if price_match:
-                    return float(price_match.group(1).replace(',', '.'))
+                price_lower = price_range.lower()
+                
+                # Ищем только "от X млн"
+                price_match_from = re.search(r'от\s+([\d,]+)\s+млн', price_lower)
+                if price_match_from:
+                    return float(price_match_from.group(1).replace(',', '.'))
+                
+                # Если "от" не найдено - в начало списка (самые дорогие)
                 return 0
-            filtered_records.sort(key=get_max_price, reverse=True)
+            filtered_records.sort(key=get_price_from, reverse=True)
         elif sort == 'area_desc':
             # Сортировка по убыванию площади
             def get_max_area(record):
@@ -826,6 +836,8 @@ def apartments_api(request):
         rooms = request.GET.get('rooms', '').strip()
         area_from = request.GET.get('area_from', '').strip()
         area_to = request.GET.get('area_to', '').strip()
+        floor_from = request.GET.get('floor_from', '').strip()
+        floor_to = request.GET.get('floor_to', '').strip()
         price_from = request.GET.get('price_from', '').strip()
         price_to = request.GET.get('price_to', '').strip()
         delivery_quarter = request.GET.get('delivery_quarter', '').strip()
@@ -921,9 +933,11 @@ def apartments_api(request):
                 parameters = avito_dev.get('parameters', {})
                 apartment_types = complex_record.get('avito', {}).get('apartment_types', {})
             
-            # Проверяем срок сдачи
+            # Получаем срок сдачи
+            completion_date_str = parameters.get('Срок сдачи', '')
+            
+            # Проверяем срок сдачи для фильтрации
             if delivery_date_limit:
-                completion_date_str = parameters.get('Срок сдачи', '')
                 if completion_date_str:
                     import re
                     patterns = re.findall(r'(\d+)\s*кв\.\s*(\d{4})', completion_date_str)
@@ -1074,40 +1088,83 @@ def apartments_api(request):
                     else:
                         apartment_title = f'{apt_type}-комнатная квартира'
 
-                    # Определяем этаж: сначала используем явные поля, затем диапазоны, затем парсим title
-                    floor_value = apt.get('floor') or apt.get('floor_number')
+                    # Получаем этаж из полей floorMin и floorMax (добавлены скриптом миграции)
                     floor_min = apt.get('floorMin')
                     floor_max = apt.get('floorMax')
-
-                    def _format_floor(val):
-                        if val is None:
-                            return None
-                        if isinstance(val, (int, float)):
-                            if isinstance(val, float) and val.is_integer():
-                                val = int(val)
-                            return str(int(val))
-                        val_str = str(val).strip()
-                        return val_str or None
-
-                    if not floor_value:
-                        formatted_min = _format_floor(floor_min)
-                        formatted_max = _format_floor(floor_max)
-                        if formatted_min and formatted_max:
-                            floor_value = formatted_min if formatted_min == formatted_max else f"{formatted_min}-{formatted_max}"
-                        elif formatted_min:
-                            floor_value = formatted_min
-                        elif formatted_max:
-                            floor_value = formatted_max
-
-                    if not floor_value and title:
-                        import re
-                        floor_range_match = re.search(r'(\d+)-(\d+)\s*этаж', title)
-                        if floor_range_match:
-                            floor_value = f"{floor_range_match.group(1)}-{floor_range_match.group(2)}"
+                    
+                    # Формируем floor_value для отображения
+                    floor_value = None
+                    if floor_min is not None and floor_max is not None:
+                        if floor_min == floor_max:
+                            floor_value = str(floor_min)
                         else:
-                            floor_match = re.search(r'(\d+)/(\d+)\s*эт', title)
-                            if floor_match:
-                                floor_value = f"{floor_match.group(1)}/{floor_match.group(2)}"
+                            floor_value = f"{floor_min}-{floor_max}"
+                    elif floor_min is not None:
+                        floor_value = str(floor_min)
+                    elif floor_max is not None:
+                        floor_value = str(floor_max)
+                    
+                    # Фильтр по этажам (используем только floorMin и floorMax)
+                    # Логика: пользователь хочет квартиры, где ВСЕ варианты этажей попадают в диапазон
+                    # "ОТ 5" = минимальный этаж квартиры >= 5 (нет вариантов ниже 5)
+                    # "ДО 10" = максимальный этаж квартиры <= 10 (нет вариантов выше 10)
+                    if floor_from or floor_to:
+                        floor_passes_filter = False
+                        
+                        # Получаем значения фильтра
+                        filter_min = None
+                        filter_max = None
+                        
+                        try:
+                            if floor_from:
+                                filter_min = int(floor_from)
+                        except (ValueError, TypeError):
+                            pass
+                        
+                        try:
+                            if floor_to:
+                                filter_max = int(floor_to)
+                        except (ValueError, TypeError):
+                            pass
+                        
+                        if floor_min is not None and floor_max is not None:
+                            # У квартиры есть диапазон этажей (например 2-12)
+                            # Проверяем, что весь диапазон попадает в фильтр
+                            if filter_min is not None and filter_max is not None:
+                                # Оба значения фильтра заданы
+                                # Квартира проходит, если: floor_min >= filter_min AND floor_max <= filter_max
+                                if floor_min >= filter_min and floor_max <= filter_max:
+                                    floor_passes_filter = True
+                            elif filter_min is not None:
+                                # Только "от" задано: минимальный этаж квартиры >= filter_min
+                                if floor_min >= filter_min:
+                                    floor_passes_filter = True
+                            elif filter_max is not None:
+                                # Только "до" задано: максимальный этаж квартиры <= filter_max
+                                if floor_max <= filter_max:
+                                    floor_passes_filter = True
+                        elif floor_min is not None:
+                            # Только floor_min задан у квартиры (одиночный этаж или только минимум)
+                            passes = True
+                            if filter_min is not None and floor_min < filter_min:
+                                passes = False
+                            if filter_max is not None and floor_min > filter_max:
+                                passes = False
+                            floor_passes_filter = passes
+                        elif floor_max is not None:
+                            # Только floor_max задан у квартиры
+                            passes = True
+                            if filter_min is not None and floor_max < filter_min:
+                                passes = False
+                            if filter_max is not None and floor_max > filter_max:
+                                passes = False
+                            floor_passes_filter = passes
+                        else:
+                            # Если этаж не указан у квартиры, пропускаем её при фильтрации по этажам
+                            floor_passes_filter = False
+                        
+                        if not floor_passes_filter:
+                            continue  # Пропускаем эту квартиру
                     
                     # Формируем карточку квартиры
                     apartment_card = {
@@ -1128,6 +1185,7 @@ def apartments_api(request):
                         'photo': apartment_photo,
                         'latitude': complex_record.get('latitude'),
                         'longitude': complex_record.get('longitude'),
+                        'completion_date': completion_date_str,  # Срок сдачи
                     }
                     all_apartments.append(apartment_card)
         
