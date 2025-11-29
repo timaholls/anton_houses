@@ -13,8 +13,8 @@ from ..services.mongo_service import get_mongo_connection
 def not_recommended(request):
     """Страница с объектами, которые не рекомендуем (рейтинг < 3)"""
     return render(request, 'main/not_recommended.html', {
-        'page_title': 'Не рекомендуем',
-        'meta_title': 'Не рекомендуем - CENTURY 21',
+        'page_title': 'Рейтинг',
+        'meta_title': 'Рейтинг - CENTURY 21',
         'meta_description': 'Объекты недвижимости с низким рейтингом, которые мы не рекомендуем к покупке'
     })
 

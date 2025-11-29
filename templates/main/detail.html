@@ -957,11 +957,10 @@
 		<!-- Фильтры квартир -->
 		<div class="apartments-filters-wrapper">
 			<!-- Фильтр по типам (только существующие) -->
-			<div class="apartment-types-filter" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+			<div class="apartment-types-filter">
 				{% for type in complex.apartment_types %}
 				<button class="apt-filter-btn {% if forloop.first %}active{% endif %}" data-type="{{ type }}"
-					onclick="filterApartmentsByType('{{ type }}')"
-					style="padding: 10px 20px; border: 2px solid {% if forloop.first %}#2563eb{% else %}#e5e7eb{% endif %}; background: {% if forloop.first %}#2563eb{% else %}white{% endif %}; color: {% if forloop.first %}white{% else %}#374151{% endif %}; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.3s;">
+					onclick="filterApartmentsByType('{{ type }}')">
 					{% if type == 'Студия' %}Студия{% else %}{{type}}-комн{% endif %}
 				</button>
 				{% endfor %}
@@ -2520,8 +2519,6 @@
 			html += `<button onclick="applyApartmentFilters(${data.page + 1})" style="padding: 8px 12px; border: 1px solid #e5e7eb; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s;"><i class="fas fa-chevron-right"></i></button>`;
 		}
 		
-		// Информация о количестве
-		html += `<span style="margin-left: 12px; color: #6b7280; font-size: 13px;">(${data.total_count} кв.)</span>`;
 		
 		pagination.innerHTML = html;
 	}
@@ -3179,6 +3176,31 @@
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 	}
 
+	/* Кнопки типов квартир */
+	.apartment-types-filter {
+		display: flex;
+		gap: 12px;
+		margin-bottom: 16px;
+		flex-wrap: wrap;
+	}
+
+	.apt-filter-btn {
+		padding: 10px 20px;
+		border: 2px solid #e5e7eb;
+		background: white;
+		color: #374151;
+		border-radius: 8px;
+		cursor: pointer;
+		font-weight: 500;
+		transition: all 0.3s;
+	}
+
+	.apt-filter-btn.active {
+		background: #2563eb;
+		color: white;
+		border-color: #2563eb;
+	}
+
 	.apt-filter-btn:hover {
 		transform: translateY(-2px);
 	}
@@ -3450,11 +3472,19 @@
 			grid-template-columns: 1fr !important;
 		}
 
+		/* Кнопки типов квартир - переносятся на новую строку */
 		.apartment-types-filter {
-			overflow-x: auto;
-			flex-wrap: nowrap !important;
-			-webkit-overflow-scrolling: touch;
-			padding-bottom: 4px;
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 8px !important;
+			overflow-x: visible;
+			padding-bottom: 0;
+		}
+
+		.apt-filter-btn {
+			padding: 8px 14px !important;
+			font-size: 13px !important;
+			flex-shrink: 0;
 		}
 
 		/* Мобильная адаптация фильтров */
@@ -3493,10 +3523,6 @@
 		.apt-filter-apply-btn {
 			width: 100%;
 			justify-content: center;
-		}
-
-		.apt-filter-btn {
-			white-space: nowrap;
 		}
 	}
 

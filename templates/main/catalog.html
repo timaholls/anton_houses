@@ -923,6 +923,7 @@
 
                                 {% endif %}
 
+                                {% if dataset_type != 'secondary' %}
                                 <div class="filter-group" id="floor-filter-group" style="display: none;">
                                     <label>Этаж</label>
                                     <div class="range-container">
@@ -954,6 +955,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                {% endif %}
 
                                 <div class="filter-group">
                                     <label>Цена, ₽</label>
@@ -1107,10 +1109,12 @@
                     <!-- Кнопка фильтров в мобильной версии -->
                     <button type="button" class="mobile-filter-toggle" id="mobile-filter-open">Фильтры</button>
                     
+                    {% if dataset_type != 'secondary' %}
                     <div class="view-toggle-buttons">
                         <button type="button" class="view-btn active" data-view="map">Картой</button>
                         <button type="button" class="view-btn" data-view="list">Списком</button>
                     </div>
+                    {% endif %}
                     <div class="page-size-toggle">
                         <span>Элементов:</span>
                         <button type="button" class="page-size-btn" data-size="15" data-active="true">15</button>
@@ -1605,13 +1609,10 @@
                 if (!data.items || !data.items.length) {
                     grid.innerHTML = `
                     <div class="no-complexes-cta">
-                        <div class="no-complexes-icon">
-                            <span>🎧</span>
-                        </div>
-                        <h3>Подберём квартиру от застройщика</h3>
-                        <p>По вашему запросу ничего не найдено — оставьте заявку, менеджер предложит подходящие квартиры в других проектах.</p>
+                        <h3>Подберём варианты в других проектах</h3>
+                        <p>По вашему запросу ничего не найдено — оставьте заявку, менеджер предложит подходящие варианты в других проектах.</p>
                         <button type="button" class="no-complexes-btn anchor-feedback-btn">
-                            Подобрать квартиру
+                            Оставить заявку
                         </button>
                     </div>
                 `;
@@ -2218,7 +2219,16 @@
             }
 
             if (!apartments.length) {
-                grid.innerHTML = `
+                // Для вторичной недвижимости убираем иконку
+                const noResultsHtml = isSecondary ? `
+                <div class="no-complexes-cta">
+                    <h3>Подберём варианты в других проектах</h3>
+                    <p>По вашему запросу ничего не найдено — оставьте заявку, менеджер предложит подходящие варианты в других проектах.</p>
+                    <button type="button" class="no-complexes-btn anchor-feedback-btn">
+                        Оставить заявку
+                    </button>
+                </div>
+                ` : `
                 <div class="no-complexes-cta">
                     <div class="no-complexes-icon">
                         <span>🎧</span>
@@ -2229,7 +2239,8 @@
                         Подобрать квартиру
                     </button>
                 </div>
-            `;
+                `;
+                grid.innerHTML = noResultsHtml;
             } else {
                 // Используем тот же горизонтальный стиль, что и для ЖК
                 let html = '';
@@ -2748,14 +2759,10 @@
 
         // Обработка полей ввода "От" и "До" для площади и цены
         document.addEventListener('DOMContentLoaded', function () {
-            // Инициализация видимости фильтров этажей и площади для вторички
+            // Инициализация видимости фильтра площади для вторички (этаж убран)
             const isSecondaryPage = '{{ dataset_type }}' === 'secondary';
-            const floorFilterGroupInit = document.getElementById('floor-filter-group');
             const areaFilterGroupInit = document.getElementById('area-filter-group');
             if (isSecondaryPage) {
-                if (floorFilterGroupInit) {
-                    floorFilterGroupInit.style.display = 'block';
-                }
                 if (areaFilterGroupInit) {
                     areaFilterGroupInit.style.display = 'block';
                 }
@@ -4789,6 +4796,22 @@
                         if (!btn.classList.contains('page-size-btn')) {
                             btn.setAttribute('data-active', 'false');
                             btn.classList.remove('active');
+                        }
+                    });
+                    
+                    // Сбрасываем категорию объекта (для вторичной недвижимости)
+                    const stypeHidden = document.getElementById('stype-hidden');
+                    if (stypeHidden) {
+                        stypeHidden.value = '';
+                    }
+                    // Сбрасываем кнопки категории объекта
+                    document.querySelectorAll('.filter-chip-btn').forEach(btn => {
+                        btn.setAttribute('data-active', 'false');
+                        btn.classList.remove('active');
+                        // Активируем кнопку "Все"
+                        if (btn.getAttribute('data-value') === '') {
+                            btn.setAttribute('data-active', 'true');
+                            btn.classList.add('active');
                         }
                     });
                     

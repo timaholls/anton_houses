@@ -68,7 +68,7 @@
                            class="dropdown-item {% if 'all_offers' in request.resolver_match.url_name %}active{% endif %}">Все
                             акции</a>
                         <a href="{% url 'main:not_recommended' %}"
-                           class="dropdown-item {% if 'not_recommended' in request.resolver_match.url_name %}active{% endif %}">Не рекомендуем</a>
+                           class="dropdown-item {% if 'not_recommended' in request.resolver_match.url_name %}active{% endif %}">Рейтинг</a>
                     </div>
                 </div>
 
@@ -138,7 +138,7 @@
                     <a href="{% url 'main:future_complexes' %}" class="drawer-sublink">Будущие проекты</a>
                     <a href="{% url 'main:videos' %}" class="drawer-sublink">Видеообзоры</a>
                     <a href="{% url 'main:all_offers' %}" class="drawer-sublink">Все акции</a>
-                    <a href="{% url 'main:not_recommended' %}" class="drawer-sublink">Не рекомендуем</a>
+                    <a href="{% url 'main:not_recommended' %}" class="drawer-sublink">Рейтинг</a>
                 </div>
                 <a href="{% url 'main:articles' %}" class="drawer-link">Новости</a>
                 <a href="{% url 'main:mortgage' %}" class="drawer-link">Ипотека</a>
