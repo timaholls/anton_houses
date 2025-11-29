@@ -68,16 +68,17 @@
 
 .favorites-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 24px;
-    margin-top: 32px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 24px;
 }
 
 .favorite-card {
     background: #fff;
-    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
     cursor: pointer;
     text-decoration: none;
@@ -87,33 +88,174 @@
 
 .favorite-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
     text-decoration: none;
     color: inherit;
 }
 
-.favorite-card-image {
+/* Галерея изображений */
+.favorite-card-gallery {
+    position: relative;
     width: 100%;
-    height: 240px;
+    height: 280px;
+    overflow: hidden;
+    background: #f3f4f6;
+}
+
+.favorite-card-gallery .gallery-image {
+    width: 100%;
+    height: 100%;
     object-fit: contain;
-    background: #f8f9fa;
+    transition: opacity 0.3s ease;
+}
+
+.favorite-card-gallery .gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.favorite-card-gallery:hover .gallery-nav {
+    opacity: 1;
+}
+
+.favorite-card-gallery .gallery-nav:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.favorite-card-gallery .gallery-prev {
+    left: 10px;
+}
+
+.favorite-card-gallery .gallery-next {
+    right: 10px;
+}
+
+.favorite-card-gallery .gallery-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+}
+
+.favorite-card-gallery .gallery-dots .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.favorite-card-gallery .gallery-dots .dot.active {
+    background: rgba(255, 255, 255, 1);
+    width: 24px;
+    border-radius: 4px;
+}
+
+.favorite-card-gallery .gallery-dots .dot:hover {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.favorite-card-remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    color: #ef4444;
+    transition: all 0.2s ease;
+}
+
+.favorite-card-remove-btn:hover {
+    background: #fee;
+    transform: scale(1.1);
 }
 
 .favorite-card-content {
-    padding: 20px;
+    padding: 16px;
 }
 
 .favorite-card-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--c21-dark);
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
     margin: 0 0 8px 0;
 }
 
-.favorite-card-location {
-    color: #666;
+.favorite-card-price {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2563eb;
+    margin-bottom: 4px;
+}
+
+.favorite-card-price-per-m {
     font-size: 14px;
-    margin-bottom: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.favorite-card-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 16px;
+    margin: 12px 0;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.favorite-card-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.favorite-card-detail-item .detail-label {
+    font-size: 11px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.favorite-card-detail-item .detail-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.favorite-card-location {
+    color: #6b7280;
+    font-size: 14px;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -121,32 +263,75 @@
 
 .favorite-card-location i {
     color: var(--c21-gold);
+    font-size: 12px;
 }
 
-.favorite-card-price {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--c21-gold);
-    margin-top: 12px;
-}
-
-.favorite-card-remove {
-    margin-top: 12px;
-    padding: 8px 16px;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
+.favorite-card-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #beaf87 0%, #d4af37 100%);
+    color: #1f2937;
+    text-decoration: none;
     border-radius: 8px;
-    color: #666;
     font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(190, 175, 135, 0.3);
+    border: none;
     cursor: pointer;
-    transition: all 0.2s ease;
     width: 100%;
 }
 
+.favorite-card-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(190, 175, 135, 0.4);
+}
+
+.favorite-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.favorite-card-actions .favorite-card-link {
+    flex: 1;
+}
+
+.favorite-card-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
 .favorite-card-remove:hover {
-    background: #fee;
-    border-color: #e74c3c;
-    color: #e74c3c;
+    background: #fef2f2;
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+@media (max-width: 768px) {
+    .favorite-card-gallery {
+        height: 240px;
+    }
+    
+    .favorite-card-gallery .gallery-nav {
+        opacity: 1;
+        width: 32px;
+        height: 32px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -156,7 +341,7 @@
     }
     
     .favorites-header h1 {
-        font-size: 2rem;
+        font-size: 1.75rem;
     }
 }
 
@@ -332,15 +517,28 @@
 }
 
 /* Стили для фильтров */
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
 .filter-btn[data-active="true"] {
     background: #d4a574 !important;
-    color: #fff !important;
+    color: #ffffff !important;
     border-color: #d4a574 !important;
 }
 
-.filter-btn:hover {
-    border-color: #d4a574 !important;
-    color: #d4a574 !important;
+.filter-btn[data-active="false"]:hover {
+    border-color: #d4a574;
+    color: #d4a574;
+    background: #fff;
 }
 
 .catalog-filters {
@@ -348,22 +546,33 @@
 }
 
 .favorites-filters-box {
-    padding: 20px;
+    padding: 24px;
     background: #f8f9fa;
     border-radius: 12px;
 }
 
-.favorites-filters-grid {
+/* Первая строка: комнаты */
+.favorites-filters-row-rooms {
+    margin-bottom: 20px;
+}
+
+/* Вторая строка: этаж, цена, жк в три колонки */
+.favorites-filters-row-inputs {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.favorites-filter-group {
+    width: 100%;
+    min-width: 0;
 }
 
 .favorites-filter-group label {
     display: block;
     margin-bottom: 8px;
-    font-weight: 600;
-    color: #374151;
+    font-weight: 500;
+    color: #1f2937;
     font-size: 14px;
 }
 
@@ -373,33 +582,116 @@
     gap: 8px;
 }
 
-.favorites-price-inputs {
+/* Стили для range-inputs как в детальной странице */
+.favorites-range-container {
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+.favorites-range-input-group {
     display: flex;
-    gap: 8px;
-    align-items: center;
+    gap: 12px;
 }
 
-.favorites-price-inputs span {
-    color: #9ca3af;
-}
-
-.favorites-price-inputs input {
+.favorites-range-input-wrapper {
     flex: 1;
-    padding: 8px 12px;
+}
+
+.favorites-range-input {
+    width: 100%;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 14px;
+    border-radius: 12px;
     background: #fff;
+    padding: 12px 14px;
+    font-size: 14px;
+    color: #111827;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.favorites-range-input:focus {
+    outline: none;
+    border-color: #bcaf87;
+    box-shadow: 0 0 0 3px rgba(188, 175, 135, 0.15);
+}
+
+.favorites-range-input::placeholder {
+    color: #9ca3af;
 }
 
 .favorites-select {
     width: 100%;
-    padding: 8px 12px;
+    padding: 12px 14px;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 14px;
     background: #fff;
     cursor: pointer;
+    color: #111827;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.favorites-select:focus {
+    outline: none;
+    border-color: #bcaf87;
+    box-shadow: 0 0 0 3px rgba(188, 175, 135, 0.15);
+}
+
+/* Кнопки действий фильтров */
+.favorites-filters-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.favorites-reset-btn {
+    padding: 12px 20px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    color: #1f2937;
+    font-weight: 600;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.favorites-reset-btn:hover {
+    border-color: #bcaf87;
+    background: #fff;
+    color: #111827;
+    box-shadow: 0 0 0 3px rgba(188, 175, 135, 0.15);
+}
+
+.favorites-apply-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--c21-gold) 0%, var(--c21-gold-dark) 100%);
+    color: var(--c21-dark);
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(190, 175, 135, 0.3);
+}
+
+.favorites-apply-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(190, 175, 135, 0.4);
+}
+
+@media (max-width: 992px) {
+    .favorites-filters-row-inputs {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 @media (max-width: 768px) {
@@ -410,23 +702,26 @@
     
     .favorites-filters-box {
         border-radius: 0;
+        padding: 16px;
     }
     
-    .favorites-filters-grid {
+    .favorites-filters-row-inputs {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
     
     .favorites-filter-buttons {
         justify-content: flex-start;
     }
     
-    .favorites-price-inputs {
+    .favorites-filters-actions {
         flex-direction: column;
-        align-items: stretch;
     }
     
-    .favorites-price-inputs span {
-        text-align: center;
+    .favorites-reset-btn,
+    .favorites-apply-btn {
+        width: 100%;
+        justify-content: center;
     }
 }
 </style>
@@ -463,8 +758,8 @@
         
         <!-- Фильтры -->
         <div class="catalog-filters favorites-filters-box" id="favorites-filters" style="display: none;">
-            <div class="favorites-filters-grid">
-                <!-- Фильтр по комнатам -->
+            <!-- Первая строка: комнаты -->
+            <div class="favorites-filters-row-rooms">
                 <div class="filter-group favorites-filter-group">
                     <label>Количество комнат</label>
                     <div class="button-filter favorites-filter-buttons">
@@ -476,14 +771,57 @@
                         <button type="button" class="filter-btn favorites-rooms-filter-btn" data-value="4" data-active="false">4+</button>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Вторая строка: этаж, цена, жк -->
+            <div class="favorites-filters-row-inputs">
+                <!-- Фильтр по этажу -->
+                <div class="filter-group favorites-filter-group">
+                    <label>Этаж</label>
+                    <div class="favorites-range-container">
+                        <div class="favorites-range-input-group">
+                            <div class="favorites-range-input-wrapper">
+                                <input type="number" 
+                                       id="favorites-floor-from" 
+                                       class="favorites-range-input"
+                                       placeholder="От" 
+                                       min="1" 
+                                       step="1" 
+                                       inputmode="numeric">
+                            </div>
+                            <div class="favorites-range-input-wrapper">
+                                <input type="number" 
+                                       id="favorites-floor-to" 
+                                       class="favorites-range-input"
+                                       placeholder="До" 
+                                       min="1" 
+                                       step="1" 
+                                       inputmode="numeric">
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Фильтр по цене -->
                 <div class="filter-group favorites-filter-group">
                     <label>Цена, ₽</label>
-                    <div class="favorites-price-inputs">
-                        <input type="text" id="favorites-price-from" placeholder="От" inputmode="numeric">
-                        <span>—</span>
-                        <input type="text" id="favorites-price-to" placeholder="До" inputmode="numeric">
+                    <div class="favorites-range-container">
+                        <div class="favorites-range-input-group">
+                            <div class="favorites-range-input-wrapper">
+                                <input type="text" 
+                                       id="favorites-price-from" 
+                                       class="favorites-range-input"
+                                       placeholder="От" 
+                                       inputmode="numeric">
+                            </div>
+                            <div class="favorites-range-input-wrapper">
+                                <input type="text" 
+                                       id="favorites-price-to" 
+                                       class="favorites-range-input"
+                                       placeholder="До" 
+                                       inputmode="numeric">
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -494,6 +832,17 @@
                         <option value="">Все ЖК</option>
                     </select>
                 </div>
+            </div>
+            
+            <!-- Кнопки действий -->
+            <div class="favorites-filters-actions">
+                <button type="button" class="favorites-reset-btn" id="favorites-reset-btn">
+                    Сбросить
+                </button>
+                <button type="button" class="favorites-apply-btn" id="favorites-apply-btn">
+                    <i class="fas fa-check"></i>
+                    Применить
+                </button>
             </div>
         </div>
         
@@ -534,6 +883,8 @@
 // Глобальные переменные для фильтрации
 let allFavoriteItems = [];
 let favoritesRoomsFilter = '';
+let favoritesFloorFrom = '';
+let favoritesFloorTo = '';
 let favoritesPriceFrom = '';
 let favoritesPriceTo = '';
 let favoritesComplexFilter = '';
@@ -792,6 +1143,43 @@ function applyFavoritesFilters(items) {
         });
     }
     
+    // Фильтр по этажу (только для квартир)
+    // floorMin = этаж квартиры (например 8 в "8/23")
+    // "от X" = этаж квартиры >= X
+    // "до Y" = этаж квартиры <= Y
+    if (favoritesFloorFrom || favoritesFloorTo) {
+        filtered = filtered.filter(item => {
+            if (item.type !== 'apartment') return true; // ЖК пропускаем
+            const apt = item.apartment;
+            
+            // Получаем этаж квартиры
+            let floorNum = null;
+            if (apt.floorMin !== undefined && apt.floorMin !== null) {
+                floorNum = parseInt(apt.floorMin);
+            } else if (apt.floor) {
+                // Парсим формат "8/23" или "8-23" или просто "8"
+                const floorStr = String(apt.floor);
+                const match = floorStr.match(/^(\d+)/);
+                if (match) {
+                    floorNum = parseInt(match[1]);
+                }
+            }
+            
+            if (floorNum === null || isNaN(floorNum)) return false;
+            
+            const floorFromNum = favoritesFloorFrom ? parseInt(favoritesFloorFrom) : null;
+            const floorToNum = favoritesFloorTo ? parseInt(favoritesFloorTo) : null;
+            
+            if (floorFromNum !== null && floorNum < floorFromNum) {
+                return false;
+            }
+            if (floorToNum !== null && floorNum > floorToNum) {
+                return false;
+            }
+            return true;
+        });
+    }
+    
     // Фильтр по цене (только для квартир)
     if (favoritesPriceFrom || favoritesPriceTo) {
         filtered = filtered.filter(item => {
@@ -877,6 +1265,30 @@ function initFavoritesFilters() {
         return value.replace(/\s/g, '').trim();
     }
     
+    // Обработчики полей этажа
+    const floorFrom = document.getElementById('favorites-floor-from');
+    const floorTo = document.getElementById('favorites-floor-to');
+    
+    if (floorFrom) {
+        floorFrom.addEventListener('input', function() {
+            favoritesFloorFrom = this.value.trim();
+            if (allFavoriteItems.length > 0) {
+                const filtered = applyFavoritesFilters(allFavoriteItems);
+                renderFavorites(filtered);
+            }
+        });
+    }
+    
+    if (floorTo) {
+        floorTo.addEventListener('input', function() {
+            favoritesFloorTo = this.value.trim();
+            if (allFavoriteItems.length > 0) {
+                const filtered = applyFavoritesFilters(allFavoriteItems);
+                renderFavorites(filtered);
+            }
+        });
+    }
+    
     // Обработчики полей цены
     const priceFrom = document.getElementById('favorites-price-from');
     const priceTo = document.getElementById('favorites-price-to');
@@ -936,6 +1348,50 @@ function initFavoritesFilters() {
     if (complexFilter) {
         complexFilter.addEventListener('change', function() {
             favoritesComplexFilter = this.value || '';
+            if (allFavoriteItems.length > 0) {
+                const filtered = applyFavoritesFilters(allFavoriteItems);
+                renderFavorites(filtered);
+            }
+        });
+    }
+    
+    // Обработчик кнопки "Сбросить"
+    const resetBtn = document.getElementById('favorites-reset-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            // Сбрасываем все фильтры
+            favoritesRoomsFilter = '';
+            favoritesFloorFrom = '';
+            favoritesFloorTo = '';
+            favoritesPriceFrom = '';
+            favoritesPriceTo = '';
+            favoritesComplexFilter = '';
+            
+            // Сбрасываем UI кнопок комнат
+            document.querySelectorAll('.favorites-rooms-filter-btn').forEach(b => {
+                b.setAttribute('data-active', b.getAttribute('data-value') === '' ? 'true' : 'false');
+            });
+            
+            // Сбрасываем поля ввода
+            if (floorFrom) floorFrom.value = '';
+            if (floorTo) floorTo.value = '';
+            if (priceFrom) priceFrom.value = '';
+            if (priceTo) priceTo.value = '';
+            if (complexFilter) complexFilter.value = '';
+            
+            // Применяем фильтры (покажет все)
+            if (allFavoriteItems.length > 0) {
+                const filtered = applyFavoritesFilters(allFavoriteItems);
+                renderFavorites(filtered);
+            }
+        });
+    }
+    
+    // Обработчик кнопки "Применить"
+    const applyBtn = document.getElementById('favorites-apply-btn');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', function() {
+            // Применяем фильтры
             if (allFavoriteItems.length > 0) {
                 const filtered = applyFavoritesFilters(allFavoriteItems);
                 renderFavorites(filtered);
@@ -1007,13 +1463,41 @@ function findApartmentInComplex(complexData, apartmentId) {
 function renderFavoriteCard(item) {
     if (item.type === 'complex') {
         const complex = item.data;
-        const image = complex.photos && complex.photos.length > 0 ? complex.photos[0] : '/static/images/placeholder.png';
+        const photos = complex.photos && complex.photos.length > 0 ? complex.photos : ['/static/images/placeholder.png'];
         const name = complex.name || 'Жилой комплекс';
         const address = complex.address || '';
         
+        // Генерируем HTML для галереи
+        let galleryHtml = '';
+        if (photos.length > 0) {
+            galleryHtml = photos.map((photo, idx) => `
+                <img src="${photo}" 
+                     alt="${escapeHtml(name)}" 
+                     class="gallery-image" 
+                     style="display: ${idx === 0 ? 'block' : 'none'};"
+                     onerror="this.src='/static/images/placeholder.png'">
+            `).join('');
+            
+            if (photos.length > 1) {
+                galleryHtml += `
+                    <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeFavImage(this, -1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="gallery-nav gallery-next" onclick="event.stopPropagation(); changeFavImage(this, 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <div class="gallery-dots">
+                        ${photos.map((_, idx) => `<span class="dot ${idx === 0 ? 'active' : ''}" onclick="event.stopPropagation(); setFavImage(this, ${idx})"></span>`).join('')}
+                    </div>
+                `;
+            }
+        }
+        
         return `
             <div class="favorite-card" onclick="window.open('/complex/${item.id}/', '_blank');">
-                <img src="${image}" alt="${name}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
+                <div class="favorite-card-gallery">
+                    ${galleryHtml}
+                </div>
                 <div class="favorite-card-content">
                     <h3 class="favorite-card-title">${escapeHtml(name)}</h3>
                     ${address ? `
@@ -1022,9 +1506,16 @@ function renderFavoriteCard(item) {
                             <span>${escapeHtml(address)}</span>
                         </div>
                     ` : ''}
-                    <button class="favorite-card-remove" onclick="event.stopPropagation(); removeComplexFromFavorites('${item.id}'); loadFavorites(); updateFavoritesCount();">
-                        <i class="far fa-trash-alt"></i> Удалить из избранного
-                    </button>
+                    <div class="favorite-card-actions">
+                        <button class="favorite-card-link" onclick="event.stopPropagation(); window.open('/complex/${item.id}/', '_blank');">
+                            <i class="fas fa-eye"></i>
+                            Подробнее
+                        </button>
+                        <button class="favorite-card-remove" onclick="event.stopPropagation(); removeComplexFromFavorites('${item.id}'); loadFavorites(); updateFavoritesCount(); updateClearFavoritesBtnVisibility();">
+                            <i class="far fa-trash-alt"></i>
+                            Удалить
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -1033,24 +1524,37 @@ function renderFavoriteCard(item) {
         const complex = item.complexData;
         const complexName = complex.name || 'Жилой комплекс';
         
-        // Получаем изображение квартиры
-        let image = '/static/images/placeholder.png';
-        if (apt.photos && Array.isArray(apt.photos) && apt.photos.length > 0) {
-            image = apt.photos[0];
-        } else if (apt.layout_photos && Array.isArray(apt.layout_photos) && apt.layout_photos.length > 0) {
-            image = apt.layout_photos[0];
+        // Получаем все изображения квартиры
+        let photos = [];
+        if (apt.layout_photos && Array.isArray(apt.layout_photos) && apt.layout_photos.length > 0) {
+            photos = apt.layout_photos;
+        } else if (apt.photos && Array.isArray(apt.photos) && apt.photos.length > 0) {
+            photos = apt.photos;
         } else if (apt.image) {
             if (Array.isArray(apt.image) && apt.image.length > 0) {
-                image = apt.image[0];
+                photos = apt.image;
             } else if (typeof apt.image === 'string') {
-                image = apt.image;
+                photos = [apt.image];
             }
+        }
+        if (photos.length === 0) {
+            photos = ['/static/images/placeholder.png'];
         }
         
         // Формируем заголовок
         let title = apt.title || '';
         if (!title && apt.rooms) {
-            title = `${apt.rooms}-комнатная квартира`;
+            const roomsStr = String(apt.rooms).toLowerCase();
+            if (roomsStr === 'студия' || roomsStr === 'studio' || roomsStr === '0') {
+                title = 'Студия';
+            } else {
+                title = `${apt.rooms}-комнатная квартира`;
+            }
+            if (apt.area) {
+                title += `, ${apt.area} м²`;
+            }
+        } else if (!title && apt.area) {
+            title = `Квартира, ${apt.area} м²`;
         } else if (!title) {
             title = 'Квартира';
         }
@@ -1058,35 +1562,112 @@ function renderFavoriteCard(item) {
         // Получаем цену
         const price = apt.price || '';
         
-        // Формируем площадь
-        let areaText = '';
-        if (apt.area) {
-            areaText = `${apt.area} м²`;
+        // Цена за м²
+        let pricePerSqm = '';
+        if (apt.formatted_price_per_sqm) {
+            pricePerSqm = apt.formatted_price_per_sqm;
+        } else if (apt.price_per_square) {
+            pricePerSqm = apt.price_per_square;
+        } else if (apt.pricePerSqm) {
+            pricePerSqm = Math.round(apt.pricePerSqm).toLocaleString('ru-RU') + ' ₽/м²';
         }
         
-        // Формируем этаж
-        let floorText = '';
-        if (apt.floor) {
-            floorText = `${apt.floor} этаж`;
+        // Площадь
+        const area = apt.area || apt.totalArea || '';
+        
+        // Этаж - проверяем разные поля
+        let floor = apt.floor || apt.floorMin || '';
+        if (!floor && apt.floorMin !== undefined) {
+            floor = apt.floorMin;
+            if (apt.floorMax && apt.floorMax !== apt.floorMin) {
+                floor = `${apt.floorMin}-${apt.floorMax}`;
+            }
+        }
+        
+        // Срок сдачи - проверяем разные поля
+        const completionDate = apt.completion_date || apt.completionDate || apt.delivery_date || apt.deliveryDate || complex.completion_date || '';
+        
+        // Генерируем HTML для галереи
+        let galleryHtml = '';
+        if (photos.length > 0) {
+            galleryHtml = photos.map((photo, idx) => `
+                <img src="${photo}" 
+                     alt="${escapeHtml(title)}" 
+                     class="gallery-image" 
+                     style="display: ${idx === 0 ? 'block' : 'none'};"
+                     onerror="this.src='/static/images/placeholder.png'">
+            `).join('');
+            
+            if (photos.length > 1) {
+                galleryHtml += `
+                    <button class="gallery-nav gallery-prev" onclick="event.stopPropagation(); changeFavImage(this, -1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="gallery-nav gallery-next" onclick="event.stopPropagation(); changeFavImage(this, 1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <div class="gallery-dots">
+                        ${photos.map((_, idx) => `<span class="dot ${idx === 0 ? 'active' : ''}" onclick="event.stopPropagation(); setFavImage(this, ${idx})"></span>`).join('')}
+                    </div>
+                `;
+            }
+        }
+        
+        // Детали квартиры
+        let detailsHtml = '';
+        if (area || floor || completionDate) {
+            detailsHtml = '<div class="favorite-card-details">';
+            if (area) {
+                detailsHtml += `
+                    <div class="favorite-card-detail-item">
+                        <span class="detail-label">Площадь</span>
+                        <span class="detail-value">${escapeHtml(String(area))} м²</span>
+                    </div>
+                `;
+            }
+            if (floor) {
+                detailsHtml += `
+                    <div class="favorite-card-detail-item">
+                        <span class="detail-label">Этаж</span>
+                        <span class="detail-value">${escapeHtml(String(floor))}</span>
+                    </div>
+                `;
+            }
+            if (completionDate) {
+                detailsHtml += `
+                    <div class="favorite-card-detail-item" style="grid-column: span 2;">
+                        <span class="detail-label">Срок сдачи</span>
+                        <span class="detail-value">${escapeHtml(String(completionDate))}</span>
+                    </div>
+                `;
+            }
+            detailsHtml += '</div>';
         }
         
         return `
             <div class="favorite-card" onclick="window.open('/apartment/${item.complexId}/${item.apartmentId}/?from=favorites', '_blank');">
-                <img src="${image}" alt="${escapeHtml(title)}" class="favorite-card-image" onerror="this.src='/static/images/placeholder.png'">
+                <div class="favorite-card-gallery">
+                    ${galleryHtml}
+                </div>
                 <div class="favorite-card-content">
                     <h3 class="favorite-card-title">${escapeHtml(title)}</h3>
-                    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
-                        ${areaText ? `<div style="color: #666; font-size: 14px; display: flex; align-items: center; gap: 4px;"><i class="fas fa-expand-arrows-alt" style="font-size: 12px;"></i><span>${escapeHtml(areaText)}</span></div>` : ''}
-                        ${floorText ? `<div style="color: #666; font-size: 14px; display: flex; align-items: center; gap: 4px;"><i class="fas fa-layer-group" style="font-size: 12px;"></i><span>${escapeHtml(floorText)}</span></div>` : ''}
-                    </div>
                     <div class="favorite-card-location">
                         <i class="fas fa-map-marker-alt"></i>
                         <span>${escapeHtml(complexName)}</span>
                     </div>
                     ${price ? `<div class="favorite-card-price">${escapeHtml(formatPrice(price))}</div>` : ''}
-                    <button class="favorite-card-remove" onclick="event.stopPropagation(); removeApartmentFromFavorites('${item.complexId}', '${item.apartmentId}'); loadFavorites(); updateFavoritesCount();">
-                        <i class="far fa-trash-alt"></i> Удалить из избранного
-                    </button>
+                    ${pricePerSqm ? `<div class="favorite-card-price-per-m">${escapeHtml(pricePerSqm)}</div>` : ''}
+                    ${detailsHtml}
+                    <div class="favorite-card-actions">
+                        <button class="favorite-card-link" onclick="event.stopPropagation(); window.open('/apartment/${item.complexId}/${item.apartmentId}/?from=favorites', '_blank');">
+                            <i class="fas fa-eye"></i>
+                            Подробнее
+                        </button>
+                        <button class="favorite-card-remove" onclick="event.stopPropagation(); removeApartmentFromFavorites('${item.complexId}', '${item.apartmentId}'); loadFavorites(); updateFavoritesCount(); updateClearFavoritesBtnVisibility();">
+                            <i class="far fa-trash-alt"></i>
+                            Удалить
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -1098,6 +1679,46 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Функции для галереи изображений
+function changeFavImage(btn, direction) {
+    const gallery = btn.closest('.favorite-card-gallery');
+    const images = gallery.querySelectorAll('.gallery-image');
+    const dots = gallery.querySelectorAll('.dot');
+    
+    let currentIndex = 0;
+    images.forEach((img, idx) => {
+        if (img.style.display !== 'none') {
+            currentIndex = idx;
+        }
+    });
+    
+    let newIndex = currentIndex + direction;
+    if (newIndex < 0) newIndex = images.length - 1;
+    if (newIndex >= images.length) newIndex = 0;
+    
+    images.forEach((img, idx) => {
+        img.style.display = idx === newIndex ? 'block' : 'none';
+    });
+    
+    dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === newIndex);
+    });
+}
+
+function setFavImage(dot, index) {
+    const gallery = dot.closest('.favorite-card-gallery');
+    const images = gallery.querySelectorAll('.gallery-image');
+    const dots = gallery.querySelectorAll('.dot');
+    
+    images.forEach((img, idx) => {
+        img.style.display = idx === index ? 'block' : 'none';
+    });
+    
+    dots.forEach((d, idx) => {
+        d.classList.toggle('active', idx === index);
+    });
 }
 
 function formatPrice(price) {

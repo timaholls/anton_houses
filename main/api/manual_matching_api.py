@@ -3866,7 +3866,19 @@ def get_client_catalog_apartments(request):
                     # Извлекаем данные
                     title = apt.get('title', '')
                     rooms = apt.get('rooms', '')
+                    
+                    # Этаж - проверяем разные поля (floorMin, floorMax, floor)
                     floor = apt.get('floor', '')
+                    floor_min = apt.get('floorMin')
+                    floor_max = apt.get('floorMax')
+                    
+                    # Если есть floorMin, используем его
+                    if floor_min is not None:
+                        if floor_max is not None and floor_max != floor_min:
+                            floor = f"{floor_min}/{floor_max}"
+                        else:
+                            floor = str(floor_min)
+                    
                     area = apt.get('area') or apt.get('totalArea', '')
                     price = apt.get('price', '')
                     price_per_sqm = apt.get('pricePerSquare', '') or apt.get('pricePerSqm', '')
@@ -3896,6 +3908,9 @@ def get_client_catalog_apartments(request):
                             if area_match:
                                 area = area_match.group(1).replace(',', '.')
                     
+                    # Срок сдачи - проверяем разные поля
+                    completion_date = apt.get('completionDate', '') or apt.get('completion_date', '') or apt.get('deliveryDate', '') or apt.get('delivery_date', '')
+                    
                     all_apartments.append({
                         'id': apt_id,  # Используем generated_id в формате complex_id_type_index
                         'complex_id': complex_id,
@@ -3907,12 +3922,14 @@ def get_client_catalog_apartments(request):
                         'rooms': rooms,
                         'area': area,
                         'floor': floor,
+                        'floorMin': floor_min,
+                        'floorMax': floor_max,
                         'price': price,
                         'price_per_sqm': price_per_sqm,
                         'image': layout_photos[0] if layout_photos else '',
                         'images': layout_photos,
                         'url': apt.get('url', ''),
-                        'completion_date': apt.get('completionDate', ''),
+                        'completion_date': completion_date,
                     })
         
         # Группируем по ЖК для отладки
