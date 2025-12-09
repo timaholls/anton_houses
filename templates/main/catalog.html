@@ -58,7 +58,7 @@
         }
 
         .catalog-card-media {
-            width: 360px;
+            width: 320px; /* уменьшили блок фото */
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
@@ -76,14 +76,13 @@
         .catalog-card-main-image img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            object-position: center;
             display: block;
         }
 
         .catalog-card-thumbs {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+            display: none; /* скрываем нижние миниатюры */
         }
 
         .catalog-thumb {
@@ -172,6 +171,266 @@
             color: #111827;
         }
 
+        .catalog-card-detail-list .catalog-detail-item {
+            gap: 2px;
+        }
+
+        .catalog-card-detail-list .catalog-detail-item span,
+        .catalog-card-detail-list .catalog-detail-item strong,
+        .compact-card-title {
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        /* Режим компактного списка (как на скриншоте) */
+        .catalog-grid.list-mode {
+            display: flex !important;
+            flex-direction: column;
+            gap: 12px !important;
+        }
+
+        .catalog-list-row {
+            display: grid;
+            grid-template-columns: 90px 1fr auto;
+            column-gap: 12px;
+            row-gap: 6px;
+            align-items: center;
+            padding: 14px 16px;
+            border: 1px solid rgba(188, 175, 135, 0.4);
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+        }
+
+        .catalog-list-thumb {
+            width: 90px;
+            height: 72px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f5f5f7;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .catalog-list-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .catalog-list-main {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+            cursor: pointer;
+        }
+
+        .catalog-list-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1f2937;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .catalog-list-meta {
+            font-size: 13px;
+            color: #6b7280;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .catalog-list-price {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-end;
+            position: relative;
+        }
+
+        .catalog-list-price .price-main {
+            font-weight: 700;
+            color: #111827;
+            font-size: 16px;
+        }
+
+        .catalog-list-price .price-sub {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .catalog-list-fav {
+            position: relative;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            color: #bcaf87;
+            cursor: pointer;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            transition: all 0.2s ease;
+        }
+
+        .catalog-list-fav .fas {
+            color: #bcaf87;
+            font-size: 14px;
+        }
+
+        .catalog-list-fav:hover {
+            background: #fff;
+            transform: scale(1.06);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+        }
+
+        .catalog-list-fav.favorite-active i,
+        .catalog-list-fav:hover i {
+            color: #e74c3c;
+        }
+
+        .layout-toggle {
+            display: inline-flex;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-left: 12px;
+        }
+
+        .layout-toggle-btn {
+            border: none;
+            background: #fff;
+            padding: 8px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: #4b5563;
+        }
+
+        .layout-toggle-btn + .layout-toggle-btn {
+            border-left: 1px solid #d1d5db;
+        }
+
+        .layout-toggle-btn.active {
+            background: #f3f4f6;
+            color: #111827;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .catalog-list-row {
+                grid-template-columns: 80px 1fr;
+                grid-template-rows: auto auto;
+                gap: 8px;
+            }
+
+            .catalog-list-price {
+                grid-column: 1 / -1;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+
+        /* Карта в модальном окне */
+        .map-modal-trigger {
+            display: block;
+            width: 100%;
+            margin: 0 0 24px;
+            padding: 14px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fff;
+            font-weight: 600;
+            color: #1f2937;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .map-modal-trigger:hover {
+            background: #f9fafb;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .map-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 12000; /* выше шапки, чата и избранного */
+        }
+
+        .map-modal-overlay.open {
+            display: flex;
+        }
+
+        .map-modal-content {
+            position: relative;
+            width: min(1100px, 96vw);
+            height: clamp(60vh, calc(100vh - 80px), 90vh);
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
+        }
+
+        #map-modal {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+            z-index: 6000; /* выше слоев карты, контролов и шапки */
+            touch-action: manipulation;
+        }
+
+        .map-modal-close i {
+            font-size: 16px;
+            color: #111827;
+        }
+
+        @media (max-width: 900px) {
+            .map-modal-content {
+                width: 100%;
+                height: clamp(60vh, calc(100vh - 32px), 88vh);
+                border-radius: 12px;
+            }
+
+            .map-modal-trigger {
+                margin-bottom: 16px;
+            }
+        }
+
         .gallery-nav {
             position: absolute;
             top: 50%;
@@ -206,6 +465,44 @@
 
         .gallery-next {
             right: 10px;
+        }
+
+        /* Стрелки в карточке каталога */
+        .catalog-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 5;
+        }
+
+        .catalog-nav-btn:hover {
+            background: #fff;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .catalog-nav-btn.prev {
+            left: 10px;
+        }
+
+        .catalog-nav-btn.next {
+            right: 10px;
+        }
+
+        /* Чтобы стрелки позиционировались относительно фото */
+        .catalog-card-media {
+            position: relative;
         }
 
         .gallery-dots {
@@ -301,6 +598,19 @@
             .catalog-grid {
                 grid-template-columns: 1fr !important;
                 gap: 12px !important;
+            }
+
+            .catalog-list-row {
+                grid-template-columns: 80px 1fr;
+                align-items: flex-start;
+                column-gap: 10px;
+                row-gap: 8px;
+                padding: 12px 14px;
+            }
+
+            .catalog-list-thumb {
+                width: 80px;
+                height: 64px;
             }
 
             .compact-card-image-gallery {
@@ -571,8 +881,8 @@
             position: absolute;
             top: 12px;
             right: 12px;
-            width: 40px;
-            height: 40px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.9);
             border: none;
@@ -1121,12 +1431,25 @@
                         <button type="button" class="page-size-btn" data-size="20">20</button>
                         <button type="button" class="page-size-btn" data-size="30">30</button>
                     </div>
+                    <div class="layout-toggle" id="layout-toggle" style="display:none;">
+                        <button type="button" class="layout-toggle-btn active" data-layout="grid" title="Карточками">
+                            <i class="fas fa-th"></i>
+                        </button>
+                        <button type="button" class="layout-toggle-btn" data-layout="list" title="Списком">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
                 </div>
 
                     <div class="catalog-content">
                     <div id="map"
-                        style="width: 100%; height: 260px; display:block; border-radius:12px; overflow:hidden; margin-bottom:24px;">
+                        style="width: 100%; height: 260px; display:block; border-radius:12px; overflow:hidden; margin-bottom:12px;">
                         </div>
+                    {% if dataset_type != 'secondary' %}
+                    <button type="button" class="map-modal-trigger" id="map-modal-open">
+                        Показать объявления на карте
+                    </button>
+                    {% endif %}
                         <div class="catalog-grid" id="catalog-grid">
                             <!-- Карточки загружаются через API -->
                         </div>
@@ -1170,6 +1493,16 @@
                             <button type="button" class="filter-modal-apply" id="city-modal-apply">Применить</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Модальное окно карты -->
+            <div class="map-modal-overlay" id="map-modal-overlay" aria-hidden="true">
+                <div class="map-modal-content">
+                    <button type="button" class="map-modal-close" id="map-modal-close" aria-label="Закрыть карту">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div id="map-modal"></div>
                 </div>
             </div>
 
@@ -1567,8 +1900,9 @@
             const grid = document.getElementById('catalog-grid');
             const isSecondary = '{{ dataset_type }}' === 'secondary';
 
-            // Для вторичной недвижимости всегда показываем списком, для новостроек - карту + список
-            const currentView = isSecondary ? 'list' : 'map';
+            // Для вторичной недвижимости по умолчанию список, для новостроек карта
+            const storedView = localStorage.getItem('catalog_view');
+            const currentView = storedView || (isSecondary ? 'list' : 'map');
 
             // Всегда рендерим и карту и список для новостроек
             if (!isSecondary) {
@@ -1600,12 +1934,6 @@
                 }
             } else {
                 // Вторичка: только список
-                if (currentView === 'map') {
-                    if (typeof renderMapPoints === 'function') {
-                        renderMapPoints(data.items || [], true);
-                    }
-                }
-
                 if (!data.items || !data.items.length) {
                     grid.innerHTML = `
                     <div class="no-complexes-cta">
@@ -1644,14 +1972,12 @@
 
                         // Формируем главное фото и миниатюры (как у новостроек)
                         const mainPhoto = photos[0] || '/media/gallery/placeholders.png';
-                        const thumbnailsHtml = photos.length > 1 ? `
+                        const thumbnailsHtml = photos.length ? `
                 <div class="catalog-card-thumbs">
-                    ${photos.map((photo, i) => `
-                        <button type="button" class="catalog-thumb ${i === 0 ? 'active' : ''}" data-photo="${photo}"
-                            onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
-                            <img src="${photo}" alt="${item.name} превью ${i + 1}">
-                        </button>
-                    `).join('')}
+                    <button type="button" class="catalog-thumb active" data-photo="${mainPhoto}"
+                        onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
+                        <img src="${mainPhoto}" alt="${item.name} превью 1">
+                    </button>
                 </div>
             ` : '';
 
@@ -1690,7 +2016,7 @@
                             }
                             detailsHtml += '</div>';
                         }
-                        
+
                         return `
             <div class="${cardClasses}" data-complex-id="${item.id}">
                 <div class="catalog-card-media">
@@ -1799,14 +2125,12 @@
                 }
 
                 const mainPhoto = photos[0] || '/media/gallery/placeholders.png';
-                const thumbnailsHtml = photos.length > 1 ? `
+                const thumbnailsHtml = photos.length ? `
                 <div class="catalog-card-thumbs">
-                    ${photos.map((photo, i) => `
-                        <button type="button" class="catalog-thumb ${i === 0 ? 'active' : ''}" data-photo="${photo}"
-                            onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
-                            <img src="${photo}" alt="${complex.name} превью ${i + 1}">
-                        </button>
-                    `).join('')}
+                    <button type="button" class="catalog-thumb active" data-photo="${mainPhoto}"
+                        onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
+                        <img src="${mainPhoto}" alt="${complex.name} превью 1">
+                    </button>
                 </div>
             ` : '';
 
@@ -1830,7 +2154,11 @@
 
                 html += `
             <div class="${cardClasses} catalog-card-horizontal" data-complex-id="${complex.id}">
-                <div class="catalog-card-media">
+                <div class="catalog-card-media" data-photos='${JSON.stringify(photos)}' data-photo-index="0">
+                    ${photos.length > 1 ? `
+                        <button class="catalog-nav-btn prev" onclick="event.stopPropagation(); window.changeCatalogCardPhoto(this, -1);"><i class="fas fa-chevron-left"></i></button>
+                        <button class="catalog-nav-btn next" onclick="event.stopPropagation(); window.changeCatalogCardPhoto(this, 1);"><i class="fas fa-chevron-right"></i></button>
+                    ` : ''}
                     <div class="catalog-card-main-image" onclick="window.open('/complex/${complex.id}/', '_blank');">
                         <img src="${mainPhoto}" alt="${complex.name}">
                     </div>
@@ -1953,12 +2281,55 @@
             const mediaWrapper = thumbButton.closest('.catalog-card-media');
             const mainImage = mediaWrapper ? mediaWrapper.querySelector('.catalog-card-main-image img') : null;
             if (!mediaWrapper || !mainImage) return;
+
+            let photos = [];
+            try {
+                photos = JSON.parse(mediaWrapper.dataset.photos || '[]').filter(Boolean);
+            } catch (e) {
+                photos = [];
+            }
+
             const targetPhoto = thumbButton.getAttribute('data-photo');
+            const targetIdx = Math.max(0, photos.indexOf(targetPhoto));
+
             if (targetPhoto) {
                 mainImage.src = targetPhoto;
+                mediaWrapper.dataset.photoIndex = targetIdx;
             }
+
             mediaWrapper.querySelectorAll('.catalog-thumb').forEach(btn => {
                 btn.classList.toggle('active', btn === thumbButton);
+            });
+        }
+
+        // Стрелки листания фото в карточке
+        window.changeCatalogCardPhoto = function (btn, direction) {
+            const media = btn.closest('.catalog-card-media');
+            if (!media) return;
+            let photos = [];
+            try {
+                photos = JSON.parse(media.dataset.photos || '[]').filter(Boolean);
+            } catch (e) {
+                photos = [];
+            }
+            if (!photos.length) return;
+
+            const img = media.querySelector('.catalog-card-main-image img');
+            if (!img) return;
+
+            let idx = parseInt(media.dataset.photoIndex || '0', 10);
+            if (!Number.isFinite(idx)) idx = 0;
+            idx = (idx + direction + photos.length) % photos.length;
+            media.dataset.photoIndex = idx;
+
+            const nextPhoto = photos[idx];
+            if (nextPhoto) {
+                img.src = nextPhoto;
+            }
+
+            // Синхронизируем активные превью, если есть
+            media.querySelectorAll('.catalog-thumb').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.photo === nextPhoto);
             });
         }
 
@@ -2207,7 +2578,9 @@
             if (!grid) return;
 
             const apartments = data.apartments || [];
-            const currentView = isSecondary ? 'list' : 'map';
+            const layout = localStorage.getItem('catalog_layout') || 'grid';
+            const isListView = !isSecondary && layout === 'list';
+            grid.classList.toggle('list-mode', isListView);
 
             // Рендерим карту для новостроек - показываем точки ЖК (как в режиме ЖК)
             if (!isSecondary) {
@@ -2256,35 +2629,61 @@
                     }
 
                     const additionalPhotos = Array.isArray(apt.complex_photos) ? apt.complex_photos.slice(1, 5) : [];
-                    const thumbnailsHtml = additionalPhotos.length ? `
+                    const thumbnailsHtml = photo ? `
                         <div class="catalog-card-thumbs">
-                            ${additionalPhotos.map((extra, index) => {
-                                let thumbSrc = extra || '';
-                                if (thumbSrc && !thumbSrc.startsWith('/media/') && !thumbSrc.startsWith('http')) {
-                                    thumbSrc = `/media/${thumbSrc}`;
-                                }
-                                if (!thumbSrc) thumbSrc = '/media/gallery/placeholders.png';
-                                return `
-                                    <button type="button" class="catalog-thumb ${index === 0 ? 'active' : ''}" data-photo="${thumbSrc}"
-                                        onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
-                                        <img src="${thumbSrc}" alt="${apt.apartment_title || ''} превью ${index + 1}">
-                                    </button>
-                                `;
-                            }).join('')}
+                            <button type="button" class="catalog-thumb active" data-photo="${photo}"
+                                onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
+                                <img src="${photo}" alt="${apt.apartment_title || ''} превью 1">
+                            </button>
                         </div>
                     ` : '';
 
-                    const apartmentTitle = apt.apartment_title || (apt.rooms === 'Студия' ? 'Студия' : apt.rooms === '1' ? '1-комнатная квартира' : apt.rooms === '2' ? '2-комнатная квартира' : apt.rooms === '3' ? '3-комнатная квартира' : apt.rooms === '4' ? '4-комнатная квартира' : apt.rooms === '5+' ? '5+ комнат' : `${apt.rooms}-комнатная квартира`);
+                    const totalFloors = apt.total_floors || apt.floor_total || apt.house_floors || apt.max_floor || apt.maxFloor || apt.floor_max;
+                    const roomsLabel = apt.rooms === 'Студия' ? 'Студия' : apt.rooms ? `${apt.rooms}-к. квартира` : 'Квартира';
+                    const areaPart = apt.area ? `${apt.area} м²` : '';
+                    const floorPart = apt.floor ? `${apt.floor}${totalFloors ? `/${totalFloors}` : ''} эт.` : '';
+                    const titleMeta = [areaPart, floorPart].filter(Boolean).join(', ');
+                    const apartmentTitle = titleMeta ? `${roomsLabel}, ${titleMeta}` : roomsLabel;
                     const priceDisplay = formatPriceText(apt.price || apt.price_display || apt.price_range || '');
                     const areaDisplay = apt.area ? `${apt.area} м²` : '—';
-                    const floorDisplay = apt.floor ? `${apt.floor} этаж` : '';
+                    const floorDisplay = apt.floor ? `${apt.floor}${totalFloors ? `/${totalFloors}` : ''} эт.` : '';
                     const apartmentUrl = `/apartment/${apt.complex_id}/${apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0')}/`;
                     
                     // Определяем complexId и apartmentId для избранного
                     const complexId = apt.complex_id || '';
                     const apartmentId = apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0');
 
-                    html += `
+                    const priceNumber = parseInt(String(apt.price || apt.price_display || apt.price_range || '').replace(/\D/g, ''), 10);
+                    const areaNumber = parseFloat(apt.area);
+                    const perMeter = priceNumber && areaNumber ? `${Math.round(priceNumber / areaNumber).toLocaleString('ru-RU')} ₽/м²` : '';
+
+                    if (isListView) {
+                        html += `
+                        <div class="catalog-list-row" data-complex-id="${apt.id}">
+                            <div class="catalog-list-thumb" onclick="window.open('${apartmentUrl}', '_blank');">
+                                <img src="${photo}" alt="${apartmentTitle}">
+                            </div>
+                            <div class="catalog-list-main" onclick="window.open('${apartmentUrl}', '_blank');">
+                        <div class="catalog-list-title" style="display:flex; align-items:center; gap:8px;">
+                            <span>${apartmentTitle}</span>
+                            <button class="catalog-list-fav favorite-btn" data-favorite-complex-id="${complexId}"
+                                data-favorite-apartment-id="${apartmentId}"
+                                onclick="event.stopPropagation(); if(typeof toggleApartmentFavoriteHandler === 'function') { toggleApartmentFavoriteHandler('${complexId}', '${apartmentId}', this); }"
+                                title="Добавить в избранное" style="position:static;">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
+                                <div class="catalog-list-meta">
+                                    ${apt.completion_date ? `${apt.completion_date}` : ''} ${apt.complex_name ? `• ${apt.complex_name}` : ''} ${apt.address ? `• ${apt.address}` : ''}
+                                </div>
+                            </div>
+                            <div class="catalog-list-price">
+                                ${priceDisplay ? `<div class="price-main">${priceDisplay}</div>` : ''}
+                                ${perMeter ? `<div class="price-sub">${perMeter}</div>` : ''}
+                            </div>
+                        </div>`;
+                    } else {
+                        html += `
                         <div class="property-card-compact catalog-card-horizontal" data-complex-id="${apt.id}">
                             <div class="catalog-card-media">
                                 <div class="catalog-card-main-image" onclick="window.open('${apartmentUrl}', '_blank');" style="position: relative;">
@@ -2310,40 +2709,9 @@
                                     ${apt.address || apt.complex_address || apt.city || 'Уфа'}
                                 </p>
                                 ${priceDisplay ? `<div class="catalog-card-price-line"><span>Стоимость:</span><strong>${priceDisplay}</strong></div>` : ''}
-                                <div class="catalog-card-detail-list">
-                                    ${areaDisplay ? `
-                                        <div class="catalog-detail-item">
-                                            <span>Площадь</span>
-                                            <strong>${areaDisplay}</strong>
-                                        </div>
-                                    ` : ''}
-                                    ${floorDisplay ? `
-                                        <div class="catalog-detail-item">
-                                            <span>Этаж</span>
-                                            <strong>${floorDisplay}</strong>
-                                        </div>
-                                    ` : ''}
-                                    ${apt.rooms ? `
-                                        <div class="catalog-detail-item">
-                                            <span>Комнат</span>
-                                            <strong>${apt.rooms}</strong>
-                                        </div>
-                                    ` : ''}
-                                    ${apt.completion_date ? `
-                                        <div class="catalog-detail-item">
-                                            <span>Сдача</span>
-                                            <strong>${apt.completion_date}</strong>
-                                        </div>
-                                    ` : ''}
-                                    ${apt.complex_name ? `
-                                        <div class="catalog-detail-item">
-                                            <span>ЖК</span>
-                                            <strong>${apt.complex_name}</strong>
-                                        </div>
-                                    ` : ''}
-                                </div>
                             </div>
                         </div>`;
+                    }
                 });
                 grid.innerHTML = html;
             }
@@ -2423,15 +2791,76 @@
             }, 100);
         }
 
+        // Кеш последней выборки для повторного рендера (например, в модалке карты)
+        window.lastMapData = { list: [], isSec: false, isApartments: false };
+        window.catalogMaps = window.catalogMaps || {};
+
+        function ensureLeafletMap(elementId, key) {
+            const el = document.getElementById(elementId);
+            if (!el) return null;
+
+            if (!window.catalogMaps[key]) {
+                const mapInstance = L.map(elementId, {attributionControl: false});
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap'}).addTo(mapInstance);
+                const layer = L.layerGroup().addTo(mapInstance);
+                mapInstance.setView([54.7388, 55.9721], 11); // Уфа по умолчанию
+                window.catalogMaps[key] = { map: mapInstance, layer };
+            }
+            return window.catalogMaps[key];
+        }
+
+        function renderPointsOnMap(target, list, isSec, isApartments) {
+            if (!target || !target.map || !target.layer) return;
+            const { map, layer } = target;
+
+            layer.clearLayers();
+            const bounds = [];
+            list.forEach(item => {
+                const lat = item.lat || item.latitude;
+                const lng = item.lng || item.longitude;
+                if (lat && lng) {
+                    const marker = L.marker([lat, lng]).addTo(layer);
+                    const price = item.price_range || item.price_display || 'Цена по запросу';
+
+                    let link;
+                    if (isSec) {
+                        link = `/secondary/${item.id}/`;
+                    } else if (isApartments) {
+                        if (item.id && item.id.includes('_apt_')) {
+                            const parts = item.id.split('_apt_');
+                            if (parts.length === 2) {
+                                const complexId = parts[0];
+                                const apartmentId = parts[1];
+                                link = `/apartment/${complexId}/${apartmentId}/`;
+                            } else {
+                                link = `/complex/${parts[0] || item.id}/`;
+                            }
+                        } else {
+                            link = `/complex/${item.id}/`;
+                        }
+                    } else {
+                        link = `/complex/${item.id}/`;
+                    }
+
+                    marker.bindPopup(`<b>${item.name || 'Объект'}</b><br/>${price}<br/><a href="${link}">Подробнее</a>`);
+                    bounds.push([lat, lng]);
+                }
+            });
+
+            if (bounds.length) {
+                map.fitBounds(bounds, {padding: [20, 20]});
+            } else {
+                map.setView([54.7388, 55.9721], 11);
+            }
+        }
+
         // Глобальная функция initMap
         window.initMap = function () {
-            const mapEl = document.getElementById('map');
-            if (!mapEl) return;
-
-            window.map = L.map('map', {attributionControl: false});
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap'}).addTo(window.map);
-            window.markersLayer = L.layerGroup().addTo(window.map);
-            window.map.setView([54.7388, 55.9721], 11); // Уфа по умолчанию
+            const mainMap = ensureLeafletMap('map', 'main');
+            if (mainMap) {
+                window.map = mainMap.map;
+                window.markersLayer = mainMap.layer;
+            }
         }
 
         // Глобальная функция serialize
@@ -2494,78 +2923,84 @@
 
         // Глобальная функция renderMapPoints
         window.renderMapPoints = function (list, isSec, isApartments) {
+            window.lastMapData = { list: list || [], isSec: !!isSec, isApartments: !!isApartments };
             // Убеждаемся, что карта видна для новостроек
             const mapEl = document.getElementById('map');
             if (mapEl && !isSec) {
                 mapEl.style.display = 'block';
             }
 
-            if (!window.map) {
-                // Если карта не инициализирована, инициализируем её
-                if (typeof window.initMap === 'function') {
-                    window.initMap();
-                } else {
-                    console.warn('initMap function not found');
-                    return;
-                }
-            }
-            if (!window.map) {
-                console.warn('Map not initialized');
+            const mainMap = ensureLeafletMap('map', 'main');
+            if (!mainMap) {
+                console.warn('Map element not found');
                 return;
             }
 
-            // Очищаем существующие маркеры
-            if (window.markersLayer) {
-                window.markersLayer.clearLayers();
-            } else {
-                window.markersLayer = L.layerGroup().addTo(window.map);
+            window.map = mainMap.map;
+            window.markersLayer = mainMap.layer;
+            renderPointsOnMap(mainMap, list, isSec, isApartments);
+
+            // Если открыта модалка карты — синхронизируем точки
+            if (document.getElementById('map-modal-overlay')?.classList.contains('open')) {
+                renderModalMapFromCache(true);
+            }
+        }
+
+        function renderModalMapFromCache(shouldInvalidate) {
+            const overlay = document.getElementById('map-modal-overlay');
+            if (!overlay) return;
+
+            const modalMapInstance = ensureLeafletMap('map-modal', 'modal');
+            if (!modalMapInstance) return;
+
+            const { list, isSec, isApartments } = window.lastMapData || {};
+            renderPointsOnMap(modalMapInstance, list || [], isSec, isApartments);
+
+            if (shouldInvalidate) {
+                setTimeout(() => {
+                    modalMapInstance.map.invalidateSize();
+                }, 150);
+            }
+        }
+
+        function setupMapModal() {
+            const isSecondary = '{{ dataset_type }}' === 'secondary';
+            const openBtn = document.getElementById('map-modal-open');
+            const overlay = document.getElementById('map-modal-overlay');
+            const closeBtn = document.getElementById('map-modal-close');
+
+            if (!openBtn || !overlay) return;
+
+            if (isSecondary) {
+                openBtn.style.display = 'none';
+                return;
             }
 
-            const bounds = [];
-            list.forEach(item => {
-                const lat = item.lat || item.latitude;
-                const lng = item.lng || item.longitude;
-                if (lat && lng) {
-                    const marker = L.marker([lat, lng]).addTo(window.markersLayer);
-                    const price = item.price_range || item.price_display || 'Цена по запросу';
+            const closeModal = () => {
+                overlay.classList.remove('open');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            };
 
-                    // Формируем ссылку в зависимости от типа
-                    let link;
-                    if (isSec) {
-                        link = `/secondary/${item.id}/`;
-                    } else if (isApartments) {
-                        // В режиме квартир используем точки ЖК (как в режиме ЖК)
-                        // Проверяем, содержит ли ID формат квартиры (complex_id_apt_apartment_id)
-                        if (item.id.includes('_apt_')) {
-                            // Если это ID квартиры, извлекаем complex_id и apartment_id
-                            const parts = item.id.split('_apt_');
-                            if (parts.length === 2) {
-                                const complexId = parts[0];
-                                const apartmentId = parts[1];
-                                link = `/apartment/${complexId}/${apartmentId}/`;
-                            } else {
-                                link = `/complex/${parts[0]}/`;
-                            }
-                        } else {
-                            // Если это просто ID ЖК (что и должно быть после исправления)
-                            link = `/complex/${item.id}/`;
-                        }
-                    } else {
-                        link = `/complex/${item.id}/`;
-                    }
+            const openModal = () => {
+                overlay.classList.add('open');
+                overlay.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                renderModalMapFromCache(true);
+            };
 
-                    marker.bindPopup(`<b>${item.name}</b><br/>${price}<br/><a href="${link}">Подробнее</a>`);
-                    bounds.push([lat, lng]);
+            openBtn.addEventListener('click', openModal);
+            closeBtn?.addEventListener('click', closeModal);
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeModal();
                 }
             });
-
-            // Обновляем границы карты, если есть маркеры
-            if (bounds.length) {
-                window.map.fitBounds(bounds, {padding: [20, 20]});
-            } else {
-                // Если нет маркеров, устанавливаем вид по умолчанию (Уфа)
-                window.map.setView([54.7388, 55.9721], 11);
-            }
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && overlay.classList.contains('open')) {
+                    closeModal();
+                }
+            });
         }
 
         function setupFiltersModal() {
@@ -2707,47 +3142,175 @@
             setupFiltersModal();
         }
 
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupMapModal);
+        } else {
+            setupMapModal();
+        }
+
+        // Управление режимом отображения карточек (grid/list) без скрытия карты
+        window.applyLayout = function () {
+            const grid = document.getElementById('catalog-grid');
+            if (!grid) return;
+            const isSecondary = '{{ dataset_type }}' === 'secondary';
+            const layout = localStorage.getItem('catalog_layout') || 'grid';
+            const contentModeField = document.getElementById('content-mode-hidden');
+            const mode = contentModeField ? contentModeField.value : (localStorage.getItem('catalog_content_mode') || 'complexes');
+            const layoutToggle = document.getElementById('layout-toggle');
+            const layoutBtns = document.querySelectorAll('.layout-toggle-btn');
+
+            // Видимость переключателя: только квартиры, не вторичка
+            if (layoutToggle) {
+                layoutToggle.style.display = (!isSecondary && mode === 'apartments') ? 'inline-flex' : 'none';
+            }
+
+            // Активное состояние кнопок
+            layoutBtns.forEach(b => {
+                const value = b.getAttribute('data-layout') || 'grid';
+                b.classList.toggle('active', value === layout);
+            });
+
+            grid.classList.toggle('list-mode', !isSecondary && mode === 'apartments' && layout === 'list');
+        };
+
+        // Глобальные функции переключателя макета (карточки/список)
+        ;(function setupLayoutToggle() {
+            // Делегированный обработчик на документе
+            function bindLayoutToggleHandler(updateState) {
+                if (window.__layoutToggleHandler) {
+                    document.removeEventListener('click', window.__layoutToggleHandler, true);
+                }
+
+                const handler = (e) => {
+                    const btn = e.target.closest('.layout-toggle-btn');
+                    const container = document.getElementById('layout-toggle');
+                    const grid = document.getElementById('catalog-grid');
+                    if (!btn || !container || !grid) return;
+                    if (!container.contains(btn)) return;
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const layout = btn.getAttribute('data-layout') || 'grid';
+                    console.log('[layout-toggle] click', layout);
+                    localStorage.setItem('catalog_layout', layout);
+                    if (typeof updateState === 'function') {
+                        updateState(layout);
+                    }
+
+                    if (typeof window.applyLayout === 'function') {
+                        window.applyLayout();
+                    }
+                    if (typeof window.fetchData === 'function') {
+                        window.fetchData();
+                    }
+                };
+
+                document.addEventListener('click', handler, { passive: false, capture: true });
+                window.__layoutToggleHandler = handler;
+                window.__layoutToggleBound = true;
+            }
+
+            // Инициализация: подменяем контейнер, выставляем активные классы, привязываем обработчик
+            function initLayoutToggleButtons() {
+                const container = document.getElementById('layout-toggle');
+                const grid = document.getElementById('catalog-grid');
+                if (!container || !grid) return;
+
+                const clone = container.cloneNode(true);
+                container.replaceWith(clone);
+
+                const buttons = clone.querySelectorAll('.layout-toggle-btn');
+                if (!buttons.length) return;
+
+                const updateState = (layout) => {
+                    const contentMode = document.getElementById('content-mode-hidden')?.value
+                        || (localStorage.getItem('catalog_content_mode') || 'complexes');
+                    const isSecondaryPage = '{{ dataset_type }}' === 'secondary';
+
+                    buttons.forEach(b => {
+                        const value = b.getAttribute('data-layout') || 'grid';
+                        b.classList.toggle('active', value === layout);
+                    });
+
+                    clone.style.display = (!isSecondaryPage && contentMode === 'apartments') ? 'inline-flex' : 'none';
+                    grid.classList.toggle('list-mode', !isSecondaryPage && contentMode === 'apartments' && layout === 'list');
+                };
+
+                const storedLayout = localStorage.getItem('catalog_layout') || 'grid';
+                updateState(storedLayout);
+                console.log('[layout-toggle] init done, layout:', storedLayout);
+
+                bindLayoutToggleHandler(updateState);
+            }
+
+            window.initLayoutToggleButtons = initLayoutToggleButtons;
+        })();
+
         // Глобальная функция setView
         window.setView = function (view) {
             const grid = document.getElementById('catalog-grid');
             const mapEl = document.getElementById('map');
+            const mapBtn = document.getElementById('map-modal-open');
             const toggleBtns = document.querySelectorAll('.view-btn');
             const isSecondary = '{{ dataset_type }}' === 'secondary';
 
-            // Не позволяем переключиться на карту для вторичной недвижимости
-            if (isSecondary && view === 'map') {
-                return;
+            let targetView = view;
+            if (isSecondary && targetView === 'map') {
+                targetView = 'list';
             }
 
-            toggleBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-view') === view));
+            toggleBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-view') === targetView));
 
-            // Всегда показываем оба элемента, но меняем порядок
-            if (view === 'map') {
-                // Карта сверху, список снизу
-                mapEl.style.display = 'block';
-                mapEl.style.order = '1';
-                grid.style.display = 'block';
-                grid.style.order = '2';
-                if (!window.map) initMap();
+            if (grid) {
+                grid.classList.remove('list-mode');
+            }
+            const contentModeField = document.getElementById('content-mode-hidden');
+            const mode = contentModeField ? contentModeField.value : (localStorage.getItem('catalog_content_mode') || 'complexes');
+
+            // Управляем отображением карты/списка
+            if (targetView === 'map' && !isSecondary) {
+                if (mapEl) {
+                    mapEl.style.display = 'block';
+                    mapEl.style.order = '1';
+                }
+                if (mapBtn) mapBtn.style.order = '2';
+                if (grid) {
+                    grid.style.display = 'block';
+                    grid.style.order = '3';
+                    grid.classList.remove('list-mode');
+                }
+                if (!window.map && typeof initMap === 'function') initMap();
                 fetchData();
             } else {
-                // Список сверху, карта снизу (или скрыта для вторички)
+                // Списком: карта снизу (или скрыта для вторички)
                 if (isSecondary) {
-                    mapEl.style.display = 'none';
-                    grid.style.display = 'block';
+                    if (mapEl) mapEl.style.display = 'none';
+                    if (grid) {
+                        grid.style.display = 'block';
+                        grid.style.order = '1';
+                    }
                 } else {
-                    mapEl.style.display = 'block';
-                    mapEl.style.order = '2';
-                    grid.style.display = 'block';
-                    grid.style.order = '1';
+                    if (mapEl) {
+                        mapEl.style.display = 'block';
+                        mapEl.style.order = '2';
+                    }
+                    if (mapBtn) mapBtn.style.order = '3';
+                    if (grid) {
+                        grid.style.display = 'block';
+                        grid.style.order = '1';
+                    }
+                }
+                // Вид списком управляется отдельным переключателем (layout)
+                if (grid) {
+                    const layout = localStorage.getItem('catalog_layout') || 'grid';
+                    grid.classList.toggle('list-mode', mode === 'apartments' && layout === 'list');
                 }
                 fetchData();
             }
 
-            // Сохраняем в localStorage только для новостроек
-            if (!isSecondary) {
-                localStorage.setItem('catalog_view', view);
-            }
+            localStorage.setItem('catalog_view', targetView);
+            window.applyLayout();
         }
 
         // Инициализация глобальных переменных для AJAX
@@ -3894,6 +4457,8 @@
                 const floorFilterGroup = document.getElementById('floor-filter-group');
                 const areaFilterGroup = document.getElementById('area-filter-group');
                 const roomsFilterGroup = document.getElementById('rooms-filter-group');
+                        const inlineListBtn = document.getElementById('inline-list-view');
+                        const layoutToggle = document.getElementById('layout-toggle');
                 if (contentToggleBtns.length > 0 && contentModeHidden) {
                     const applyContentMode = (mode) => {
                         contentModeHidden.value = mode;
@@ -3912,6 +4477,19 @@
                         if (roomsFilterGroup) {
                             roomsFilterGroup.style.display = (mode === 'apartments') ? 'block' : 'none';
                         }
+                                if (inlineListBtn) {
+                                    inlineListBtn.style.display = (mode === 'apartments') ? 'block' : 'none';
+                                }
+                                if (layoutToggle) {
+                                    layoutToggle.style.display = (mode === 'apartments') ? 'inline-flex' : 'none';
+                                }
+                                // При смене режима на "квартиры" гарантируем инициализацию переключателя макета
+                                if (mode === 'apartments' && typeof window.initLayoutToggleButtons === 'function') {
+                                    window.initLayoutToggleButtons();
+                                }
+                                if (typeof window.applyLayout === 'function') {
+                                    window.applyLayout();
+                                }
                     };
 
                     const initialMode = contentModeHidden.value || localStorage.getItem('catalog_content_mode') || 'complexes';
@@ -4275,60 +4853,70 @@
 
             // Функция инициализации кнопок view toggle
             function initViewToggleButtons() {
-                const mapBtn = document.querySelector('.view-btn[data-view="map"]');
-                const listBtn = document.querySelector('.view-btn[data-view="list"]');
+                const buttons = document.querySelectorAll('.view-btn');
                 
-                if (!mapBtn || !listBtn) {
+                if (!buttons.length) {
                     console.log('View buttons not found');
                     return;
                 }
                 
-                // Клонируем кнопки чтобы удалить все старые обработчики
-                const newMapBtn = mapBtn.cloneNode(true);
-                const newListBtn = listBtn.cloneNode(true);
-                mapBtn.parentNode.replaceChild(newMapBtn, mapBtn);
-                listBtn.parentNode.replaceChild(newListBtn, listBtn);
-                
-                // Добавляем обработчик на кнопку "Картой"
-                newMapBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (isSecondary) return;
-                    
-                    if (typeof window.setView === 'function') {
-                        window.setView('map');
+                const wiredButtons = [];
+                buttons.forEach(btn => {
+                    const clone = btn.cloneNode(true);
+                    btn.parentNode.replaceChild(clone, btn);
+                    wiredButtons.push(clone);
+                });
+
+                wiredButtons.forEach(btn => {
+                    const targetView = btn.getAttribute('data-view');
+
+                    if (targetView) {
+                        if (isSecondary && targetView === 'map') {
+                            btn.disabled = true;
+                            btn.style.opacity = '0.5';
+                            btn.style.cursor = 'not-allowed';
+                            btn.title = 'Карта недоступна для вторичной недвижимости';
+                            return;
+                        }
+
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (typeof window.setView === 'function') {
+                                window.setView(targetView);
+                            }
+                        });
                     }
                 });
-                
-                // Добавляем обработчик на кнопку "Списком"
-                newListBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (typeof window.setView === 'function') {
-                        window.setView('list');
-                    }
-                });
-                
+
                 console.log('View toggle buttons initialized');
             }
-            
+
             // Инициализируем кнопки после полной загрузки DOM
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initViewToggleButtons);
+                document.addEventListener('DOMContentLoaded', () => {
+                    initViewToggleButtons();
+                    initLayoutToggleButtons();
+                    if (typeof window.applyLayout === 'function') {
+                        window.applyLayout();
+                    }
+                });
             } else {
                 // DOM уже загружен, используем небольшую задержку чтобы быть последними
-                setTimeout(initViewToggleButtons, 100);
+                setTimeout(() => {
+                    initViewToggleButtons();
+                    initLayoutToggleButtons();
+                    if (typeof window.applyLayout === 'function') {
+                        window.applyLayout();
+                    }
+                }, 100);
             }
             // Инициализация вида по умолчанию
-            // Принудительно устанавливаем вид "списком" для вторичной недвижимости
-            if (isSecondary) {
-                setView('list');
-            } else {
-                // По умолчанию показываем карту для новостроек
-                setView('map');
-                localStorage.setItem('catalog_view', 'map');
+            const storedViewInit = localStorage.getItem('catalog_view');
+            const defaultViewInit = storedViewInit || (isSecondary ? 'list' : 'map');
+            setView(defaultViewInit);
+            if (typeof window.applyLayout === 'function') {
+                window.applyLayout();
             }
 
 
@@ -4460,47 +5048,11 @@
             const gridInit = document.getElementById('catalog-grid');
 
             if (mapElInit && gridInit) {
-                if (!isSecondaryInit) {
-                    // Новостройки: карта сверху, список снизу
-                    mapElInit.style.display = 'block';
-                    mapElInit.style.order = '1';
-                    gridInit.style.display = 'block';
-                    gridInit.style.order = '2';
-
-                    // Инициализируем карту если еще не инициализирована
-                    if (!window.map && typeof initMap === 'function') {
-                        initMap();
-                    }
-
-                    // Загружаем данные для карты и списка
-                    if (typeof fetchData === 'function') {
-                        fetchData();
-                    }
-
-                    // Устанавливаем активную кнопку "Картой"
-                    const mapBtn = document.querySelector('.view-btn[data-view="map"]');
-                    const listBtn = document.querySelector('.view-btn[data-view="list"]');
-                    if (mapBtn && listBtn) {
-                        mapBtn.classList.add('active');
-                        listBtn.classList.remove('active');
-                    }
-                } else {
-                    // Вторичка: только список, карта скрыта
-                    mapElInit.style.display = 'none';
-                    gridInit.style.display = 'block';
-
-                    // Загружаем данные для вторичной недвижимости
-                    if (typeof fetchData === 'function') {
-                        fetchData();
-                    }
-
-                    // Устанавливаем активную кнопку "Списком"
-                    const mapBtn = document.querySelector('.view-btn[data-view="map"]');
-                    const listBtn = document.querySelector('.view-btn[data-view="list"]');
-                    if (mapBtn && listBtn) {
-                        listBtn.classList.add('active');
-                        mapBtn.classList.remove('active');
-                    }
+                const initView = isSecondaryInit ? 'list' : 'map';
+                if (typeof window.setView === 'function') {
+                    window.setView(initView);
+                } else if (typeof fetchData === 'function') {
+                    fetchData();
                 }
             }
         });
@@ -4672,9 +5224,12 @@
                 if (window.initialCatalogFetchDone) return;
                 const isSecondaryInit = '{{ dataset_type }}' === 'secondary';
                 const storedView = localStorage.getItem('catalog_view');
-                const defaultView = isSecondaryInit ? 'list' : (storedView || 'map');
+                    const defaultView = storedView || (isSecondaryInit ? 'list' : 'map');
                 if (!storedView && !isSecondaryInit) {
                     localStorage.setItem('catalog_view', defaultView);
+                }
+                if (!localStorage.getItem('catalog_layout')) {
+                    localStorage.setItem('catalog_layout', 'grid');
                 }
 
                 if (!localStorage.getItem('catalog_content_mode')) {
@@ -4910,38 +5465,25 @@
     <script>
         (function() {
             function fixViewToggleButtons() {
-                const mapBtn = document.querySelector('.view-btn[data-view="map"]');
-                const listBtn = document.querySelector('.view-btn[data-view="list"]');
+                const buttons = document.querySelectorAll('.view-btn');
                 
-                if (!mapBtn || !listBtn) {
+                if (!buttons.length) {
                     console.log('View buttons not found, retrying...');
                     setTimeout(fixViewToggleButtons, 100);
                     return;
                 }
-                
-                // Клонируем чтобы удалить ВСЕ старые обработчики
-                const newMapBtn = mapBtn.cloneNode(true);
-                const newListBtn = listBtn.cloneNode(true);
-                mapBtn.parentNode.replaceChild(newMapBtn, mapBtn);
-                listBtn.parentNode.replaceChild(newListBtn, listBtn);
-                
-                // Добавляем обработчики
-                newMapBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (typeof window.setView === 'function') {
-                        window.setView('map');
-                    }
+
+                buttons.forEach(btn => {
+                    const view = btn.getAttribute('data-view');
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (typeof window.setView === 'function') {
+                            window.setView(view);
+                        }
+                    });
                 });
-                
-                newListBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (typeof window.setView === 'function') {
-                        window.setView('list');
-                    }
-                });
-                
+
                 console.log('✅ View toggle buttons fixed');
             }
             

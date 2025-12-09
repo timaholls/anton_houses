@@ -872,11 +872,14 @@ def detail(request, complex_id):
                     apartment_variants_grouped[apt_type_key] = []
                 apartment_variants_grouped[apt_type_key].append(apt)
             
-            # Удаляем дубли и сортируем типы квартир по иерархии: Студия -> 1 -> 2 -> ...
+            # Базовый набор типов (отображаем всегда)
+            base_types = ['Студия', '1', '2', '3', '4', '5', '5+']
+
+            # Удаляем дубли и добавляем базовые типы (чтобы отображать даже если пустые)
             unique_types = []
-            for apt_type in apartment_types_list:
+            for apt_type in apartment_types_list + base_types:
                 apt_type_str = str(apt_type).strip()
-                if apt_type_str not in unique_types:
+                if apt_type_str and apt_type_str not in unique_types:
                     unique_types.append(apt_type_str)
 
             def sort_key(value: str):
@@ -903,6 +906,11 @@ def detail(request, complex_id):
                 return (3, value)
 
             apartment_types_list = sorted(unique_types, key=sort_key)
+
+            # Гарантируем наличие групп даже если нет квартир по типу
+            for base_type in base_types:
+                if base_type not in apartment_variants_grouped:
+                    apartment_variants_grouped[base_type] = []
             
             # Формируем контекст для MongoDB версии
             # Получаем акции для этого ЖК

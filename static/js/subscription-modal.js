@@ -201,12 +201,7 @@
         return cookieValue;
     }
     
-    // Показываем модальное окно сразу при первой загрузке (если нужно)
-    if (shouldShowModal()) {
-        showModal();
-    }
-    
-    // Периодическая проверка каждые 15 минут
+    // Периодическая проверка каждые 15 минут (без показа при загрузке)
     setInterval(() => {
         if (!overlay.classList.contains('active') && shouldShowModal()) {
             showModal();

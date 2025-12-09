@@ -782,7 +782,7 @@ body {
 
     /* Кнопки количества элементов */
     .page-size-toggle {
-        order: 3;
+        order: 4;
         margin-left: auto !important;
         padding-left: 8px !important;
         border-left: 1px solid rgba(15, 23, 42, 0.08) !important;
@@ -793,6 +793,16 @@ body {
         gap: 6px !important;
         width: auto !important;
         justify-content: flex-end !important;
+    }
+
+    /* Переключатель списка/карточек слева от кол-ва элементов */
+    .layout-toggle {
+        order: 3;
+        display: inline-flex;
+        margin-left: 0 !important;
+        margin-right: 8px !important;
+        padding-left: 0 !important;
+        border-left: none !important;
     }
 
     .filters-backdrop {

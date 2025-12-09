@@ -1257,7 +1257,11 @@ def complex_apartments_api(request, complex_id):
     """API для получения квартир конкретного ЖК с фильтрацией"""
     try:
         # Параметры фильтрации
-        apt_type = request.GET.get('type')  # Тип квартиры (Студия, 1, 2, 3, 4, 5+)
+        # Поддерживаем множественный выбор типов: type=1&type=2&type=Студия
+        apt_types_list = request.GET.getlist('type')
+        apt_type = request.GET.get('type')  # для обратной совместимости (одиночный)
+        if apt_type and not apt_types_list:
+            apt_types_list = [apt_type]
         area_from = request.GET.get('area_from')
         area_to = request.GET.get('area_to')
         floor_from = request.GET.get('floor_from')
@@ -1315,7 +1319,7 @@ def complex_apartments_api(request, complex_id):
                     apt_type_str = 'Студия'
                 
                 # Фильтр по типу
-                if apt_type and apt_type != apt_type_str:
+                if apt_types_list and apt_type_str not in apt_types_list:
                     continue
                 
                 # Получаем площадь
