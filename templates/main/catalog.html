@@ -351,19 +351,26 @@
             width: 100%;
             margin: 0 0 24px;
             padding: 14px 16px;
-            border: 1px solid #e5e7eb;
+            border: none;
             border-radius: 12px;
-            background: #fff;
-            font-weight: 600;
-            color: #1f2937;
+            background: linear-gradient(135deg, var(--c21-gold) 0%, #d4a574 100%);
+            font-weight: 700;
+            color: var(--c21-dark);
             text-align: center;
             cursor: pointer;
-            transition: background 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+            box-shadow: 0 10px 24px rgba(188, 175, 135, 0.35);
         }
 
         .map-modal-trigger:hover {
-            background: #f9fafb;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(188, 175, 135, 0.45);
+            filter: brightness(1.03);
+        }
+
+        .map-modal-trigger:active {
+            transform: translateY(0);
+            box-shadow: 0 8px 18px rgba(188, 175, 135, 0.4);
         }
 
         .map-modal-overlay {
@@ -1449,6 +1456,9 @@
                     <button type="button" class="map-modal-trigger" id="map-modal-open">
                         Показать объявления на карте
                     </button>
+                    <div id="map-bounds-indicator" style="display:none; margin: -12px 0 16px 0; padding: 8px 12px; background: rgba(188,175,135,0.12); color: #1f2937; border-radius: 10px; font-weight: 600; font-size: 13px; width: fit-content;">
+                        Фильтр по области карты
+                    </div>
                     {% endif %}
                         <div class="catalog-grid" id="catalog-grid">
                             <!-- Карточки загружаются через API -->
@@ -1907,12 +1917,32 @@
             // Всегда рендерим и карту и список для новостроек
             if (!isSecondary) {
                 // Новостройки: рендерим и карту и список
+                let list = data.complexes || [];
+                list = filterByCurrentBounds(list);
                 if (typeof renderMapPoints === 'function') {
-                    const mapPoints = data.map_points || data.complexes || [];
+                    const mapPoints = filterByCurrentBounds(data.map_points || list || []);
                     renderMapPoints(mapPoints, false, false); // false = не квартиры
                 }
 
-                const list = data.complexes || [];
+                // Синхронизируем фильтр ЖК по видимой области только если фильтр карты включен
+                // (т.е. когда открыта большая карта и пользователь фильтрует по границам)
+                if (window.mapFilterEnabled && window.currentMapBounds) {
+                    const complexesHidden = document.getElementById('complexes-hidden');
+                    if (complexesHidden) {
+                        // Используем данные из API ответа (уже отфильтрованные сервером по bbox)
+                        // а не клиентскую фильтрацию, чтобы получить все ЖК в видимой области
+                        const complexesFromApi = data.complexes || [];
+                        const ids = complexesFromApi.map(c => String(c.id)).filter(Boolean);
+                        complexesHidden.value = ids.join(',');
+                        if (typeof window.updateComplexesText === 'function') {
+                            window.updateComplexesText(ids);
+                        }
+                        document.querySelectorAll('.complex-modal-checkbox').forEach(cb => {
+                            cb.checked = ids.includes(String(cb.value));
+                        });
+                    }
+                }
+
                 if (!list.length) {
                     grid.innerHTML = `
                     <div class="no-complexes-cta">
@@ -1929,8 +1959,32 @@
                 } else {
                     // Используем полноценный рендер с компактными карточками
                     if (typeof updateCatalog === 'function') {
-                        updateCatalog(data);
+                        const filteredData = Object.assign({}, data, {
+                            complexes: list,
+                            map_points: filterByCurrentBounds(data.map_points || list || [])
+                        });
+                        updateCatalog(filteredData);
                     }
+                }
+
+                // Обновляем пагинацию под список
+                if (typeof updatePagination === 'function') {
+                    const perPageField = document.getElementById('per_page-hidden');
+                    const perPage = perPageField ? parseInt(perPageField.value || '15', 10) : 15;
+                    // Используем общее количество из ответа API, а не отфильтрованный список
+                    const totalCount = Number.isFinite(Number(data.total_count)) ? Number(data.total_count) : 0;
+                    // Если есть фильтр по границам карты, используем количество отфильтрованных элементов
+                    const totalFiltered = window.mapFilterEnabled && window.currentMapBounds 
+                        ? list.length 
+                        : totalCount;
+                    const totalPages = Math.max(1, Math.ceil(totalFiltered / perPage));
+                    const currentPage = Math.min(data.current_page || 1, totalPages);
+                    updatePagination({
+                        current_page: currentPage,
+                        total_pages: totalPages,
+                        has_previous: currentPage > 1,
+                        has_next: currentPage < totalPages
+                    });
                 }
             } else {
                 // Вторичка: только список
@@ -2038,11 +2092,7 @@
                     }).join('');
                 }
             }
-            // Обновляем пагинацию под список
-            if (typeof updatePagination === 'function') {
-                updatePagination(data);
-            }
-        }
+        } // конец renderItems
 
         // Глобальная функция applyFilters
         window.applyFilters = function () {
@@ -2100,7 +2150,11 @@
             }
 
             let html = '';
-            data.complexes.forEach((complex, index) => {
+            let complexes = data.complexes || [];
+            // Фильтр по видимым границам карты
+            complexes = filterByCurrentBounds(complexes);
+
+            complexes.forEach((complex, index) => {
                 // Создаем массив фото из photos или используем старые поля
                 let photos = [];
                 if (complex.photos && complex.photos.length > 0) {
@@ -2338,8 +2392,13 @@
             const container = document.querySelector('.pagination-container');
             if (!container) return;
 
-            // Показываем контейнер пагинации
-            container.style.display = 'block';
+            // Показываем контейнер пагинации только если есть больше одной страницы
+            if (data.total_pages > 1) {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+                return;
+            }
 
             const info = container.querySelector('.pagination-info');
             const controls = container.querySelector('.pagination-controls');
@@ -2473,6 +2532,17 @@
                     form.appendChild(hiddenInput);
                 }
             }
+            // Сбрасываем фильтр карты
+            window.currentMapBounds = null;
+            window.mapFilterEnabled = false;
+            const mapBoundsInput = form ? form.querySelector('input[name="map_bounds"]') : null;
+            if (mapBoundsInput) {
+                mapBoundsInput.value = '';
+            }
+            const mapFilterIndicator = document.getElementById('map-bounds-indicator');
+            if (mapFilterIndicator) {
+                mapFilterIndicator.style.display = 'none';
+            }
             window.fetchData();
         }
 
@@ -2481,6 +2551,21 @@
             const form = document.getElementById('filters-form');
             const grid = document.getElementById('catalog-grid');
             const isSecondary = '{{ dataset_type }}' === 'secondary';
+            // Кешируем ссылку на hidden для границ
+            if (!window.mapBoundsInput && form) {
+                window.mapBoundsInput = form.querySelector('input[name="map_bounds"]');
+                if (!window.mapBoundsInput) {
+                    window.mapBoundsInput = document.createElement('input');
+                    window.mapBoundsInput.type = 'hidden';
+                    window.mapBoundsInput.name = 'map_bounds';
+                    form.appendChild(window.mapBoundsInput);
+                }
+            }
+            
+            // Очищаем map_bounds если фильтр карты не включен
+            if (window.mapBoundsInput && !window.mapFilterEnabled) {
+                window.mapBoundsInput.value = '';
+            }
 
             // Определяем режим: ЖК или Квартиры
             const contentModeField = document.getElementById('content-mode-hidden');
@@ -2543,7 +2628,12 @@
                 if (typeof window.updateResultsCount === 'function') {
                     const totalCount = Number.isFinite(Number(data.total_count)) ? Number(data.total_count) : 0;
                     const modeForCount = isSecondary ? 'secondary' : (isApartmentsMode ? 'apartments' : 'complexes');
-                    window.updateResultsCount(totalCount, {mode: modeForCount});
+                    let filteredCount = totalCount;
+                    if (window.currentMapBounds) {
+                        const listForCount = isApartmentsMode ? (data.apartments || []) : (data.complexes || data.items || []);
+                        filteredCount = filterByCurrentBounds(listForCount).length;
+                    }
+                    window.updateResultsCount(filteredCount, {mode: modeForCount});
                 }
 
                 // Обновляем текущую страницу из ответа
@@ -2577,15 +2667,18 @@
 
             if (!grid) return;
 
-            const apartments = data.apartments || [];
+            let apartments = data.apartments || [];
             const layout = localStorage.getItem('catalog_layout') || 'grid';
             const isListView = !isSecondary && layout === 'list';
             grid.classList.toggle('list-mode', isListView);
 
+            // Фильтр по видимым границам карты
+            apartments = filterByCurrentBounds(apartments);
+
             // Рендерим карту для новостроек - показываем точки ЖК (как в режиме ЖК)
             if (!isSecondary) {
                 if (typeof renderMapPoints === 'function') {
-                    const mapPoints = data.map_points || [];
+                    const mapPoints = filterByCurrentBounds(data.map_points || []);
                     // Важно: передаем false в третьем параметре чтобы показывались ЖК, а не квартиры
                     renderMapPoints(mapPoints, false, false); // false = показываем точки ЖК
                 }
@@ -2718,7 +2811,22 @@
 
             // Обновляем пагинацию
             if (typeof updatePagination === 'function') {
-                updatePagination(data);
+                const perPageField = document.getElementById('per_page-hidden');
+                const perPage = perPageField ? parseInt(perPageField.value || '15', 10) : 15;
+                // Используем общее количество из ответа API, а не отфильтрованный список
+                const totalCount = Number.isFinite(Number(data.total_count)) ? Number(data.total_count) : 0;
+                // Если есть фильтр по границам карты, используем количество отфильтрованных элементов
+                const totalFiltered = window.mapFilterEnabled && window.currentMapBounds 
+                    ? apartments.length 
+                    : totalCount;
+                const totalPages = Math.max(1, Math.ceil(totalFiltered / perPage));
+                const currentPage = Math.min(data.current_page || 1, totalPages);
+                updatePagination({
+                    current_page: currentPage,
+                    total_pages: totalPages,
+                    has_previous: currentPage > 1,
+                    has_next: currentPage < totalPages
+                });
             }
 
             // Инициализируем состояние кнопок избранного для квартир
@@ -2794,6 +2902,33 @@
         // Кеш последней выборки для повторного рендера (например, в модалке карты)
         window.lastMapData = { list: [], isSec: false, isApartments: false };
         window.catalogMaps = window.catalogMaps || {};
+        window.currentMapBounds = window.currentMapBounds || null;
+        window.suppressMapFit = false;
+        window.mapBoundsInput = null;
+        window.mapFilterEnabled = window.mapFilterEnabled || false;
+
+        function boundsToObject(bounds) {
+            if (!bounds) return null;
+            return {
+                south: bounds.getSouth(),
+                west: bounds.getWest(),
+                north: bounds.getNorth(),
+                east: bounds.getEast(),
+            };
+        }
+
+        function isWithinBounds(item, b) {
+            if (!b) return true;
+            const lat = item.lat || item.latitude;
+            const lng = item.lng || item.longitude;
+            if (lat === undefined || lng === undefined || lat === null || lng === null) return false;
+            return lat >= b.south && lat <= b.north && lng >= b.west && lng <= b.east;
+        }
+
+        function filterByCurrentBounds(list) {
+            if (!window.mapFilterEnabled || !window.currentMapBounds) return list;
+            return list.filter(item => isWithinBounds(item, window.currentMapBounds));
+        }
 
         function ensureLeafletMap(elementId, key) {
             const el = document.getElementById(elementId);
@@ -2805,6 +2940,65 @@
                 const layer = L.layerGroup().addTo(mapInstance);
                 mapInstance.setView([54.7388, 55.9721], 11); // Уфа по умолчанию
                 window.catalogMaps[key] = { map: mapInstance, layer };
+
+                // Привязываем фильтрацию по видимой области только для модальной карты
+                if (key === 'modal') {
+                    const handleBoundsChange = () => {
+                        // Проверяем что модальная карта открыта и фильтр включен
+                        const overlay = document.getElementById('map-modal-overlay');
+                        if (!overlay || !overlay.classList.contains('open') || !window.mapFilterEnabled) return;
+                        
+                        // Получаем границы модальной карты
+                        const bounds = boundsToObject(mapInstance.getBounds());
+                        window.currentMapBounds = bounds;
+                        
+                        // Определяем видимые метки на карте
+                        const { list: allComplexes } = window.lastMapData || { list: [] };
+                        const visibleComplexes = filterByCurrentBounds(allComplexes);
+                        const visibleIds = visibleComplexes.map(c => String(c.id)).filter(Boolean);
+                        
+                        // Устанавливаем видимые ЖК в фильтр complexes
+                        const complexesHidden = document.getElementById('complexes-hidden');
+                        if (complexesHidden && visibleIds.length > 0) {
+                            complexesHidden.value = visibleIds.join(',');
+                            // Обновляем текст фильтра
+                            if (typeof window.updateComplexesText === 'function') {
+                                window.updateComplexesText(visibleIds);
+                            }
+                            // Проставляем галочки в фильтре
+                            document.querySelectorAll('.complex-modal-checkbox').forEach(cb => {
+                                cb.checked = visibleIds.includes(String(cb.value));
+                            });
+                        }
+                        
+                        // Очищаем map_bounds, используем complexes для фильтрации
+                        if (window.mapBoundsInput) {
+                            window.mapBoundsInput.value = '';
+                        }
+                        
+                        const mapFilterIndicator = document.getElementById('map-bounds-indicator');
+                        if (mapFilterIndicator) {
+                            mapFilterIndicator.style.display = visibleIds.length > 0 ? 'inline-flex' : 'none';
+                        }
+                        
+                        // Сбрасываем страницу на 1 при изменении границ
+                        window.currentPage = 1;
+                        const form = document.getElementById('filters-form');
+                        if (form) {
+                            const pageInputs = form.querySelectorAll('input[name="page"]');
+                            if (pageInputs.length > 0) {
+                                pageInputs[0].value = '1';
+                            }
+                        }
+                        
+                        // Делаем API запрос с фильтрацией по complexes (видимым ЖК)
+                        if (typeof window.fetchData === 'function' && !window.suppressMapFit) {
+                            window.fetchData();
+                        }
+                    };
+                    mapInstance.on('moveend', handleBoundsChange);
+                    mapInstance.on('zoomend', handleBoundsChange);
+                }
             }
             return window.catalogMaps[key];
         }
@@ -2847,10 +3041,12 @@
                 }
             });
 
-            if (bounds.length) {
+            if (bounds.length && !window.currentMapBounds) {
                 map.fitBounds(bounds, {padding: [20, 20]});
             } else {
-                map.setView([54.7388, 55.9721], 11);
+                if (!window.currentMapBounds) {
+                    map.setView([54.7388, 55.9721], 11);
+                }
             }
         }
 
@@ -2872,8 +3068,13 @@
             const params = new URLSearchParams();
 
             // Собираем все параметры, исключая чекбоксы city, complexes, district, street, delivery_quarter (они обрабатываются через скрытые поля)
+            // Также исключаем map_bounds если фильтр карты не включен
             for (const [k, v] of fd.entries()) {
                 if (k !== 'city' && k !== 'complexes' && k !== 'district' && k !== 'street' && k !== 'delivery_quarter' && v !== '') {
+                    // Пропускаем map_bounds если фильтр карты не включен
+                    if (k === 'map_bounds' && !window.mapFilterEnabled) {
+                        continue;
+                    }
                     // Удаляем пробелы из значений цены перед отправкой
                     if (k === 'price_from' || k === 'price_to') {
                         const cleanValue = String(v).replace(/\s/g, '');
@@ -2980,12 +3181,92 @@
                 overlay.classList.remove('open');
                 overlay.setAttribute('aria-hidden', 'true');
                 document.body.style.overflow = '';
+                // Отключаем фильтр карты и очищаем границы
+                window.mapFilterEnabled = false;
+                window.currentMapBounds = null;
+                if (window.mapBoundsInput) {
+                    window.mapBoundsInput.value = '';
+                }
+                const mapFilterIndicator = document.getElementById('map-bounds-indicator');
+                if (mapFilterIndicator) {
+                    mapFilterIndicator.style.display = 'none';
+                }
+                // Сбрасываем страницу на 1 и делаем запрос без фильтра
+                window.currentPage = 1;
+                const form = document.getElementById('filters-form');
+                if (form) {
+                    const pageInputs = form.querySelectorAll('input[name="page"]');
+                    if (pageInputs.length > 0) {
+                        pageInputs[0].value = '1';
+                    }
+                }
+                // Делаем запрос без фильтра по границам
+                if (typeof window.fetchData === 'function') {
+                    window.fetchData();
+                }
             };
 
             const openModal = () => {
                 overlay.classList.add('open');
                 overlay.setAttribute('aria-hidden', 'false');
                 document.body.style.overflow = 'hidden';
+                window.mapFilterEnabled = true;
+                
+                // Получаем границы модальной карты при открытии
+                const modalMapInstance = ensureLeafletMap('map-modal', 'modal');
+                if (modalMapInstance && modalMapInstance.map) {
+                    // Небольшая задержка чтобы карта успела отрендериться
+                    setTimeout(() => {
+                        const bounds = boundsToObject(modalMapInstance.map.getBounds());
+                        window.currentMapBounds = bounds;
+                        
+                        // Определяем видимые метки на карте
+                        const { list: allComplexes } = window.lastMapData || { list: [] };
+                        const visibleComplexes = filterByCurrentBounds(allComplexes);
+                        const visibleIds = visibleComplexes.map(c => String(c.id)).filter(Boolean);
+                        
+                        // Устанавливаем видимые ЖК в фильтр complexes
+                        const complexesHidden = document.getElementById('complexes-hidden');
+                        if (complexesHidden && visibleIds.length > 0) {
+                            complexesHidden.value = visibleIds.join(',');
+                            // Обновляем текст фильтра
+                            if (typeof window.updateComplexesText === 'function') {
+                                window.updateComplexesText(visibleIds);
+                            }
+                            // Проставляем галочки в фильтре
+                            document.querySelectorAll('.complex-modal-checkbox').forEach(cb => {
+                                cb.checked = visibleIds.includes(String(cb.value));
+                            });
+                        }
+                        
+                        // Очищаем map_bounds, используем complexes для фильтрации
+                        if (window.mapBoundsInput) {
+                            window.mapBoundsInput.value = '';
+                        }
+                        
+                        // Показываем индикатор фильтра
+                        const mapFilterIndicator = document.getElementById('map-bounds-indicator');
+                        if (mapFilterIndicator) {
+                            mapFilterIndicator.style.display = visibleIds.length > 0 ? 'inline-flex' : 'none';
+                        }
+                        
+                        // Сбрасываем страницу на 1
+                        window.currentPage = 1;
+                        const form = document.getElementById('filters-form');
+                        if (form) {
+                            const pageInputs = form.querySelectorAll('input[name="page"]');
+                            if (pageInputs.length > 0) {
+                                pageInputs[0].value = '1';
+                            }
+                        }
+                        
+                        // Делаем запрос с фильтрацией по complexes (видимым ЖК)
+                        if (typeof window.fetchData === 'function') {
+                            window.fetchData();
+                        }
+                    }, 150);
+                }
+                
                 renderModalMapFromCache(true);
             };
 
