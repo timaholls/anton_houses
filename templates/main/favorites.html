@@ -882,7 +882,7 @@
 <script>
 // Глобальные переменные для фильтрации
 let allFavoriteItems = [];
-let favoritesRoomsFilter = '';
+let favoritesRoomsFilter = []; // Массив выбранных типов комнат
 let favoritesFloorFrom = '';
 let favoritesFloorTo = '';
 let favoritesPriceFrom = '';
@@ -971,10 +971,17 @@ function loadFavorites() {
     );
     
     // Загружаем данные о квартирах
+    console.log('🔍 [FAVORITES] loadFavorites: начинаем загрузку квартир', { 
+        totalApartments: favorites.apartments.length, 
+        apartments: favorites.apartments 
+    });
+    
     const apartmentPromises = favorites.apartments.map(fullId => {
+        console.log('📋 [FAVORITES] Обрабатываем ID квартиры:', fullId);
+        
         const parts = fullId.split('_');
         if (parts.length < 2) {
-            console.warn('Некорректный формат ID квартиры:', fullId);
+            console.warn('❌ [FAVORITES] Некорректный формат ID квартиры:', fullId, { parts, partsLength: parts.length });
             return Promise.resolve(null);
         }
         
@@ -982,32 +989,56 @@ function loadFavorites() {
         const complexId = parts[0];
         const apartmentId = parts.slice(1).join('_'); // Остальные части - это ID квартиры
         
+        console.log('🔍 [FAVORITES] Парсинг ID:', { fullId, complexId, apartmentId, parts });
+        
         return fetch(`/api/complex/${complexId}/`)
             .then(res => {
                 if (!res.ok) {
-                    console.warn(`Ошибка загрузки ЖК ${complexId}:`, res.status);
+                    console.warn(`❌ [FAVORITES] Ошибка загрузки ЖК ${complexId}:`, res.status, res.statusText);
                     return null;
                 }
                 return res.json();
             })
             .then(result => {
+                console.log(`📥 [FAVORITES] Получен ответ для ЖК ${complexId}:`, { 
+                    success: result?.success, 
+                    hasApartmentTypes: !!result?.apartment_types,
+                    apartmentTypesKeys: result?.apartment_types ? Object.keys(result.apartment_types) : []
+                });
+                
                 if (!result || !result.success) {
-                    console.warn('ЖК не найден или ошибка:', result);
+                    console.warn('❌ [FAVORITES] ЖК не найден или ошибка:', result);
                     return null;
                 }
                 const complexData = result;
                 // Находим квартиру в данных ЖК
-                const apartment = findApartmentInComplex(complexData, apartmentId);
-                if (!apartment) {
-                    console.warn(`Квартира ${apartmentId} не найдена в ЖК ${complexId}`, {
+                console.log(`🔍 [FAVORITES] Ищем квартиру ${apartmentId} в ЖК ${complexId}`);
+                const apartmentResult = findApartmentInComplex(complexData, apartmentId);
+                if (!apartmentResult) {
+                    console.warn(`❌ [FAVORITES] Квартира ${apartmentId} не найдена в ЖК ${complexId}`, {
                         apartmentTypes: Object.keys(complexData.apartment_types || {}),
-                        apartmentId: apartmentId
+                        apartmentId: apartmentId,
+                        complexId: complexId,
+                        fullId: fullId
                     });
+                    return null;
                 }
-                return apartment ? { type: 'apartment', complexId, apartmentId, complexData, apartment } : null;
+                
+                const apartment = apartmentResult.apartment;
+                const apartmentType = apartmentResult.apartmentType;
+                
+                console.log(`✅ [FAVORITES] Квартира найдена:`, { 
+                    apartmentId, 
+                    complexId,
+                    apartmentTitle: apartment.title,
+                    apartmentPrice: apartment.price,
+                    apartmentType: apartmentType
+                });
+                
+                return { type: 'apartment', complexId, apartmentId, complexData, apartment, apartmentType };
             })
             .catch(err => {
-                console.error('Ошибка загрузки квартиры:', err);
+                console.error('❌ [FAVORITES] Ошибка загрузки квартиры:', err, { fullId, complexId, apartmentId });
                 return null;
             });
     });
@@ -1047,10 +1078,12 @@ function loadFavorites() {
             });
         }
         
-        // Инициализируем фильтр из выбранной кнопки (если еще не инициализирован)
-        if (favoritesRoomsFilter === '' && document.querySelector('.favorites-rooms-filter-btn[data-active="true"]')) {
-            const activeBtn = document.querySelector('.favorites-rooms-filter-btn[data-active="true"]');
-            favoritesRoomsFilter = activeBtn.getAttribute('data-value') || '';
+        // Инициализируем фильтр из выбранных кнопок (если еще не инициализирован)
+        if (favoritesRoomsFilter.length === 0) {
+            const activeBtns = document.querySelectorAll('.favorites-rooms-filter-btn[data-active="true"]');
+            favoritesRoomsFilter = Array.from(activeBtns)
+                .map(btn => btn.getAttribute('data-value'))
+                .filter(val => val !== ''); // Исключаем "Любое"
         }
         
         // Применяем фильтры и рендерим
@@ -1063,15 +1096,28 @@ function applyFavoritesFilters(items) {
     let filtered = [...items];
     
     // Функция для нормализации количества комнат
-    function normalizeRooms(apt) {
+    function normalizeRooms(apt, apartmentType = null) {
         const title = apt.title || '';
         let rooms = apt.rooms;
         
         const isStudioValue = (value) => {
             if (!value && value !== 0) return false;
             const normalized = String(value).trim().toLowerCase();
-            return normalized === 'студия' || normalized === 'studio' || normalized === '0';
+            return normalized === 'студия' || normalized === 'studio' || normalized === '0' || normalized === 'студио';
         };
+        
+        // Сначала проверяем тип квартиры из ключа apartment_types (самый надежный источник)
+        if (apartmentType) {
+            const typeLower = String(apartmentType).trim().toLowerCase();
+            if (isStudioValue(apartmentType) || typeLower === 'студия' || typeLower === 'studio') {
+                return 'studio';
+            }
+            // Если тип - число, возвращаем его
+            const typeMatch = apartmentType.match(/^(\d+)/);
+            if (typeMatch) {
+                return typeMatch[1];
+            }
+        }
         
         if (typeof rooms === 'number') {
             rooms = String(rooms);
@@ -1123,23 +1169,27 @@ function applyFavoritesFilters(items) {
         return roomsMatch ? roomsMatch[1] : '';
     }
     
-    // Фильтр по комнатам (только для квартир)
-    if (favoritesRoomsFilter) {
+    // Фильтр по комнатам (только для квартир) - множественный выбор
+    if (favoritesRoomsFilter.length > 0) {
         filtered = filtered.filter(item => {
             if (item.type !== 'apartment') return true; // ЖК пропускаем
             const apt = item.apartment;
-            const rooms = normalizeRooms(apt);
+            // Передаем тип квартиры из ключа apartment_types для правильной нормализации
+            const rooms = normalizeRooms(apt, item.apartmentType);
             
             if (!rooms) return false; // Если не удалось определить комнаты, пропускаем
             
-            if (favoritesRoomsFilter === 'studio') {
-                return rooms === 'studio';
-            }
-            if (favoritesRoomsFilter === '4') {
-                const roomsNum = parseInt(rooms) || 0;
-                return roomsNum >= 4;
-            }
-            return rooms === favoritesRoomsFilter;
+            // Проверяем, входит ли квартира в список выбранных типов
+            return favoritesRoomsFilter.some(filterValue => {
+                if (filterValue === 'studio') {
+                    return rooms === 'studio';
+                }
+                if (filterValue === '4') {
+                    const roomsNum = parseInt(rooms) || 0;
+                    return roomsNum >= 4;
+                }
+                return rooms === filterValue;
+            });
         });
     }
     
@@ -1230,20 +1280,50 @@ function renderFavorites(items) {
 }
 
 function initFavoritesFilters() {
-    // Инициализируем фильтр из выбранной кнопки
-    const activeRoomsBtn = document.querySelector('.favorites-rooms-filter-btn[data-active="true"]');
-    if (activeRoomsBtn) {
-        favoritesRoomsFilter = activeRoomsBtn.getAttribute('data-value') || '';
+    // Инициализируем фильтр из выбранных кнопок
+    const activeRoomsBtns = document.querySelectorAll('.favorites-rooms-filter-btn[data-active="true"]');
+    if (activeRoomsBtns.length > 0) {
+        favoritesRoomsFilter = Array.from(activeRoomsBtns)
+            .map(btn => btn.getAttribute('data-value'))
+            .filter(val => val !== ''); // Исключаем "Любое"
     }
     
-    // Обработчики кнопок комнат
+    // Обработчики кнопок комнат - множественный выбор (toggle)
     document.querySelectorAll('.favorites-rooms-filter-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            document.querySelectorAll('.favorites-rooms-filter-btn').forEach(b => {
-                b.setAttribute('data-active', 'false');
-            });
-            this.setAttribute('data-active', 'true');
-            favoritesRoomsFilter = this.getAttribute('data-value') || '';
+            const value = this.getAttribute('data-value');
+            const isActive = this.getAttribute('data-active') === 'true';
+            
+            // Кнопка "Любое" - снимает все выборы
+            if (value === '') {
+                if (!isActive) {
+                    // Снимаем все выборы
+                    document.querySelectorAll('.favorites-rooms-filter-btn').forEach(b => {
+                        b.setAttribute('data-active', 'false');
+                    });
+                    this.setAttribute('data-active', 'true');
+                    favoritesRoomsFilter = [];
+                }
+            } else {
+                // Для остальных кнопок - toggle
+                if (isActive) {
+                    // Снимаем выбор
+                    this.setAttribute('data-active', 'false');
+                    favoritesRoomsFilter = favoritesRoomsFilter.filter(v => v !== value);
+                } else {
+                    // Добавляем выбор
+                    this.setAttribute('data-active', 'true');
+                    if (!favoritesRoomsFilter.includes(value)) {
+                        favoritesRoomsFilter.push(value);
+                    }
+                    // Снимаем "Любое", если выбрана конкретная опция
+                    const anyBtn = document.querySelector('.favorites-rooms-filter-btn[data-value=""]');
+                    if (anyBtn) {
+                        anyBtn.setAttribute('data-active', 'false');
+                    }
+                }
+            }
+            
             if (allFavoriteItems.length > 0) {
                 const filtered = applyFavoritesFilters(allFavoriteItems);
                 renderFavorites(filtered);
@@ -1360,14 +1440,14 @@ function initFavoritesFilters() {
     if (resetBtn) {
         resetBtn.addEventListener('click', function() {
             // Сбрасываем все фильтры
-            favoritesRoomsFilter = '';
+            favoritesRoomsFilter = [];
             favoritesFloorFrom = '';
             favoritesFloorTo = '';
             favoritesPriceFrom = '';
             favoritesPriceTo = '';
             favoritesComplexFilter = '';
             
-            // Сбрасываем UI кнопок комнат
+            // Сбрасываем UI кнопок комнат - только "Любое" активна
             document.querySelectorAll('.favorites-rooms-filter-btn').forEach(b => {
                 b.setAttribute('data-active', b.getAttribute('data-value') === '' ? 'true' : 'false');
             });
@@ -1401,15 +1481,28 @@ function initFavoritesFilters() {
 }
 
 function findApartmentInComplex(complexData, apartmentId) {
-    if (!complexData || !apartmentId) return null;
+    console.log('🔍 [FAVORITES] findApartmentInComplex вызвана:', { 
+        apartmentId, 
+        apartmentIdType: typeof apartmentId,
+        hasComplexData: !!complexData,
+        hasApartmentTypes: !!complexData?.apartment_types
+    });
+    
+    if (!complexData || !apartmentId) {
+        console.warn('❌ [FAVORITES] findApartmentInComplex: отсутствуют данные', { complexData: !!complexData, apartmentId });
+        return null;
+    }
     
     // Ищем квартиру в apartment_types
     const apartmentTypes = complexData.apartment_types || {};
+    console.log('📋 [FAVORITES] Типы квартир в ЖК:', Object.keys(apartmentTypes));
     
     // Проверяем разные форматы ID квартиры
     // Формат может быть: "1_0" (type_index), "68f08089b02e8b1ca002f26b_1_0", или просто "_id"
     const apartmentIdStr = String(apartmentId);
     const complexIdStr = String(complexData.id || '');
+    
+    console.log('🔍 [FAVORITES] Парсинг ID квартиры:', { apartmentIdStr, complexIdStr });
     
     // Если ID содержит подчеркивания, разбиваем на части
     const parts = apartmentIdStr.split('_');
@@ -1420,43 +1513,64 @@ function findApartmentInComplex(complexData, apartmentId) {
         // Последние две части могут быть тип и индекс
         searchIndex = parseInt(parts[parts.length - 1], 10);
         searchType = parts[parts.length - 2];
+        console.log('🔍 [FAVORITES] Разбит ID на части:', { parts, searchType, searchIndex });
     }
     
+    let checkedCount = 0;
     for (const aptType in apartmentTypes) {
         const apartments = apartmentTypes[aptType].apartments || [];
+        console.log(`📋 [FAVORITES] Проверяем тип "${aptType}": ${apartments.length} квартир`);
+        
         for (let idx = 0; idx < apartments.length; idx++) {
             const apt = apartments[idx];
+            checkedCount++;
             
             // Проверяем разные форматы ID
             const aptId = apt._id ? String(apt._id) : null;
+            const aptIdField = apt.id ? String(apt.id) : null;
             const generatedId = `${complexIdStr}_${aptType}_${idx}`;
             const typeIndexId = `${aptType}_${idx}`;
             
             // Сравниваем с разными вариантами ID
-            if (aptId && (aptId === apartmentIdStr || aptId === apartmentIdStr || aptId.endsWith(apartmentIdStr))) {
-                return apt;
+            if (aptId && (aptId === apartmentIdStr || aptId.endsWith(apartmentIdStr))) {
+                console.log(`✅ [FAVORITES] Квартира найдена по apt._id:`, { aptId, apartmentIdStr, aptType, idx });
+                return { apartment: apt, apartmentType: aptType };
+            }
+            
+            if (aptIdField && (aptIdField === apartmentIdStr || aptIdField.endsWith(apartmentIdStr))) {
+                console.log(`✅ [FAVORITES] Квартира найдена по apt.id:`, { aptIdField, apartmentIdStr, aptType, idx });
+                return { apartment: apt, apartmentType: aptType };
             }
             
             if (generatedId === apartmentIdStr || generatedId.endsWith(`_${apartmentIdStr}`)) {
-                return apt;
+                console.log(`✅ [FAVORITES] Квартира найдена по generatedId:`, { generatedId, apartmentIdStr, aptType, idx });
+                return { apartment: apt, apartmentType: aptType };
             }
             
             if (typeIndexId === apartmentIdStr) {
-                return apt;
+                console.log(`✅ [FAVORITES] Квартира найдена по typeIndexId:`, { typeIndexId, apartmentIdStr, aptType, idx });
+                return { apartment: apt, apartmentType: aptType };
             }
             
             // Если ID разбит на части, проверяем по типу и индексу
             if (searchType && searchIndex !== null && searchType === aptType && searchIndex === idx) {
-                return apt;
+                console.log(`✅ [FAVORITES] Квартира найдена по типу и индексу:`, { searchType, searchIndex, aptType, idx });
+                return { apartment: apt, apartmentType: aptType };
             }
             
             // Проверяем, совпадает ли только индекс (если тип не указан)
             if (searchIndex !== null && searchIndex === idx && !searchType) {
-                return apt;
+                console.log(`✅ [FAVORITES] Квартира найдена по индексу:`, { searchIndex, idx, aptType });
+                return { apartment: apt, apartmentType: aptType };
             }
         }
     }
     
+    console.warn(`❌ [FAVORITES] Квартира не найдена после проверки ${checkedCount} квартир:`, { 
+        apartmentIdStr, 
+        complexIdStr,
+        apartmentTypesKeys: Object.keys(apartmentTypes)
+    });
     return null;
 }
 

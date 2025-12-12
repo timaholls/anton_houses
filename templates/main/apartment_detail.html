@@ -5,16 +5,6 @@
 {% block content %}
 <div class="container">
     <section class="apartment-detail-section">
-        <!-- Кнопка "Назад" -->
-        <div style="margin-bottom: 16px;">
-            <button id="back-button" onclick="returnToPrevious()" 
-                style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; color: #374151; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-                onmouseover="this.style.background='#e5e7eb'; this.style.borderColor='#d1d5db';"
-                onmouseout="this.style.background='#f3f4f6'; this.style.borderColor='#e5e7eb';">
-                <i class="fas fa-arrow-left"></i>
-                <span>Назад</span>
-            </button>
-        </div>
 
         <!-- Хлебные крошки -->
         <div class="breadcrumbs">
@@ -1521,30 +1511,6 @@
             }
         }
 
-        // Функция возврата назад
-        function returnToPrevious() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const from = urlParams.get('from');
-            const prevAptId = urlParams.get('prev_apt');
-            const complexId = '{{ complex.id }}';
-            
-            if (from === 'favorites') {
-                // Возврат в избранное
-                window.location.href = '/favorites/';
-            } else if (from === 'complex') {
-                // Возврат на страницу ЖК
-                window.location.href = '/complex/' + complexId + '/';
-            } else if (from === 'apartment' && prevAptId) {
-                // Возврат на предыдущую квартиру
-                window.location.href = '/apartment/' + complexId + '/' + prevAptId + '/';
-            } else {
-                // По умолчанию - возврат на страницу ЖК
-                window.location.href = '/complex/' + complexId + '/';
-            }
-        }
-        
-        // Делаем функцию глобальной
-        window.returnToPrevious = returnToPrevious;
 
         // Обработка якоря для ипотечного калькулятора
         document.querySelectorAll('a[href="#mortgage"]').forEach(a => {

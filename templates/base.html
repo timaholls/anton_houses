@@ -99,7 +99,7 @@
                     продаж</a>
             </nav>
             <div class="header-right">
-                <a href="{% url 'main:favorites' %}" class="favorites-header-link" title="Избранное">
+                <a href="{% url 'main:favorites' %}" class="favorites-header-link" title="Избранное" target="_blank">
                     <i class="far fa-heart"></i>
                     <span class="favorites-count" id="favorites-count" style="display: none;">0</span>
                 </a>
@@ -128,7 +128,7 @@
             </div>
             <nav class="mobile-drawer-nav">
                 <a href="{% url 'main:home' %}" class="drawer-link">Главная</a>
-                <a href="{% url 'main:favorites' %}" class="drawer-link">
+                <a href="{% url 'main:favorites' %}" class="drawer-link" target="_blank">
                     Избранное
                 </a>
                 <div class="drawer-group">
@@ -172,7 +172,7 @@
 
 <!-- Кнопка избранного -->
 <div class="favorites-button-container" id="favorites-button-container" style="display: none;">
-    <a href="{% url 'main:favorites' %}" class="favorites-button" id="favorites-button">
+    <a href="{% url 'main:favorites' %}" class="favorites-button" id="favorites-button" target="_blank">
         <i class="fas fa-heart"></i>
         <span class="favorites-text">Избранное</span>
         <span class="favorites-badge" id="favorites-badge-floating">0</span>

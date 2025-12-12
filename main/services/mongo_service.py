@@ -32,10 +32,10 @@ def get_mongo_user(email: str):
 
 
 def get_unified_houses_from_mongo(filters=None, sort_by=None, limit=None, random=False):
-    """Получить ЖК из unified_houses_3 коллекции MongoDB"""
+    """Получить ЖК из unified_houses коллекции MongoDB"""
     try:
         db = get_mongo_connection()
-        collection = db['unified_houses_3']
+        collection = db['unified_houses']
         
         # Базовый фильтр - только записи с данными development
         mongo_filter = {'development': {'$exists': True, '$ne': None}}
@@ -149,7 +149,7 @@ def get_unified_houses_from_mongo(filters=None, sort_by=None, limit=None, random
         return complexes
         
     except Exception as e:
-        print(f"Ошибка получения данных из unified_houses_3: {e}")
+        print(f"Ошибка получения данных из unified_houses: {e}")
         return []
 
 
@@ -248,44 +248,51 @@ def get_special_offers_from_mongo(limit=None):
 
 
 def get_future_complexes_from_mongo(filters=None, sort_by=None, limit=None):
-    """Получить будущие ЖК из MongoDB"""
+    """Получить будущие ЖК из unified_houses с is_future: true"""
     try:
         db = get_mongo_connection()
-        collection = db['future_complexes']
+        collection = db['unified_houses']
         
-        # Базовый фильтр
-        mongo_filter = {'is_active': True}
+        # Базовый фильтр - только будущие проекты
+        mongo_filter = {'is_future': True}
         
         # Применяем дополнительные фильтры
         if filters:
             if filters.get('city'):
-                mongo_filter['city'] = {'$regex': filters['city'], '$options': 'i'}
+                mongo_filter['$or'] = [
+                    {'city': {'$regex': filters['city'], '$options': 'i'}},
+                    {'address_city': {'$regex': filters['city'], '$options': 'i'}}
+                ]
             if filters.get('district'):
-                mongo_filter['district'] = {'$regex': filters['district'], '$options': 'i'}
-            if filters.get('price_from'):
-                mongo_filter['price_from'] = {'$gte': float(filters['price_from'])}
-            if filters.get('price_to'):
-                mongo_filter['price_from'] = {'$lte': float(filters['price_to'])}
-            if filters.get('delivery_date'):
-                mongo_filter['delivery_date'] = {'$lte': filters['delivery_date']}
+                district_filter = {
+                    '$or': [
+                        {'district': {'$regex': filters['district'], '$options': 'i'}},
+                        {'address_district': {'$regex': filters['district'], '$options': 'i'}}
+                    ]
+                }
+                if '$or' in mongo_filter:
+                    mongo_filter = {'$and': [mongo_filter, district_filter]}
+                else:
+                    mongo_filter.update(district_filter)
+            # Фильтры по цене и дате сдачи можно добавить позже если нужно
         
         # Сортировка
         sort_dict = {}
         if sort_by:
             if sort_by == 'delivery_date_asc':
-                sort_dict['delivery_date'] = 1
+                sort_dict['_id'] = 1  # Сортируем по дате создания
             elif sort_by == 'delivery_date_desc':
-                sort_dict['delivery_date'] = -1
+                sort_dict['_id'] = -1
             elif sort_by == 'price_asc':
-                sort_dict['price_from'] = 1
+                sort_dict['_id'] = 1
             elif sort_by == 'price_desc':
-                sort_dict['price_from'] = -1
+                sort_dict['_id'] = -1
             elif sort_by == 'name_asc':
-                sort_dict['name'] = 1
+                sort_dict['development.name'] = 1
             else:
-                sort_dict['delivery_date'] = 1
+                sort_dict['_id'] = -1
         else:
-            sort_dict['delivery_date'] = 1
+            sort_dict['_id'] = -1
         
         # Выполняем запрос
         cursor = collection.find(mongo_filter).sort(list(sort_dict.items()))
@@ -293,7 +300,7 @@ def get_future_complexes_from_mongo(filters=None, sort_by=None, limit=None):
         if limit:
             cursor = cursor.limit(limit)
         
-        # Преобразуем _id в строку и добавляем как поле id для использования в шаблонах
+        # Преобразуем _id в строку и адаптируем формат для шаблонов
         complexes = list(cursor)
         for complex_item in complexes:
             if '_id' in complex_item:

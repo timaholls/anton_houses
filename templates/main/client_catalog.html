@@ -675,7 +675,7 @@ if (isSelection) {
 }
 
 // Переменные для фильтров
-let currentRoomsFilter = '';
+let currentRoomsFilter = []; // Массив выбранных типов комнат
 let currentFloorFrom = '';
 let currentFloorTo = '';
 let currentPriceFrom = '';
@@ -843,21 +843,24 @@ function normalizeRooms(apt) {
 function applyFilters(apartments) {
     let filtered = [...apartments];
     
-    // Фильтр по комнатам
-    if (currentRoomsFilter) {
+    // Фильтр по комнатам - множественный выбор
+    if (currentRoomsFilter.length > 0) {
         filtered = filtered.filter(apt => {
             const rooms = normalizeRooms(apt);
             
             if (!rooms) return false;
             
-            if (currentRoomsFilter === 'studio') {
-                return rooms === 'studio';
-            }
-            if (currentRoomsFilter === '4') {
-                const roomsNum = parseInt(rooms) || 0;
-                return roomsNum >= 4;
-            }
-            return rooms === currentRoomsFilter;
+            // Проверяем, входит ли квартира в список выбранных типов
+            return currentRoomsFilter.some(filterValue => {
+                if (filterValue === 'studio') {
+                    return rooms === 'studio';
+                }
+                if (filterValue === '4') {
+                    const roomsNum = parseInt(rooms) || 0;
+                    return roomsNum >= 4;
+                }
+                return rooms === filterValue;
+            });
         });
     }
     
@@ -1102,7 +1105,7 @@ function renderApartments(apartments) {
         const isInFavorites = typeof isApartmentFavorite === 'function' ? isApartmentFavorite(apt.complex_id, apartmentId) : false;
         
         return `
-            <div class="apartment-card" onclick="window.location.href='${detailUrl}'">
+            <div class="apartment-card" onclick="window.open('${detailUrl}', '_blank')">
                 <div class="card-gallery">
                     <button class="card-favorite-btn ${isInFavorites ? 'active' : ''}" 
                             onclick="event.stopPropagation(); toggleFavorite(this, '${apt.complex_id}', '${apartmentId}')" 
@@ -1121,7 +1124,7 @@ function renderApartments(apartments) {
                     ${pricePerSqm ? `<div class="card-price-per-m">${escapeHtml(pricePerSqm)}</div>` : ''}
                     ${detailsHtml}
                     <div class="card-actions">
-                        <button class="card-link" onclick="event.stopPropagation(); window.location.href='${detailUrl}'">
+                        <button class="card-link" onclick="event.stopPropagation(); window.open('${detailUrl}', '_blank')">
                             <i class="fas fa-eye"></i>
                             Подробнее
                         </button>
@@ -1166,14 +1169,41 @@ function toggleFavorite(btn, complexId, apartmentId) {
 
 // Обработчики фильтров
 document.addEventListener('DOMContentLoaded', function() {
-    // Обработчики кнопок комнат
+    // Обработчики кнопок комнат - множественный выбор (toggle)
     document.querySelectorAll('.rooms-filter-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            document.querySelectorAll('.rooms-filter-btn').forEach(b => {
-                b.setAttribute('data-active', 'false');
-            });
-            this.setAttribute('data-active', 'true');
-            currentRoomsFilter = this.getAttribute('data-value') || '';
+            const value = this.getAttribute('data-value');
+            const isActive = this.getAttribute('data-active') === 'true';
+            
+            // Кнопка "Любое" - снимает все выборы
+            if (value === '') {
+                if (!isActive) {
+                    // Снимаем все выборы
+                    document.querySelectorAll('.rooms-filter-btn').forEach(b => {
+                        b.setAttribute('data-active', 'false');
+                    });
+                    this.setAttribute('data-active', 'true');
+                    currentRoomsFilter = [];
+                }
+            } else {
+                // Для остальных кнопок - toggle
+                if (isActive) {
+                    // Снимаем выбор
+                    this.setAttribute('data-active', 'false');
+                    currentRoomsFilter = currentRoomsFilter.filter(v => v !== value);
+                } else {
+                    // Добавляем выбор
+                    this.setAttribute('data-active', 'true');
+                    if (!currentRoomsFilter.includes(value)) {
+                        currentRoomsFilter.push(value);
+                    }
+                    // Снимаем "Любое", если выбрана конкретная опция
+                    const anyBtn = document.querySelector('.rooms-filter-btn[data-value=""]');
+                    if (anyBtn) {
+                        anyBtn.setAttribute('data-active', 'false');
+                    }
+                }
+            }
         });
     });
     
@@ -1237,14 +1267,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (resetBtn) {
         resetBtn.addEventListener('click', function() {
             // Сбрасываем все фильтры
-            currentRoomsFilter = '';
+            currentRoomsFilter = [];
             currentFloorFrom = '';
             currentFloorTo = '';
             currentPriceFrom = '';
             currentPriceTo = '';
             currentComplexFilter = '';
             
-            // Сбрасываем UI
+            // Сбрасываем UI - только "Любое" активна
             document.querySelectorAll('.rooms-filter-btn').forEach(b => {
                 b.setAttribute('data-active', b.getAttribute('data-value') === '' ? 'true' : 'false');
             });

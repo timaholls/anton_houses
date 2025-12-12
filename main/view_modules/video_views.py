@@ -15,7 +15,7 @@ def videos(request):
     complex_id = request.GET.get('complex', '')
     db = get_mongo_connection()
     videos_col = db['residential_videos']
-    unified = db['unified_houses_3']
+    unified = db['unified_houses']
 
     q = {'is_active': True}
     if complex_id:
@@ -76,7 +76,7 @@ def video_detail(request, video_id):
     """Детальная страница видеообзора (Mongo)"""
     db = get_mongo_connection()
     videos_col = db['residential_videos']
-    unified = db['unified_houses_3']
+    unified = db['unified_houses']
     d = videos_col.find_one({'_id': ObjectId(str(video_id))})
     if not d:
         raise Http404("Видео не найдено")

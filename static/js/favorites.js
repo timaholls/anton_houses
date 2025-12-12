@@ -87,14 +87,25 @@ function isComplexInFavorites(complexId) {
  * Добавить квартиру в избранное
  */
 function addApartmentToFavorites(complexId, apartmentId) {
-    if (!complexId || !apartmentId) return false;
+    console.log('🔍 [FAVORITES] addApartmentToFavorites вызвана:', { complexId, apartmentId, complexIdType: typeof complexId, apartmentIdType: typeof apartmentId });
+    
+    if (!complexId || !apartmentId) {
+        console.warn('❌ [FAVORITES] addApartmentToFavorites: отсутствуют параметры', { complexId, apartmentId });
+        return false;
+    }
     
     const favorites = getFavorites();
     const idStr = `${complexId}_${apartmentId}`;
+    console.log('📝 [FAVORITES] Формируем ID для сохранения:', idStr);
+    console.log('📋 [FAVORITES] Текущие избранные квартиры:', favorites.apartments);
     
     if (!favorites.apartments.includes(idStr)) {
         favorites.apartments.push(idStr);
-        return saveFavorites(favorites);
+        const saved = saveFavorites(favorites);
+        console.log('✅ [FAVORITES] Квартира добавлена в избранное:', { idStr, saved, totalApartments: favorites.apartments.length });
+        return saved;
+    } else {
+        console.log('⚠️ [FAVORITES] Квартира уже в избранном:', idStr);
     }
     return false;
 }

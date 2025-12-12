@@ -60,7 +60,7 @@ def apartment_detail(request, complex_id, apartment_id):
         db = get_mongo_connection()
         
         # Получаем данные ЖК
-        complex_collection = db['unified_houses_3']
+        complex_collection = db['unified_houses']
         complex_data = complex_collection.find_one({'_id': ObjectId(complex_id)})
         
         if not complex_data:
@@ -276,6 +276,8 @@ def apartment_detail(request, complex_id, apartment_id):
         apartment_data = None
         apartment_index = None
         
+        print(f"🔍 Поиск квартиры: apartment_id_str = '{apartment_id_str}', complex_id = '{complex_id}'")
+        
         # Если apartment_id содержит подчеркивание, это сгенерированный ID
         if '_' in apartment_id_str:
             # Проверяем формат ID: может быть {complex_id}_{type}_{index} или {type}_{index}
@@ -322,6 +324,83 @@ def apartment_detail(request, complex_id, apartment_id):
                 if apt_id and (str(apt_id) == apartment_id_str):
                     apartment_data = apt
                     break
+            
+            # Если не нашли в списке apartments, ищем в apartment_types по id
+            if not apartment_data and 'apartment_types' in complex_data:
+                print(f"🔍 Ищем в apartment_types по id = '{apartment_id_str}'")
+                apartment_types_data = complex_data.get('apartment_types', {})
+                for apt_type, type_data in apartment_types_data.items():
+                    apt_list = type_data.get('apartments', [])
+                    for apt in apt_list:
+                        # Проверяем разные варианты ID
+                        apt_id = apt.get('id') or apt.get('_id')
+                        if apt_id and (str(apt_id) == apartment_id_str):
+                            print(f"✅ Нашли квартиру по id: {apt_id}")
+                            # Нашли квартиру, формируем данные
+                            layout_photos = apt.get('image', [])
+                            if isinstance(layout_photos, str):
+                                layout_photos = [layout_photos] if layout_photos else []
+                            elif not isinstance(layout_photos, list):
+                                layout_photos = []
+                            
+                            title = apt.get('title', '')
+                            rooms = apt.get('rooms', '')
+                            if title and not rooms:
+                                if '-комн' in title:
+                                    rooms = title.split('-комн')[0].strip()
+                            
+                            floor = apt.get('floor', '')
+                            price = apt.get('price', '')
+                            total_area = apt.get('totalArea', '') or apt.get('area', '')
+                            price_per_sqm = apt.get('pricePerSqm', '') or apt.get('pricePerSquare', '')
+                            
+                            if not price_per_sqm and price and total_area:
+                                try:
+                                    price_str = str(price).replace(' ', '').replace(',', '.').replace('₽', '').replace('руб', '').strip()
+                                    area_str = str(total_area).replace(',', '.').strip()
+                                    if price_str and area_str:
+                                        price_num = float(price_str)
+                                        area_num = float(area_str)
+                                        if area_num > 0:
+                                            price_per_sqm = price_num / area_num
+                                except (ValueError, TypeError, ZeroDivisionError):
+                                    pass
+                            
+                            apartment_data = {
+                                'id': apartment_id_str,
+                                'type': apt_type,
+                                'title': title,
+                                'price': price,
+                                'price_per_square': price_per_sqm,
+                                'pricePerSqm': price_per_sqm,
+                                'completion_date': apt.get('completionDate', ''),
+                                'image': layout_photos[0] if layout_photos else '',
+                                'url': apt.get('url', ''),
+                                'layout_photos': layout_photos,
+                                '_id': apt.get('_id'),
+                                'rooms': rooms,
+                                'totalArea': total_area,
+                                'area': total_area,
+                                'floor': floor,
+                                'layout': apt.get('layout', ''),
+                                'balcony': apt.get('balcony', ''),
+                                'loggia': apt.get('loggia', ''),
+                                'view': apt.get('view', ''),
+                                'condition': apt.get('condition', ''),
+                                'furniture': apt.get('furniture', ''),
+                                'ceilingHeight': apt.get('ceilingHeight', ''),
+                                'windows': apt.get('windows', ''),
+                                'bathroom': apt.get('bathroom', ''),
+                                'kitchenArea': apt.get('kitchenArea', ''),
+                                'livingArea': apt.get('livingArea', ''),
+                                'bedroomArea': apt.get('bedroomArea', ''),
+                                'photos': apt.get('photos', []),
+                                'description': apt.get('description', ''),
+                                'features': apt.get('features', [])
+                            }
+                            break
+                    if apartment_data:
+                        break
         
         if not apartment_data:
             # Если не нашли в сформированном списке, пробуем найти напрямую в apartment_types

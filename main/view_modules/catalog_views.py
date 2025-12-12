@@ -56,7 +56,7 @@ def get_all_delivery_dates_from_db():
     """Получает все уникальные сроки сдачи из базы данных"""
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         all_records = list(unified_col.find({}))
         
         delivery_dates = set()
@@ -91,14 +91,11 @@ def get_all_delivery_dates_from_db():
         
         return sorted(list(delivery_dates))
     except Exception as e:
-        print(f"Ошибка получения сроков сдачи из базы: {e}")
         return []
 
 
 def get_delivery_quarters():
     """Генерирует список кварталов на основе реальных данных из базы"""
-    print("=" * 60)
-    print("🔍 [get_delivery_quarters] Начало генерации кварталов")
     sys.stdout.flush()
     
     current_date = datetime.now().date()
@@ -106,19 +103,13 @@ def get_delivery_quarters():
     current_month = current_date.month
     current_quarter = (current_month - 1) // 3 + 1
     
-    print(f"📅 Текущая дата: {current_date}")
-    print(f"📅 Текущий год: {current_year}")
-    print(f"📅 Текущий месяц: {current_month}")
-    print(f"📅 Текущий квартал: Q{current_quarter}")
     sys.stdout.flush()
     
-    print("\n🔹 Получение сроков сдачи из базы данных...")
     sys.stdout.flush()
     
     # Получаем все уникальные сроки сдачи из базы
     all_delivery_dates = get_all_delivery_dates_from_db()
     
-    print(f"📊 Найдено уникальных сроков сдачи: {len(all_delivery_dates)}")
     sys.stdout.flush()
     
     # Создаем множество кварталов из всех дат
@@ -168,10 +159,6 @@ def get_delivery_quarters():
             'quarter': quarter
         })
     
-    print(f"📊 Сгенерировано уникальных кварталов: {len(quarters_list)}")
-    for i, q in enumerate(quarters_list, 1):
-        print(f"   {i}. {q['label']} ({q['value']})")
-    print("=" * 60)
     sys.stdout.flush()
     
     return quarters_list
@@ -324,7 +311,7 @@ def get_complexes_list_for_filter():
     complexes_list = []
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         all_complexes = list(unified_col.find({}))
         
         for comp in all_complexes:
@@ -354,7 +341,6 @@ def get_complexes_list_for_filter():
         complexes_list = sorted(unique_complexes, key=lambda x: x['name'])
     except Exception as e:
         import traceback
-        print(f"[ERROR] Ошибка получения списка ЖК: {e}")
         traceback.print_exc()
         complexes_list = []
     
@@ -363,9 +349,6 @@ def get_complexes_list_for_filter():
 
 def catalog(request):
     """Каталог ЖК - теперь только рендерит шаблон, данные загружаются через API"""
-    print("\n" + "="*80)
-    print("🎯 [catalog] Функция catalog() вызвана")
-    print("="*80)
     sys.stdout.flush()
     
     page = request.GET.get('page', 1)
@@ -396,11 +379,47 @@ def catalog(request):
     streets = []
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         
         # Получаем уникальные города
         cities = unified_col.distinct('city', {'city': {'$ne': None, '$ne': ''}})
         cities = [city for city in cities if city]  # Убираем пустые значения
+        
+        
+        # Фильтруем города: исключаем названия ЖК и комплексов
+        def is_valid_city(city_name):
+            if not city_name:
+                return False
+            city_str = str(city_name).strip()
+            city_lower = city_str.lower()
+            
+            
+            # Исключаем значения, начинающиеся с "ЖК" или содержащие паттерны названий комплексов
+            # Проверяем начало строки на "жк" (с разными вариантами пробелов и кавычек)
+            if city_lower.startswith('жк'):
+                return False
+            
+            invalid_patterns = [
+                'жк ',  # Содержит "ЖК " (с пробелом)
+                'жк«',  # Содержит "ЖК«"
+                'жк"',  # Содержит 'ЖК"'
+                'жк «', # Содержит "ЖК «"
+                'жк "', # Содержит 'ЖК "'
+                'город природы',  # Специфичное название
+                'жилой комплекс',
+                'комплекс',
+            ]
+            
+            for pattern in invalid_patterns:
+                if pattern in city_lower:
+                    return False
+            
+            return True
+        
+        cities_before = cities.copy()
+        cities = [city for city in cities if is_valid_city(city)]
+        cities_filtered_out = [city for city in cities_before if city not in cities]
+        
         
         # Получаем уникальные районы
         districts = unified_col.distinct('district', {'district': {'$ne': None, '$ne': ''}})
@@ -416,19 +435,13 @@ def catalog(request):
         streets = sorted(streets)
         
     except Exception as e:
-        print(f"Ошибка получения списков локаций: {e}")
         cities = []
         districts = []
         streets = []
 
     # Генерируем список кварталов для фильтра по сроку сдачи
-    print("\n" + "="*80)
-    print("🚀 [catalog view] Вызов get_delivery_quarters()")
-    print("="*80)
     sys.stdout.flush()
     delivery_quarters = get_delivery_quarters()
-    print(f"✅ [catalog view] Получено кварталов: {len(delivery_quarters)}")
-    print("="*80 + "\n")
     sys.stdout.flush()
 
     # Получаем список ЖК для фильтра по названиям
@@ -520,7 +533,7 @@ def detail(request, complex_id):
         # ============ MONGODB VERSION ============
         try:
             db = get_mongo_connection()
-            unified_col = db['unified_houses_3']
+            unified_col = db['unified_houses']
             
             # Получаем запись по ID
             record = unified_col.find_one({'_id': ObjectId(complex_id)})
@@ -558,8 +571,36 @@ def detail(request, complex_id):
                         address = ''
                 price_range = development.get('price_range', '')
                 
-                # Фото ЖК
-                photos = development.get('photos', [])
+                # Фото ЖК (исключаем фото из хода строительства)
+                all_photos = development.get('photos', [])
+                construction_progress = record.get('construction_progress', {})
+                construction_photos = []
+                
+                # Собираем все фото из хода строительства
+                if construction_progress:
+                    if isinstance(construction_progress, list):
+                        # Если это массив этапов
+                        for stage in construction_progress:
+                            if isinstance(stage, dict):
+                                stage_photos = stage.get('photos', [])
+                                if stage_photos:
+                                    construction_photos.extend(stage_photos)
+                    elif isinstance(construction_progress, dict):
+                        # Если это объект с construction_stages
+                        stages = construction_progress.get('construction_stages', [])
+                        for stage in stages:
+                            if isinstance(stage, dict):
+                                stage_photos = stage.get('photos', [])
+                                if stage_photos:
+                                    construction_photos.extend(stage_photos)
+                        # Или если это объект с photos напрямую
+                        if not stages:
+                            direct_photos = construction_progress.get('photos', [])
+                            if direct_photos:
+                                construction_photos.extend(direct_photos)
+                
+                # Исключаем фото хода строительства из фото ЖК
+                photos = [p for p in all_photos if p not in construction_photos]
                 
                 # Координаты напрямую в корне
                 latitude = record.get('latitude')
@@ -872,12 +913,9 @@ def detail(request, complex_id):
                     apartment_variants_grouped[apt_type_key] = []
                 apartment_variants_grouped[apt_type_key].append(apt)
             
-            # Базовый набор типов (отображаем всегда)
-            base_types = ['Студия', '1', '2', '3', '4', '5', '5+']
-
-            # Удаляем дубли и добавляем базовые типы (чтобы отображать даже если пустые)
+            # Удаляем дубли из списка типов
             unique_types = []
-            for apt_type in apartment_types_list + base_types:
+            for apt_type in apartment_types_list:
                 apt_type_str = str(apt_type).strip()
                 if apt_type_str and apt_type_str not in unique_types:
                     unique_types.append(apt_type_str)
@@ -905,12 +943,16 @@ def detail(request, complex_id):
                 # Всё остальное оставляем в конце по алфавиту
                 return (3, value)
 
-            apartment_types_list = sorted(unique_types, key=sort_key)
-
-            # Гарантируем наличие групп даже если нет квартир по типу
-            for base_type in base_types:
-                if base_type not in apartment_variants_grouped:
-                    apartment_variants_grouped[base_type] = []
+            # Фильтруем список типов: оставляем только те, для которых есть квартиры
+            apartment_types_list = []
+            for apt_type in unique_types:
+                apt_type_str = str(apt_type).strip()
+                # Проверяем, есть ли квартиры для этого типа
+                if apt_type_str in apartment_variants_grouped and apartment_variants_grouped[apt_type_str]:
+                    apartment_types_list.append(apt_type_str)
+            
+            # Сортируем только те типы, для которых есть квартиры
+            apartment_types_list = sorted(apartment_types_list, key=sort_key)
             
             # Формируем контекст для MongoDB версии
             # Получаем акции для этого ЖК
@@ -983,6 +1025,70 @@ def detail(request, complex_id):
             except Exception as e:
                 videos = []
 
+            # Нормализуем формат хода строительства перед передачей в шаблон
+            # Шаблон ожидает объект с construction_stages, а не массив
+            # Также добавляем stage_number для каждого этапа
+            construction_progress_raw = record.get('construction_progress', {})
+            if isinstance(construction_progress_raw, list):
+                # Если это массив этапов, оборачиваем в объект с construction_stages
+                # И добавляем stage_number для каждого этапа
+                normalized_stages = []
+                for idx, stage in enumerate(construction_progress_raw):
+                    if isinstance(stage, dict):
+                        normalized_stage = stage.copy()
+                        # Добавляем stage_number если его нет
+                        if 'stage_number' not in normalized_stage:
+                            normalized_stage['stage_number'] = idx + 1
+                        # Убеждаемся, что есть date
+                        if 'date' not in normalized_stage:
+                            normalized_stage['date'] = normalized_stage.get('stage', '')
+                        normalized_stages.append(normalized_stage)
+                    else:
+                        # Если этап не словарь, создаем словарь
+                        normalized_stages.append({
+                            'stage_number': idx + 1,
+                            'date': '',
+                            'photos': []
+                        })
+                construction_progress = {'construction_stages': normalized_stages}
+            elif isinstance(construction_progress_raw, dict) and 'construction_stages' in construction_progress_raw:
+                # Если это уже объект с construction_stages, добавляем stage_number если его нет
+                stages = construction_progress_raw.get('construction_stages', [])
+                normalized_stages = []
+                for idx, stage in enumerate(stages):
+                    if isinstance(stage, dict):
+                        normalized_stage = stage.copy()
+                        # Добавляем stage_number если его нет
+                        if 'stage_number' not in normalized_stage:
+                            normalized_stage['stage_number'] = idx + 1
+                        # Убеждаемся, что есть date
+                        if 'date' not in normalized_stage:
+                            normalized_stage['date'] = normalized_stage.get('stage', '')
+                        normalized_stages.append(normalized_stage)
+                    else:
+                        normalized_stages.append({
+                            'stage_number': idx + 1,
+                            'date': '',
+                            'photos': []
+                        })
+                construction_progress = {'construction_stages': normalized_stages}
+            elif isinstance(construction_progress_raw, dict) and construction_progress_raw:
+                # Если это объект без construction_stages, пытаемся создать этап из photos
+                direct_photos = construction_progress_raw.get('photos', [])
+                if direct_photos:
+                    construction_progress = {
+                        'construction_stages': [{
+                            'stage_number': 1,
+                            'stage': 'Строительство',
+                            'date': construction_progress_raw.get('date', ''),
+                            'photos': direct_photos
+                        }]
+                    }
+                else:
+                    construction_progress = {}
+            else:
+                construction_progress = {}
+
             context = {
                 'complex': {
                     'id': str(record['_id']),
@@ -1003,8 +1109,8 @@ def detail(request, complex_id):
                     'total_apartments': avito_data.get('total_apartments', 0),
                     'avito_url': avito_data.get('url', ''),
                     'domclick_url': domclick_data.get('url', ''),
-                    # Ход строительства из объединенной записи (скопирован из DomClick)
-                    'construction_progress': record.get('construction_progress', {}),
+                    # Ход строительства из объединенной записи (нормализованный формат)
+                    'construction_progress': construction_progress,
                 },
                 'complex_offers': complex_offers,
                 'videos': videos,
@@ -1023,6 +1129,17 @@ def detail(request, complex_id):
                 except Exception:
                     agent = None
             context['agent'] = agent
+            
+            # Логируем данные, передаваемые в шаблон
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            
+            # Логируем development.photos
+            development = context['complex'].get('development', {})
+            dev_photos = development.get('photos', [])
+            
+            
             return render(request, 'main/detail.html', context)
             
         except Exception as e:
@@ -1459,21 +1576,57 @@ def _get_location_lists(kind: str):
     try:
         db = get_mongo_connection()
         if kind == 'newbuild':
-            collection = db['unified_houses_3']
+            collection = db['unified_houses']
         elif kind == 'secondary':
             collection = db['secondary_properties']
         else:
             return cities, districts, streets
         
+        # Получаем уникальные города
         cities = collection.distinct('city', {'city': {'$ne': None, '$ne': ''}})
-        districts = collection.distinct('district', {'district': {'$ne': None, '$ne': ''}})
-        streets = collection.distinct('street', {'street': {'$ne': None, '$ne': ''}})
+        cities = [city for city in cities if city]  # Убираем пустые значения
         
-        cities = sorted([city for city in cities if city])
+        
+        # Фильтруем города: исключаем названия ЖК и комплексов
+        def is_valid_city(city_name):
+            if not city_name:
+                return False
+            city_str = str(city_name).strip()
+            city_lower = city_str.lower()
+            
+            
+            # Исключаем значения, начинающиеся с "ЖК" или содержащие паттерны названий комплексов
+            # Проверяем начало строки на "жк" (с разными вариантами пробелов и кавычек)
+            if city_lower.startswith('жк'):
+                return False
+            
+            invalid_patterns = [
+                'жк ',  # Содержит "ЖК " (с пробелом)
+                'жк«',  # Содержит "ЖК«"
+                'жк"',  # Содержит 'ЖК"'
+                'жк «', # Содержит "ЖК «"
+                'жк "', # Содержит 'ЖК "'
+                'город природы',  # Специфичное название
+                'жилой комплекс',
+                'комплекс',
+            ]
+            
+            for pattern in invalid_patterns:
+                if pattern in city_lower:
+                    return False
+            
+            return True
+        
+        cities_before = cities.copy()
+        cities = [city for city in cities if is_valid_city(city)]
+        cities_filtered_out = [city for city in cities_before if city not in cities]
+        
+        
+        districts = collection.distinct('district', {'district': {'$ne': None, '$ne': ''}})
         districts = sorted([district for district in districts if district])
+        streets = collection.distinct('street', {'street': {'$ne': None, '$ne': ''}})
         streets = sorted([street for street in streets if street])
     except Exception as exc:
-        print(f"⚠️ Ошибка получения списков локаций ({kind}): {exc}")
         cities, districts, streets = [], [], []
     return cities, districts, streets
 
@@ -1482,9 +1635,6 @@ def _catalog_fallback(request, kind: str, title: str):
     """Рендер каталога без необходимости иметь запись CatalogLanding.
     kind: 'newbuild'|'secondary'
     """
-    print("\n" + "="*80)
-    print(f"🎯 [_catalog_fallback] Вызвана с kind='{kind}', title='{title}'")
-    print("="*80)
     sys.stdout.flush()
     
     if kind == 'secondary':
@@ -1506,13 +1656,8 @@ def _catalog_fallback(request, kind: str, title: str):
     # Генерируем список кварталов для фильтра по сроку сдачи (только для новостроек)
     delivery_quarters = []
     if kind == 'newbuild':
-        print("\n" + "="*80)
-        print("🚀 [_catalog_fallback] Вызов get_delivery_quarters() для новостроек")
-        print("="*80)
         sys.stdout.flush()
         delivery_quarters = get_delivery_quarters()
-        print(f"✅ [_catalog_fallback] Получено кварталов: {len(delivery_quarters)}")
-        print("="*80 + "\n")
         sys.stdout.flush()
 
     context = {
@@ -1538,19 +1683,14 @@ def _catalog_fallback(request, kind: str, title: str):
 
 def newbuild_index(request):
     # Стартовая страница новостроек - читает из MongoDB
-    print("\n" + "="*80)
-    print("🎯 [newbuild_index] Функция newbuild_index() вызвана")
-    print("="*80)
     sys.stdout.flush()
     
     db = get_mongo_connection()
     landing = db['catalog_landings'].find_one({'kind': 'newbuild', 'category': 'all', 'is_active': True})
     if landing:
-        print(f"✅ [newbuild_index] Найден landing, переход в catalog_landing")
         sys.stdout.flush()
         return catalog_landing(request, slug=landing['slug'])
     
-    print(f"✅ [newbuild_index] Landing не найден, переход в _catalog_fallback")
     sys.stdout.flush()
     return _catalog_fallback(request, kind='newbuild', title='Новостройки')
 

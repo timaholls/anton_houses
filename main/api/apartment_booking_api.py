@@ -55,7 +55,7 @@ def book_apartment(request):
         db = get_mongo_connection()
         
         # Получаем информацию о ЖК
-        complex_collection = db['unified_houses_3']
+        complex_collection = db['unified_houses']
         complex_data = complex_collection.find_one({'_id': ObjectId(complex_id)})
         
         if not complex_data:

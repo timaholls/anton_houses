@@ -11,7 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             db = get_mongo_connection()
-            unified_collection = db['unified_houses_3']
+            unified_collection = db['unified_houses']
             
             self.stdout.write("=" * 60)
             self.stdout.write(self.style.SUCCESS("ПРОВЕРКА ЖК С РЕЙТИНГОМ 4 И 5"))

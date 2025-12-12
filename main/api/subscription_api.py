@@ -292,7 +292,16 @@ def notify_new_future_project(project_data):
         }))
         
         if subscribers:
-            project_name = project_data.get('name', 'Новый проект')
+            # Извлекаем название из нового формата unified_houses
+            project_name = 'Новый проект'
+            if isinstance(project_data, dict):
+                # Проверяем новый формат (development.name)
+                dev = project_data.get('development', {})
+                if dev and dev.get('name'):
+                    project_name = dev['name']
+                # Fallback на старый формат (name в корне)
+                elif project_data.get('name'):
+                    project_name = project_data['name']
             
             send_notification_email(
                 subscribers, 

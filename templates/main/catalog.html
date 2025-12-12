@@ -45,6 +45,29 @@
             margin-bottom: 50px !important;
         }
 
+        /* Стили для группировки квартир */
+        .apartment-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .apartment-group-header:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+        
+        .apartment-group-content {
+            margin-bottom: 24px;
+        }
+        
         .catalog-card-horizontal {
             display: flex;
             flex-direction: row;
@@ -1920,8 +1943,15 @@
                 let list = data.complexes || [];
                 list = filterByCurrentBounds(list);
                 if (typeof renderMapPoints === 'function') {
-                    const mapPoints = filterByCurrentBounds(data.map_points || list || []);
-                    renderMapPoints(mapPoints, false, false); // false = не квартиры
+                    // Передаем все метки для карты (не фильтруем), чтобы все метки оставались видимыми
+                    const allMapPoints = data.map_points || data.complexes || [];
+                    // Обновляем allMapPoints только если нет активных фильтров или при явном сбросе
+                    const forceUpdate = window.shouldUpdateAllMapPoints === true;
+                    renderMapPoints(allMapPoints, false, false, forceUpdate); // false = не квартиры
+                    // Сбрасываем флаг после обновления
+                    if (forceUpdate) {
+                        window.shouldUpdateAllMapPoints = false;
+                    }
                 }
 
                 // Синхронизируем фильтр ЖК по видимой области только если фильтр карты включен
@@ -2535,6 +2565,7 @@
             // Сбрасываем фильтр карты
             window.currentMapBounds = null;
             window.mapFilterEnabled = false;
+            window.shouldUpdateAllMapPoints = true; // Флаг для обновления всех меток при сбросе
             const mapBoundsInput = form ? form.querySelector('input[name="map_bounds"]') : null;
             if (mapBoundsInput) {
                 mapBoundsInput.value = '';
@@ -2543,6 +2574,15 @@
             if (mapFilterIndicator) {
                 mapFilterIndicator.style.display = 'none';
             }
+            
+            // Очищаем кеш меток карты, чтобы при следующей загрузке все метки обновились
+            if (window.allMapPoints) {
+                window.allMapPoints = [];
+            }
+            
+            // Убеждаемся, что флаг обновления меток установлен
+            window.shouldUpdateAllMapPoints = true;
+            
             window.fetchData();
         }
 
@@ -2566,6 +2606,22 @@
             if (window.mapBoundsInput && !window.mapFilterEnabled) {
                 window.mapBoundsInput.value = '';
             }
+
+            // Определяем, есть ли активные фильтры (кроме пагинации)
+            // Если фильтров нет - обновляем allMapPoints, если есть - сохраняем старые
+            const complexesHidden = form ? form.querySelector('#complexes-hidden') : null;
+            const cityHidden = form ? form.querySelector('#city-hidden') : null;
+            const districtHidden = form ? form.querySelector('#district-hidden') : null;
+            const streetHidden = form ? form.querySelector('#street-hidden') : null;
+            const hasActiveFilters = (
+                (complexesHidden && complexesHidden.value) ||
+                (cityHidden && cityHidden.value) ||
+                (districtHidden && districtHidden.value) ||
+                (streetHidden && streetHidden.value) ||
+                (window.mapBoundsInput && window.mapBoundsInput.value) ||
+                window.mapFilterEnabled
+            );
+            window.shouldUpdateAllMapPoints = !hasActiveFilters;
 
             // Определяем режим: ЖК или Квартиры
             const contentModeField = document.getElementById('content-mode-hidden');
@@ -2668,9 +2724,22 @@
             if (!grid) return;
 
             let apartments = data.apartments || [];
+            // Определяем layout из localStorage
             const layout = localStorage.getItem('catalog_layout') || 'grid';
-            const isListView = !isSecondary && layout === 'list';
-            grid.classList.toggle('list-mode', isListView);
+            
+            // Сначала устанавливаем класс на основе layout
+            const contentModeField = document.getElementById('content-mode-hidden');
+            const mode = contentModeField ? contentModeField.value : (localStorage.getItem('catalog_content_mode') || 'complexes');
+            
+            if (!isSecondary && mode === 'apartments' && layout === 'list') {
+                grid.classList.add('list-mode');
+            } else {
+                grid.classList.remove('list-mode');
+            }
+            
+            // Теперь определяем isListView на основе установленного класса
+            const isListView = !isSecondary && grid.classList.contains('list-mode');
+            
 
             // Фильтр по видимым границам карты
             apartments = filterByCurrentBounds(apartments);
@@ -2678,12 +2747,20 @@
             // Рендерим карту для новостроек - показываем точки ЖК (как в режиме ЖК)
             if (!isSecondary) {
                 if (typeof renderMapPoints === 'function') {
-                    const mapPoints = filterByCurrentBounds(data.map_points || []);
+                    // Передаем все метки для карты (не фильтруем), чтобы все метки оставались видимыми
+                    const allMapPoints = data.map_points || [];
+                    // Обновляем allMapPoints только если нет активных фильтров
+                    const forceUpdate = window.shouldUpdateAllMapPoints !== false;
                     // Важно: передаем false в третьем параметре чтобы показывались ЖК, а не квартиры
-                    renderMapPoints(mapPoints, false, false); // false = показываем точки ЖК
+                    renderMapPoints(allMapPoints, false, false, forceUpdate); // false = показываем точки ЖК
                 }
             }
 
+            // Инициализируем переменные для пагинации групп
+            let sortedGroups = [];
+            let perPage = 15;
+            let totalGroups = 0;
+            
             if (!apartments.length) {
                 // Для вторичной недвижимости убираем иконку
                 const noResultsHtml = isSecondary ? `
@@ -2708,9 +2785,301 @@
                 `;
                 grid.innerHTML = noResultsHtml;
             } else {
-                // Используем тот же горизонтальный стиль, что и для ЖК
-                let html = '';
+                // В режиме больших карточек (grid) показываем квартиры без группировки
+                // В режиме списка (list) группируем по типу и ЖК
+                if (!isListView) {
+                    // Режим больших карточек - просто список карточек без группировки
+                    // Квартиры уже отсортированы на сервере, сохраняем порядок
+                    
+                    const perPageField = document.getElementById('per_page-hidden');
+                    const perPage = perPageField ? parseInt(perPageField.value || '15', 10) : 15;
+                    const currentPage = data.current_page || 1;
+                    
+                    // Используем общее количество из ответа API, если доступно
+                    const totalCount = Number.isFinite(Number(data.total_count)) ? Number(data.total_count) : apartments.length;
+                    // Если есть фильтр по границам карты, используем количество отфильтрованных элементов
+                    const totalFiltered = window.mapFilterEnabled && window.currentMapBounds 
+                        ? apartments.length 
+                        : totalCount;
+                    const totalPages = Math.max(1, Math.ceil(totalFiltered / perPage));
+                    const currentPageAdjusted = Math.min(currentPage, totalPages);
+                    
+                    // Для отображения берем все квартиры (они уже отфильтрованы и отсортированы на сервере)
+                    // Но если есть фильтр карты, используем только видимые
+                    const apartmentsToPaginate = apartments;
+                    const startIdx = (currentPageAdjusted - 1) * perPage;
+                    const endIdx = startIdx + perPage;
+                    const paginatedApartments = apartmentsToPaginate.slice(startIdx, endIdx);
+                    
+                    let html = '';
+                    paginatedApartments.forEach((apt) => {
+                        let photo = apt.photo || (Array.isArray(apt.complex_photos) && apt.complex_photos.length > 0 ? apt.complex_photos[0] : null) || '/media/gallery/placeholders.png';
+                        if (photo) {
+                            photo = String(photo);
+                            if (photo && photo !== '/media/gallery/placeholders.png' && !photo.startsWith('/media/') && !photo.startsWith('http')) {
+                                photo = `/media/${photo}`;
+                            }
+                        } else {
+                            photo = '/media/gallery/placeholders.png';
+                        }
+
+                        const additionalPhotos = Array.isArray(apt.complex_photos) ? apt.complex_photos.slice(1, 5) : [];
+                        const thumbnailsHtml = photo ? `
+                            <div class="catalog-card-thumbs">
+                                <button type="button" class="catalog-thumb active" data-photo="${photo}"
+                                    onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
+                                    <img src="${photo}" alt="${apt.apartment_title || ''} превью 1">
+                                </button>
+                            </div>
+                        ` : '';
+
+                        const totalFloors = apt.total_floors || apt.floor_total || apt.house_floors || apt.max_floor || apt.maxFloor || apt.floor_max;
+                        const roomsLabel = apt.rooms === 'Студия' ? 'Студия' : apt.rooms ? `${apt.rooms}-к. квартира` : 'Квартира';
+                        const areaPart = apt.area ? `${apt.area} м²` : '';
+                        const floorPart = apt.floor ? `${apt.floor}${totalFloors ? `/${totalFloors}` : ''} эт.` : '';
+                        const titleMeta = [areaPart, floorPart].filter(Boolean).join(', ');
+                        const apartmentTitle = titleMeta ? `${roomsLabel}, ${titleMeta}` : roomsLabel;
+                        const priceDisplay = formatPriceText(apt.price || apt.price_display || apt.price_range || '');
+                        const apartmentUrl = `/apartment/${apt.complex_id}/${apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0')}/`;
+                        
+                        const complexId = apt.complex_id || '';
+                        const apartmentId = apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0');
+
+                        const priceNumber = parseInt(String(apt.price || apt.price_display || apt.price_range || '').replace(/\D/g, ''), 10);
+                        const areaNumber = parseFloat(apt.area);
+                        const perMeter = priceNumber && areaNumber ? `${Math.round(priceNumber / areaNumber).toLocaleString('ru-RU')} ₽/м²` : '';
+
+                        // Большая карточка для режима grid
+                        html += `
+                        <div class="property-card-compact catalog-card-horizontal" data-complex-id="${apt.id}">
+                            <div class="catalog-card-media">
+                                <div class="catalog-card-main-image" onclick="window.open('${apartmentUrl}', '_blank');" style="position: relative;">
+                                    <button class="favorite-btn" data-favorite-complex-id="${complexId}"
+                                        data-favorite-apartment-id="${apartmentId}"
+                                        onclick="event.stopPropagation(); if(typeof toggleApartmentFavoriteHandler === 'function') { toggleApartmentFavoriteHandler('${complexId}', '${apartmentId}', this); }"
+                                        title="Добавить в избранное">
+                                        <i class="far fa-heart"></i>
+                                    </button>
+                                    <img src="${photo}" alt="${apartmentTitle}">
+                                </div>
+                                ${thumbnailsHtml}
+                            </div>
+                            <div class="catalog-card-body" onclick="window.open('${apartmentUrl}', '_blank');">
+                                <div class="catalog-card-header">
+                                    <h3 class="compact-card-title">${apartmentTitle}</h3>
+                                    ${apt.special_offer ? `<span class="catalog-card-badge">Есть акция</span>` : ''}
+                                </div>
+                                <p class="catalog-card-subtitle">
+                                    ${apt.complex_name || ''}${apt.completion_date ? ` • Сдача: ${apt.completion_date}` : ''}
+                                </p>
+                                <p class="catalog-card-address">
+                                    ${apt.address || apt.complex_address || apt.city || 'Уфа'}
+                                </p>
+                                ${priceDisplay ? `<div class="catalog-card-price-line"><span>Стоимость:</span><strong>${priceDisplay}</strong></div>` : ''}
+                            </div>
+                        </div>`;
+                    });
+                    
+                    grid.innerHTML = html;
+                    
+                    // Обновляем пагинацию (по квартирам, а не по группам)
+                    if (typeof updatePagination === 'function') {
+                        updatePagination({
+                            current_page: currentPageAdjusted,
+                            total_pages: totalPages,
+                            has_previous: currentPageAdjusted > 1,
+                            has_next: currentPageAdjusted < totalPages
+                        });
+                    }
+                    
+                    return; // Выходим из функции, так как уже отрендерили
+                }
+                
+                // Режим списка - группируем квартиры по типу и ЖК
+                // Важно: квартиры уже отсортированы на сервере, сохраняем порядок
+                const grouped = {};
                 apartments.forEach((apt) => {
+                    // Определяем тип квартиры
+                    const roomsLabel = apt.rooms === 'Студия' || apt.rooms === '0' || String(apt.rooms).toLowerCase() === 'студия' 
+                        ? 'Студии' 
+                        : apt.rooms 
+                            ? `${apt.rooms}-комнатные` 
+                            : 'Квартиры';
+                    
+                    // Получаем название ЖК
+                    const complexName = apt.complex_name || 'Без названия';
+                    
+                    // Создаем ключ для группировки: тип_ЖК
+                    const groupKey = `${roomsLabel}_${complexName}`;
+                    
+                    if (!grouped[groupKey]) {
+                        grouped[groupKey] = {
+                            type: roomsLabel,
+                            complexName: complexName,
+                            apartments: [],
+                            prices: []
+                        };
+                    }
+                    
+                    // Добавляем квартиру в группу
+                    grouped[groupKey].apartments.push(apt);
+                    
+                    // Собираем цены для расчета диапазона
+                    const priceNumber = parseInt(String(apt.price || apt.price_display || apt.price_range || '').replace(/\D/g, ''), 10);
+                    if (priceNumber && priceNumber > 0) {
+                        grouped[groupKey].prices.push(priceNumber);
+                    }
+                });
+                
+                // Сортируем квартиры внутри каждой группы по цене (они уже отсортированы на сервере, но убеждаемся)
+                Object.keys(grouped).forEach(groupKey => {
+                    const group = grouped[groupKey];
+                    // Сортируем квартиры внутри группы по price_num (если есть) или по цене из строки
+                    group.apartments.sort((a, b) => {
+                        const priceA = a.price_num || (a.price ? parseFloat(String(a.price).replace(/\D/g, '')) / 1000000 : 0);
+                        const priceB = b.price_num || (b.price ? parseFloat(String(b.price).replace(/\D/g, '')) / 1000000 : 0);
+                        // Для price_asc: дешевле сначала
+                        const sortOrder = 'price_asc'; // Можно получить из скрытого поля, но по умолчанию price_asc
+                        if (sortOrder === 'price_asc') {
+                            return (priceA || Infinity) - (priceB || Infinity);
+                        } else {
+                            return (priceB || 0) - (priceA || 0);
+                        }
+                    });
+                });
+                
+                // Сортируем группы по минимальной цене в группе (чтобы группы с более дешевыми квартирами шли первыми)
+                const sortInput = document.getElementById('sort-hidden');
+                const currentSort = sortInput ? sortInput.value : 'price_asc';
+                
+                const typeOrder = ['Студии', '1-комнатные', '2-комнатные', '3-комнатные', '4-комнатные', '5-комнатные', 'Квартиры'];
+                const sortedGroups = Object.keys(grouped).sort((a, b) => {
+                    const groupA = grouped[a];
+                    const groupB = grouped[b];
+                    
+                    // Вычисляем минимальную цену в каждой группе
+                    const minPriceA = groupA.prices.length > 0 ? Math.min(...groupA.prices) / 1000000 : Infinity;
+                    const minPriceB = groupB.prices.length > 0 ? Math.min(...groupB.prices) / 1000000 : Infinity;
+                    
+                    // Если сортировка по цене, используем минимальную цену группы
+                    if (currentSort === 'price_asc' || currentSort === 'price_desc') {
+                        if (currentSort === 'price_asc') {
+                            // Дешевле сначала - группы с меньшей минимальной ценой идут первыми
+                            if (minPriceA !== minPriceB) {
+                                return minPriceA - minPriceB;
+                            }
+                        } else {
+                            // Дороже сначала - группы с большей минимальной ценой идут первыми
+                            if (minPriceA !== minPriceB) {
+                                return minPriceB - minPriceA;
+                            }
+                        }
+                    }
+                    
+                    // Если цены равны или сортировка не по цене, сортируем по типу, потом по названию
+                    const typeA = groupA.type;
+                    const typeB = groupB.type;
+                    const indexA = typeOrder.indexOf(typeA);
+                    const indexB = typeOrder.indexOf(typeB);
+                    
+                    if (indexA !== indexB) {
+                        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+                    }
+                    
+                    return groupA.complexName.localeCompare(groupB.complexName, 'ru');
+                });
+                
+                // Пагинация по группам (15 групп на страницу)
+                const perPageField = document.getElementById('per_page-hidden');
+                perPage = perPageField ? parseInt(perPageField.value || '15', 10) : 15;
+                const currentPage = data.current_page || 1;
+                totalGroups = sortedGroups.length;
+                const totalPages = Math.max(1, Math.ceil(totalGroups / perPage));
+                const startIdx = (currentPage - 1) * perPage;
+                const endIdx = startIdx + perPage;
+                const paginatedGroups = sortedGroups.slice(startIdx, endIdx);
+                
+                // Генерируем HTML с раскрывающимися секциями
+                let html = '';
+                paginatedGroups.forEach((groupKey, localIndex) => {
+                    const groupIndex = startIdx + localIndex;
+                    const group = grouped[groupKey];
+                    const groupId = `apartment-group-${groupIndex}`;
+                    
+                    // Вычисляем диапазон цен
+                    let priceRange = '';
+                    if (group.prices.length > 0) {
+                        const minPrice = Math.min(...group.prices);
+                        const maxPrice = Math.max(...group.prices);
+                        const minPriceMillions = (minPrice / 1000000).toFixed(1);
+                        const maxPriceMillions = (maxPrice / 1000000).toFixed(1);
+                        
+                        if (minPrice === maxPrice) {
+                            priceRange = `от ${minPriceMillions} млн ₽`;
+                        } else {
+                            priceRange = `от ${minPriceMillions} до ${maxPriceMillions} млн ₽`;
+                        }
+                    }
+                    
+                    // Вычисляем диапазон площадей
+                    const areas = group.apartments.map(apt => parseFloat(apt.area)).filter(a => a && a > 0);
+                    let areaRange = '';
+                    if (areas.length > 0) {
+                        const minArea = Math.min(...areas);
+                        const maxArea = Math.max(...areas);
+                        if (minArea === maxArea) {
+                            areaRange = `от ${minArea.toFixed(1)} м²`;
+                        } else {
+                            areaRange = `от ${minArea.toFixed(1)} до ${maxArea.toFixed(1)} м²`;
+                        }
+                    }
+                    
+                    const count = group.apartments.length;
+                    const countText = count === 1 ? 'объявление' : count < 5 ? 'объявления' : 'объявлений';
+                    
+                    // Заголовок группы (раскрывающийся)
+                    html += `
+                        <div class="apartment-group-header" onclick="toggleApartmentGroup('${groupId}')" style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding: 16px 20px;
+                            background: #f8f9fa;
+                            border: 1px solid #e5e7eb;
+                            border-radius: 8px;
+                            margin-bottom: 12px;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        ">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                    <span style="font-weight: 700; font-size: 16px; color: #1f2937;">${group.type}</span>
+                                    ${priceRange ? `<span style="color: #6b7280; font-size: 14px;">${priceRange}</span>` : ''}
+                                    ${areaRange ? `<span style="color: #6b7280; font-size: 14px;">${areaRange}</span>` : ''}
+                                    <span style="color: #6b7280; font-size: 14px;">•</span>
+                                    <span style="font-weight: 600; color: #374151; font-size: 14px;">${group.complexName}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span style="color: #6b7280; font-size: 14px;">${count} ${countText}</span>
+                                <i class="fas fa-chevron-down" id="${groupId}-icon" style="
+                                    transition: transform 0.3s ease;
+                                    color: #6b7280;
+                                "></i>
+                            </div>
+                        </div>
+                        <div id="${groupId}" class="apartment-group-content" style="
+                            display: none;
+                            margin-bottom: 24px;
+                        " data-apartments='${JSON.stringify(group.apartments)}'>
+                            <div class="apartment-group-items" id="${groupId}-items" data-current-page="1">
+                    `;
+                    
+                    // Показываем только первые 15 квартир
+                    const apartmentsToShow = group.apartments.slice(0, 15);
+                    
+                    // Квартиры внутри группы
+                    apartmentsToShow.forEach((apt) => {
                     let photo = apt.photo || (Array.isArray(apt.complex_photos) && apt.complex_photos.length > 0 ? apt.complex_photos[0] : null) || '/media/gallery/placeholders.png';
                     if (photo) {
                         photo = String(photo);
@@ -2805,17 +3174,449 @@
                             </div>
                         </div>`;
                     }
+                    });
+                    
+                    // Закрываем контейнер квартир
+                    html += `</div>`;
+                    
+                    // Добавляем пагинацию для группы (если квартир больше 15)
+                    const totalApartments = group.apartments.length;
+                    const totalPages = Math.ceil(totalApartments / 15);
+                    if (totalPages > 1) {
+                        html += `
+                            <div class="apartment-group-pagination" id="${groupId}-pagination" style="
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                gap: 8px;
+                                margin-top: 20px;
+                                flex-wrap: wrap;
+                            ">
+                        `;
+                        
+                        // Кнопка "Назад" (стрелка влево)
+                        html += `
+                            <button class="apartment-group-pagination-btn" onclick="changeGroupPage('${groupId}', 'prev')" style="
+                                padding: 8px 12px;
+                                border: 1px solid #e5e7eb;
+                                background: white;
+                                color: #374151;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                transition: all 0.3s;
+                                display: none;
+                            " data-page="prev">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        `;
+                        
+                        // Номера страниц: показываем первые 3 страницы (1, 2, 3), затем многоточие и последнюю
+                        if (totalPages <= 3) {
+                            // Если страниц 3 или меньше, показываем все
+                            for (let i = 1; i <= totalPages; i++) {
+                                const isActive = i === 1;
+                                html += `
+                                    <button class="apartment-group-pagination-number ${isActive ? 'active' : ''}" onclick="changeGroupPage('${groupId}', ${i})" style="
+                                        padding: 8px 12px;
+                                        border: ${isActive ? '2px solid #2563eb' : '1px solid #e5e7eb'};
+                                        background: ${isActive ? '#2563eb' : 'white'};
+                                        color: ${isActive ? 'white' : '#374151'};
+                                        border-radius: 6px;
+                                        font-weight: ${isActive ? '600' : 'normal'};
+                                        font-size: 14px;
+                                        cursor: pointer;
+                                        transition: all 0.3s;
+                                    " data-page="${i}">${i}</button>
+                                `;
+                            }
+                        } else {
+                            // Показываем первые 3 страницы (1, 2, 3)
+                            for (let i = 1; i <= 3; i++) {
+                                const isActive = i === 1;
+                                html += `
+                                    <button class="apartment-group-pagination-number ${isActive ? 'active' : ''}" onclick="changeGroupPage('${groupId}', ${i})" style="
+                                        padding: 8px 12px;
+                                        border: ${isActive ? '2px solid #2563eb' : '1px solid #e5e7eb'};
+                                        background: ${isActive ? '#2563eb' : 'white'};
+                                        color: ${isActive ? 'white' : '#374151'};
+                                        border-radius: 6px;
+                                        font-weight: ${isActive ? '600' : 'normal'};
+                                        font-size: 14px;
+                                        cursor: pointer;
+                                        transition: all 0.3s;
+                                    " data-page="${i}">${i}</button>
+                                `;
+                            }
+                            
+                            // Добавляем многоточие, если между страницей 3 и последней есть хотя бы одна страница
+                            if (totalPages > 4) {
+                                html += `<span class="pagination-ellipsis" style="padding: 8px 6px; color: #9ca3af; font-size: 14px;">…</span>`;
+                            }
+                            
+                            // Показываем последнюю страницу
+                            html += `
+                                <button class="apartment-group-pagination-number" onclick="changeGroupPage('${groupId}', ${totalPages})" style="
+                                    padding: 8px 12px;
+                                    border: 1px solid #e5e7eb;
+                                    background: white;
+                                    color: #374151;
+                                    border-radius: 6px;
+                                    cursor: pointer;
+                                    font-size: 14px;
+                                    transition: all 0.3s;
+                                " data-page="${totalPages}">${totalPages}</button>
+                            `;
+                        }
+                        
+                        // Кнопка "Вперед" (стрелка вправо)
+                        html += `
+                            <button class="apartment-group-pagination-btn" onclick="changeGroupPage('${groupId}', 'next')" style="
+                                padding: 8px 12px;
+                                border: 1px solid #e5e7eb;
+                                background: white;
+                                color: #374151;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                transition: all 0.3s;
+                            " data-page="next">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        `;
+                        
+                        html += `</div>`;
+                    }
+                    
+                    // Закрываем группу
+                    html += `</div>`;
                 });
+                
                 grid.innerHTML = html;
+                
+                // Добавляем функцию для раскрытия/сворачивания групп
+                if (typeof window.toggleApartmentGroup === 'undefined') {
+                    window.toggleApartmentGroup = function(groupId) {
+                        const content = document.getElementById(groupId);
+                        const icon = document.getElementById(groupId + '-icon');
+                        if (content && icon) {
+                            const isExpanded = content.style.display !== 'none';
+                            content.style.display = isExpanded ? 'none' : 'block';
+                            icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+                            
+                            // Если раскрываем группу, инициализируем пагинацию на первой странице
+                            if (!isExpanded) {
+                                const itemsContainer = document.getElementById(groupId + '-items');
+                                if (itemsContainer) {
+                                    // Убеждаемся, что показываем первую страницу
+                                    const currentPage = parseInt(itemsContainer.getAttribute('data-current-page') || '1', 10);
+                                    if (currentPage !== 1) {
+                                        if (typeof window.changeGroupPage === 'function') {
+                                            window.changeGroupPage(groupId, 1);
+                                        }
+                                    } else {
+                                        // Инициализируем пагинацию для первой страницы
+                                        if (typeof window.updateGroupPagination === 'function') {
+                                            window.updateGroupPagination(groupId);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    };
+                }
+                
+                // Функция для переключения страниц внутри группы
+                if (typeof window.changeGroupPage === 'undefined') {
+                    window.changeGroupPage = function(groupId, page) {
+                        const content = document.getElementById(groupId);
+                        if (!content) return;
+                        
+                        const apartmentsData = content.getAttribute('data-apartments');
+                        if (!apartmentsData) return;
+                        
+                        const apartments = JSON.parse(apartmentsData);
+                        const itemsContainer = document.getElementById(groupId + '-items');
+                        if (!itemsContainer) return;
+                        
+                        const perPage = 15;
+                        const totalPages = Math.ceil(apartments.length / perPage);
+                        
+                        // Определяем текущую страницу
+                        let currentPage;
+                        if (page === 0 || page === 'prev') {
+                            // Кнопка "Назад"
+                            currentPage = parseInt(itemsContainer.getAttribute('data-current-page') || '1', 10);
+                            currentPage = Math.max(1, currentPage - 1);
+                        } else if (page === 'next') {
+                            // Кнопка "Вперед"
+                            currentPage = parseInt(itemsContainer.getAttribute('data-current-page') || '1', 10);
+                            currentPage = Math.min(totalPages, currentPage + 1);
+                        } else {
+                            // Прямой переход на страницу
+                            currentPage = Math.max(1, Math.min(page, totalPages));
+                        }
+                        
+                        // Вычисляем индексы для текущей страницы
+                        const startIdx = (currentPage - 1) * perPage;
+                        const endIdx = startIdx + perPage;
+                        const apartmentsToShow = apartments.slice(startIdx, endIdx);
+                        
+                        // Сохраняем текущую страницу
+                        itemsContainer.setAttribute('data-current-page', currentPage);
+                        
+                        // Получаем isListView из класса grid (проверяем текущее состояние)
+                        const grid = document.getElementById('catalog-grid');
+                        const isListView = grid ? grid.classList.contains('list-mode') : false;
+                        
+                        // Генерируем HTML для квартир
+                        let html = '';
+                        apartmentsToShow.forEach((apt) => {
+                            let photo = apt.photo || (Array.isArray(apt.complex_photos) && apt.complex_photos.length > 0 ? apt.complex_photos[0] : null) || '/media/gallery/placeholders.png';
+                            if (photo) {
+                                photo = String(photo);
+                                if (photo && photo !== '/media/gallery/placeholders.png' && !photo.startsWith('/media/') && !photo.startsWith('http')) {
+                                    photo = `/media/${photo}`;
+                                }
+                            } else {
+                                photo = '/media/gallery/placeholders.png';
+                            }
+
+                            const totalFloors = apt.total_floors || apt.floor_total || apt.house_floors || apt.max_floor || apt.maxFloor || apt.floor_max;
+                            const roomsLabel = apt.rooms === 'Студия' ? 'Студия' : apt.rooms ? `${apt.rooms}-к. квартира` : 'Квартира';
+                            const areaPart = apt.area ? `${apt.area} м²` : '';
+                            const floorPart = apt.floor ? `${apt.floor}${totalFloors ? `/${totalFloors}` : ''} эт.` : '';
+                            const titleMeta = [areaPart, floorPart].filter(Boolean).join(', ');
+                            const apartmentTitle = titleMeta ? `${roomsLabel}, ${titleMeta}` : roomsLabel;
+                            const priceDisplay = formatPriceText(apt.price || apt.price_display || apt.price_range || '');
+                            const apartmentUrl = `/apartment/${apt.complex_id}/${apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0')}/`;
+                            
+                            const complexId = apt.complex_id || '';
+                            const apartmentId = apt.apartment_id ? String(apt.apartment_id) : (apt.id ? (String(apt.id).includes('_apt_') ? String(apt.id).split('_apt_')[1] : String(apt.id).split('_').slice(-2).join('_')) : '0_0');
+
+                            const priceNumber = parseInt(String(apt.price || apt.price_display || apt.price_range || '').replace(/\D/g, ''), 10);
+                            const areaNumber = parseFloat(apt.area);
+                            const perMeter = priceNumber && areaNumber ? `${Math.round(priceNumber / areaNumber).toLocaleString('ru-RU')} ₽/м²` : '';
+
+                            if (isListView) {
+                                html += `
+                                <div class="catalog-list-row" data-complex-id="${apt.id}">
+                                    <div class="catalog-list-thumb" onclick="window.open('${apartmentUrl}', '_blank');">
+                                        <img src="${photo}" alt="${apartmentTitle}">
+                                    </div>
+                                    <div class="catalog-list-main" onclick="window.open('${apartmentUrl}', '_blank');">
+                                <div class="catalog-list-title" style="display:flex; align-items:center; gap:8px;">
+                                    <span>${apartmentTitle}</span>
+                                    <button class="catalog-list-fav favorite-btn" data-favorite-complex-id="${complexId}"
+                                        data-favorite-apartment-id="${apartmentId}"
+                                        onclick="event.stopPropagation(); if(typeof toggleApartmentFavoriteHandler === 'function') { toggleApartmentFavoriteHandler('${complexId}', '${apartmentId}', this); }"
+                                        title="Добавить в избранное" style="position:static;">
+                                        <i class="far fa-heart"></i>
+                                    </button>
+                                </div>
+                                    <div class="catalog-list-meta">
+                                        ${apt.completion_date ? `${apt.completion_date}` : ''} ${apt.complex_name ? `• ${apt.complex_name}` : ''} ${apt.address ? `• ${apt.address}` : ''}
+                                    </div>
+                                </div>
+                                <div class="catalog-list-price">
+                                    ${priceDisplay ? `<div class="price-main">${priceDisplay}</div>` : ''}
+                                    ${perMeter ? `<div class="price-sub">${perMeter}</div>` : ''}
+                                </div>
+                            </div>`;
+                            } else {
+                                const thumbnailsHtml = photo ? `
+                                    <div class="catalog-card-thumbs">
+                                        <button type="button" class="catalog-thumb active" data-photo="${photo}"
+                                            onclick="event.stopPropagation(); window.switchCatalogCardPhoto(this);">
+                                            <img src="${photo}" alt="${apt.apartment_title || ''} превью 1">
+                                        </button>
+                                    </div>
+                                ` : '';
+                                
+                                html += `
+                                <div class="property-card-compact catalog-card-horizontal" data-complex-id="${apt.id}">
+                                    <div class="catalog-card-media">
+                                        <div class="catalog-card-main-image" onclick="window.open('${apartmentUrl}', '_blank');" style="position: relative;">
+                                            <button class="favorite-btn" data-favorite-complex-id="${complexId}"
+                                                data-favorite-apartment-id="${apartmentId}"
+                                                onclick="event.stopPropagation(); if(typeof toggleApartmentFavoriteHandler === 'function') { toggleApartmentFavoriteHandler('${complexId}', '${apartmentId}', this); }"
+                                                title="Добавить в избранное">
+                                                <i class="far fa-heart"></i>
+                                            </button>
+                                            <img src="${photo}" alt="${apartmentTitle}">
+                                        </div>
+                                        ${thumbnailsHtml}
+                                    </div>
+                                    <div class="catalog-card-body" onclick="window.open('${apartmentUrl}', '_blank');">
+                                        <div class="catalog-card-header">
+                                            <h3 class="compact-card-title">${apartmentTitle}</h3>
+                                            ${apt.special_offer ? `<span class="catalog-card-badge">Есть акция</span>` : ''}
+                                        </div>
+                                        <p class="catalog-card-subtitle">
+                                            ${apt.complex_name || ''}${apt.completion_date ? ` • Сдача: ${apt.completion_date}` : ''}
+                                        </p>
+                                        <p class="catalog-card-address">
+                                            ${apt.address || apt.complex_address || apt.city || 'Уфа'}
+                                        </p>
+                                        ${priceDisplay ? `<div class="catalog-card-price-line"><span>Стоимость:</span><strong>${priceDisplay}</strong></div>` : ''}
+                                    </div>
+                                </div>`;
+                            }
+                        });
+                        
+                        itemsContainer.innerHTML = html;
+                        
+                        // Обновляем пагинацию
+                        updateGroupPagination(groupId);
+                    };
+                }
+                
+                // Функция для обновления пагинации группы
+                if (typeof window.updateGroupPagination === 'undefined') {
+                    window.updateGroupPagination = function(groupId) {
+                        const content = document.getElementById(groupId);
+                        if (!content) return;
+                        
+                        const apartmentsData = content.getAttribute('data-apartments');
+                        if (!apartmentsData) return;
+                        
+                        const apartments = JSON.parse(apartmentsData);
+                        const itemsContainer = document.getElementById(groupId + '-items');
+                        if (!itemsContainer) return;
+                        
+                        const perPage = 15;
+                        const totalPages = Math.ceil(apartments.length / perPage);
+                        const currentPage = parseInt(itemsContainer.getAttribute('data-current-page') || '1', 10);
+                        
+                        const pagination = document.getElementById(groupId + '-pagination');
+                        if (!pagination || totalPages <= 1) {
+                            if (pagination) pagination.style.display = 'none';
+                            return;
+                        }
+                        
+                        pagination.style.display = 'flex';
+                        
+                        // Обновляем кнопку "Назад"
+                        const prevBtn = pagination.querySelector('[data-page="prev"]');
+                        if (prevBtn) {
+                            if (currentPage > 1) {
+                                prevBtn.style.display = 'block';
+                                prevBtn.onclick = () => changeGroupPage(groupId, 'prev');
+                            } else {
+                                prevBtn.style.display = 'none';
+                            }
+                        }
+                        
+                        // Обновляем кнопку "Вперед"
+                        const nextBtn = pagination.querySelector('[data-page="next"]');
+                        if (nextBtn) {
+                            if (currentPage < totalPages) {
+                                nextBtn.style.display = 'block';
+                                nextBtn.onclick = () => changeGroupPage(groupId, 'next');
+                            } else {
+                                nextBtn.style.display = 'none';
+                            }
+                        }
+                        
+                        // Обновляем номера страниц - выделяем активную страницу
+                        const pageNumbers = pagination.querySelectorAll('.apartment-group-pagination-number');
+                        pageNumbers.forEach(btn => {
+                            const pageNum = parseInt(btn.getAttribute('data-page'), 10);
+                            if (pageNum === currentPage) {
+                                btn.classList.add('active');
+                                btn.style.background = '#2563eb';
+                                btn.style.color = 'white';
+                                btn.style.border = '2px solid #2563eb';
+                                btn.style.fontWeight = '600';
+                            } else {
+                                btn.classList.remove('active');
+                                btn.style.background = 'white';
+                                btn.style.color = '#374151';
+                                btn.style.border = '1px solid #e5e7eb';
+                                btn.style.fontWeight = 'normal';
+                            }
+                            btn.onclick = () => changeGroupPage(groupId, pageNum);
+                        });
+                        
+                        // Если страниц больше 3, всегда показываем: 1, 2, 3, ..., последняя
+                        if (totalPages > 3) {
+                            // Показываем все кнопки страниц (1, 2, 3 и последняя уже есть в HTML)
+                            pageNumbers.forEach(btn => {
+                                const pageNum = parseInt(btn.getAttribute('data-page'), 10);
+                                // Показываем первые 3 страницы и последнюю
+                                if (pageNum <= 3 || pageNum === totalPages) {
+                                    btn.style.display = 'inline-block';
+                                } else {
+                                    btn.style.display = 'none';
+                                }
+                            });
+                            
+                            // Убеждаемся, что многоточие есть между 3 и последней страницей
+                            const existingEllipsis = pagination.querySelectorAll('.pagination-ellipsis');
+                            if (existingEllipsis.length === 0 && totalPages > 4) {
+                                // Находим кнопку со страницей 3
+                                const page3Btn = pagination.querySelector('[data-page="3"]');
+                                const lastBtn = pagination.querySelector(`[data-page="${totalPages}"]`);
+                                if (page3Btn && lastBtn) {
+                                    // Проверяем, нет ли уже многоточия между ними
+                                    let hasEllipsis = false;
+                                    let current = page3Btn.nextElementSibling;
+                                    while (current && current !== lastBtn) {
+                                        if (current.classList && current.classList.contains('pagination-ellipsis')) {
+                                            hasEllipsis = true;
+                                            break;
+                                        }
+                                        current = current.nextElementSibling;
+                                    }
+                                    if (!hasEllipsis) {
+                                        const ellipsis = document.createElement('span');
+                                        ellipsis.style.cssText = 'padding: 8px 6px; color: #9ca3af; font-size: 14px;';
+                                        ellipsis.textContent = '…';
+                                        ellipsis.className = 'pagination-ellipsis';
+                                        if (lastBtn.previousElementSibling) {
+                                            lastBtn.parentNode.insertBefore(ellipsis, lastBtn);
+                                        } else {
+                                            page3Btn.parentNode.insertBefore(ellipsis, page3Btn.nextSibling);
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // Если страниц 3 или меньше, показываем все
+                            pageNumbers.forEach(btn => {
+                                btn.style.display = 'inline-block';
+                            });
+                        }
+                    };
+                }
+                
+                // Инициализируем иконки для отображаемых групп (по умолчанию закрыты)
+                paginatedGroups.forEach((groupKey, localIndex) => {
+                    const groupIndex = startIdx + localIndex;
+                    const groupId = `apartment-group-${groupIndex}`;
+                    const icon = document.getElementById(groupId + '-icon');
+                    if (icon) {
+                        icon.style.transform = 'rotate(0deg)'; // Стрелка вниз = закрыто (по умолчанию)
+                    }
+                });
             }
 
-            // Обновляем пагинацию
-            if (typeof updatePagination === 'function') {
+            // Обновляем пагинацию (по группам, а не по квартирам)
+            if (typeof updatePagination === 'function' && totalGroups > 0) {
+                // Используем количество групп для пагинации
+                const totalPages = Math.max(1, Math.ceil(totalGroups / perPage));
+                const currentPage = Math.min(data.current_page || 1, totalPages);
+                updatePagination({
+                    current_page: currentPage,
+                    total_pages: totalPages,
+                    has_previous: currentPage > 1,
+                    has_next: currentPage < totalPages
+                });
+            } else if (typeof updatePagination === 'function') {
+                // Если нет групп, используем стандартную пагинацию
                 const perPageField = document.getElementById('per_page-hidden');
                 const perPage = perPageField ? parseInt(perPageField.value || '15', 10) : 15;
-                // Используем общее количество из ответа API, а не отфильтрованный список
                 const totalCount = Number.isFinite(Number(data.total_count)) ? Number(data.total_count) : 0;
-                // Если есть фильтр по границам карты, используем количество отфильтрованных элементов
                 const totalFiltered = window.mapFilterEnabled && window.currentMapBounds 
                     ? apartments.length 
                     : totalCount;
@@ -2901,6 +3702,8 @@
 
         // Кеш последней выборки для повторного рендера (например, в модалке карты)
         window.lastMapData = { list: [], isSec: false, isApartments: false };
+        // Кеш всех меток для карты (без фильтрации)
+        window.allMapPoints = [];
         window.catalogMaps = window.catalogMaps || {};
         window.currentMapBounds = window.currentMapBounds || null;
         window.suppressMapFit = false;
@@ -2952,8 +3755,8 @@
                         const bounds = boundsToObject(mapInstance.getBounds());
                         window.currentMapBounds = bounds;
                         
-                        // Определяем видимые метки на карте
-                        const { list: allComplexes } = window.lastMapData || { list: [] };
+                        // Определяем видимые метки на карте из всех сохраненных меток
+                        const allComplexes = window.allMapPoints || [];
                         const visibleComplexes = filterByCurrentBounds(allComplexes);
                         const visibleIds = visibleComplexes.map(c => String(c.id)).filter(Boolean);
                         
@@ -3013,7 +3816,28 @@
                 const lat = item.lat || item.latitude;
                 const lng = item.lng || item.longitude;
                 if (lat && lng) {
-                    const marker = L.marker([lat, lng]).addTo(layer);
+                    // Создаем желтую иконку для будущих проектов в стиле стандартной синей метки Leaflet
+                    let markerIcon = null;
+                    if (item.is_future === true) {
+                        // Создаем желтую иконку в стиле стандартной капли Leaflet
+                        const yellowMarkerSvg = encodeURIComponent(`
+                            <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+                                <path fill="#FFD700" stroke="#fff" stroke-width="1.5" d="M12.5 0C5.596 0 0 5.596 0 12.5c0 8.5 12.5 28.5 12.5 28.5S25 21 25 12.5C25 5.596 19.404 0 12.5 0z"/>
+                                <circle fill="#fff" cx="12.5" cy="12.5" r="5"/>
+                            </svg>
+                        `).replace(/'/g, '%27').replace(/"/g, '%22');
+                        markerIcon = L.icon({
+                            iconUrl: 'data:image/svg+xml;charset=utf-8,' + yellowMarkerSvg,
+                            iconSize: [25, 41],
+                            iconAnchor: [12.5, 41],
+                            popupAnchor: [0, -41]
+                        });
+                    }
+                    
+                    const marker = markerIcon 
+                        ? L.marker([lat, lng], {icon: markerIcon}).addTo(layer)
+                        : L.marker([lat, lng]).addTo(layer);
+                    
                     const price = item.price_range || item.price_display || 'Цена по запросу';
 
                     let link;
@@ -3033,6 +3857,7 @@
                             link = `/complex/${item.id}/`;
                         }
                     } else {
+                        // Для будущих проектов используем тот же роут /complex/
                         link = `/complex/${item.id}/`;
                     }
 
@@ -3123,8 +3948,15 @@
         }
 
         // Глобальная функция renderMapPoints
-        window.renderMapPoints = function (list, isSec, isApartments) {
+        window.renderMapPoints = function (list, isSec, isApartments, forceUpdate = false) {
             window.lastMapData = { list: list || [], isSec: !!isSec, isApartments: !!isApartments };
+            
+            // Сохраняем все метки для карты только при первой загрузке или при явном обновлении
+            // Это гарантирует, что все метки остаются видимыми даже после фильтрации
+            if (!window.allMapPoints || window.allMapPoints.length === 0 || forceUpdate) {
+                window.allMapPoints = list || [];
+            }
+            
             // Убеждаемся, что карта видна для новостроек
             const mapEl = document.getElementById('map');
             if (mapEl && !isSec) {
@@ -3139,7 +3971,8 @@
 
             window.map = mainMap.map;
             window.markersLayer = mainMap.layer;
-            renderPointsOnMap(mainMap, list, isSec, isApartments);
+            // Рендерим ВСЕ метки на карте из сохраненного кеша, а не из текущего списка
+            renderPointsOnMap(mainMap, window.allMapPoints, isSec, isApartments);
 
             // Если открыта модалка карты — синхронизируем точки
             if (document.getElementById('map-modal-overlay')?.classList.contains('open')) {
@@ -3154,8 +3987,9 @@
             const modalMapInstance = ensureLeafletMap('map-modal', 'modal');
             if (!modalMapInstance) return;
 
-            const { list, isSec, isApartments } = window.lastMapData || {};
-            renderPointsOnMap(modalMapInstance, list || [], isSec, isApartments);
+            // Используем все метки для модальной карты, чтобы можно было перемещаться
+            const { isSec, isApartments } = window.lastMapData || {};
+            renderPointsOnMap(modalMapInstance, window.allMapPoints || [], isSec, isApartments);
 
             if (shouldInvalidate) {
                 setTimeout(() => {
@@ -3220,8 +4054,8 @@
                         const bounds = boundsToObject(modalMapInstance.map.getBounds());
                         window.currentMapBounds = bounds;
                         
-                        // Определяем видимые метки на карте
-                        const { list: allComplexes } = window.lastMapData || { list: [] };
+                        // Определяем видимые метки на карте из всех сохраненных меток
+                        const allComplexes = window.allMapPoints || [];
                         const visibleComplexes = filterByCurrentBounds(allComplexes);
                         const visibleIds = visibleComplexes.map(c => String(c.id)).filter(Boolean);
                         
@@ -3451,7 +4285,12 @@
                 b.classList.toggle('active', value === layout);
             });
 
-            grid.classList.toggle('list-mode', !isSecondary && mode === 'apartments' && layout === 'list');
+            // Устанавливаем или удаляем класс list-mode в зависимости от layout
+            if (!isSecondary && mode === 'apartments' && layout === 'list') {
+                grid.classList.add('list-mode');
+            } else {
+                grid.classList.remove('list-mode');
+            }
         };
 
         // Глобальные функции переключателя макета (карточки/список)
@@ -3473,8 +4312,20 @@
                     e.stopPropagation();
 
                     const layout = btn.getAttribute('data-layout') || 'grid';
-                    console.log('[layout-toggle] click', layout);
                     localStorage.setItem('catalog_layout', layout);
+                    
+                    // Сразу обновляем класс на grid для немедленного эффекта
+                    const isSecondary = '{{ dataset_type }}' === 'secondary';
+                    const contentModeField = document.getElementById('content-mode-hidden');
+                    const mode = contentModeField ? contentModeField.value : (localStorage.getItem('catalog_content_mode') || 'complexes');
+                    
+                    // Устанавливаем класс в зависимости от layout
+                    if (!isSecondary && mode === 'apartments' && layout === 'list') {
+                        grid.classList.add('list-mode');
+                    } else {
+                        grid.classList.remove('list-mode');
+                    }
+                    
                     if (typeof updateState === 'function') {
                         updateState(layout);
                     }
@@ -3482,6 +4333,8 @@
                     if (typeof window.applyLayout === 'function') {
                         window.applyLayout();
                     }
+                    
+                    // Перерисовываем данные с новым layout - важно для обновления отображения
                     if (typeof window.fetchData === 'function') {
                         window.fetchData();
                     }
@@ -3520,7 +4373,6 @@
 
                 const storedLayout = localStorage.getItem('catalog_layout') || 'grid';
                 updateState(storedLayout);
-                console.log('[layout-toggle] init done, layout:', storedLayout);
 
                 bindLayoutToggleHandler(updateState);
             }
@@ -5106,8 +5958,6 @@
 
         // AJAX-загрузка без изменения URL
         (function () {
-            console.log('🔴🔴🔴 ВХОД В IIFE - AJAX блок');
-            console.log('🔴 Текущая строка после входа в IIFE');
             const form = document.getElementById('filters-form');
             const ajaxGrid = document.getElementById('catalog-grid');
             const isSecondaryAjax = '{{ dataset_type }}' === 'secondary';
@@ -5137,7 +5987,6 @@
                 const buttons = document.querySelectorAll('.view-btn');
                 
                 if (!buttons.length) {
-                    console.log('View buttons not found');
                     return;
                 }
                 
@@ -5170,7 +6019,6 @@
                     }
                 });
 
-                console.log('View toggle buttons initialized');
             }
 
             // Инициализируем кнопки после полной загрузки DOM
@@ -5384,17 +6232,13 @@
         // Обработчик для кнопки "Подобрать квартиру" - прокрутка к форме обратной связи
         // Используем делегирование событий, так как кнопки создаются динамически
         document.addEventListener('DOMContentLoaded', function () {
-            console.log('🔍 Инициализация обработчика кнопки "Подобрать квартиру"');
 
             // Используем делегирование событий на родительском элементе
             const catalogGrid = document.getElementById('catalog-grid');
 
             if (!catalogGrid) {
-                console.warn('⚠️ Элемент #catalog-grid не найден!');
                 return;
             }
-
-            console.log('✅ Элемент #catalog-grid найден, используем делегирование событий');
 
             // Обработчик на родительском элементе для всех кнопок (включая динамически созданные)
             catalogGrid.addEventListener('click', function (e) {
@@ -5405,47 +6249,22 @@
                     return; // Клик был не по нашей кнопке
                 }
 
-                console.log('🖱️ Клик по кнопке "Подобрать квартиру"');
-                console.log('📍 Кнопка:', clickedButton);
-                console.log('📍 Текст кнопки:', clickedButton.textContent.trim());
-
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('✅ preventDefault() и stopPropagation() выполнены');
 
                 // Ищем форму обратной связи по ID
                 const feedbackTarget = document.getElementById('feedback-title');
-                console.log('🎯 Поиск элемента с id="feedback-title":', feedbackTarget);
 
                 if (feedbackTarget) {
-                    console.log('✅ Элемент feedback-title найден!');
-                    console.log('📍 Позиция элемента:', {
-                        top: feedbackTarget.getBoundingClientRect().top,
-                        left: feedbackTarget.getBoundingClientRect().left,
-                        height: feedbackTarget.offsetHeight
-                    });
-
                     const headerOffset = 120;
                     const elementPosition = feedbackTarget.getBoundingClientRect().top;
                     const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-                    console.log('📐 Расчеты:', {
-                        elementPosition: elementPosition,
-                        pageYOffset: window.pageYOffset,
-                        headerOffset: headerOffset,
-                        offsetPosition: offsetPosition
-                    });
 
                     window.scrollTo({
                         top: offsetPosition,
                         behavior: 'smooth'
                     });
-
-                    console.log('✅ Прокрутка запущена к позиции:', offsetPosition);
                 } else {
-                    console.warn('⚠️ Элемент feedback-title не найден!');
-                    console.log('🔍 Ищем альтернативные элементы...');
-
                     const alternatives = {
                         'feedback-form': document.getElementById('feedback-form'),
                         '.feedback-title': document.querySelector('.feedback-title'),
@@ -5453,13 +6272,10 @@
                         '.feedback-container': document.querySelector('.feedback-container')
                     };
 
-                    console.log('🔍 Альтернативные элементы:', alternatives);
-
                     // Пробуем найти любой элемент с feedback
                     let found = null;
                     for (const [key, element] of Object.entries(alternatives)) {
                         if (element) {
-                            console.log(`✅ Найден альтернативный элемент: ${key}`, element);
                             found = element;
                             break;
                         }
@@ -5470,20 +6286,11 @@
                         const elementPosition = found.getBoundingClientRect().top;
                         const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
-                        console.log('📐 Расчеты для альтернативного элемента:', {
-                            elementPosition: elementPosition,
-                            offsetPosition: offsetPosition
-                        });
-
                         window.scrollTo({
                             top: offsetPosition,
                             behavior: 'smooth'
                         });
-
-                        console.log('✅ Прокрутка к альтернативному элементу запущена');
                     } else {
-                        console.warn('⚠️ Никакие элементы формы обратной связи не найдены!');
-                        console.log('📏 Прокручиваем вниз страницы...');
 
                         // Если формы нет на странице, прокручиваем вниз страницы
                         window.scrollTo({
@@ -5491,12 +6298,10 @@
                             behavior: 'smooth'
                         });
 
-                        console.log('✅ Прокрутка вниз страницы запущена');
                     }
                 }
             });
 
-            console.log('✅ Инициализация завершена, делегирование событий настроено');
         });
 
         // Гарантируем первичную загрузку каталога после инициализации страницы
@@ -5609,7 +6414,6 @@
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    console.log('Reset button clicked');
                     
                     const form = document.getElementById('filters-form');
                     if (!form) {
@@ -5627,11 +6431,53 @@
                         }
                     });
                     
+                    // Сбрасываем сортировку на значение по умолчанию
+                    const sortInput = form.querySelector('input[name="sort"]');
+                    if (sortInput) {
+                        sortInput.value = 'price_asc';
+                    }
+                    // Сбрасываем кнопки сортировки
+                    document.querySelectorAll('[data-sort]').forEach(btn => {
+                        if (btn.getAttribute('data-sort') === 'price_asc') {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+                    
+                    // Сбрасываем фильтр карты явно
+                    window.currentMapBounds = null;
+                    window.mapFilterEnabled = false;
+                    window.shouldUpdateAllMapPoints = true; // Флаг для обновления всех меток
+                    const mapBoundsInput = form.querySelector('input[name="map_bounds"]');
+                    if (mapBoundsInput) {
+                        mapBoundsInput.value = '';
+                    }
+                    const mapFilterIndicator = document.getElementById('map-bounds-indicator');
+                    if (mapFilterIndicator) {
+                        mapFilterIndicator.style.display = 'none';
+                    }
+                    
                     // Сбрасываем активные кнопки комнат
                     form.querySelectorAll('[data-active="true"]').forEach(btn => {
                         if (!btn.classList.contains('page-size-btn')) {
                             btn.setAttribute('data-active', 'false');
                             btn.classList.remove('active');
+                        }
+                    });
+                    
+                    // Сбрасываем фильтр скидок
+                    const hasOffersHidden = document.getElementById('has_offers-hidden');
+                    if (hasOffersHidden) {
+                        hasOffersHidden.value = '';
+                    }
+                    document.querySelectorAll('.offers-toggle-btn').forEach(btn => {
+                        btn.setAttribute('data-active', 'false');
+                        btn.classList.remove('active');
+                        // Активируем кнопку "Любое" (пустое значение)
+                        if (btn.getAttribute('data-value') === '') {
+                            btn.setAttribute('data-active', 'true');
+                            btn.classList.add('active');
                         }
                     });
                     
@@ -5701,6 +6547,13 @@
                     if (complexesText) complexesText.textContent = 'Любые';
                     document.querySelectorAll('.complex-modal-checkbox').forEach(cb => cb.checked = false);
                     
+                    // Сбрасываем фильтр карты (чтобы вернуть все метки) - дублирование убрано, уже сделано выше
+                    
+                    // Очищаем кеш меток карты для полного обновления
+                    if (window.allMapPoints) {
+                        window.allMapPoints = [];
+                    }
+                    
                     // Сбрасываем срок сдачи
                     const deliveryHidden = document.getElementById('delivery-quarter-hidden');
                     const deliveryText = document.getElementById('delivery-quarter-text');
@@ -5717,7 +6570,6 @@
                         document.body.classList.remove('filter-open');
                     }
                     
-                    console.log('Filters reset, calling API...');
                     
                     // Выполняем AJAX поиск
                     if (typeof window.resetPageAndFetch === 'function') {
@@ -5730,7 +6582,6 @@
                     }
                 });
                 
-                console.log('Reset button handler attached');
             }
             
             // Запускаем при готовности DOM
@@ -5749,7 +6600,6 @@
                 const buttons = document.querySelectorAll('.view-btn');
                 
                 if (!buttons.length) {
-                    console.log('View buttons not found, retrying...');
                     setTimeout(fixViewToggleButtons, 100);
                     return;
                 }
@@ -5765,7 +6615,6 @@
                     });
                 });
 
-                console.log('✅ View toggle buttons fixed');
             }
             
             // Запускаем с задержкой чтобы гарантировано быть последними

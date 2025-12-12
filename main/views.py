@@ -229,13 +229,16 @@ from django.views.decorators.csrf import csrf_exempt
 from bson import ObjectId
 from datetime import datetime, date
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ===== ДОПОЛНИТЕЛЬНЫЕ API ФУНКЦИИ =====
 
 @require_http_methods(["GET"])
 def catalog_api(request):
-    """API для каталога ЖК из MongoDB unified_houses_3 с полной поддержкой фильтрации"""
+    """API для каталога ЖК из MongoDB unified_houses с полной поддержкой фильтрации"""
     try:
         # Получаем параметры фильтрации
         page = int(request.GET.get('page', 1))
@@ -301,6 +304,7 @@ def catalog_api(request):
         # Сортировка
         sort = request.GET.get('sort', 'price_asc')
         
+        
         # Поиск
         search = request.GET.get('search', '').strip()
         
@@ -314,7 +318,7 @@ def catalog_api(request):
                 selected_complex_ids = []
 
         db = get_mongo_connection()
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         
         # Преобразуем квартал в конечную дату для фильтрации
         delivery_date_limit = None
@@ -503,28 +507,48 @@ def catalog_api(request):
                     if not has_matching_rooms:
                         continue
             
-            # Фильтр по цене (используем поля min_price и max_price)
+            # Фильтр по цене (используем price_range из карточки ЖК)
             if price_from_millions is not None or price_to_millions is not None:
-                # Получаем min_price и max_price из записи (в миллионах рублей)
-                min_price = record.get('min_price')
-                max_price = record.get('max_price')
-                
-                # Если поля не заполнены, пропускаем фильтрацию по цене
-                if min_price is None or max_price is None:
-                    # Если фильтр задан, но цены нет - пропускаем запись
-                    continue
+                # Получаем price_range из development (формат: "От 5 млн ₽" или "От 5 до 10 млн ₽")
+                development = {}
+                if 'development' in record and 'avito' not in record:
+                    development = record.get('development', {})
                 else:
-                    # Фильтр "от X": ЖК включается, если min_price >= price_from_millions
-                    # (все квартиры в ЖК стоят от указанной цены или выше)
-                    if price_from_millions is not None:
-                        if min_price < price_from_millions:
-                            continue
+                    avito_dev = record.get('avito', {}).get('development', {}) if record.get('avito') else {}
+                    development = avito_dev
+                
+                price_range = development.get('price_range', '')
+                record_name = development.get('name', 'Без названия')
+                
+                # Парсим цену из price_range используя extract_price_from_range
+                # Функция извлекает первое число из строки (например "от 5 млн" -> 5.0)
+                price_from_card = extract_price_from_range(price_range)  # В миллионах
+                
+                if not price_range or price_from_card == 0:
+                    # Если нет price_range, пропускаем запись при фильтрации
+                    continue
+                
+                
+                # Фильтр "от X": ЖК включается, если price_from_card >= price_from_millions
+                # (цена на карточке "от X млн" должна быть >= указанной в фильтре)
+                if price_from_millions is not None:
+                    if price_from_card < price_from_millions:
+                        continue
+                
+                # Фильтр "до Y": для "до" нужно извлечь максимальную цену из диапазона
+                # Если price_range содержит "до X" или "от X до Y", извлекаем максимальное значение
+                if price_to_millions is not None:
+                    # Ищем все числа в price_range (может быть "от 5 до 10 млн")
+                    import re
+                    numbers = re.findall(r'(\d+\.?\d*)', str(price_range))
+                    if numbers:
+                        # Берем максимальное число из диапазона (если есть "от 5 до 10", берем 10)
+                        price_max_from_card = max([float(n) for n in numbers])
+                    else:
+                        price_max_from_card = price_from_card
                     
-                    # Фильтр "до Y": ЖК включается, если max_price <= price_to_millions
-                    # (все квартиры в ЖК стоят до указанной цены или ниже)
-                    if price_to_millions is not None:
-                        if max_price > price_to_millions:
-                            continue
+                    if price_max_from_card > price_to_millions:
+                        continue
             
             # Фильтр по площади (проверяем в apartment_types)
             if area_from or area_to:
@@ -580,22 +604,40 @@ def catalog_api(request):
             
             filtered_records.append(record)
         
-        # Сортировка по цене (используем поле min_price)
+        # Сортировка по цене (используем price_range из карточки ЖК)
         if sort == 'price_asc':
-            # Сортировка по возрастанию цены (дешевле) - от меньшего min_price к большему
+            # Сортировка по возрастанию цены (дешевле) - используем price_range
             def get_price_from(record):
-                min_price = record.get('min_price')
-                if min_price is not None:
-                    return float(min_price)
+                development = {}
+                if 'development' in record and 'avito' not in record:
+                    development = record.get('development', {})
+                else:
+                    avito_dev = record.get('avito', {}).get('development', {}) if record.get('avito') else {}
+                    development = avito_dev
+                
+                price_range = development.get('price_range', '')
+                price_from_card = extract_price_from_range(price_range)
+                
+                if price_from_card > 0:
+                    return float(price_from_card)
                 # Если цена не найдена - в конец списка
                 return float('inf')
             filtered_records.sort(key=get_price_from)
         elif sort == 'price_desc':
-            # Сортировка по убыванию цены (дороже) - от большего min_price к меньшему
+            # Сортировка по убыванию цены (дороже) - используем price_range
             def get_price_from(record):
-                min_price = record.get('min_price')
-                if min_price is not None:
-                    return float(min_price)
+                development = {}
+                if 'development' in record and 'avito' not in record:
+                    development = record.get('development', {})
+                else:
+                    avito_dev = record.get('avito', {}).get('development', {}) if record.get('avito') else {}
+                    development = avito_dev
+                
+                price_range = development.get('price_range', '')
+                price_from_card = extract_price_from_range(price_range)
+                
+                if price_from_card > 0:
+                    return float(price_from_card)
                 # Если цена не найдена - в конец списка
                 return float('-inf')
             filtered_records.sort(key=get_price_from, reverse=True)
@@ -762,6 +804,7 @@ def catalog_api(request):
                     'lng': longitude,
                     'latitude': latitude,
                     'longitude': longitude,
+                    'is_future': record.get('is_future', False),  # Флаг будущего проекта
                 })
 
         complexes_data = formatted_records[start_idx:end_idx]
@@ -858,7 +901,7 @@ def apartments_api(request):
         sort = request.GET.get('sort', 'price_asc')
         
         db = get_mongo_connection()
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         
         # Преобразуем квартал в конечную дату для фильтрации
         delivery_date_limit = None
@@ -1187,24 +1230,31 @@ def apartments_api(request):
         
         # Сортировка
         if sort == 'price_asc':
-            all_apartments.sort(key=lambda x: x.get('price_num') or float('inf'))
+            # Сортировка по возрастанию: элементы с None идут в конец
+            all_apartments.sort(key=lambda x: (
+                x.get('price_num') is None,  # Сначала элементы с ценой (False), потом без (True)
+                x.get('price_num') if x.get('price_num') is not None else float('inf')
+            ))
         elif sort == 'price_desc':
-            all_apartments.sort(key=lambda x: x.get('price_num') or 0, reverse=True)
+            # Сортировка по убыванию: элементы с None идут в конец
+            all_apartments.sort(key=lambda x: (
+                x.get('price_num') is None,  # Сначала элементы с ценой (False), потом без (True)
+                -(x.get('price_num') if x.get('price_num') is not None else 0)  # Отрицательное для reverse эффекта
+            ))
         elif sort == 'area_desc':
-            all_apartments.sort(key=lambda x: float(str(x.get('area', 0)).replace(',', '.')) if x.get('area') else 0, reverse=True)
+            all_apartments.sort(key=lambda x: (x.get('area') is None or x.get('area') == '', -float(str(x.get('area', 0)).replace(',', '.')) if x.get('area') else 0), reverse=False)
         elif sort == 'area_asc':
-            all_apartments.sort(key=lambda x: float(str(x.get('area', float('inf'))).replace(',', '.')) if x.get('area') else float('inf'))
+            all_apartments.sort(key=lambda x: (x.get('area') is None or x.get('area') == '', float(str(x.get('area', float('inf'))).replace(',', '.')) if x.get('area') else float('inf')))
         
-        # Пагинация
+        # Для режима квартир возвращаем ВСЕ квартиры без пагинации
+        # Пагинация будет происходить на фронтенде по группам
         total_count = len(all_apartments)
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        apartments_data = all_apartments[start_idx:end_idx]
+        apartments_data = all_apartments  # Возвращаем все квартиры
         
-        # Собираем ВСЕ ЖК для карты (независимо от пагинации)
+        # Собираем ВСЕ ЖК для карты
         # Это нужно чтобы показать все точки ЖК, как в режиме "ЖК"
         map_points_dict = {}
-        # Проходим по ВСЕМ квартирам (не только на текущей странице)
+        # Проходим по ВСЕМ квартирам
         for apt in all_apartments:
             complex_id = apt.get('complex_id')
             if not complex_id or not apt.get('latitude') or not apt.get('longitude'):
@@ -1226,15 +1276,18 @@ def apartments_api(request):
         # Преобразуем словарь в список
         map_points = list(map_points_dict.values())
         
-        total_pages = (total_count + per_page - 1) // per_page
+        # Для режима квартир пагинация будет на фронтенде по группам
+        # Возвращаем все квартиры, фронтенд сам будет группировать и пагинировать
+        # total_pages будет пересчитан на фронтенде на основе количества групп
+        total_pages = 1  # Временное значение, будет пересчитано на фронтенде
         
         return JsonResponse({
             'apartments': apartments_data,
             'map_points': map_points,
-            'has_previous': page > 1,
-            'has_next': page < total_pages,
-            'current_page': page,
-            'total_pages': total_pages,
+            'has_previous': False,  # Пагинация на фронтенде
+            'has_next': False,  # Пагинация на фронтенде
+            'current_page': page,  # Сохраняем для совместимости
+            'total_pages': total_pages,  # Будет пересчитано на фронтенде
             'total_count': total_count
         })
         
@@ -1272,7 +1325,7 @@ def complex_apartments_api(request, complex_id):
         per_page = int(request.GET.get('per_page', 6))
         
         db = get_mongo_connection()
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         
         # Получаем ЖК
         from bson import ObjectId
@@ -1599,7 +1652,7 @@ def districts_api(request):
                 )
                 districts = sorted({d for d in list(districts) + list(alt_districts) if d})
             else:
-                collection = db['unified_houses_3']
+                collection = db['unified_houses']
                 # Фильтруем по address_city или city
                 query = {
                     '$or': [
@@ -1646,7 +1699,7 @@ def streets_api(request):
                 # Сортируем по алфавиту (case-insensitive для правильной сортировки)
                 streets = sorted({s for s in list(streets_primary) + list(streets_alt) if s}, key=str.lower)
             else:
-                collection = db['unified_houses_3']
+                collection = db['unified_houses']
                 
                 # Базовый запрос по городу
                 base_query = {

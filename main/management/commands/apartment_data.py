@@ -18,7 +18,7 @@ class Command(BaseCommand):
         # Если не указан ID ЖК, показываем первые несколько ЖК
         if not options['complex_id']:
             self.stdout.write("=== ПОИСК ЖК С КВАРТИРАМИ ===")
-            complexes = list(db['unified_houses_3'].find({}).limit(10))
+            complexes = list(db['unified_houses'].find({}).limit(10))
             
             for complex_doc in complexes:
                 complex_id = str(complex_doc.get('_id'))
@@ -42,7 +42,7 @@ class Command(BaseCommand):
         # Получаем конкретный ЖК
         complex_id = options['complex_id']
         try:
-            complex_doc = db['unified_houses_3'].find_one({'_id': ObjectId(complex_id)})
+            complex_doc = db['unified_houses'].find_one({'_id': ObjectId(complex_id)})
         except:
             self.stdout.write(f"Ошибка: Неверный ID ЖК {complex_id}")
             return

@@ -117,10 +117,10 @@ def get_video_thumbnail(video_url):
 
 def home(request):
     """Главная страница"""
-    # Получаем 9 популярных ЖК для главной страницы из unified_houses_3
+    # Получаем 9 популярных ЖК для главной страницы из unified_houses
     try:
         db = get_mongo_connection()
-        unified_collection = db['unified_houses_3']
+        unified_collection = db['unified_houses']
         
         # Получаем все ЖК с флагом is_featured
         featured_complexes = list(unified_collection.find({'is_featured': True}))
@@ -173,7 +173,7 @@ def home(request):
         try:
             db = get_mongo_connection()
             promotions = db['promotions']
-            unified = db['unified_houses_3']
+            unified = db['unified_houses']
             q = {'is_active': True}
             items = []
             for p in promotions.find(q).sort('created_at', -1).limit(limit):
@@ -318,14 +318,14 @@ def catalog(request):
 
 
 def catalog_api(request):
-    """API для каталога ЖК из MongoDB unified_houses_3"""
+    """API для каталога ЖК из MongoDB unified_houses"""
     page = int(request.GET.get('page', 1))
     per_page = 9
     search = request.GET.get('search', '').strip()
     
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         
         # Формируем фильтр (поддержка обеих структур)
         filter_query = {}
@@ -916,7 +916,7 @@ def videos(request):
     complex_id = request.GET.get('complex', '')
     db = get_mongo_connection()
     videos_col = db['residential_videos']
-    unified = db['unified_houses_3']
+    unified = db['unified_houses']
 
     q = {'is_active': True}
     if complex_id:
@@ -977,7 +977,7 @@ def video_detail(request, video_id):
     """Детальная страница видеообзора (Mongo)"""
     db = get_mongo_connection()
     videos_col = db['residential_videos']
-    unified = db['unified_houses_3']
+    unified = db['unified_houses']
     d = videos_col.find_one({'_id': ObjectId(str(video_id))})
     if not d:
         raise Http404("Видео не найдено")
@@ -1276,7 +1276,7 @@ def detail(request, complex_id):
         # ============ MONGODB VERSION ============
         try:
             db = get_mongo_connection()
-            unified_col = db['unified_houses_3']
+            unified_col = db['unified_houses']
             
             # Получаем запись по ID
             record = unified_col.find_one({'_id': ObjectId(complex_id)})
@@ -1994,8 +1994,8 @@ def agent_properties(request, employee_id):
     secondary_properties = []
     
     try:
-        # Новостройки: unified_houses_3 по agent_id
-        rc_cursor = db['unified_houses_3'].find({'agent_id': ObjectId(employee_id)})
+        # Новостройки: unified_houses по agent_id
+        rc_cursor = db['unified_houses'].find({'agent_id': ObjectId(employee_id)})
         for d in rc_cursor:
             development = d.get('development', {}) or {}
             item = {
@@ -2220,8 +2220,8 @@ def employee_detail(request, employee_id):
     residential_complexes = []
     secondary_properties = []
     try:
-        # Новостройки: unified_houses_3 по agent_id (максимум 4)
-        rc_cursor = db['unified_houses_3'].find({'agent_id': ObjectId(employee_id)}).limit(4)
+        # Новостройки: unified_houses по agent_id (максимум 4)
+        rc_cursor = db['unified_houses'].find({'agent_id': ObjectId(employee_id)}).limit(4)
         for d in rc_cursor:
             development = d.get('development', {}) or {}
             item = {
@@ -2254,7 +2254,7 @@ def employee_detail(request, employee_id):
     total_residential_count = 0
     total_secondary_count = 0
     try:
-        total_residential_count = db['unified_houses_3'].count_documents({'agent_id': ObjectId(employee_id)})
+        total_residential_count = db['unified_houses'].count_documents({'agent_id': ObjectId(employee_id)})
     except Exception:
         pass
     try:
@@ -2487,7 +2487,7 @@ def all_offers(request):
         try:
             db = get_mongo_connection()
             promotions = db['promotions']
-            unified = db['unified_houses_3']
+            unified = db['unified_houses']
             q = {'is_active': True}
             adapters = []
             for p in promotions.find(q).sort('created_at', -1):
@@ -2533,7 +2533,7 @@ def offer_detail(request, offer_id):
         try:
             db = get_mongo_connection()
             promotions = db['promotions']
-            unified = db['unified_houses_3']
+            unified = db['unified_houses']
             p = promotions.find_one({'_id': ObjectId(str(offer_id_str))})
             if not p:
                 raise Exception('not found')
@@ -2577,7 +2577,7 @@ def videos_objects_api(request):
     objects = []
     if category == 'newbuild':
         db = get_mongo_connection()
-        unified = db['unified_houses_3']
+        unified = db['unified_houses']
         # Берём первые 1000 для селекта
         for r in unified.find({}, {'development.name': 1}).limit(1000):
             name = (r.get('development', {}) or {}).get('name') or (r.get('avito', {}) or {}).get('development', {}) .get('name') or (r.get('domclick', {}) or {}).get('development', {}) .get('complex_name') or 'ЖК'
@@ -2624,7 +2624,7 @@ def videos_list(request):
         active = request.GET.get('active')
         db = get_mongo_connection()
         videos_col = db['residential_videos']
-        unified = db['unified_houses_3']
+        unified = db['unified_houses']
         q = {}
         if active in ('1', 'true', 'True'):
             q['is_active'] = True
@@ -2904,7 +2904,7 @@ def get_unmatched_records(request):
         domrf_col = db['domrf']
         avito_col = db['avito']
         domclick_col = db['domclick']
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         
         # Получаем ID уже сопоставленных записей
         matched_records = list(unified_col.find({}, {
@@ -3067,7 +3067,7 @@ def save_manual_match(request):
         domrf_col = db['domrf']
         avito_col = db['avito']
         domclick_col = db['domclick']
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         
         # Получаем DomRF запись если она выбрана
         domrf_record = None
@@ -3966,7 +3966,7 @@ def toggle_featured(request):
             return JsonResponse({'success': False, 'error': 'Не указан complex_id'}, status=400)
         
         db = get_mongo_connection()
-        unified_collection = db['unified_houses_3']
+        unified_collection = db['unified_houses']
         residential_collection = db['residential_complexes']
         
         # Обновляем флаг в объединенной записи
@@ -3992,7 +3992,7 @@ def get_unified_records(request):
     """API: Получить уже объединенные записи"""
     try:
         db = get_mongo_connection()
-        unified_col = db['unified_houses_3']
+        unified_col = db['unified_houses']
         
         # Параметры пагинации
         page = int(request.GET.get('page', 1))
@@ -4064,7 +4064,7 @@ def unified_get(request, unified_id: str):
     """API: получить одну объединенную запись для редактирования."""
     try:
         db = get_mongo_connection()
-        col = db['unified_houses_3']
+        col = db['unified_houses']
         doc = col.find_one({'_id': ObjectId(unified_id)})
         if not doc:
             return JsonResponse({'success': False, 'error': 'Запись не найдена'}, status=404)
@@ -4080,7 +4080,7 @@ def unified_update(request, unified_id: str):
     """API: обновить произвольные поля объединенной записи (безопасный апдейт)."""
     try:
         db = get_mongo_connection()
-        col = db['unified_houses_3']
+        col = db['unified_houses']
         # Поддерживаем form-data и JSON
         payload = {}
         if request.content_type and 'application/json' in request.content_type:
@@ -4238,7 +4238,7 @@ def promotions_list(request):
         if active in ('1', 'true', 'True'):
             q['is_active'] = True
         items = []
-        unified = db['unified_houses_3']
+        unified = db['unified_houses']
         for p in promotions.find(q).sort('created_at', -1):
             comp_name = ''
             try:
@@ -4299,7 +4299,7 @@ def promotions_toggle(request, promo_id):
 def unified_delete(request, unified_id):
     try:
         db = get_mongo_connection()
-        unified = db['unified_houses_3']
+        unified = db['unified_houses']
         
         # Сначала получаем документ чтобы узнать связанные файлы
         doc = unified.find_one({'_id': ObjectId(unified_id)})

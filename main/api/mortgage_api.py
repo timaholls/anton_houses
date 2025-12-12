@@ -89,7 +89,7 @@ def mortgage_programs_update(request, program_id):
             
             complex_ids = []
             if is_individual and complexes:
-                unified_col = db['unified_houses_3']
+                unified_col = db['unified_houses']
                 for complex_id in complexes:
                     try:
                         if unified_col.find_one({'_id': ObjectId(complex_id)}):
